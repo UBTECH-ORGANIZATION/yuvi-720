@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-08-31T11:45:50Z",
+  "generated_at": "2026-08-31T12:40:37Z",
   "shards": [
     {
       "subject": "math",
@@ -53,8 +53,6 @@
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00002",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00006",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00002",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006"
     ]
@@ -63,7 +61,7 @@
     "lomdot": 45,
     "slides": 204,
     "questions": 273,
-    "texts_generated": 10,
+    "texts_generated": 0,
     "texts_pending": 18,
     "removed": []
   }

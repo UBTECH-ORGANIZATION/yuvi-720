@@ -13,7 +13,7 @@
       "component_fingerprint": "b684718dd719724e",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:15:51Z",
+        "probed_at": "2026-08-31T12:24:11Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 4,
         "screens_mapped": 4
@@ -46,7 +46,41 @@
               "model": "mini"
             }
           },
-          "questions": []
+          "questions": [],
+          "enrichment": {
+            "visible_text": "חפש את המטמון היום נגלה איך שני מספרים יכולים להפוך לכתובת מדויקת של נקודה. נועה וחבריה משחקים במשחק \"חפש את המטמון\".​נועה נמצאת בחדר ובידיה מפה שבה המטמון מסומן ב־X. ​החברים נמצאים בשטח ומחכים להוראות ממנה. שערו: איך נועה יכולה להעביר לחברים את מיקום המטמון? הקודם 1 2 3 4 5 6 7 8 הבא",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "תמונה מוכלת",
+                "src_digest": "sha1:f182a316eb807e50"
+              },
+              {
+                "kind": "image",
+                "alt": "נועה מחזיקה מפה שבה המטמון מסומן ב-x ומציגה אותה לחבריה.",
+                "src_digest": "sha1:3492e06037aef6c7"
+              }
+            ],
+            "question_rendering": "none",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.138,
+                  "y": 0.178,
+                  "w": 0.704,
+                  "h": 0.436
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:11Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrlmkvid1qspbvaxj",
@@ -92,7 +126,45 @@
                 }
               }
             }
-          ]
+          ],
+          "enrichment": {
+            "visible_text": "חפש את המטמון האם הוספת המספרים יכולה לעזור לכם לקבוע את מיקום המטמון? כן לא בדיקה הקודם 1 2 3 4 5 6 7 8 הבא עליך לענות על כל השאלות כדי להתקדם",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "נועה מחזיקה מפה שבה המטמון מסומן ב-x ומציגה אותה לחבריה.",
+                "src_digest": "sha1:0a05a9da502bfb63"
+              }
+            ],
+            "question_rendering": "radio",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.138,
+                  "y": 0.128,
+                  "w": 0.388,
+                  "h": 0.436
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.556,
+                  "y": 0.165,
+                  "w": 0.28,
+                  "h": 0.047
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:11Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mriwy5ub14z7d79e2",
@@ -137,7 +209,50 @@
                 }
               }
             }
-          ]
+          ],
+          "enrichment": {
+            "visible_text": "בואו נראה מה קורה בלוח השחמט. היכן המלכה נמצאת? היא נמצאת בטור מספר בחרו ובשורה מספר בחרו . בדיקה הקודם 1 2 3 4 5 6 7 8 הבא עליך לענות על כל השאלות כדי להתקדם",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "נועה מחזיקה מפה שבה המטמון מסומן ב-x ומציגה אותה לחבריה.",
+                "src_digest": "sha1:d9dc479de0eeeda1"
+              },
+              {
+                "kind": "image",
+                "alt": "",
+                "src_digest": "sha1:a0540e46442757d6"
+              }
+            ],
+            "question_rendering": "none",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.138,
+                  "y": 0.128,
+                  "w": 0.509,
+                  "h": 0.467
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.667,
+                  "y": 0.154,
+                  "w": 0.175,
+                  "h": 0.025
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:11Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrix7pqf16ev03wv8",
@@ -183,7 +298,50 @@
                 }
               }
             }
-          ]
+          ],
+          "enrichment": {
+            "visible_text": "בואו נראה מה קורה בלוח השחמט. היכן המלכה נמצאת? היא נמצאת בטור מספר בחרו ובשורה מספר בחרו . בדיקה הקודם 1 2 3 4 5 6 7 8 הבא",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "נועה מחזיקה מפה שבה המטמון מסומן ב-x ומציגה אותה לחבריה.",
+                "src_digest": "sha1:d9dc479de0eeeda1"
+              },
+              {
+                "kind": "image",
+                "alt": "",
+                "src_digest": "sha1:a0540e46442757d6"
+              }
+            ],
+            "question_rendering": "none",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.138,
+                  "y": 0.128,
+                  "w": 0.509,
+                  "h": 0.467
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.667,
+                  "y": 0.154,
+                  "w": 0.175,
+                  "h": 0.025
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:11Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrixsn7g21cku8q36",
@@ -544,7 +702,7 @@
       "component_fingerprint": "8219462508cf54c8",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:16:26Z",
+        "probed_at": "2026-08-31T12:24:47Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -698,7 +856,45 @@
                 }
               }
             }
-          ]
+          ],
+          "enrichment": {
+            "visible_text": "נתונות נקודות המסומנות על מערכת הצירים איזו נקודה נמצאת על ראשית הצירים? בחרו מהם שיעוריה? ​( , ) בדיקה איזו נקודה נמצאת על ציר ה־x? בחרו מהם שיעוריה? ​( , ) בדיקה איזו נקודה נמצאת על ציר ה־y? בחרו מהם שיעוריה? ​( , ) בדיקה מצאו את שיעורי הנקודות B ו־M. ( , )B ( , )M בדיקה הקודם 1 2 הבא",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "מערכת צירים",
+                "src_digest": "sha1:490fcaaf684750da"
+              }
+            ],
+            "question_rendering": "none",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.436
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.064,
+                  "w": 0.402,
+                  "h": 0.047
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:47Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a38d3dfb93f40ee8afcc48d/ms5y3ux1337o9ou83",
@@ -718,7 +914,45 @@
               "model": "mini"
             }
           },
-          "questions": []
+          "questions": [],
+          "enrichment": {
+            "visible_text": "נתונות נקודות המסומנות על מערכת הצירים איזו נקודה נמצאת על ראשית הצירים? בחרו מהם שיעוריה? ​( , ) בדיקה איזו נקודה נמצאת על ציר ה־x? בחרו מהם שיעוריה? ​( , ) בדיקה איזו נקודה נמצאת על ציר ה־y? בחרו מהם שיעוריה? ​( , ) בדיקה מצאו את שיעורי הנקודות B ו־M. ( , )B ( , )M בדיקה הקודם 1 2 הבא < > ≤ ≤ ≥ ≥ ≠  = □ □ ​ □ 2 □ 2 □ □ □ □ ∣ □ ∣ ∣□∣ ∅ ∅ 𝑅 R x y z a b c d e 7 8 9 + ) 4 5 6 − ( 1 2 3 · ± . 0 = : □ □ □ □ ​ ⌫ ← ← → → ↓ ↓ ↑ ↑ ↵",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "מערכת צירים",
+                "src_digest": "sha1:490fcaaf684750da"
+              }
+            ],
+            "question_rendering": "none",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.436
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.064,
+                  "w": 0.402,
+                  "h": 0.047
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:24:47Z"
+          }
         }
       ]
     },
@@ -731,7 +965,7 @@
       "component_fingerprint": "6f9ca04ca7908ba3",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:17:02Z",
+        "probed_at": "2026-08-31T12:32:36Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -800,7 +1034,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:17:02Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.176,
+                  "w": 0.351,
+                  "h": 0.344
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:36Z"
           }
         },
         {
@@ -904,7 +1164,7 @@
       "component_fingerprint": "0ee09642aae2999f",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:17:20Z",
+        "probed_at": "2026-08-31T12:32:54Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -1037,7 +1297,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:17:20Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.889
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:54Z"
           }
         },
         {
@@ -1094,7 +1380,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:17:20Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.898
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:54Z"
           }
         },
         {
@@ -1151,7 +1463,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:17:20Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.898
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:54Z"
           }
         }
       ]
@@ -1165,7 +1503,7 @@
       "component_fingerprint": "ce2c45b7ee120a0b",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:17:51Z",
+        "probed_at": "2026-08-31T12:33:26Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -1234,7 +1572,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:17:51Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.176,
+                  "w": 0.28,
+                  "h": 0.392
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:33:26Z"
           }
         },
         {
@@ -1478,7 +1842,7 @@
       "component_fingerprint": "11123660432bb63a",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:18:09Z",
+        "probed_at": "2026-08-31T12:33:44Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -1547,7 +1911,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:18:09Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.177,
+                  "w": 0.289,
+                  "h": 0.392
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.134,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:33:44Z"
           }
         },
         {
@@ -1824,10 +2214,10 @@
       "component_fingerprint": "935ba5019f34c870",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:18:27Z",
+        "probed_at": "2026-08-31T12:34:01Z",
         "player_host": "learning.cet.ac.il",
-        "screens_seen": 2,
-        "screens_mapped": 2
+        "screens_seen": 3,
+        "screens_mapped": 3
       },
       "texts": {
         "lesson_welcome": {
@@ -1925,7 +2315,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:18:27Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.482
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:01Z"
           }
         },
         {
@@ -1973,7 +2389,7 @@
             }
           ],
           "enrichment": {
-            "visible_text": "אומדן שיעורי נקודה שיעורי הנקודה A הם A(3, 3). מה יכולים להיות שיעורי הנקודה B? ( 4 , 5 ) (4,5) ( 9 , 6 ) (9,6) ( 10 , 2 ) (10,2) ( 15 , 8 ) (15,8) לא נורא, מטעויות לומדים מה יכולים להיות שיעורי הנקודה C? ( 2 , 4 ) (2,4) ( 4 , 6 ) (4,6) ( 1.5 , 7 ) (1.5,7) ( 1 , 5 ) (1,5) בדיקה הקודם 1 2 3 4 הבא",
+            "visible_text": "אומדן שיעורי נקודה שיעורי הנקודה A הם A(3, 3). מה יכולים להיות שיעורי הנקודה B? ( 4 , 5 ) (4,5) ( 9 , 6 ) (9,6) ( 10 , 2 ) (10,2) ( 15 , 8 ) (15,8) אין דבר. מי שלא מנסה לא טועה :) מה יכולים להיות שיעורי הנקודה C? ( 2 , 4 ) (2,4) ( 4 , 6 ) (4,6) ( 1.5 , 7 ) (1.5,7) ( 1 , 5 ) (1,5) בדיקה הקודם 1 2 3 4 הבא",
             "media": [
               {
                 "kind": "image",
@@ -1982,7 +2398,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:18:27Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.491
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:01Z"
           }
         },
         {
@@ -2028,7 +2470,45 @@
                 }
               }
             }
-          ]
+          ],
+          "enrichment": {
+            "visible_text": "אומדן שיעורי נקודה שיעורי הנקודה A הם A(3, 3). מה יכולים להיות שיעורי הנקודה B? ( 4 , 5 ) (4,5) ( 9 , 6 ) (9,6) ( 10 , 2 ) (10,2) ( 15 , 8 ) (15,8) לא נורא, מטעויות לומדים מה יכולים להיות שיעורי הנקודה C? ( 2 , 4 ) (2,4) ( 4 , 6 ) (4,6) ( 1.5 , 7 ) (1.5,7) ( 1 , 5 ) (1,5) בדיקה הקודם 1 2 3 4 הבא",
+            "media": [
+              {
+                "kind": "image",
+                "alt": "נקודה A נמצאת בנקודה (3,3), הנקודה B ממוקמת במיקום גבוהה יותר וימינה יותר מנקודה A, והנקודה C ממוקמת למעלה יותר ושמאלה י",
+                "src_digest": "sha1:0c3385dee70bc428"
+              }
+            ],
+            "question_rendering": "radio",
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.491
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:01Z"
+          }
         },
         {
           "item_id": "https://learning.cet.ac.il/metadata/6a2a3467a2f63c9b47cfd501/mq9230wp1ortbbtpq",
@@ -2120,7 +2600,7 @@
       "component_fingerprint": "3c980a0cd412d82f",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:18:51Z",
+        "probed_at": "2026-08-31T12:34:33Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -2221,7 +2701,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:18:51Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.19,
+                  "w": 0.34,
+                  "h": 0.385
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.085,
+                  "w": 0.684,
+                  "h": 0.658
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:33Z"
           }
         },
         {
@@ -2272,7 +2778,24 @@
             "visible_text": "תזוזה בין נקודות במערכת צירים נתונה הנקודה A(2, 3). כתבו את שיעורי הנקודות הבאות: נקודה B נמצאת 3 יחידות ימינה ו־2 יחידות למעלה מנקודה A. B( , ) נקודה C נמצאת יחידה אחת שמאלה ויחידה אחת למעלה מנקודה A. C( , ) הקודם 1 2 3 הבא",
             "media": [],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:18:51Z"
+            "anchors": [
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:33Z"
           }
         },
         {
@@ -2393,7 +2916,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:18:51Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.049,
+                  "y": 0.064,
+                  "w": 0.401,
+                  "h": 0.4
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.549,
+                  "y": 0.111,
+                  "w": 0.402,
+                  "h": 0.622
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:33Z"
           }
         }
       ]
@@ -2407,7 +2956,7 @@
       "component_fingerprint": "50afa2b6a45bf4af",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:19:10Z",
+        "probed_at": "2026-08-31T12:34:52Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -2476,7 +3025,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:19:10Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.21,
+                  "w": 0.351,
+                  "h": 0.28
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.067
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:52Z"
           }
         },
         {
@@ -2533,7 +3108,33 @@
               }
             ],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:19:10Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.204,
+                  "w": 0.352,
+                  "h": 0.393
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.06
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:52Z"
           }
         },
         {
@@ -2616,7 +3217,24 @@
             "visible_text": "נקודות זזות נתונה הנקודה A(4, 2). הנקודה B היא נקודה שבה: שיעור ה־x גדול ב־2 משיעור ה־x של נקודה A. שיעור ה־y קטן ב־1 משיעור ה־y של נקודה A. נקודה C היא נקודה שבה: שיעור ה־x שווה לשיעור ה־y של נקודה B. שיעור ה־y שווה לשיעור ה־x של נקודה B. מצאו את שיעורי הנקודות B ו־C: B( , ) C( , ) הציעו שיעורי נקודה D כך ש: שיעור ה־x שלה הוא מספר שלם הנמצא בין שיעורי ה־x של הנקודות B ו־C. שיעור ה־y שלה הוא מספר שלם הנמצא בין שיעורי ה־y של הנקודות B ו־C. D( , ) הקודם 1 2 3 סיימתי",
             "media": [],
             "question_rendering": "input",
-            "captured_at": "2026-08-31T11:19:10Z"
+            "anchors": [
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.591
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:34:52Z"
           }
         }
       ]

@@ -13,7 +13,7 @@
       "component_fingerprint": "432993f38f86be43",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:35:45Z",
+        "probed_at": "2026-08-31T12:28:50Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 20,
         "screens_mapped": 1
@@ -51,7 +51,14 @@
             "visible_text": "מערכת הצירים-מיקום נקודה 0:03 / 1:09 סיימתי",
             "media": [],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:35:45Z"
+            "anchors": [],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:28:50Z"
           }
         }
       ]
@@ -65,7 +72,7 @@
       "component_fingerprint": "959343e555c6e4f6",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-08-31T11:37:17Z",
+        "probed_at": "2026-08-31T12:23:54Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -226,7 +233,7 @@
       "component_fingerprint": "afbb13924fea4fef",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:37:26Z",
+        "probed_at": "2026-08-31T12:30:23Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -275,7 +282,24 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:37:26Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.138,
+                  "y": 0.128,
+                  "w": 0.704,
+                  "h": 0.436
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:30:23Z"
           }
         },
         {
@@ -332,7 +356,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:37:26Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.204,
+                  "w": 0.31,
+                  "h": 0.334
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.157,
+                  "w": 0.684,
+                  "h": 0.033
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:30:23Z"
           }
         },
         {
@@ -364,7 +414,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:37:26Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.204,
+                  "w": 0.31,
+                  "h": 0.334
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.157,
+                  "w": 0.684,
+                  "h": 0.033
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:30:23Z"
           }
         },
         {
@@ -607,7 +683,7 @@
       "component_fingerprint": "0498edf5171fb638",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:37:56Z",
+        "probed_at": "2026-08-31T12:30:52Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -676,7 +752,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:37:56Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.204,
+                  "w": 0.344,
+                  "h": 0.448
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.06
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:30:52Z"
           }
         },
         {
@@ -780,7 +882,7 @@
       "component_fingerprint": "1369245e93f78166",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:38:14Z",
+        "probed_at": "2026-08-31T12:31:10Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -824,7 +926,24 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:38:14Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0,
+                  "y": 0.009,
+                  "w": 1,
+                  "h": 0.984
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 901,
+              "h": 516
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:10Z"
           }
         }
       ]
@@ -838,7 +957,7 @@
       "component_fingerprint": "07f8abb2d5fcfd3b",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-08-31T11:38:27Z",
+        "probed_at": "2026-08-31T12:24:03Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -1044,7 +1163,7 @@
       "component_fingerprint": "75de2c5e8d8e6f91",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:38:36Z",
+        "probed_at": "2026-08-31T12:31:23Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -1113,7 +1232,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:38:36Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.21,
+                  "w": 0.238,
+                  "h": 0.268
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.067
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:23Z"
           }
         },
         {
@@ -1333,7 +1478,7 @@
       "component_fingerprint": "7183baf83d75c562",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:38:54Z",
+        "probed_at": "2026-08-31T12:31:41Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -1389,7 +1534,24 @@
             "visible_text": "ריבוע במערכת הצירים נתון ריבוע שקודקודיו הם: A(2, 2), B(3, 2), C(3, 3), D(2, 3) קבעו את המיקום של כל אחת מהנקודות הבאות ביחס לריבוע: (2.5 ,3) בחרו (2.5, 2.5) בחרו (3.5, 3.5) בחרו (3 ,2.5) בחרו בדיקה הקודם 1 2 3 4 הבא",
             "media": [],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:38:54Z"
+            "anchors": [
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.067
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:41Z"
           }
         },
         {
@@ -1504,7 +1666,7 @@
       "component_fingerprint": "423aa19f1864b387",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:39:12Z",
+        "probed_at": "2026-08-31T12:31:59Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -1566,7 +1728,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:39:12Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.176,
+                  "w": 0.285,
+                  "h": 0.36
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:59Z"
           }
         },
         {
@@ -1641,7 +1829,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:39:12Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.178,
+                  "w": 0.684,
+                  "h": 0.254
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.529
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:59Z"
           }
         },
         {
@@ -1724,7 +1938,24 @@
             "visible_text": "יחס בין נקודות איזו מהנקודות נמצאת מימין לנקודה (2 ,3) ומעל לנקודה (4, 2)? (6 ,2) (3 ,4) (5 ,3) (6 ,5) איזו מהנקודות נמצאת משמאל לנקודה (2 ,3) ומתחת לנקודה (4, 2)? (1 ,4) (2 ,1) (5 ,3) (6 ,0) הקודם 1 2 3 סיימתי",
             "media": [],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:39:12Z"
+            "anchors": [
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.085,
+                  "w": 0.684,
+                  "h": 0.323
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:31:59Z"
           }
         }
       ]
@@ -1738,7 +1969,7 @@
       "component_fingerprint": "e08f2d9cb508c33b",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T11:39:30Z",
+        "probed_at": "2026-08-31T12:32:18Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -1807,7 +2038,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:39:30Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.176,
+                  "w": 0.329,
+                  "h": 0.414
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.032
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:18Z"
           }
         },
         {
@@ -1865,7 +2122,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:39:30Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.204,
+                  "w": 0.328,
+                  "h": 0.343
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.133,
+                  "w": 0.684,
+                  "h": 0.06
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:18Z"
           }
         },
         {
@@ -1948,7 +2231,24 @@
             "visible_text": "יחס בין נקודות איזו מהנקודות נמצאת מעל לנקודה ( 21 , 3 ) (21,3) ומשמאל לנקודה ( 1 , 12 ) (1,12)? ( 23 , 6 ) (23,6) ( 2 , 0 ) (2,0) ( 0 , 6 ) (0,6) ( 12 , 12 ) (12,12) איזו מהנקודות נמצאת מתחת לנקודה ( 11 , 4 ) (11,4) ומימין לנקודה ( 12 , 1 ) (12,1)? ( 3 , 8 ) (3,8) ( 15 , 3 ) (15,3) ( 2 , 18 ) (2,18) ( 0 , 0 ) (0,0) הקודם 1 2 3 סיימתי",
             "media": [],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T11:39:30Z"
+            "anchors": [
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.085,
+                  "w": 0.684,
+                  "h": 0.253
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:32:18Z"
           }
         }
       ]

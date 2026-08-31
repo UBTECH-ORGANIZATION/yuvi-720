@@ -13,7 +13,7 @@
       "component_fingerprint": "5bfcc764f96edea2",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T09:41:42Z",
+        "probed_at": "2026-08-31T12:39:10Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 5,
         "screens_mapped": 5
@@ -92,7 +92,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T09:41:42Z"
+            "anchors": [
+              {
+                "region": "options",
+                "rect": {
+                  "x": 0.23,
+                  "y": 0.345,
+                  "w": 0.541,
+                  "h": 0.324
+                }
+              },
+              {
+                "region": "video",
+                "rect": {
+                  "x": 0.232,
+                  "y": 0.349,
+                  "w": 0.536,
+                  "h": 0.317
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:39:10Z"
           }
         },
         {
@@ -152,7 +178,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T09:41:42Z"
+            "anchors": [
+              {
+                "region": "options",
+                "rect": {
+                  "x": 0.497,
+                  "y": 0.463,
+                  "w": 0.472,
+                  "h": 0.302
+                }
+              },
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.038,
+                  "y": 0.259,
+                  "w": 0.283,
+                  "h": 0.421
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:39:10Z"
           }
         },
         {
@@ -209,7 +261,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T09:41:42Z"
+            "anchors": [
+              {
+                "region": "options",
+                "rect": {
+                  "x": 0.497,
+                  "y": 0.463,
+                  "w": 0.472,
+                  "h": 0.3
+                }
+              },
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.038,
+                  "y": 0.259,
+                  "w": 0.283,
+                  "h": 0.421
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:39:10Z"
           }
         },
         {
@@ -269,7 +347,33 @@
               }
             ],
             "question_rendering": "radio",
-            "captured_at": "2026-08-31T09:41:42Z"
+            "anchors": [
+              {
+                "region": "options",
+                "rect": {
+                  "x": 0.497,
+                  "y": 0.463,
+                  "w": 0.472,
+                  "h": 0.298
+                }
+              },
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.038,
+                  "y": 0.259,
+                  "w": 0.283,
+                  "h": 0.421
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:39:10Z"
           }
         },
         {
@@ -331,7 +435,33 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T09:41:42Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.209,
+                  "y": 0.41,
+                  "w": 0.581,
+                  "h": 0.371
+                }
+              },
+              {
+                "region": "instruction",
+                "rect": {
+                  "x": 0.191,
+                  "y": 0.294,
+                  "w": 0.617,
+                  "h": 0.043
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:39:10Z"
           }
         },
         {
@@ -765,7 +895,7 @@
       "component_fingerprint": "9b6df7a286c59a57",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T11:24:12Z",
+        "probed_at": "2026-08-31T12:40:13Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -838,7 +968,24 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:24:12Z"
+            "anchors": [
+              {
+                "region": "video",
+                "rect": {
+                  "x": 0.381,
+                  "y": 0.428,
+                  "w": 0.238,
+                  "h": 0.341
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:40:13Z"
           }
         },
         {
@@ -898,7 +1045,24 @@
               }
             ],
             "question_rendering": "none",
-            "captured_at": "2026-08-31T11:24:12Z"
+            "anchors": [
+              {
+                "region": "image",
+                "rect": {
+                  "x": 0.038,
+                  "y": 0.259,
+                  "w": 0.283,
+                  "h": 0.421
+                }
+              }
+            ],
+            "capture_viewport": {
+              "w": 1280,
+              "h": 860
+            },
+            "no_internal_scroll": true,
+            "capture_version": 2,
+            "captured_at": "2026-08-31T12:40:13Z"
           }
         },
         {
