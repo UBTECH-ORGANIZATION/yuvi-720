@@ -777,6 +777,13 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         # answer to the learner (the hint/explanation rules forbid revealing it).
         f"{scope}_question_correct_answer_DO_NOT_REVEAL: {joined((current.get('question') or {}).get('correct'))}",
         f"{scope}_item_info: {current.get('informationToBot') or '—'}",
+        # What the slide actually shows (nightly browser pass, fingerprint-
+        # gated fresh) — so a free-text "מה רואים על המסך?" is answerable from
+        # the screen itself, not just the authored note.
+        f"{scope}_screen_visible_text: "
+        f"{(current.get('screen_enrichment') or {}).get('visible_text') or '—'}",
+        f"{scope}_screen_media_inventory: "
+        f"{joined((current.get('screen_enrichment') or {}).get('media'))}",
         f"query_intent: {bundle.get('query_intent') or 'learning_help'}",
         f"portrait_interests: {joined(portrait.get('interests'))}",
         f"portrait_preferences: {joined(portrait.get('preferences'))}",
@@ -1121,6 +1128,81 @@ async def run_coach_stream(
     # learners in Hebrew whenever the brain still held its creation-default.
     if language not in COACH_INSTRUCTIONS:
         lang = bundle.get("locale") or lang
+
+    # ── content-intelligence short-circuit ───────────────────────────────────
+    # Arrival messages (question/step intros, the welcome, a video summary) are
+    # content-determined: the nightly pipeline pre-writes them per slide, and
+    # while the config's fingerprint still matches the live catalog the stored
+    # body IS the answer — same SSE frames, same persistence, zero model calls.
+    # Any miss (stale, absent, non-Hebrew, guard-flagged) falls through to the
+    # live path below, which is exactly today's behavior.
+    if user_message is None and lang == "he":
+        pregen_kind = (
+            trigger if trigger in ("question_intro", "lesson_step_intro",
+                                   "lesson_welcome")
+            else "video_summary" if support_mode == "video_summary" else None
+        )
+        _cur = bundle.get("current") or {}
+        pregen_component = str(
+            _cur.get("component_id")
+            or (surface_context or {}).get("component_id") or "")
+        entry = None
+        if pregen_kind and pregen_component:
+            from app.services import content_intelligence
+            if pregen_kind == "lesson_welcome":
+                entry = content_intelligence.pregen_text(
+                    pregen_kind, pregen_component)
+            elif pregen_kind in ("lesson_step_intro", "video_summary"):
+                if _cur.get("item_id"):
+                    entry = content_intelligence.pregen_text(
+                        pregen_kind, pregen_component, str(_cur["item_id"]))
+            elif _cur.get("item_id") and _cur.get("question_id"):
+                entry = content_intelligence.pregen_text(
+                    pregen_kind, pregen_component,
+                    str(_cur["item_id"]), str(_cur["question_id"]))
+        if entry:
+            from app.agents import tutor_decision
+            body = safety.screen_output(entry["text"], lang).text.strip()
+            pregen_guard = answer_guard.build(
+                _cur.get("question") if coach_mode is CoachMode.LESSON else None)
+            if body and not pregen_guard.reveals(body):
+                collected = body
+                if pregen_kind == "lesson_welcome":
+                    # The name-splice stays deterministic and local, exactly as
+                    # on the live path — the name never entered any prompt.
+                    greeting = await welcome_greeting(learner_id, lang)
+                    collected = f"{greeting} {body}".strip()
+                    yield greeting
+                    yield " " + body
+                else:
+                    yield body
+                coach_debug_trace.append(debug_trace, f"pregen_hit:{pregen_kind}")
+                await sessions.append_turn(
+                    learner_id,
+                    coach_role,
+                    user=memory_user,
+                    assistant=collected,
+                    session_id=session_id,
+                    exchange_id=exchange_id,
+                    include_user_in_history=False,
+                    question_key=tutor_decision.support_question_key(
+                        {
+                            "component_id": _cur.get("component_id"),
+                            "item_id": _cur.get("item_id"),
+                            "question_id": _cur.get("question_id"),
+                        },
+                        (surface_context or {}).get("component_id"),
+                    ),
+                    query_intent=query_intent,
+                )
+                coach_debug_trace.append(debug_trace, "persist_conversation_turn")
+                await content_intelligence.record_pregen_hit(
+                    usage_context, pregen_kind, collected)
+                return
+            coach_debug_trace.append(debug_trace, "pregen_guard_blocked")
+        elif pregen_kind and pregen_component:
+            coach_debug_trace.append(debug_trace, f"pregen_miss:{pregen_kind}")
+
     title_task: Optional[asyncio.Task[tuple[str, str]]] = None
     if user_message is not None and query_intent != "calendar_clarification" and await sessions.conversation_needs_title(
         learner_id, session_id, role=coach_role
@@ -1221,6 +1303,31 @@ async def run_coach_stream(
         )
         if is_hint and hint_level is None:
             await tutor_decision.record_hint_level(learner_id, component_for_ladder, resolved_hint_level)
+
+    # A reviewed pre-generated baseline grounds the first hint / the explanation
+    # so the mini-tier model paraphrases something correct instead of composing
+    # from thin metadata (the observed fabrication mode). Injected as guidance,
+    # never served verbatim: the personalization stack above still decides how
+    # it lands for THIS learner. L2/L3 hints stay fully live — they are defined
+    # relative to what was already said.
+    if lang == "he" and (
+        (support_mode == "hint" and resolved_hint_level == 1)
+        or support_mode == "explanation"
+    ):
+        _cur = bundle.get("current") or {}
+        if _cur.get("component_id") and _cur.get("item_id") and _cur.get("question_id"):
+            from app.services import content_intelligence
+            baseline = content_intelligence.pregen_text(
+                "hint_l1" if support_mode == "hint" else "explanation",
+                str(_cur["component_id"]), str(_cur["item_id"]),
+                str(_cur["question_id"]))
+            if baseline:
+                instructions += (
+                    "\n- קו בסיס שנבדק מראש לעזרה בשאלה הזו — התאם אותו ללומד "
+                    "ולראיות האחרונות, אל תקריא אותו מילה במילה ואל תוסיף "
+                    f"עובדות שאינן בו או בנתוני השאלה: \"{baseline['text']}\""
+                )
+                coach_debug_trace.append(debug_trace, "pregen_baseline")
 
     # Naming a specific option ("סעיף א'", "תשובה 2", "אופציה ג'", "אפשרות 3")
     # is resolved deterministically in `_referenced_option`, but handing the

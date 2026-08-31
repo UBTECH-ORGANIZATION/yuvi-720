@@ -321,7 +321,7 @@ async def build_coach_bundle(
         classify_query_intent,
         memory_defaults,
     )
-    from app.services import kata_catalog, kata_client
+    from app.services import content_intelligence, kata_catalog, kata_client
     from app.services.kata_catalog import get_component, localized_objective_title
     from app.services.events import get_recent_events
 
@@ -740,6 +740,21 @@ async def build_coach_bundle(
             # simulation is a learning step. Without this the coach treated every
             # screen as a question and had nothing to say on the others.
             "item": current_item,
+            # What the slide LOOKS like to the learner — text and media the
+            # nightly browser pass read off the real screen. Served only while
+            # provably fresh (content_intelligence fingerprint gate); the
+            # authored note above stays the primary grounding. Screen text is
+            # vendor/browser content — neutralized like every other context line.
+            "screen_enrichment": (
+                {
+                    "visible_text": safe_text(screen_enrichment.get("visible_text"), 700),
+                    "media": [safe_text(m, 90) for m in screen_enrichment.get("media") or []],
+                }
+                if (screen_enrichment := (
+                    content_intelligence.enrichment(component_id, item_id)
+                    if component_id and item_id else None
+                )) else None
+            ),
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
             # Ids for the per-question message key (chat scoping), so a stored
