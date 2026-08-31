@@ -659,20 +659,24 @@ async def run(args: argparse.Namespace) -> int:
     if not model:
         print("no components returned — is KATA_API_KEY set?")
         return 2
+    # --component / --limit narrow what gets BROWSED and GENERATED — never what
+    # gets written. The written shards always mirror the whole catalog, or a
+    # filtered run would prune everything outside its scope as "removed".
+    scope = set(model)
     if args.component:
-        model = {cid: c for cid, c in model.items() if cid == args.component}
+        scope = {args.component} & scope
     if args.limit:
-        model = dict(sorted(model.items())[:args.limit])
+        scope = set(sorted(scope)[:args.limit])
 
     committed = load_committed(out_dir)
     diff = ci.diff_components(
         {cid: c["component_fingerprint"] for cid, c in model.items()},
         {cid: str(l.get("component_fingerprint") or "")
-         for cid, l in committed.items()
-         if not args.component or cid == args.component},
+         for cid, l in committed.items()},
     )
     print(f"  {len(model)} lomdot live · new {len(diff['new'])} · "
-          f"changed {len(diff['changed'])} · removed {len(diff['removed'])}")
+          f"changed {len(diff['changed'])} · removed {len(diff['removed'])}"
+          + (f" · scoped to {len(scope)}" if len(scope) != len(model) else ""))
 
     if args.report:
         targets = collect_generation_targets(model, committed)
@@ -684,9 +688,11 @@ async def run(args: argparse.Namespace) -> int:
     # ── browse ──
     extractions: dict[str, dict[str, Any]] = {}
     backlog = [c for c in load_backlog(out_dir) if c in model]
-    queue = list(dict.fromkeys(backlog + diff["new"] + diff["changed"]))
+    queue = [cid for cid in dict.fromkeys(backlog + diff["new"] + diff["changed"])
+             if cid in scope]
     to_browse = [] if args.skip_browser else queue[:args.max_browse]
-    backlog_left = [c for c in queue if c not in to_browse]
+    backlog_left = [c for c in queue if c not in to_browse] \
+        + [c for c in backlog if c not in scope]   # out-of-scope stays queued
     for cid in to_browse:
         print(f"→ browsing {cid}…")
         extraction = await browse_component(cid, model[cid], dump_dir)
@@ -698,7 +704,8 @@ async def run(args: argparse.Namespace) -> int:
 
     # ── generate ──
     generated: dict[str, dict[str, Any]] = {}
-    targets = collect_generation_targets(model, committed)
+    targets = [t for t in collect_generation_targets(model, committed)
+               if t["id"].split("|", 1)[0] in scope]
     if targets and not args.skip_llm:
         print(f"→ generating {len(targets)} stale texts "
               f"(≤{args.max_llm_calls} calls)…")

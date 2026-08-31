@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "subject": "other",
+  "objective_id": "MOE.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER",
+  "objective_title_he": "מכינת כשירות בינה מלאכותית",
+  "lomdot": [
+    {
+      "component_id": "CET.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER-00001",
+      "title": "מפצחים את הפרומט",
+      "cognitive_level": "['analyze']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-08-25T07:56:16.812243Z",
+      "component_fingerprint": "871f688d56c079c0",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נכיר את הפרומט ונבין איך לנסח בקשה טובה יותר. נתרגל זיהוי של פרטים חשובים, דיוק בהנחיות ושיפור התוצאה שמקבלים.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "871f688d56c079c0",
+          "generated_at": "2026-08-31T09:45:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": []
+    }
+  ]
+}

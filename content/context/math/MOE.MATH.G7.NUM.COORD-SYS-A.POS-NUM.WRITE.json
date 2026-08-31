@@ -1,0 +1,2469 @@
+{
+  "schema_version": 1,
+  "subject": "math",
+  "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE",
+  "objective_title_he": "מערכת צירים - מספרים חיוביים",
+  "lomdot": [
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001",
+      "title": "חפש את המטמון",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-26T08:57:31.742047Z",
+      "component_fingerprint": "396611d105f509e0",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נכיר איך קובעים מיקום במערכת צירים בעזרת מספרים חיוביים. נלמד דרך חיפוש המטמון ולוח השחמט.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "396611d105f509e0",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mriro31m3ib50cl4i",
+          "title": "חפש את המטמון",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 1,
+          "fingerprint": "8c350fa69b46cf90",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "במסך הזה מתחילים את המסע בעקבות המטמון. כדאי לשים לב איך משתמשים ברמזים כדי להבין מיקום.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "8c350fa69b46cf90",
+              "generated_at": "2026-08-31T09:42:59Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrlmkvid1qspbvaxj",
+          "title": "חפש את המטמון -שאלה 1",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "f56b76003aa45cb1",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrlmkvid33j7s6lpx",
+              "question_type": "true-false",
+              "question_text": "האם הוספת המספרים יכולה לעזור לכם לקבוע את מיקום המטמון?",
+              "answers": [
+                "true",
+                "false"
+              ],
+              "fingerprint": "eb63ebd08a735dfd",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לחשוב אם חיבור המספרים יכול לעזור לקבוע את המקום המדויק של המטמון. נסו לבחור תשובה ולבדוק את ההבנה שלכם.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "eb63ebd08a735dfd",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על הקשר בין המספרים לבין קביעת המיקום. מה יכול לעזור להבין איפה המטמון נמצא?",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "eb63ebd08a735dfd",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם אפשר להשתמש בהוספת המספרים כדי לקבוע מיקום. הרעיון הוא לבדוק איך מספרים יכולים לעזור למצוא נקודה מסוימת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "eb63ebd08a735dfd",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mriwy5ub14z7d79e2",
+          "title": "בואו נראה מה קורה בלוח השחמט.",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "ef3ff5fef4f31788",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrix0rcacunhro62",
+              "question_type": "other",
+              "question_text": "היכן המלכה נמצאת?",
+              "answers": [
+                "היא נמצאת בטור מספר (5) ובשורה מספר (2)"
+              ],
+              "fingerprint": "e56f2eb942190656",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים איך קוראים מיקום על לוח שחמט. נסו להיעזר בטור ובשורה כדי למצוא היכן המלכה נמצאת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e56f2eb942190656",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לשילוב בין הטור לבין השורה בלוח. כך אפשר לזהות את המקום של הכלי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e56f2eb942190656",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה עוסקת בקביעת מיקום על לוח שחמט בעזרת טור ושורה. זהו תרגול של זיהוי נקודה לפי שני נתונים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e56f2eb942190656",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrix7pqf16ev03wv8",
+          "title": "המיקום של המטמון",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 4,
+          "fingerprint": "b8cb78e435d9952f",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrix7pqgqqykd977",
+              "question_type": "true-false",
+              "question_text": "אחרי שראיתם איך מוצאים מיקום של כלי על לוח השחמט,​ האם עכשיו אתם יכולים לקבוע את המיקום של המטמון?",
+              "answers": [
+                "true",
+                "false"
+              ],
+              "fingerprint": "0b3e7a1a453a8e57",
+              "texts": {
+                "question_intro": {
+                  "he": "אחרי שלמדתם איך מוצאים מיקום של כלי על לוח שחמט, עכשיו אפשר לנסות להשתמש באותו רעיון גם לגבי המטמון. חשבו אם אפשר לקבוע את המיקום שלו.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b3e7a1a453a8e57",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו להיעזר במה שלמדתם על מיקום בלוח שחמט. האם אותו אופן חשיבה יכול לעזור גם כאן?",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b3e7a1a453a8e57",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם אפשר להעביר את הרעיון של קביעת מיקום על לוח שחמט גם למציאת המטמון. המוקד הוא בקישור בין שני מצבים דומים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b3e7a1a453a8e57",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrixsn7g21cku8q36",
+          "title": "איך קובעים מיקום של נקודה?",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 5,
+          "fingerprint": "0755d753c29cf5f4",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן מתחילים להבין איך קובעים מיקום של נקודה. שימו לב לצעדים שמובילים לזיהוי המקום במדויק.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "0755d753c29cf5f4",
+              "generated_at": "2026-08-31T09:42:59Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrizvykox2bx3zgv",
+          "title": "איך קובעים מיקום של נקודה",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 6,
+          "fingerprint": "e456c1afc9f63d61",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrm3ppgy1duo0oit7",
+              "question_type": "other",
+              "question_text": "​גררו את האות x ליד ציר ה־x​ ואת האות y  ליד ציר ה־y.",
+              "answers": [
+                "X,Y"
+              ],
+              "fingerprint": "5b3ef8d0002892a0",
+              "texts": {
+                "question_intro": {
+                  "he": "נסו להתאים כל אות לציר המתאים במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b3ef8d0002892a0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על התפקיד של כל אות במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b3ef8d0002892a0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "במערכת הצירים צריך להתאים בין הסימנים לבין הצירים המתאימים להם.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b3ef8d0002892a0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001-item-https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrj2jntc3fjzenkxg",
+          "title": "נקודה במערכת הצירים",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 7,
+          "fingerprint": "03ad7d3a97d43559",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrj4ebt31vfxvk2pe",
+              "question_type": "numeric",
+              "question_text": "מה שיעור ה־x של הנקודה המסומנת? \nמה שיעור ה־y של הנקודה המסומנת?",
+              "answers": [],
+              "fingerprint": "01110542b8db70f6",
+              "texts": {
+                "question_intro": {
+                  "he": "מנסים לקרוא את שיעורי הנקודה המסומנת במערכת הצירים. שימו לב לשני הערכים שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "01110542b8db70f6",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "הסתכלו על מיקומה של הנקודה ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "01110542b8db70f6",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי למצוא שיעורי נקודה, בודקים את המיקום שלה לפי שני הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "01110542b8db70f6",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrk612f91gcsamaaz",
+          "title": "שיעורי נקודה",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 8,
+          "fingerprint": "2ea9711e38e22514",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן רואים שיעורי נקודה במערכת הצירים. כדאי לשים לב לקשר בין הנקודה לבין הצירים.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "2ea9711e38e22514",
+              "generated_at": "2026-08-31T09:42:59Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrk71rfq22hsob5zo",
+          "title": "נקודה במערכת הצירים​",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 9,
+          "fingerprint": "71abb14558bf17b7",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrk71rfrp9n86hky",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות A ו־B.​",
+              "answers": [
+                "A(5,3);B(2,6)"
+              ],
+              "fingerprint": "30d117ed10544c50",
+              "texts": {
+                "question_intro": {
+                  "he": "מנסים לכתוב את שיעורי שתי הנקודות שמופיעות על המסך. כדאי להסתכל על כל נקודה בנפרד.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "30d117ed10544c50",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו כל נקודה לפי מיקומה במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "30d117ed10544c50",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "שיעורי נקודה נכתבים לפי שני הערכים שלה במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "30d117ed10544c50",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrk8tu561n9rbfvjh",
+          "title": "נקודות על הצירים",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 10,
+          "fingerprint": "179d8d3825be807f",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrk8tu571dx93gqhw",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות.",
+              "answers": [
+                "C(7,0);D(3,0);K(0,5);P(0,2);M(0,0)"
+              ],
+              "fingerprint": "36c0e7491b2caa68",
+              "texts": {
+                "question_intro": {
+                  "he": "מנסים לכתוב את שיעורי הנקודות שמופיעות על הצירים. שימו לב למיקום של כל נקודה ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "36c0e7491b2caa68",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "היעזרו במיקום של כל נקודה על הציר המתאים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "36c0e7491b2caa68",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לשים לב למיקום של כל נקודה על מערכת הצירים ולכתוב את השיעורים שלה לפי המקום שבו היא נמצאת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "36c0e7491b2caa68",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrkab2o71ysfuh6w0",
+          "title": "אורך קטע היחידה​",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 11,
+          "fingerprint": "6e0f693aee5070db",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן מופיע נושא הקשור לאורכו של קטע היחידה. אפשר לשים לב איך משתמשים במערכת הצירים כדי להבין את המיקום של נקודות.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "6e0f693aee5070db",
+              "generated_at": "2026-08-31T09:42:59Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrkc7m7i2nec8sgpt",
+          "title": "אורך קטע היחידה​",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 12,
+          "fingerprint": "c367310da3c1d375",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrkc7m7k1hn1doipj",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודה A.",
+              "answers": [
+                "A(3,2)"
+              ],
+              "fingerprint": "60ddfc8b864f9448",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם נקודה על מערכת הצירים, וצריך לזהות את השיעורים שלה. כדאי להסתכל על המיקום שלה ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "60ddfc8b864f9448",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את מיקום הנקודה על מערכת הצירים, ושימו לב למקום שלה ביחס לציר ה־x ולציר ה־y.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "60ddfc8b864f9448",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך קוראים שיעורים של נקודה לפי המיקום שלה על מערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "60ddfc8b864f9448",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrkdmkdt13081af6g",
+          "title": "חפש את המטמון -מציאת המטמון",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 13,
+          "fingerprint": "9dcec648107992d9",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrkdn9b02gbptgpui",
+              "question_type": "other",
+              "question_text": "המטמון נמצא בנקודה",
+              "answers": [
+                "(6,5)"
+              ],
+              "fingerprint": "91e7f5928f144375",
+              "texts": {
+                "question_intro": {
+                  "he": "מופיעה כאן שאלה על מיקום של מטמון במערכת הצירים. כדאי לבדוק את הנקודה שמסמנת את המקום שלו.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "91e7f5928f144375",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לאתר את הנקודה שמסומנת כמקום של המטמון ולבדוק את השיעורים שלה על מערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "91e7f5928f144375",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לזהות נקודה לפי המיקום שלה על מערכת הצירים ולכתוב את השיעורים שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "91e7f5928f144375",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d/mrkjhndtxlmjmq1c",
+          "title": "סיכום",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 14,
+          "fingerprint": "4cdf15471689fbd6",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "בסיכום אפשר לעצור ולחשוב על מה למדנו על נקודות ועל שיעורים במערכת הצירים.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "4cdf15471689fbd6",
+              "generated_at": "2026-08-31T09:42:59Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00002",
+      "title": "כתיבת שיעורי נקודה - דוגמא פתורה 1",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T09:44:15.590407Z",
+      "component_fingerprint": "aeb4fa07735d51f8",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים כתיבת שיעורי נקודה על מערכת הצירים. עובדים עם נקודות מסומנות ולומדים לזהות את המיקום שלהן לפי השיעורים.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "aeb4fa07735d51f8",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a38d3dfb93f40ee8afcc48d/mrrdfl0n3c83iubtj",
+          "title": "נתונות נקודות המסומנות על מערכת הצירים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "56288e74f83d6b11",
+          "information_to_bot": "",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mrrei8vz2lyl0vx48",
+              "question_type": "other",
+              "question_text": "איזו נקודה נמצאת על ראשית הצירים?",
+              "answers": [
+                "D (0,0)"
+              ],
+              "fingerprint": "aab438a87c1749c0",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם כמה נקודות על מערכת הצירים, וצריך למצוא איזו מהן נמצאת בראשית הצירים. אפשר להיעזר במיקום של כל נקודה ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "aab438a87c1749c0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו איזו נקודה נמצאת בדיוק במקום שבו שני הצירים נפגשים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "aab438a87c1749c0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לענות על השאלה, צריך לזהות נקודה שממוקמת בדיוק במקום שבו שני הצירים נפגשים. כדאי להיעזר בהגדרה של ראשית הצירים ולבדוק את הקואורדינטות של הנקודות המסומנות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "aab438a87c1749c0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mrremk561gbex2nxp",
+              "question_type": "other",
+              "question_text": "איזו נקודה נמצאת על ציר ה־x?",
+              "answers": [
+                "c(9,0)"
+              ],
+              "fingerprint": "906259a1839ccbda",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להביט במערכת הצירים ולבדוק אילו נקודות יושבות על אחד הצירים בלבד. נסו לזהות את הנקודה המתאימה מתוך הסימון שעל המסך.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "906259a1839ccbda",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אילו נקודות נמצאות על הציר האופקי, בלי לעלות מעליו או לרדת ממנו.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "906259a1839ccbda",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של נקודה שנמצאת על הציר האופקי במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "906259a1839ccbda",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mrreokv01neg33wbz",
+              "question_type": "other",
+              "question_text": "איזו נקודה נמצאת על ציר ה־y?",
+              "answers": [
+                "A(0,4)"
+              ],
+              "fingerprint": "345e94f960c77c8b",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להביט במערכת הצירים ולבדוק אילו נקודות יושבות על אחד הצירים בלבד. נסו לזהות את הנקודה המתאימה מתוך הסימון שעל המסך.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "345e94f960c77c8b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את הנקודה שנמצאת על הציר האנכי. על ציר כזה אחד השיעורים שווה ל־0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "345e94f960c77c8b",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "צריך לבדוק איזו נקודה יושבת על הציר האנכי, כלומר נקודה שבה אחד השיעורים הוא 0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "345e94f960c77c8b",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mrreq8a52mdskz3mt",
+              "question_type": "other",
+              "question_text": "מצאו את שיעורי הנקודות B ו־M.",
+              "answers": [
+                "B(6,2);M(9,6)"
+              ],
+              "fingerprint": "1b319a377e0156a8",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להביט בנקודות המסומנות ולחשוב איך קוראים את השיעורים שלהן על מערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1b319a377e0156a8",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לקרוא כל נקודה לפי המיקום שלה על הצירים, ולבדוק את השיעורים בזהירות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1b319a377e0156a8",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה של שיעורי נקודות מסומנות על מערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1b319a377e0156a8",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a38d3dfb93f40ee8afcc48d/ms5y3ux1337o9ou83",
+          "title": "נקודות מסומנות על מערכת הצירים - פתרון.",
+          "content_type": "instruction",
+          "media_format": "interactive-content",
+          "role": "teaching",
+          "position": 2,
+          "fingerprint": "97de23bc197a7958",
+          "information_to_bot": "",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "במסך הבא מופיע פתרון לנקודות המסומנות על מערכת הצירים. כדאי לשים לב לאופן שבו קוראים את השיעורים של כל נקודה.",
+              "prompt_version": "cp-v1",
+              "source_fingerprint": "97de23bc197a7958",
+              "generated_at": "2026-08-31T09:45:04Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00003",
+      "title": "כתיבת שיעורי נקודה - בסיסית 1",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T10:01:12.230424Z",
+      "component_fingerprint": "6f9ca04ca7908ba3",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לכתוב שיעורי נקודה ברביע הראשון. נתרגל זאת דרך משחק לוח ונקודות על הצירים.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "6f9ca04ca7908ba3",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a28f8e7364620a6652f4740/mptti9na1c802zgwy",
+          "title": "התלמידים ידעו לכתוב שיעורי נקודה ברביע הראשון",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "e56a76b460dbc965",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n*הנושא: כתיבת נקודות  \nמיומנויות: התלמידים ידעו לכתוב שיעורי נקודה ברביע הראשון \nרמז: \nהתחילו מראשית הצירים (הנקודה (0,0)) והתקדמו ממנה לכל נקודה: \nכמה צעדים ימינה מראשית הצירים? זה ה־x. \nכמה צעדים למעלה? זה ה־y. \nפתרון מודרך: \nנזהה את המרחקים של כל נקודה מראשית הצירים: \nA: 5 ימינה ו־3 למעלה: (5, 3) \nB: 1 ימינה ו־6 למעלה: (1, 6) \nC: על ציר ה־ yבגובה 4: (0, 4)  \nD: 5 ימינה על ציר x: (5, 0) \nE: 6 ימינה ו־1 למעלה: (6, 1) \nמטרת השאלה: קריאת שיעורי נקודות במערכת צירים ברביע הראשון, כולל נקודות הנמצאות על הצירים וזיהוי ערכי ה־x וה־y של כל נקודה",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7ngvj52icdw610u",
+              "question_type": "other",
+              "question_text": "לפניכם מערכת צירים. כתבו את שיעורי הנקודות המסומנות בה.",
+              "answers": [
+                "A(5,3); B(1,6); C(0,4); D(5,0); E(6,1)"
+              ],
+              "fingerprint": "e3ff559827331e45",
+              "texts": {
+                "question_intro": {
+                  "he": "בואו נבדוק יחד איך קוראים את הנקודות במערכת הצירים. נסו למצוא את השיעורים של כל נקודה לפי המיקום שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e3ff559827331e45",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להסתכל על כל נקודה ולבדוק איפה היא נמצאת ביחס לצירים. שימו לב לסדר השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e3ff559827331e45",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה וכתיבה של שיעורי נקודה במערכת צירים ברביע הראשון, כולל נקודות שנמצאות על הצירים. חשוב לשים לב לסדר השיעורים ולכך שבנקודה שעל ציר אחד אחד השיעורים הוא 0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e3ff559827331e45",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a28f8e7364620a6652f4740/mq7o1vcs28aeaqabc",
+          "title": " \"משחק לוח\"",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "a449d8988a87f321",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.\n\nמיומנויות: התלמידים ידעו לכתוב שיעורי נקודה ברביע הראשון \nרמז: \nהתחילו מראשית הצירים (0, 0). \nכל צעד ימינה מוסיף ל־x, וכל צעד למעלה מוסיף ל־y. \nפתרון מודרך: \nא. מתחילים ב־(0, 0): \n7 צעדים ימינה: x=7 \n4 צעדים למעלה: y=4 \nלכן: (7, 4) \nב. מתחילים ב־(0, 0): \n7 צעדים למעלה: y=7 \n4 צעדים ימינה: x=4 \nלכן: (4, 7) \nג. מתחילים מהנקודה של סעיף ב: (4, 7) \nממשיכים 2 צעדים ימינה: x=6, וה־y נשאר 7. \nלכן: (6, 7) \nמטרת השאלה: כתיבת שיעורי נקודות על פי תיאור מילולי של תנועה מראשית הצירים והבחנה בין תנועה בכיוון ציר ה־x ובין תנועה בכיוון ציר ה־y.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7o2mno2sytzbnr3",
+              "question_type": "other",
+              "question_text": "כתבו את הנקודה שאליה הגיע:",
+              "answers": [
+                "1(7,4);2(4,7);3(6,7)"
+              ],
+              "fingerprint": "1a19d55b7c5772b7",
+              "texts": {
+                "question_intro": {
+                  "he": "יש כאן לוח או מסלול עם נקודה יעד. קראו את המיקום שלה ונסו לכתוב את השיעורים המתאימים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1a19d55b7c5772b7",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר בכיוון התנועה או במיקום היחסי על המערכת, ולבדוק כל צעד בנפרד לפני שכותבים את השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1a19d55b7c5772b7",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת כתיבת שיעורי נקודה לפי מיקום על מערכת הצירים. צריך לשים לב לסדר השיעורים, לכיוון התנועה ולמיקום ביחס לצירים ולראשית.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "1a19d55b7c5772b7",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a28f8e7364620a6652f4740/mq7oh0no21yqvped7",
+          "title": "משחק לוח – נקודות על הצירים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "551b901f3d080ba0",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.\n\nמיומנויות: התלמידים ידעו לכתוב שיעורי נקודה ברביע הראשון \nרמז: \nבדקו על איזה ציר כל נקודה נמצאת: \nאם הנקודה על ציר ה־x, ערך ה־y שווה 0.  \nאם הנקודה על ציר ה־y, ערך ה־x שווה 0.\nפתרון מודרך: \nכשהנקודה נמצאת על ציר ה־x שיעור ה־y שלה הוא 0, ושיעור ה־x נקבע לפי המספר שעל הציר. כשהנקודה נמצאת על ציר ה־y שיעור ה־x שלה הוא 0, ושיעור ה־y נקבע לפי המספר שעל הציר.\n\nמטרת השאלה: קריאת שיעורי נקודות הממוקמות על צירי מערכת הצירים והבנת משמעותו של שיעור השווה ל־0 בנקודות שעל הצירים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7oiapr2ua8mswhj",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות של כל תחנה.",
+              "answers": [
+                "(0,3);(5,0);(9,0);(0,8) "
+              ],
+              "fingerprint": "e28ba105466c9760",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם כמה תחנות על מערכת צירים. נסו לזהות את המיקום של כל תחנה ולכתוב את השיעורים שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e28ba105466c9760",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מנקודה על אחד הצירים ולבדוק איזה שיעור שלה צריך להיות 0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e28ba105466c9760",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "צריך לזהות נקודות על הצירים ולזכור שבנקודה כזו אחד השיעורים שווה ל־0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e28ba105466c9760",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00004",
+      "title": "כתיבת שיעורי נקודה- בסיסית 2",
+      "cognitive_level": "['algorithmic-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T10:15:34.012797Z",
+      "component_fingerprint": "0ee09642aae2999f",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נתרגל כתיבת שיעורי נקודה במערכת צירים עם מספרים חיוביים. נלמד לזהות נקודות במערכת ולכתוב את המיקום שלהן בצורה מדויקת.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "0ee09642aae2999f",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a29087fd20c9d1598cb802b/mq7pmy512c3239qox",
+          "title": "זיהוי נקודות מבין אפשרויות וכתיבת נקודות",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "744e1ac673fa7d0c",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \nרמז: \nקראו כל נקודה לפי הסדר: \nקודם תנועה ימינה לקביעת ה־x ואחר כך תנועה למעלה לקביעת ה־y.\nפתרון מודרך: \nא. הנקודה A נמצאת 1 ימינה ו־5 למעלה, לכן (1, 5). \nב. הנקודה B נמצאת על ציר ה־y בגובה 3, לכן (0, 3). \nג. הנקודה C נמצאת 6 ימינה ו־2 למעלה, לכן (6, 2). \nד. הנקודה D נמצאת על ציר ה־x במרחק 8 ימינה, לכן (8, 0). \nמטרת השאלה: זיהוי וקריאת שיעורי נקודות במערכת צירים, הבחנה בין נקודות על הצירים ובין נקודות בתוך מערכת הצירים ובחירת ייצוג קואורדינטיבי מתאים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7pw2yfugsewei6",
+              "question_type": "choice",
+              "question_text": "מהם שיעורי הנקודה המתאימים לנקודה A?",
+              "answers": [
+                "(1,5)"
+              ],
+              "fingerprint": "e5cce2f8f3d99d1b",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים זיהוי נקודות וכתיבה של שיעוריהן. נסו למצוא את המיקום המדויק של כל נקודה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e5cce2f8f3d99d1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר במערכת הצירים ובמיקום של כל נקודה כדי לבדוק את השיעורים שלה לפי הסדר.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e5cce2f8f3d99d1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לשים לב לסדר שבו כותבים את שני השיעורים ולקרוא נכון את המיקום על הצירים. אפשר להיעזר בחומר שלמדתם על נקודות ברביע הראשון ועל טעויות נפוצות בכתיבת שיעורי נקודות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e5cce2f8f3d99d1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7q14zx38dkh64e0",
+              "question_type": "choice",
+              "question_text": "מהם שיעורי הנקודה המתאימים לנקודה B?",
+              "answers": [
+                "(0,3)"
+              ],
+              "fingerprint": "6d4a1fbc1ce34b40",
+              "texts": {
+                "question_intro": {
+                  "he": "כעת מופיעה נקודה נוספת על המסך. נסו לזהות את שיעוריה לפי המיקום שלה, תוך תשומת לב לסדר הכתיבה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6d4a1fbc1ce34b40",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק כל נקודה לפי המיקום שלה על הצירים, ולזכור שבנקודה על ציר אחד אחד השיעורים חייב להיות 0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6d4a1fbc1ce34b40",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של נקודות על הצירים וכתיבה של השיעורים שלהן.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6d4a1fbc1ce34b40",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7q9lnx188kba8h4",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות C ו־D:",
+              "answers": [
+                "C(8,0);D(6,2)"
+              ],
+              "fingerprint": "62b3ef28b1643bb0",
+              "texts": {
+                "question_intro": {
+                  "he": "מופיעות כאן נקודות שונות על מערכת הצירים, וצריך לבחור את השיעורים המתאימים להן. כדאי להסתכל על המיקום של כל נקודה בנפרד.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "62b3ef28b1643bb0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לבדוק כל נקודה לפי מקומה על הצירים, ולזכור מה קורה כשנקודה נמצאת על אחד מהם.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "62b3ef28b1643bb0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים כתיבת שיעורי נקודות ברביע הראשון, תוך שימת לב לסדר הנכון של השיעורים ולקריאה מדויקת של מיקום הנקודות. צריך להבחין בין תנועה אופקית לתנועה אנכית, ולזהות נקודות שנמצאות על הצירים או בדיוק באותו גובה או בדיוק מתחת לנקודה אחרת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "62b3ef28b1643bb0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a29087fd20c9d1598cb802b/mptti9na1c802zgwy",
+          "title": "תיאור של נקודות על הצירים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "56284f27dcf45622",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nחשבו מה קורה לנקודה שנמצאת בדיוק על אחד הצירים: \nאיזה ערך נשאר 0 בכל אחד מהמקרים?\nפתרון מודרך: \nא. הנקודה נמצאת על ציר ה־y בגובה 6, לכן x=0, y=6. נקבל (0, 6). \nב. הנקודה נמצאת על ציר ה־x במרחק 20 ימינה, לכן x=20, y=0. נקבל (20, 0). \nמטרת השאלה: כתיבת שיעורי נקודות על פי תיאור מילולי של מיקומן על צירי מערכת הצירים והבנת משמעותו של שיעור השווה ל־0 בנקודות שעל הצירים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "התבוננו בסרטוט המצורף",
+              "answers": [
+                "A(0,6);B(20,0)"
+              ],
+              "fingerprint": "acc21a3a70da2f98",
+              "texts": {
+                "question_intro": {
+                  "he": "מופיע תיאור של נקודות על הצירים, וצריך להתבונן בשרטוט כדי לזהות את מיקומן. שימו לב במיוחד לנקודות שנמצאות על אחד הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "acc21a3a70da2f98",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כשנקודה נמצאת על אחד הצירים, אחד השיעורים שלה צריך להיות 0. בדקו באיזה ציר היא נמצאת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "acc21a3a70da2f98",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "במשימה הזו בודקים זיהוי של נקודות על הצירים וכתיבת שיעוריהן. חשוב לשים לב שנקודה על ציר אחד כוללת שיעור השווה ל־0.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "acc21a3a70da2f98",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a29087fd20c9d1598cb802b/mq7qq96l23s43lkvd",
+          "title": "נקודות באותו גובה או זו מעל זו",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "2eeac5d2f373e125",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nמה נשאר קבוע כאשר שתי נקודות נמצאות באותו הגובה? \nמה נשאר קבוע כאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת?\nפתרון מודרך: \nA נמצאת 3 ימינה ו־6 למעלה, לכן (3, 6). \nB נמצאת 7 ימינה ובאותו הגובה כמו A, לכן ערך ה־y נשאר 6. נקבל (7, 6). \nC נמצאת על ציר ה־x ומתחת ל־B, לכן ערך ה־x נשאר 7. על ציר ה־x ערך ה־y הוא 0. נקבל (7, 0). \nמטרת השאלה: כתיבת שיעורי נקודות על פי קשרים מרחביים ביניהן, תוך שימוש במושגים \"אותו הגובה\" ו\"מתחת לנקודה\" והבנת הקשר בין מיקום גאומטרי ובין ערכי ה־x וה־y",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qq96lnftfm7oh",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות.",
+              "answers": [
+                "A(3,6);B(7,6);C(7,0) "
+              ],
+              "fingerprint": "362ce696ce0deb1b",
+              "texts": {
+                "question_intro": {
+                  "he": "עכשיו תופיע קבוצה של נקודות שיש ביניהן קשר לפי הגובה או המיקום זו מעל זו. נסו לקרוא את השרטוט ולכתוב את השיעורים המתאימים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "362ce696ce0deb1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אילו נקודות נמצאות באותו גובה, ואילו נקודות מונחות בדיוק מעל או מתחת לאחרות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "362ce696ce0deb1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לשים לב לסדר שבו כותבים את השיעורים ולמיקום של כל נקודה ביחס לצירים. בשאלה הזו בודקים איך מזהים נקודות על מערכת הצירים וכותבים את שיעוריהן נכון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "362ce696ce0deb1b",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00005",
+      "title": "כתיבת שיעורי נקודה- ממוצעת 1",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T10:16:53.624002Z",
+      "component_fingerprint": "ce2c45b7ee120a0b",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לכתוב שיעורי נקודה במערכת צירים עם מספרים חיוביים. נתרגל איך מזהים מיקום של נקודות ומבינים את הקשר בין תנועה על הרשת לבין השיעורים שלהן.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "ce2c45b7ee120a0b",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2917bcd20c9d1598cb8cc7/mptti9na1c802zgwy",
+          "title": "ספירת צעדים והזזת נקודות",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "133b538b052ff1e3",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nקראו קודם את שיעורי הנקודות מהסרטוט. \nלאחר מכן בדקו כמה יחידות זזים מכל נקודה ולאיזה כיוון.\nפתרון מודרך: \nא. מקריאת הסרטוט: \nA נמצאת 4 ימינה ו־2 למעלה ולכן (4, 2). \nB נמצאת 2 ימינה ו־4 למעלה ולכן (2, 4). \nC נמצאת 5 ימינה על ציר ה־x ולכן (5, 0). \nD נמצאת על ציר ה־y בגובה 5 ולכן (0, 5). \nב. הנקודה E נמצאת 5 ימינה ו־4 למעלה מהנקודה B. \nהנקודה B היא (2, 4) ולכן נוסיף: \nx: 2+5=7 \ny: 4+4=8 \nונקבל (7, 8). \nג. הנקודה F נמצאת 3 יחידות משמאל לנקודה A ובאותו הגובה. \nהנקודה A היא (4,2). \nנפחית 3 מ־x ונשאיר את y ללא שינוי. נקבל (1, 2). \nמטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים וכתיבת שיעורי נקודה חדשה על פי תזוזה אופקית ואנכית מנקודה נתונה",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות המסומנות:",
+              "answers": [
+                "כתבו את שיעורי הנקודות המסומנות:A(4,2);B(2,4);C(5,0);D(0,5) ; כתבו את שיעורי נקודה E:E(7,8) ;כתבו את שיעורי נקודה F:F(1,2)"
+              ],
+              "fingerprint": "d32d69cdd6524935",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתבונן בנקודות המסומנות על מערכת הצירים ולחשוב איך כותבים את השיעורים שלהן. נסו להיעזר בכיוון ההתקדמות על הרשת ובמיקום ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d32d69cdd6524935",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק כל נקודה בנפרד ולשים לב לסדר שבו כותבים את השיעורים. אפשר להיעזר בכיוון התנועה על הרשת כדי לא להתבלבל.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d32d69cdd6524935",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת כתיבת שיעורי נקודות ברביע הראשון, תוך הימנעות מטעויות כמו החלפת סדר השיעורים, בלבול בין תנועה אופקית לאנכית, קריאה שגויה של נקודות על הצירים, או ספירה לא נכונה של יחידות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d32d69cdd6524935",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2917bcd20c9d1598cb8cc7/mq7pmy512c3239qox",
+          "title": "מתקנים בגן ציבורי – נקודות בעלות שיעור y זהה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "15b8f0680332a095",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nכאשר נקודות נמצאות על אותו ישר אופקי, מה נשאר קבוע? \nבדקו את הגובה של כל הנקודות. \nפתרון מודרך: \nא. שלושת המתקנים נמצאים על אותו ישר אופקי, לכן ערכי ה־y זהים. לכל נקודה יש ערך x שונה. התשובה היא 2. \nב. מקריאת הסרטוט: \nנדנדה (4, 9) \nמגלשה (10, 9) \nקרוסלה (0, 9) \nג. מחפשים נקודות עם אותו ערך: y=9. לכן הנקודות המתאימות הן: \n(2, 9) \n(13, 9) \nד. השער נמצא על ציר ה־x ולכן ערך ה־y הוא 0. \nהוא נמצא בדיוק מתחת למגלשה, לכן ערך ה־x זהה למגלשה.  \nהמגלשה היא (10, 9) ולכן השער הוא (10, 0). \nמטרת השאלה: \nזיהוי נקודות בעלות אותו שיעורy , קריאת שיעורי נקודות במערכת צירים ויישום הקשרים בין מיקום יחסי של נקודות ובין ערכי הקואורדינטות",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7pw2yfugsewei6",
+              "question_type": "choice",
+              "question_text": "אילו שיעורים של הנקודות זהים בשלושת המתקנים?",
+              "answers": [
+                "שיעורי ה־y זהים."
+              ],
+              "fingerprint": "fca3214a01ee0992",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתבונן במתקנים שעל המסך ולבדוק אילו שיעורים של הנקודות יכולים להיות משותפים לכולם. לאחר מכן אפשר לנסות לזהות את הנקודות המתאימות ואת המיקום של השער.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "fca3214a01ee0992",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לחפש מה משותף לכל הנקודות על אותו קו, ולאחר מכן לבדוק את המיקום של כל מתקן ביחס אליו.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "fca3214a01ee0992",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של נקודות שנמצאות באותו גובה במערכת הצירים, כלומר נקודות ששיעור ה־y שלהן זהה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "fca3214a01ee0992",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7q9lnx188kba8h4",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות המייצגות את המיקום של כל מתקן.",
+              "answers": [
+                "נדנדה:(4,9) ; מגלשה:(10,9) ; קרוסלה: (0,9) "
+              ],
+              "fingerprint": "de441bd216d1ad08",
+              "texts": {
+                "question_intro": {
+                  "he": "נסו לזהות היכן ממוקמים המתקנים לפי מערכת הצירים, ולבדוק אילו נקודות מתאימות למיקום שלהם. שימו לב במיוחד לשיעור ה־y המשותף ולישר שעליו נמצאים המתקנים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "de441bd216d1ad08",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתבונן במיקום של כל מתקן ביחס לישר המשותף וביחס זה לזה, ולבדוק איזה שיעור נשאר זהה בין הנקודות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "de441bd216d1ad08",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מזהים נקודות שממוקמות על אותו ישר ושיש להן שיעור משותף אחד. צריך לשים לב לקריאת שיעורי הנקודות ולבדוק אילו מהן מתאימות למיקום המתואר.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "de441bd216d1ad08",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7q14zx38dkh64e0",
+              "question_type": "choice",
+              "question_text": "אילו מבין הנקודות הבאות נמצאות על הישר שעליו ממוקמים המתקנים?",
+              "answers": [
+                "(2,9)",
+                "(13,9)"
+              ],
+              "fingerprint": "a4468b5fd78475b0",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לבדוק אילו נקודות מתאימות לישר שעליו נמצאים המתקנים, ולשים לב לאיזה שיעור נשאר קבוע בכל הנקודות. אפשר להיעזר בכך כדי להשוות בין האפשרויות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "a4468b5fd78475b0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו על איזה ערך בציר ה־y הנקודות נמצאות, ואז השוו את השיעור הזה בין האפשרויות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "a4468b5fd78475b0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של נקודות שנמצאות על ישר משותף, ולכן חשוב להתבונן בשיעור המשותף שלהן ולקרוא נכון את הזוגות המסודרים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "a4468b5fd78475b0",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7totwghbdfah44",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודה של השער:",
+              "answers": [
+                "(10,0)"
+              ],
+              "fingerprint": "7128a2d3deebcb56",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להיעזר במיקום היחסי של השער ושל המתקנים על מערכת הצירים. קראו בזהירות את הנקודות המסומנות ובדקו את השיעורים שלהן.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7128a2d3deebcb56",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את הנקודה שנמצאת בדיוק על אחד הצירים, ואז בדקו איזה שיעור שלה נשאר קבוע ואיזה משתנה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7128a2d3deebcb56",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת כתיבת שיעור של נקודה על פי המיקום שלה ביחס למתקנים האחרים. כדאי לשים לב אם הנקודה נמצאת על אחד הצירים או על ישר משותף.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7128a2d3deebcb56",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2917bcd20c9d1598cb8cc7/mq7qq96l23s43lkvd",
+          "title": "\"הערכה לפי מיקום יחסי\"",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "a4e703314806509c",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nסמנו לעצמכם את הנקודה (5, 3) וחשבו: \nלאיזה כיוון צריך לזוז כדי לקבל ערך גדול יותר? \nלאיזה כיוון צריך לזוז כדי לקבל ערך קטן יותר?\nפתרון מודרך: \n \nנתונה הנקודה  .A(5, 3) \nא. ערך ה־x גדול מ־5 וערך ה־y גדול מ־3.  \nלכן הנקודה תהיה ימינה ולמעלה מהנקודה A. התשובה: B. \nב. ערך ה־x גדול מ־5 וערך ה־y קטן מ־3. \nלכן הנקודה תהיה ימינה ולמטה מהנקודה A. התשובה: E. \nג. ערך ה־x קטן מ־5 וערך ה־y גדול מ־3. \nלכן הנקודה תהיה שמאלה ולמעלה מהנקודה A. התשובה: C. \nד. ערך ה־x קטן מ־5 וערך ה־y קטן מ־3. \nלכן הנקודה תהיה שמאלה ולמטה מהנקודה A. התשובה: D. \nמטרת השאלה: \nקביעת מיקום יחסי של נקודות במערכת צירים על פי השוואת ערכי ה־x וה־y לנקודה נתונה והסקת שיעורים גדולים או קטנים מערכים נתונים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qq96lnftfm7oh",
+              "question_type": "other",
+              "question_text": "כתבו את הנקודה המתאימה לתיאור על פי מיקומה ביחס לנקודה A.",
+              "answers": [
+                "1:B; 2:E; 3:C; 4:4"
+              ],
+              "fingerprint": "f24b00a62d3e162c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך להתבונן בתיאור של כל מיקום ביחס לנקודה A, ולבחור את הנקודה שמתאימה לו. שווה לעקוב אחרי הכיוון והמרחק בכל סעיף.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f24b00a62d3e162c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לזהות בכל תיאור אם מדובר בהזזה אופקית, אנכית או בשילוב ביניהן, ואז השוו לנקודות הנתונות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f24b00a62d3e162c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת התאמה בין תיאורי מיקום לבין נקודות במערכת הצירים. כדי לפתור, כדאי לקרוא כל תיאור בנפרד ולחפש את הנקודה שמתאימה לכיוון ולמרחק המתוארים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f24b00a62d3e162c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2917bcd20c9d1598cb8cc7/mq7uj8m819je5u65c",
+          "title": "במערכת הצירים הבאה מסומנת הנקודה A(2,3).",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 4,
+          "fingerprint": "0752d87db1ec7524",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nהיעזרו בנקודה (2, 3) כדי להבין כמה שווה כל קפיצה על כל ציר\nפתרון מודרך: \n \nנתונה הנקודה  .A(5, 3) \nא. לפי מיקום הנקודה (2, 3) רואים שכל קפיצה על ציר ה־x שווה 2 יחידות וכל קפיצה על ציר ה־y שווה 3 יחידות. \nב. B נמצאת 4 קפיצות ימינה ו־1 קפיצה למעלה, לכן: \nx=4*2=8 \ny=1*3=3 להשתמש בסימן כפל (נקודה ולא כוכבית) \nנקבל (8, 3). \nC נמצאת 4 קפיצות ימינה ו־5 קפיצות למעלה, לכן: \nx=4*2=8 \ny=5*3=15 להשתמש בסימן כפל (נקודה ולא כוכבית) \nנקבל (8,15). \nמטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים כאשר קנה המידה של הצירים אינו אחיד והסקת ערכי הקואורדינטות על פי ערך של כל יחידת סימון",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7uj8m8309uwqpxw",
+              "question_type": "numeric",
+              "question_text": "1. כמה יחידות מייצג כל מרווח בין משבצות בציר ה־x וה-Y?\n2. כתבו את שיעורי הנקודות B ו־C.",
+              "answers": [],
+              "fingerprint": "9a46ec779a48898f",
+              "texts": {
+                "question_intro": {
+                  "he": "קודם כדאי לבדוק מה מייצג כל מרווח בין משבצות בצירים, ואז להשתמש בזה כדי למצוא את הנקודות המבוקשות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46ec779a48898f",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לנקודה A ולמרווחים על הצירים. אחר כך בדקו כמה מרווחים מפרידים בין A לבין כל אחת מהנקודות האחרות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46ec779a48898f",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה של מערכת צירים כשקנה המידה אינו שווה בשני הצירים. כדאי להתחיל בזיהוי מה מייצג כל מרווח, ורק אחר כך לקבוע את שיעורי הנקודות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46ec779a48898f",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00006",
+      "title": "כתיבת שיעורי נקודה- ממוצעת 2",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T10:17:24.698696Z",
+      "component_fingerprint": "11123660432bb63a",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לעבוד עם נקודות במערכת הצירים ולזהות את המיקום שלהן לפי השיעורים. נתרגל קריאה וכתיבה של נקודות, וגם נבדוק איך מרחקים ותזוזות נראים על הצירים.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "11123660432bb63a",
+          "generated_at": "2026-08-31T09:42:59Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a292f02edbc383f90fbe059/mptti9na1c802zgwy",
+          "title": "תזוזה בין נקודות",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "ac8bee8ba8d1a0ba",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nקראו קודם את שיעורי הנקודות מהסרטוט. \nלאחר מכן בדקו כמה יחידות זזים ולאיזה כיוון\nפתרון מודרך: \n \nנתונה הנקודה  .A(5, 3) \nא. מקריאת הסרטוט: \nA: (0, 3) \nB: (2, 1) \nC: (5, 2) \nב. כדי לעבור מ־B ל־C עוברים מ־2 ל־5 ולכן 3 יחידות ימינה, ועוברים מ־1 ל־2 ולכן יחידה אחת למעלה. \nג. הנקודה D נמצאת 4 יחידות שמאלה ו־2 יחידות למטה מהנקודה C. הנקודה C היא (5, 2). \nנפחית: \nx: 5-4=1 \ny: 2-2=0 \nנקבל (1, 0). \nמטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים, תיאור תזוזה בין נקודות במונחי יחידות וכיוונים וכתיבת שיעורי נקודה חדשה לאחר הזזה מנקודה נתונה",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "1. כתבו את שיעורי הנקודות המסומנות\n2. כמה יחידות יש לנוע כדי להגיע מנקודה B לנקודה C?\n3. נקודה D נמצאת 4 יחידות משמאל ו־2 יחידות למטה מנקודה C. כתבו את שיעורי נקודה D.",
+              "answers": [
+                "A(0,3) B(2,1) C(0,3); שלוש (3) יחידות לימין, 1 יחידות למעלה; D(1,0)"
+              ],
+              "fingerprint": "b48e97df972c7cad",
+              "texts": {
+                "question_intro": {
+                  "he": "בואו ניגש לשאלה על נקודות במערכת הצירים. נסו לקרוא היטב את התנועה והמרחקים, ואז לכתוב את השיעורים המתאימים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b48e97df972c7cad",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להסתכל על הנקודות המסומנות ועל כיוון התזוזה בין נקודה לנקודה. שימו לב במיוחד לסדר השיעורים ולכיוון התנועה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b48e97df972c7cad",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו צריך לקרוא נקודות במערכת הצירים ולחשב תזוזה בין נקודות. חשוב לשים לב לסדר השיעורים, להבחין בין תנועה אופקית לתנועה אנכית, ולבדוק נקודות שנמצאות על הצירים או מתוארות לפי תזוזה מנקודה אחרת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b48e97df972c7cad",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a292f02edbc383f90fbe059/mq7pmy512c3239qox",
+          "title": "\"גן המשחקים\"",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "700b414585b7b269",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nהתקדמות בכיוון מזרח מגדילה את ערך ה־x.  \nהתקדמות בכיוון צפון מגדילה את ערך ה־y. \nמה קורה לערכים כשנעים בכיוון דרום (הכיוון ההפוך לצפון)?\nפתרון מודרך: \n \nא. המזרקה נמצאת 4 מזרחה ו־3 צפונה, לכן (4, 3). \nב. דוכן האוכל נמצא 18 מזרחה ו־24 צפונה, לכן (18, 24). \nג. דרום־מזרחית לדוכן האוכל פירושו: \nx גדול יותר מ־18, y קטן יותר מ־24. \nמבין האפשרויות, רק (20, 22) מתאימה. \nמטרת השאלה: \nתרגום תיאורי מיקום במרחב לשיעורי נקודות במערכת צירים ושימוש בכיוונים יחסיים כדי לזהות מיקום מתאים של נקודה",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7q9lnx188kba8h4",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודה שבה ממוקמת המזרקה:",
+              "answers": [
+                "(4,3)"
+              ],
+              "fingerprint": "12aaf40c21c8f988",
+              "texts": {
+                "question_intro": {
+                  "he": "יש כאן נקודה במפת גן המשחקים שצריך לזהות את מיקומה. נסו להיעזר במבנה של המפה ובמיקומים של האתרים השונים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "12aaf40c21c8f988",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לאתר את המקום המבוקש במפה ולקרוא את השיעורים שלו לפי הצירים. שימו לב לא לבלבל בין הנקודות השונות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "12aaf40c21c8f988",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים קריאת שיעורי נקודה מתוך מפת גן משחקים. חשוב להיעזר במיקום על המערכת, לקרוא את השיעורים לפי הסדר הנכון, ולבדוק את הנקודה המבוקשת מול שאר הנקודות במפה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "12aaf40c21c8f988",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7totwghbdfah44",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודה שבה ממוקם דוכן האוכל:",
+              "answers": [
+                "(18,24)"
+              ],
+              "fingerprint": "86e0b9f4e91e6d5f",
+              "texts": {
+                "question_intro": {
+                  "he": "נסו לזהות את מיקום דוכן האוכל לפי מערכת הצירים ולכתוב את שיעורי הנקודה המתאימים. כדאי להתבונן במיקום שלו ביחס לשאר נקודות הגן.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "86e0b9f4e91e6d5f",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתמקד במיקום של דוכן האוכל ביחס לנקודות האחרות ולבדוק את שני השיעורים שמגדירים אותו במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "86e0b9f4e91e6d5f",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים כתיבת שיעורי נקודה לפי מיקום בגן המשחקים. צריך לקרוא את הנקודה המבוקשת במדויק ולהבחין בין השיעור האופקי לשיעור האנכי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "86e0b9f4e91e6d5f",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7pw2yfugsewei6",
+              "question_type": "choice",
+              "question_text": "מה יכולים להיות שיעורי הנקודה שבה ממוקמת הברזייה?",
+              "answers": [
+                "(20,22)"
+              ],
+              "fingerprint": "177cbed2b9fb6dae",
+              "texts": {
+                "question_intro": {
+                  "he": "בדקו את מיקום הברזייה במערכת הצירים ונסו לכתוב את שיעורי הנקודה שלה. שימו לב לשני השיעורים המתארים את המקום שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "177cbed2b9fb6dae",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להיעזר במיקום היחסי של הברזייה בגן המשחקים ולבדוק את שני השיעורים שלה במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "177cbed2b9fb6dae",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים זיהוי של נקודה במערכת הצירים לפי מיקומה בגן המשחקים. המטרה היא לקרוא נכון את שיעורי הנקודה ולהבין כיצד הם מתארים את המקום שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "177cbed2b9fb6dae",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a292f02edbc383f90fbe059/mq7qq96l23s43lkvd",
+          "title": "נקודות בעלות שיעורים זהים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "154ebe4acc52e43f",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nכאשר נקודות נמצאות זו מעל זו, מה נשאר קבוע? \nכאשר נקודות נמצאות על אותו ישר אופקי, מה נשאר קבוע?\nפתרון מודרך: \n \nא. לפי המיקום ביחס לנקודה (5, 8) \nA נמצאת באותו ערך x ומתחת, לכן (5, 2). \nC נמצאת באותו ערך x ומעל, לכן (5,10). \nD נמצאת משמאל ובאותו גובה, לכן (2, 8). \nE נמצאת מימין ובאותו גובה, לכן (8, 8). \nב. הנקודות A, B ו־C נמצאות זו מעל זו, לכן יש להן אותו ערך של x. \nהתשובה: 1 \nג. הנקודות B, D ו־E נמצאות על אותו ישר אופקי, לכן יש להן אותו ערך של y. \nהתשובה: 2 \nמטרת השאלה: \nזיהוי נקודות בעלות אותו שיעור x או אותו שיעור y והתאמת שיעורי נקודות על פי מיקומן היחסי במערכת הצירים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7zcihq3fy0wkhp9",
+              "question_type": "matching",
+              "question_text": "גררו כל ערך לנקודה המתאימה לו לפי מיקומה ביחס לנקודה B.",
+              "answers": [
+                "{'source': ['A', 'E', 'C', 'D'], 'target': ['(5,2)', '(2,8)', '(8,8)', '(5,10)']}"
+              ],
+              "fingerprint": "6f8603f2f8ec458c",
+              "texts": {
+                "question_intro": {
+                  "he": "במשימה הזו תתבקשו להתאים ערכים לנקודות לפי המיקום שלהן סביב נקודה B. כדאי להיעזר במיקומים היחסיים על הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6f8603f2f8ec458c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לבדוק כל נקודה לפי היחס שלה לנקודה B, ולא לפי סדר אקראי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6f8603f2f8ec458c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת זיהוי של שיעורים זהים בין נקודות שונות במישור. צריך לבחון אילו נקודות נמצאות באותו גובה ואילו נמצאות באותו קו אנכי, ולהתאים כל ערך למקום המתאים לו.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "6f8603f2f8ec458c",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7zdx8k2rc8pgmq8",
+              "question_type": "choice",
+              "question_text": "אילו שיעורים זהים בנקודות A, B, C?",
+              "answers": [
+                "שיעורי ה־x זהים."
+              ],
+              "fingerprint": "e1919af6bf880ff3",
+              "texts": {
+                "question_intro": {
+                  "he": "במשימה הזו בודקים אילו שיעורים משותפים לנקודות שונות. אפשר להיעזר במיקום של הנקודות ביחס לצירים ולנקודה B.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e1919af6bf880ff3",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו להשוות בין הנקודות לפי הכיוון שבו הן מסתדרות על המישור.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e1919af6bf880ff3",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת הבחנה בין שיעור x לשיעור y לפי המיקום היחסי של נקודות. כשבודקים נקודות על אותו קו אנכי או באותו גובה, אפשר לזהות אילו שיעורים נשארים זהים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "e1919af6bf880ff3",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7zgbmr1lnmtkdu9",
+              "question_type": "choice",
+              "question_text": "אילו שיעורים זהים בנקודות B, D, E?",
+              "answers": [
+                "שיעורי ה־y זהים."
+              ],
+              "fingerprint": "b3991292b5683b73",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן תבדקו אילו שיעורים משותפים לקבוצה אחרת של נקודות. הסתכלו על המיקום שלהן במישור ונסו לזהות את הדפוס.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b3991292b5683b73",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אם הנקודות נמצאות באותו קו אופקי או באותו קו אנכי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b3991292b5683b73",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת הבנה של שיעורים זהים בין נקודות במישור. כדי לפתור אותה, כדאי להשוות בין המיקום של הנקודות ולזהות מה משותף להן.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "b3991292b5683b73",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a292f02edbc383f90fbe059/mq7uj8m819je5u65c",
+          "title": "קנה מידה שונה 2",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 4,
+          "fingerprint": "a5353c5b8d4aeeb3",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n רמז: \nבדקו את מיקום הנקודה (2,0.5) כדי להבין כמה שווה כל צעד על כל ציר. \nפתרון מודרך: \n \nא. מתחילים מראשית הצירים. A נמצאת צעד אחד ימינה וצעד אחד למעלה. בציר ה־x כל צעד שווה 2 יחידות, לכן 1×2=2. בציר ה־y כל צעד שווה 0.5 יחידות, לכן .1×0.5=0.5 נקבל (2,0.5). \nב. B נמצאת באותו ערך x כמו A ושלושה צעדים למעלה מראשית הצירים. בציר ה־x נקבל 1×2=2 ובציר ה־y נקבל 3×0.5=1.5. הנקודה היא (2,1.5). \nC נמצאת חמישה צעדים ימינה וצעד אחד למעלה מראשית הצירים. בציר ה־x נקבל 5×2=10 ובציר ה־y נקבל 1×0.5=0.5. הנקודה היא (10,0.5). \nD נמצאת חמישה צעדים ימינה וארבעה צעדים למעלה מראשית הצירים. בציר ה־x נקבל 5×2=10 ובציר ה־y נקבל 4×0.5=2. הנקודה היא (10,2). \nמטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים כאשר לכל ציר קנה מידה שונה וחישוב הקואורדינטות בהתאם לערך כל יחידת סימון",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7uj8m8309uwqpxw",
+              "question_type": "other",
+              "question_text": "1. מהם שיעורי הנקודה A:\n2. השלימו את שיעורי הנקודות הנוספות:",
+              "answers": [
+                "A(2,0.5) ; B(2,1.5) ; C(10,0.5) ; D(10,2) "
+              ],
+              "fingerprint": "4b2ca9be2fcd2d2d",
+              "texts": {
+                "question_intro": {
+                  "he": "במשימה הזו צריך להשלים שיעורי נקודות לפי מיקומן במערכת צירים, גם כשקנה המידה אינו אחיד. כדאי להסתכל בזהירות על הערכים הנתונים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "4b2ca9be2fcd2d2d",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב שלא כל ציר מתקדם באותו קצב. בדקו כל נקודה ביחס לצירים לפני שאתם משלימים את הערכים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "4b2ca9be2fcd2d2d",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת קריאה מדויקת של נקודות במערכת צירים, כולל מצב שבו קנה המידה שונה. חשוב להתייחס לכל ציר בנפרד ולוודא את מיקום הנקודות לפני שמשלימים את השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "4b2ca9be2fcd2d2d",
+                  "generated_at": "2026-08-31T09:42:59Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00007",
+      "title": "כתיבת שיעורי נקודה- מתקדמת",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-07-30T10:17:53.380753Z",
+      "component_fingerprint": "935ba5019f34c870",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים כתיבת שיעורי נקודה במערכת הצירים, עם מספרים חיוביים. לומדים לקרוא מיקום במדויק ולזהות נקודות לפי השיעורים שלהן.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "935ba5019f34c870",
+          "generated_at": "2026-08-31T09:45:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a3467a2f63c9b47cfd501/mq7pmy512c3239qox",
+          "title": "שאלה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "50ebafed0485ccd0",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7pw2yfugsewei6",
+              "question_type": "choice",
+              "question_text": "מה יכולים להיות שיעורי הנקודה B?",
+              "answers": [
+                "(9,6)"
+              ],
+              "fingerprint": "0469e468a607a15d",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם שאלה על נקודה במערכת צירים. כדאי להביט היטב בשרטוט ולנסות למצוא את השיעורים שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0469e468a607a15d",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לכיוון התנועה ולסדר שבו רושמים את השיעורים. חשוב לבדוק כל רכיב בנפרד.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0469e468a607a15d",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי להבחין בין השיעור האופקי לשיעור האנכי, ולזכור שנקודה על ציר חייבת לכלול 0 בשיעור המתאים. אפשר גם להיעזר בראשית הצירים ולספור את המרחקים במדויק.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0469e468a607a15d",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7q14zx38dkh64e0",
+              "question_type": "choice",
+              "question_text": "מה יכולים להיות שיעורי הנקודה C?",
+              "answers": [
+                "(1,5)"
+              ],
+              "fingerprint": "d9667d889788db46",
+              "texts": {
+                "question_intro": {
+                  "he": "בואו נבדוק נקודה במערכת הצירים. קראו את הנתונים במסך ונסו לנסח את שיעוריה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d9667d889788db46",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לסדר השיעורים ולכיוון התנועה במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d9667d889788db46",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק את מיקום הנקודה לפי התנועה במערכת הצירים ולוודא ששיעורי x ו־y נכתבים בסדר הנכון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d9667d889788db46",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a3467a2f63c9b47cfd501/mptti9na1c802zgwy",
+          "title": "שאלה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "f998fc62fc89e39a",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות:",
+              "answers": [
+                "A(1,1); B(2,2); C(4,2); D(6,0)"
+              ],
+              "fingerprint": "3e051692940a8f40",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם כמה נקודות במערכת צירים. כדאי להתבונן בשרטוט ולכתוב את השיעורים שלהן.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "3e051692940a8f40",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו כל נקודה בנפרד, ושימו לב גם לסדר כתיבת השיעורים וגם למיקום שלה ביחס לצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "3e051692940a8f40",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לפתור, כדאי לעבור על כל נקודה בנפרד ולזהות את השיעור האופקי ואת השיעור האנכי שלה. חשוב להיצמד לשרטוט ולבדוק את המיקום ביחס לראשית הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "3e051692940a8f40",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a3467a2f63c9b47cfd501/mq7qq96l23s43lkvd",
+          "title": "שאלה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "8a1048fec59b6030",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qq96lnftfm7oh",
+              "question_type": "other",
+              "question_text": "לפניכם שלוש נקודות במערכת צירים. כתבו את שיעוריהן.",
+              "answers": [
+                "A(0.5,1); B(1.5,3); C(2.25,5)"
+              ],
+              "fingerprint": "7a9d3eb9178056ba",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם שלוש נקודות במערכת צירים. נסו לזהות את השיעורים של כל אחת מהן לפי השרטוט.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7a9d3eb9178056ba",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לעבור נקודה נקודה, ולהקפיד על סדר השיעורים ועל ספירה מדויקת של המרחקים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7a9d3eb9178056ba",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי מדויק של מיקום נקודות במערכת צירים. חשוב להתבונן בכל נקודה, לבדוק את הכיוון האופקי והאנכי שלה, ולהיעזר בראשית הצירים כשסופרים את המרחקים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "7a9d3eb9178056ba",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a3467a2f63c9b47cfd501/mq9230wp1ortbbtpq",
+          "title": "שאלה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 4,
+          "fingerprint": "caf5f1cdafd620d7",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq923ib62k4bxr51f",
+              "question_type": "choice",
+              "question_text": "מבין הנקודות B1 עד B7, סמנו את אלה שאליהן הרובוט יכול לעבור מהנקודה A.",
+              "answers": [
+                "B1",
+                "B7",
+                "B2",
+                "B4",
+                "B6"
+              ],
+              "fingerprint": "20b37aaabcd78df6",
+              "texts": {
+                "question_intro": {
+                  "he": "קראו את האפשרויות על המסך ובדקו אילו נקודות מתאימות למעבר של הרובוט מהנקודה A. נסו להיעזר בכיוון התנועה ובמיקום על הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "20b37aaabcd78df6",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתמקד בכיוון שבו הרובוט יכול לזוז מהנקודה A, ולבדוק כל אפשרות לפי המיקום שלה ביחס אליה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "20b37aaabcd78df6",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לבדוק אילו נקודות אפשר להגיע אליהן מהנקודה A, ואחר כך לחשוב על מספר המעברים הדרוש כדי להגיע לנקודה המבוקשת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "20b37aaabcd78df6",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mqt8y3xl12ibgt9qz",
+              "question_type": "fill-in",
+              "question_text": "אחרי כמה מעברים יגיע הרובוט מהנקודה A לנקודה (22 ,103)?",
+              "answers": [],
+              "fingerprint": "d256ff88585c44df",
+              "texts": {
+                "question_intro": {
+                  "he": "קראו את הנתון על היעד של הרובוט, ועקבו אחרי מספר המעברים שהוא מבצע מהנקודה A. נסו לחשב את הדרך לפי המיקום על הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d256ff88585c44df",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהנקודה A ולספור את המעברים עד שמגיעים ליעד המבוקש.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d256ff88585c44df",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת מעקב אחרי רצף מעברים מהנקודה A ועד הנקודה המבוקשת, תוך ספירה מדויקת של מספר הצעדים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "d256ff88585c44df",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00008",
+      "title": "כתיבת שיעורי נקודה - הערכה 1",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-08-02T05:48:08.042670Z",
+      "component_fingerprint": "3c980a0cd412d82f",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים כתיבת שיעורי נקודות במערכת צירים חיובית. עובדים על זיהוי מיקום נקודות ועל תיאור היחס ביניהן לפי הצירים.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "3c980a0cd412d82f",
+          "generated_at": "2026-08-31T09:45:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a59eba2f63c9b47cfe2fd/mq7qq96l23s43lkvd",
+          "title": "נקודות בעלות שיעורים זהים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "978051a426edaa23",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\nמטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים והתאמת ייצוג קואורדינטיבי לנקודות על פי מיקומן היחסי במערכת",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq9516882apa3ag4f",
+              "question_type": "other",
+              "question_text": "מהם שיעורי הנקודה A?",
+              "answers": [
+                "A(3,5)"
+              ],
+              "fingerprint": "0b0fe25c22f1dc0a",
+              "texts": {
+                "question_intro": {
+                  "he": "במסך הזה צריך לזהות את שיעורי הנקודה A. הסתכלו על המיקום שלה במערכת הצירים ונסו לכתוב את השיעורים המתאימים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b0fe25c22f1dc0a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להיעזר במיקום של הנקודה A ביחס לצירים, ולשים לב לסדר שבו כותבים את השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b0fe25c22f1dc0a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים זיהוי של שיעורי נקודה לפי מיקומה במערכת הצירים, בלי להתבלבל בסדר השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "0b0fe25c22f1dc0a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7zcihq3fy0wkhp9",
+              "question_type": "matching",
+              "question_text": "גררו לכל נקודה את שיעורי הנקודה המתאימים לה, לפי מיקומה ביחס לנקודה A.",
+              "answers": [
+                "{'source': ['B', 'C', 'D', 'E'], 'target': ['(2,7)', '(1,3)', '(6,7)', '(5,4)']}"
+              ],
+              "fingerprint": "2105fd6043024106",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להסתכל על הנקודה A ועל הנקודות האחרות ביחס אליה. נסו להתאים בין המיקום של כל נקודה לבין השיעורים שלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "2105fd6043024106",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל מהנקודה A, ואז לבדוק כל נקודה אחרת לפי המרחקים והגובה שלה ביחס אליה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "2105fd6043024106",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של נקודות במערכת הצירים לפי המיקום שלהן ביחס לנקודת ייחוס. חשוב לשים לב לכיוון התזוזה, לספירה מדויקת של משבצות ולכתיבת השיעורים בסדר הנכון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "2105fd6043024106",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00008-item-00002",
+          "title": "תזוזה בין נקודות",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "ebea39681912dae9",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n מטרת השאלה: \nכתיבת שיעורי נקודות חדשות על פי תזוזה אופקית ואנכית מנקודה נתונה במערכת הצירים",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות B ו-C",
+              "answers": [
+                "B(5,5); C(1,4)"
+              ],
+              "fingerprint": "9a46d0ab8ca1bb34",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתבונן במיקום של הנקודות ביחס לנקודת הייחוס ולבדוק את התזוזה לכל כיוון. אחר כך אפשר לכתוב את שיעורי הנקודות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46d0ab8ca1bb34",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק אם התיאור מתייחס לתזוזה אנכית או אופקית, ולשים לב שספירה נעשית לפי משבצות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46d0ab8ca1bb34",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לקרוא את מיקום שתי הנקודות לפי התזוזה ביניהן, ולזכור שבכתיבה של נקודות חשוב לשמור על סדר נכון של השיעורים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9a46d0ab8ca1bb34",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a59eba2f63c9b47cfe2fd/mq7pmy512c3239qox",
+          "title": "\"גן המשחקים\"",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "d49de3984bbc522c",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n מטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים, ושימוש בתזוזות אופקיות ואנכיות כדי לזהות נקודות מתאימות על פי תיאור מציאותי.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7q9lnx188kba8h4",
+              "question_type": "other",
+              "question_text": "כתבו את המיקום של הקופסאות:",
+              "answers": [
+                "קופסה 1: (2,7); קופסה 2: (1,3); קופסה 3: (5,4); קופסה 4: (4,2)"
+              ],
+              "fingerprint": "94312b857fe33898",
+              "texts": {
+                "question_intro": {
+                  "he": "מומלץ להשוות בין כל קופסה לבין ההזזה המבוקשת, ולבדוק איזו מהן מתאימה לתנועה כלפי מטה או שמאלה. כך אפשר למצוא את המיקום הנכון של הקופסאות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "94312b857fe33898",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר בכיוון של התזוזה: למטה או שמאלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "94312b857fe33898",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק את מיקום הקופסאות לפי מספר הטורים והמדפים, ולראות איזו מהן מתאימה לתזוזה המבוקשת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "94312b857fe33898",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq7pw2yfugsewei6",
+              "question_type": "choice",
+              "question_text": "איזו קופסה אפשר להוריד 5 מדפים למטה ממקומה הנוכחי?",
+              "answers": [
+                "קופסה 1"
+              ],
+              "fingerprint": "58a2c62568a6557b",
+              "texts": {
+                "question_intro": {
+                  "he": "יש כאן כמה קופסאות במיקומים שונים. נסו לזהות איזו מהן מתאימה לתזוזה המבוקשת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "58a2c62568a6557b",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתמקד בקופסאות ולבדוק איך כל תזוזה משנה את המיקום שלהן ביחס לרשת.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "58a2c62568a6557b",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של קופסה לפי תזוזה נתונה על גבי רשת. צריך לשים לב לכיוון ההזזה, ולבדוק איזה מיקום מתאים להורדה למטה או להזזה שמאלה בהתאם למיקומה הנוכחי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "58a2c62568a6557b",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq969sukq4u6zj0d",
+              "question_type": "choice",
+              "question_text": "איזו קופסה אפשר להזיז 5 טורים שמאלה?",
+              "answers": [
+                "קופסה 3"
+              ],
+              "fingerprint": "9d1ecc27bc58127d",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לבחון את הקופסאות לפי ההזזה המתבקשת, ולבדוק מה קורה למיקום שלהן כשנעים למטה או שמאלה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9d1ecc27bc58127d",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לעקוב אחרי שינוי אחד בכל פעם: טורים או מדפים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9d1ecc27bc58127d",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לענות על השאלה, צריך לחשוב על תנועה במערכת הצירים ולבדוק כיוון ומרחק. חשוב לשים לב אם מזיזים שמאלה, ימינה, למעלה או למטה, ולספור את המשבצות נכון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "9d1ecc27bc58127d",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00009",
+      "title": "כתיבת שיעורי נקודה - הערכה 2",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-08-02T05:59:12.396615Z",
+      "component_fingerprint": "50afa2b6a45bf4af",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים כתיבת שיעורי נקודות במערכת הצירים. נלמד לקרוא מיקום של נקודות ולכתוב אותו בצורה מדויקת.",
+          "prompt_version": "cp-v1",
+          "source_fingerprint": "50afa2b6a45bf4af",
+          "generated_at": "2026-08-31T09:45:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a63ec66d78e0bf41aaa94/mptti9na1c802zgwy",
+          "title": "במערכת הצירים שלפניכם מסומנות 4 נקודות.",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "4ba250115bfcd4d8",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n מטרת השאלה: \nקריאת שיעורי נקודות במערכת צירים שבה ערך כל משבצת אינו שווה ליחידת אורך אחת, כולל נקודות הנמצאות על הצירים ובתוך מערכת הצירים.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7qfqdy2npir5xiz",
+              "question_type": "other",
+              "question_text": "כתבו את שיעורי הנקודות:",
+              "answers": [
+                "A(0,6); B(10,0); C(2,4); D(8,4)"
+              ],
+              "fingerprint": "f10dab3913b0e389",
+              "texts": {
+                "question_intro": {
+                  "he": "לפניכם מערכת צירים ובה ארבע נקודות מסומנות. כדאי להתבונן במיקום של כל נקודה ולכתוב את שיעוריה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f10dab3913b0e389",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מנקודת ההתחלה במערכת הצירים ולבדוק כל נקודה לפי הציר האופקי והציר האנכי.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f10dab3913b0e389",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת כתיבה של שיעורי נקודות במערכת הצירים, תוך הקפדה על סדר השיעורים ועל זיהוי נכון של המיקום של כל נקודה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f10dab3913b0e389",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a63ec66d78e0bf41aaa94/mq7uj8m819je5u65c",
+          "title": "שאלה - רחפן",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "b88c9528742b2447",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \nמטרת השאלה: \nתרגום תיאור מציאותי של מיקומים לשיעורי נקודות במערכת צירים, ושימוש בתזוזות בין נקודות לזיהוי מיקומים מתאימים.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq7uj8m8309uwqpxw",
+              "question_type": "other",
+              "question_text": "כתבו את המיקום של כל עובד. עובד 1:",
+              "answers": [
+                "עובד 1: (1,4); עובד 2 (1,2); עובד 3 (2,2); עובד 4: (5,4); א. עובד (2) זז (2) יחידות למעלה ופגש את עובד 1; ב. עובד 4 זז יחידות (2) למטה ו־3 יחידות שמאלה ופגש את עובד (3)."
+              ],
+              "fingerprint": "8829c759b0e71f8a",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך לבדוק תזוזה של עובדים במערכת הצירים ולזהות מי נפגש עם מי. כדאי לעקוב אחרי הכיוון והמרחק של כל תזוזה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "8829c759b0e71f8a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר במיקומים ההתחלתיים של העובדים ולבדוק איך כל תזוזה משנה את המקום שלהם במערכת הצירים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "8829c759b0e71f8a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה עוסקת בכתיבת מיקומים במערכת הצירים ובבדיקה של תזוזות כדי לזהות מפגש בין נקודות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "8829c759b0e71f8a",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "https://learning.cet.ac.il/metadata/6a2a63ec66d78e0bf41aaa94/mq7qq96l23s43lkvd",
+          "title": "שאלה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "475061d1cd9c68e5",
+          "information_to_bot": "טעויות נפוצות – יעד 1א \n\nכתיבת שיעורי נקודות ברביע הראשון \n\n \n\n1. החלפת סדר השיעורים \n\nתיאור: \nהתלמיד כותב תחילה את שיעור ה־y ורק אחר כך את שיעור ה־x. \n\nדוגמה: \nבמקום (5,3) כותב (3,5). \n\n \n\n2. בלבול בין תנועה אופקית לתנועה אנכית \n\nתיאור: \nהתלמיד מקשר בטעות בין תנועה ימינה לבין שיעור ה־y, או בין תנועה למעלה לבין שיעור ה־x. \n\nדוגמה: \nלאחר תנועה של 7 ימינה ו־4 למעלה כותב (4,7). \n\n \n\n3. קריאה שגויה של נקודות על הצירים \n\nתיאור: \nהתלמיד אינו מזהה שנקודה הנמצאת על אחד הצירים חייבת להכיל שיעור השווה ל־0. \n\nדוגמאות: \n\nנקודה על ציר ה־x נכתבת (5,2) במקום (5,0). \n\nנקודה על ציר ה־y נכתבת (3,6) במקום (0,6). \n\n \n\n4. בלבול בין ראשית הצירים לבין אחת מהנקודות \n\nתיאור: \nהתלמיד מתחיל למדוד את המיקום מנקודה אחרת במקום מראשית הצירים. \n\n \n\n5. ספירה לא נכונה של יחידות \n\nתיאור: \nהתלמיד מדלג על משבצות, סופר קווי רשת במקום מרווחים או להפך. \n\n \n\n6. אי־הבנת משמעות הביטוי \"אותו גובה\" \n\nתיאור: \nהתלמיד משנה גם את שיעור ה־x וגם את שיעור ה־y. \n\nבפועל: \nכאשר שתי נקודות נמצאות באותו גובה, שיעור ה־y שלהן זהה. \n\n \n\n7. אי־הבנת משמעות הביטוי \"בדיוק מתחת\" \n\nתיאור: \nהתלמיד משנה את שני השיעורים. \n\nבפועל: \nכאשר נקודה נמצאת בדיוק מתחת לנקודה אחרת, שיעור ה־x נשאר זהה ורק שיעור ה־y משתנה. \n\n \n\n8. ביצוע תזוזה בכיוון שגוי \n\nתיאור: \nבמקום להוסיף לערך המתאים התלמיד מחסיר, או להפך. \n\nדוגמה: \n\"4 יחידות ימינה\" מתורגם להקטנת ערך ה־x. \n\n \n\n9. שינוי שני השיעורים כאשר רק אחד צריך להשתנות \n\nתיאור: \nבעת הזזה אופקית התלמיד משנה גם את שיעור ה־y, או להפך. \n\n \n\n10. בלבול בין ישר אופקי לישר אנכי \n\nתיאור: \nהתלמיד מחליף בין התנאים. \n\nבפועל: \n\nישר אופקי → אותו שיעור y. \n\nישר אנכי → אותו שיעור x. \n\n \n\n11. קביעה שגויה של מרחק מציר \n\nתיאור: \nהתלמיד משתמש בשיעור הלא נכון כדי לקבוע קרבה לציר. \n\nלדוגמה: \nבנקודות שעל אותו גובה הוא משווה את ערכי ה־y במקום את ערכי ה־x. \n\n \n\n12. התעלמות מקנה מידה שונה בצירים \n\nתיאור: \nהתלמיד מתייחס לכל משבצת כיחידה אחת גם כאשר קנה המידה שונה. \n\nדוגמה: \nאם כל קפיצה בציר ה־x מייצגת 2 יחידות, התלמיד כותב 4 במקום 8. \n\n \n\n13. שימוש בקנה המידה של ציר אחד גם עבור הציר השני \n\nתיאור: \nהתלמיד מזהה נכון את קנה המידה של ציר ה־x אך מיישם אותו גם על ציר ה־y. \n\n \n\n14. קושי בתרגום תיאור מילולי למערכת צירים \n\nתיאור: \nהתלמיד אינו מקשר בין כיווני תנועה לבין השיעורים המתאימים. \n\nדוגמאות: \n\nמזרח → x גדל. \n\nצפון → y גדל. \n\n \n\n15. פירוש שגוי של מיקום יחסי \n\nתיאור: \nכאשר נאמר ששיעור ה־x גדול יותר, התלמיד בוחר נקודה שמאלה במקום ימינה. \n\n \n\n16. זיהוי שגוי של נקודות בעלות שיעור משותף \n\nתיאור: \nהתלמיד בוחר נקודות בעלות אותו מרחק מראשית הצירים במקום אותו x או אותו y. \n\n \n\n17. חיפוש מספרים במקום קשרים \n\nתיאור: \nבשאלות מתקדמות התלמיד מחפש ערכים זהים במקום לזהות את הדפוס או היחס בין הנקודות. \n\n \n\n18. קושי בהסקת דפוס בין נקודות \n\nתיאור: \nהתלמיד מצליח לקרוא נקודות אך מתקשה לזהות כלל החוזר על עצמו בין מספר נקודות. \n\n \n\n19. אי־הבחנה בין תנאי הכרחי לתנאי אפשרי \n\nתיאור: \nבשאלות פתוחות התלמיד מחפש תשובה יחידה, למרות שקיימים פתרונות אפשריים רבים. \n\n \n\n20. אי־בדיקת התאמת הפתרון לכל התנאים \n\nתיאור: \nהתלמיד בודק רק אחד מהתנאים ומתעלם מהשאר. \n\nדוגמה: \nמוצא נקודה בעלת שיעור x מתאים, אך שיעור ה־y אינו מקיים את הדרישה. \n\n מטרת השאלה: \nכתיבת שיעורי נקודות על פי קשרים בין הקואורדינטות של נקודות שונות, והצעת נקודה העומדת בתנאים נתונים על סמך השוואת שיעורי ה־x וה־y.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "mq988y06326p5tms5",
+              "question_type": "other",
+              "question_text": "מצאו את שיעורי הנקודות B ו־:C",
+              "answers": [
+                "B(6,1);C(1,6)"
+              ],
+              "fingerprint": "f8cbd4692cfa3f67",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך למצוא את שיעורי הנקודות המסומנות ולהשלים נקודה נוספת לפי התנאי שמופיע בהמשך. כדאי לבדוק את המיקום של כל נקודה בזהירות.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f8cbd4692cfa3f67",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתבונן היטב בנקודות המסומנות ולכתוב כל שיעור בנפרד, בלי למהר.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f8cbd4692cfa3f67",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של שיעורי נקודות במערכת הצירים וגם השלמה של נקודה על פי תנאי נתון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "f8cbd4692cfa3f67",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "mq98b063eaugkre5",
+              "question_type": "other",
+              "question_text": "הציעו שיעורי נקודה D כך ש:",
+              "answers": [
+                "D(1,1)"
+              ],
+              "fingerprint": "5b9df899962b22c0",
+              "texts": {
+                "question_intro": {
+                  "he": "קראו כל היגד בנפרד ובדקו אם הוא מתאים למה שלמדתם על יחידות מסה.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b9df899962b22c0",
+                  "generated_at": "2026-08-31T09:48:16Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו קודם את הכיוון שבו זזים, ורק אחר כך את מספר המשבצות בכל כיוון.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b9df899962b22c0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לשים לב לסדר שבו כותבים את השיעורים, ולבדוק אם הנקודה נמצאת על אחד הצירים או מול נקודה אחרת. אפשר גם להיעזר בספירה מדויקת של המשבצות והכיוון שאליו מתקדמים.",
+                  "prompt_version": "cp-v1",
+                  "source_fingerprint": "5b9df899962b22c0",
+                  "generated_at": "2026-08-31T09:45:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
