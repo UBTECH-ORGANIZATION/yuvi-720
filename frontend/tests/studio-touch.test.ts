@@ -26,6 +26,7 @@ const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
 
 const avatar = read('frontend/src/features/Yuvi-studio/YuviAvatar3D.tsx')
 const studio = read('frontend/src/features/Yuvi-studio/StudioContent.tsx')
+const propMenu = read('frontend/src/features/Yuvi-studio/panel/PropMenu.tsx')
 const css = read('frontend/src/styles/Yuvi-studio.css')
 const he = JSON.parse(read('locales/he.json')) as Record<string, string>
 
@@ -35,13 +36,47 @@ test('only the studio takes the browser gestures away', () => {
   assert.match(avatar, /if \(orbit\) \{[\s\S]{0,300}touchAction = 'none'/)
 })
 
-test('press and hold is the finger right-click', () => {
+test('press and hold opens the furniture menu on touch', () => {
   assert.match(avatar, /holdTimer = window\.setTimeout/)
-  // Both routes must open the same menu, or the two drift apart.
+  // Touch keeps a deliberate alternative to mouse hover.
   assert.match(avatar, /openMenuAt\(pressX, pressY\)/)
-  assert.match(avatar, /openMenuAt\(event\.clientX, event\.clientY\)/)
   // A hold that became a drag is not a hold.
   assert.match(avatar, /if \(holdTimer && Math\.hypot[\s\S]{0,80}cancelHold\(\)/)
+})
+
+test('hovering furniture opens its menu and leaving it begins dismissal', () => {
+  assert.match(avatar, /const onPropHover = \(event: PointerEvent\) => \{[\s\S]{0,160}openMenuAt\(event\.clientX, event\.clientY\)/)
+  assert.match(avatar, /addEventListener\('pointermove', onPropHover/)
+  assert.match(avatar, /addEventListener\('pointerleave', onPropHoverLeave\)/)
+  assert.match(studio, /onItemMenu=\{!placing \? showPropMenu : undefined\}/)
+  assert.match(studio, /onItemMenuLeave=\{!placing \? deferPropMenuClose : undefined\}/)
+  assert.match(studio, /onHoverStart=\{clearPropMenuClose\}/)
+  assert.match(studio, /setTimeout\(\(\) => setPropMenu\(null\), 350\)/)
+  assert.match(propMenu, /onMouseEnter=\{onHoverStart\}/)
+})
+
+test('tintable furniture offers five quick colours and the full palette', () => {
+  assert.match(studio, /ITEM_TINTS\.slice\(0, 5\)/)
+  assert.match(studio, /<RoomColorDialog/)
+  assert.match(studio, /ITEM_TINTS\.map\(\(hex\) => \(/)
+  assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
+})
+
+test('hovering Yuvi station offers only the Design Yuvi action', () => {
+  assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
+  assert.match(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
+  assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
+  assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
+})
+
+test('room styles share the General Room tab', () => {
+  assert.match(studio, /type RoomTab = RoomItemCategory \| 'general'/)
+  assert.match(studio, /YuviStudio\.room\.general/)
+  assert.match(studio, /category === 'general'/)
+  assert.match(studio, /key: 'floor', options: ROOM_STYLES/)
+  assert.match(studio, /key: 'wall', options: WALL_STYLES/)
+  assert.match(studio, /key: 'mood', options: MOODS/)
+  assert.equal(he['YuviStudio.room.general'], 'חדר כללי')
 })
 
 test('two fingers zoom and pan', () => {

@@ -109,9 +109,10 @@ interface Props {
   lockRoam?: boolean
   /** Fires when the learner clicks the floor while placing. */
   onPlaceAt?: (x: number, z: number, valid: boolean) => void
-  /** Right-click on a placed prop. Passing it enables in-world prop menus;
-   *  `null` means the menu should close. */
+  /** Hovering a placed prop opens its in-world menu. */
   onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
+  /** The pointer has left the room canvas, so its menu may close. */
+  onItemMenuLeave?: () => void
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -137,7 +138,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -174,6 +175,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const lockRoamRef = useRef(lockRoam)
   const onPlaceAtRef = useRef(onPlaceAt)
   const onItemMenuRef = useRef(onItemMenu)
+  const onItemMenuLeaveRef = useRef(onItemMenuLeave)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -211,6 +213,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { lockRoamRef.current = lockRoam }, [lockRoam])
   useEffect(() => { onPlaceAtRef.current = onPlaceAt }, [onPlaceAt])
   useEffect(() => { onItemMenuRef.current = onItemMenu }, [onItemMenu])
+  useEffect(() => { onItemMenuLeaveRef.current = onItemMenuLeave }, [onItemMenuLeave])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -944,15 +947,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       const uid = room.pickItem(raycaster)
       const station = uid ? null : room.pickStation(raycaster)
       if (!uid && !station) { report(null); return false }
-      const anchor = uid ? room.itemAnchor(uid) : room.stationAnchor(station!)
-      if (!anchor) { report(null); return false }
-      anchor.project(camera)
+      const side = clientX + 190 > rect.right ? 'left' : 'right'
       report({
         uid: uid ?? `station:${station}`,
-        x: rect.left + ((anchor.x + 1) / 2) * rect.width,
-        y: rect.top + ((1 - anchor.y) / 2) * rect.height,
+        x: clientX,
+        y: THREE.MathUtils.clamp(clientY, rect.top + 125, rect.bottom - 125),
+        side,
       })
       return true
+    }
+    const onPropHover = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || dragging || placingRef.current) return
+      openMenuAt(event.clientX, event.clientY)
+    }
+    const onPropHoverLeave = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') onItemMenuLeaveRef.current?.()
     }
 
     const onOrbitDown = (event: PointerEvent) => {
@@ -1057,12 +1066,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       gestureConsumed = false
       renderer.domElement.style.cursor = 'grab'
     }
-    // Right-click a placed prop for its own menu, Sims-style. The browser menu
-    // is always suppressed over the bay — right-drag is how you pan.
+    // The browser menu is always suppressed over the bay — right-drag is how
+    // learners pan the camera, while furniture actions open on hover.
     const onContextMenu = (event: MouseEvent) => {
       event.preventDefault()
-      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > TAP_SLOP_MOUSE) return
-      openMenuAt(event.clientX, event.clientY)
     }
     // While a prop is on the cursor, the room shows exactly where it will land.
     let lastPointerAt: { clientX: number; clientY: number } | null = null
@@ -1118,6 +1125,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.addEventListener('wheel', onOrbitWheel, { passive: false })
       renderer.domElement.addEventListener('dblclick', onOrbitReset)
       renderer.domElement.addEventListener('contextmenu', onContextMenu)
+      renderer.domElement.addEventListener('pointermove', onPropHover, { passive: true })
+      renderer.domElement.addEventListener('pointerleave', onPropHoverLeave)
       renderer.domElement.addEventListener('pointermove', onGhostMove, { passive: true })
       window.addEventListener('pointermove', onOrbitMove)
       window.addEventListener('pointerup', onOrbitUp)
@@ -1680,6 +1689,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('wheel', onOrbitWheel)
       renderer.domElement.removeEventListener('dblclick', onOrbitReset)
       renderer.domElement.removeEventListener('contextmenu', onContextMenu)
+      renderer.domElement.removeEventListener('pointermove', onPropHover)
+      renderer.domElement.removeEventListener('pointerleave', onPropHoverLeave)
       renderer.domElement.removeEventListener('pointermove', onGhostMove)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)

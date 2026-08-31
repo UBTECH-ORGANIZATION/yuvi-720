@@ -30,11 +30,9 @@ const ROOM_ICONS: Record<RoomItemCategory, string> = {
   seating: 'sofa', desk: 'book', play: 'gamepad', nature: 'leaf',
   light: 'lightbulb', tech: 'chip', wall: 'image',
 }
-type RoomTab = RoomItemCategory | 'floor' | 'wallStyle' | 'mood'
+type RoomTab = RoomItemCategory | 'general'
 const ROOM_STYLE_TABS: Array<{ id: Exclude<RoomTab, RoomItemCategory>; labelKey: string; icon: string }> = [
-  { id: 'floor', labelKey: 'YuviStudio.room.floor', icon: 'sofa' },
-  { id: 'wallStyle', labelKey: 'YuviStudio.room.wall', icon: 'image' },
-  { id: 'mood', labelKey: 'YuviStudio.room.mood', icon: 'lightbulb' },
+  { id: 'general', labelKey: 'YuviStudio.room.general', icon: 'home' },
 ]
 
 /**
@@ -136,8 +134,10 @@ export function StudioContent({
   const [firstPerson, setFirstPerson] = useState(false)
   const requestedStationRef = useRef<'avatar' | 'room' | null>(null)
   const [placing, setPlacing] = useState<YuviPlacing | null>(null)
-  // Right-clicking a prop opens its own menu over it, Sims-style.
+  // Hovering a prop opens its own menu over it.
   const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
+  const propMenuCloseTimer = useRef<number | null>(null)
+  const [colorPicker, setColorPicker] = useState<{ uid: string; kind: string } | null>(null)
   const roomState = useRoomDesign()
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
@@ -157,6 +157,19 @@ export function StudioContent({
   const menuStation: StationId | null = propMenu?.uid.startsWith('station:')
     ? (propMenu.uid.slice(8) as StationId)
     : null
+  const clearPropMenuClose = () => {
+    if (propMenuCloseTimer.current) window.clearTimeout(propMenuCloseTimer.current)
+    propMenuCloseTimer.current = null
+  }
+  const showPropMenu = (menu: PropMenuState | null) => {
+    clearPropMenuClose()
+    setPropMenu((current) => menu && current?.uid === menu.uid ? current : menu)
+  }
+  const deferPropMenuClose = () => {
+    clearPropMenuClose()
+    propMenuCloseTimer.current = window.setTimeout(() => setPropMenu(null), 350)
+  }
+  useEffect(() => () => clearPropMenuClose(), [])
   const {
     avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
     saving, dirty, isLocked, isPropLocked, requirementFor, equip, setVariant, setColor, reset, save,
@@ -670,7 +683,8 @@ export function StudioContent({
               placing={placing}
               placeTarget={placeTarget}
               onPlaceAt={handlePlaceAt}
-              onItemMenu={mode === 'room' && !placing ? setPropMenu : undefined}
+              onItemMenu={!placing ? showPropMenu : undefined}
+              onItemMenuLeave={!placing ? deferPropMenuClose : undefined}
               lockRoam={mode !== 'roam' || Boolean(tutorial)}
               label={t('YuviStudio.avatarAlt')}
             />
@@ -779,13 +793,33 @@ export function StudioContent({
           label={menuStation
             ? t(`YuviStudio.zone.${menuStation}`)
             : t(`YuviStudio.room.item.${menuItem!.kind}`)}
-          onMove={() => startMove(propMenu.uid)}
-          onRotate={menuStation
+          primaryAction={menuStation === 'avatar'
+            ? { label: t('YuviStudio.zone.avatar'), icon: 'spark', onClick: () => { setPropMenu(null); goToStation('avatar') } }
+            : undefined}
+          onMove={menuStation === 'avatar' ? undefined : () => startMove(propMenu.uid)}
+          onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
           onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
-          onClose={() => setPropMenu(null)}
+          colors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable ? ITEM_TINTS.slice(0, 5) : undefined}
+          onTint={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
+            ? (hex) => roomState.tint(menuItem!.uid, hex)
+            : undefined}
+          onMoreColors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
+            ? () => { setColorPicker({ uid: menuItem!.uid, kind: menuItem!.kind }); setPropMenu(null) }
+            : undefined}
+          onClose={() => { clearPropMenuClose(); setPropMenu(null) }}
+          onHoverStart={clearPropMenuClose}
+          onHoverEnd={deferPropMenuClose}
           t={t}
+        />
+      )}
+      {colorPicker && (
+        <RoomColorDialog
+          item={roomState.items.find((item) => item.uid === colorPicker.uid) ?? null}
+          t={t}
+          onPick={(hex) => roomState.tint(colorPicker.uid, hex)}
+          onClose={() => setColorPicker(null)}
         />
       )}
       {pending && (
@@ -979,6 +1013,36 @@ function ColorsPanel({
   )
 }
 
+function RoomColorDialog({
+  item, t, onPick, onClose,
+}: {
+  item: import('./RoomDesign').RoomItem | null
+  t: (key: string) => string
+  onPick: (hex: string) => void
+  onClose: () => void
+}) {
+  if (!item) return null
+  return (
+    <div className="ys-shop-backdrop" role="presentation" onClick={onClose}>
+      <div className="ys-shop ys-room-color-dialog" role="dialog" aria-modal="true" aria-label={t('YuviStudio.room.colors')} onClick={(event) => event.stopPropagation()}>
+        <h2>{t('YuviStudio.room.colors')}</h2>
+        <div className="ys-room-color-dialog__swatches">
+          {ITEM_TINTS.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              className={`ys-swatch${item.tint?.toLowerCase() === hex.toLowerCase() ? ' is-active' : ''}`}
+              style={{ background: hex }}
+              aria-label={hex}
+              onClick={() => onPick(hex)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * The room-building station. Pick a prop, drop it on the floor, then keep
  * adjusting it — the room is the learner's, so nothing here is one-shot.
@@ -1018,13 +1082,11 @@ function RoomPanel({
     setPlacing({ ...placing, rot: (placing.rot ?? 0) + delta })
   }
 
-  const activeStyle = category === 'floor'
-    ? { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor }
-    : category === 'wallStyle'
-      ? { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall }
-      : category === 'mood'
-        ? { key: 'mood', options: MOODS, value: room.mood, set: state.setMood }
-        : null
+  const generalStyles = [
+    { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor },
+    { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall },
+    { key: 'mood', options: MOODS, value: room.mood, set: state.setMood },
+  ]
 
   return (
     <StationPanel
@@ -1083,19 +1145,6 @@ function RoomPanel({
                   ))}
                 </div>
               ) : undefined}
-              actions={(
-                <>
-                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.rotate(selected.uid, Math.PI / 8)}>
-                    {t('YuviStudio.room.rotate')}
-                  </button>
-                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.remove(selected.uid)}>
-                    {t('YuviStudio.room.remove')}
-                  </button>
-                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setSelectedUid(null)}>
-                    {t('YuviStudio.room.done')}
-                  </button>
-                </>
-              )}
             />
           )
           : null}
@@ -1133,46 +1182,28 @@ function RoomPanel({
         </div>
       </section>}
 
-      {activeStyle && <section className="ys-section">
-        <div className="ys-section__head">
-          <h2 className="ys-section__title">{t(`YuviStudio.room.${activeStyle.key}`)}</h2>
-        </div>
-        <div className="ys-chips">
-          {activeStyle.options.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className={`ys-chip${activeStyle.value === id ? ' is-active' : ''}`}
-              onClick={() => activeStyle.set(id)}
-            >
-              {t(`YuviStudio.room.${activeStyle.key}.${id}`)}
-            </button>
-          ))}
-        </div>
-      </section>}
-
-      {items.length > 0 && (
+      {category === 'general' && (
         <section className="ys-section">
-          <div className="ys-section__head">
-            <h2 className="ys-section__title">{t('YuviStudio.room.placed')}</h2>
-            <button type="button" className="ys-toggle" onClick={state.clear}>
-              {t('YuviStudio.room.clear')}
-            </button>
-          </div>
-          <div className="ys-grid">
-            {items.map((item) => (
-              <ItemCard
-                key={item.uid}
-                label={t(`YuviStudio.room.item.${item.kind}`)}
-                thumb={roomThumbnails[item.kind]}
-                dot={item.tint ?? roomItemSpec(item.kind)?.tint ?? 'var(--ys-accent)'}
-                selected={selected?.uid === item.uid}
-                onClick={() => { setPlacing(null); setSelectedUid(item.uid) }}
-              />
-            ))}
-          </div>
+          {generalStyles.map((style) => (
+            <div key={style.key} className="ys-general-style">
+              <h2 className="ys-section__title">{t(`YuviStudio.room.${style.key}`)}</h2>
+              <div className="ys-chips">
+                {style.options.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`ys-chip${style.value === id ? ' is-active' : ''}`}
+                    onClick={() => style.set(id)}
+                  >
+                    {t(`YuviStudio.room.${style.key}.${id}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       )}
+
     </StationPanel>
   )
 }
