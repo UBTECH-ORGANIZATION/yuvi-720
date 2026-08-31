@@ -1567,7 +1567,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // text-only reply. We plan + render from that message's text plus its
   // prompting user turn, then retain it on that assistant message.
   const requestVisual = useCallback(async (messageId: string, mode: VisualMode) => {
-    if (activityScoped) return
+    // In a lesson only VIDEO stays out of this lane — it would bypass the
+    // per-item video-support metering (a9914e9). The image CTA renders in
+    // lessons too, and a button that renders must work: /api/agent/visualize
+    // draws from the already-guarded reply text, so it reveals nothing new.
+    if (activityScoped && mode === 'video') return
     const current = messagesRef.current
     const index = current.findIndex((message) => message.id === messageId)
     if (index === -1) return

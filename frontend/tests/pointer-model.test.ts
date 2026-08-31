@@ -59,3 +59,11 @@ test('screen identity is component+item — the push key can be partial', () => 
   assert.ok(!pointerMatchesKey('c|i|q1', 'other|i|q1'))
   assert.ok(pointerMatchesKey('c|i|q1', null))
 })
+
+test('an empty segment is a wildcard, not a contradiction', () => {
+  // The assumed-first-screen pointer vs a player that never reported an item:
+  // the current key is `component||` and must not veto the overlay.
+  assert.ok(pointerMatchesKey('c|i-00001|', 'c||'))
+  assert.ok(pointerMatchesKey('c||', 'c|i|q1'))
+  assert.ok(!pointerMatchesKey('c|i|', 'other||'))
+})

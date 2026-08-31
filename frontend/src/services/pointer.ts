@@ -38,14 +38,18 @@ export function presentPointer(
   return { mode: 'rect', rect: clamped }
 }
 
-/** A pointer belongs to one screen. The arrival push key can be partial
- *  (`component|item`), so identity is component+item — a stale pointer for a
- *  screen the learner left must never render. */
+/** A pointer belongs to one screen. Either key can be partial — the arrival
+ *  push is `component|item`, and a player that only reports on answers leaves
+ *  the current key as `component||` (the assumed-first-screen case). An empty
+ *  segment is a wildcard, not a contradiction: only two PRESENT segments that
+ *  differ prove the learner left the screen the pointer describes. */
 export function pointerMatchesKey(
   pointerKey: string, currentKey: string | null,
 ): boolean {
   if (!currentKey) return true // no signal to contradict it
   const [pc, pi] = String(pointerKey || '').split('|')
   const [cc, ci] = String(currentKey).split('|')
-  return pc === cc && pi === ci
+  if (pc && cc && pc !== cc) return false
+  if (pi && ci && pi !== ci) return false
+  return true
 }
