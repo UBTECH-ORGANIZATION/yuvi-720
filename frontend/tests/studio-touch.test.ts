@@ -55,7 +55,7 @@ test('hovering furniture opens its menu and leaving it begins dismissal', () => 
   assert.match(avatar, /addEventListener\('pointermove', onPropHover/)
   assert.match(avatar, /addEventListener\('pointerleave', onPropHoverLeave\)/)
   assert.match(studio, /onItemMenu=\{!placing \? showPropMenu : undefined\}/)
-  assert.match(studio, /onItemMenuLeave=\{!placing \? deferPropMenuClose : undefined\}/)
+  assert.match(studio, /onItemMenuLeave=\{!placing \? \(\) => \{ deferPropMenuClose\(\); setSurpriseNotice\(false\) \} : undefined\}/)
   assert.match(studio, /onHoverStart=\{clearPropMenuClose\}/)
   assert.match(studio, /setTimeout\(\(\) => setPropMenu\(null\), 350\)/)
   assert.match(propMenu, /onMouseEnter=\{onHoverStart\}/)
@@ -91,13 +91,21 @@ test('globe and mission furniture open hover menus with move and rotate only', (
 })
 
 test('room styles share the General Room tab', () => {
-  assert.match(studio, /type RoomTab = RoomItemCategory \| 'general'/)
+  assert.match(studio, /type RoomTab = RoomItemCategory \| 'general' \| 'surprises'/)
   assert.match(studio, /YuviStudio\.room\.general/)
   assert.match(studio, /category === 'general'/)
   assert.match(studio, /key: 'floor', options: ROOM_STYLES/)
   assert.match(studio, /key: 'wall', options: WALL_STYLES/)
   assert.match(studio, /key: 'mood', options: MOODS/)
   assert.equal(he['YuviStudio.room.general'], 'חדר כללי')
+})
+
+test('an approved gift opens only from a deliberate item tap', () => {
+  assert.match(avatar, /const tappedItem = pickRoomItemAt\(event\.clientX, event\.clientY\)/)
+  assert.match(avatar, /onRoomItemTapRef\.current\?\.\(tappedItem\)/)
+  assert.match(studio, /weeklySurprise\.state === 'ready' \? WEEKLY_SURPRISE_READY : WEEKLY_SURPRISE_COVERED/s)
+  assert.match(studio, /onRoomItemTap=\{\(uid\) => \{/)
+  assert.match(studio, /claimWeeklySurprise\(\)/)
 })
 
 test('a first visit gets a four-step in-world welcome without reopening the old practical tutorial', () => {
@@ -141,6 +149,15 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.equal(he['YuviStudio.intro.finish'], 'יוצאים לשחק')
 })
 
+test('placing a station shows its translucent model as well as its valid placement ring', () => {
+  assert.match(labRoom, /const ghostStationHolder = new THREE\.Group\(\)/)
+  assert.match(labRoom, /const makeTransparent = \(object: THREE\.Object3D\) => \{[\s\S]{0,700}transparent\.transparent = true/)
+  assert.match(labRoom, /station === 'avatar'[\s\S]{0,180}platform\.clone\(true\)/)
+  assert.match(labRoom, /station === 'room' \? makeTransparent\(bench\.clone\(true\)\)/)
+  assert.match(labRoom, /ghostRing\.material = mat/)
+  assert.doesNotMatch(labRoom, /ghostBody\?\.traverse\(\(obj: any\) => \{ if \(obj\.isMesh\) obj\.material = mat \}\)/)
+})
+
 test('the Yuvi-Girl selector is not offered in the studio', () => {
   assert.doesNotMatch(studio, /YuviStudio\.variant\.girl/)
   assert.doesNotMatch(studio, /YuviVariant/)
@@ -156,15 +173,24 @@ test('Help presents all topics and anchors an independently dismissible explanat
   assert.match(studio, /className="ys-help" ref=\{helpRef\}/)
   assert.doesNotMatch(studio, /className="ys-station ys-station--help"\s+onClick=\{startTutorial\}/)
   assert.match(studio, /<StudioHelp/)
-  assert.match(studioHelp, /const TOPICS: StudioHelpTopic\[\] = \['start', 'move', 'furniture', 'change', 'yuvi', 'save', 'firstPerson', 'locked', 'resetCamera'\]/)
+  assert.match(studioHelp, /const TOPICS: StudioHelpTopic\[\] = \['start', 'move', 'furniture', 'change', 'yuvi'\]/)
   assert.doesNotMatch(studioHelp, /ys-help__more|ys-help__guide|onStartTutorial/)
   assert.match(studioHelp, /onCloseTopic/)
-  assert.match(css, /\.ys-help__menu \{ position: absolute;[\s\S]{0,120}right: calc\(100% \+ 10px\)/)
-  assert.match(css, /\.ys-help__bubble \{ position: absolute;[\s\S]{0,120}left: 10px/)
-  for (const topic of ['start', 'move', 'furniture', 'change', 'yuvi', 'save', 'firstPerson', 'locked', 'resetCamera']) {
+  assert.match(css, /\.ys-help__menu \{ position: absolute;[\s\S]{0,120}inline-size: 278px/)
+  assert.match(studioHelp, /ys-help__topic-anchor\$\{activeTopic === topic \? ' is-active' : ''\}/)
+  assert.match(studioHelp, /activeTopic === topic && \([\s\S]{0,80}<aside className="ys-help__bubble"/)
+  assert.match(css, /\.ys-help__topic-anchor:nth-child\(5\) \{ --x: -81px; --y: -179px; --help-color: #c28a36/)
+  assert.match(css, /\.ys-help__bubble \{[\s\S]{0,300}inset-inline-start: calc\(100% \+ 10px\)[\s\S]{0,300}background: var\(--help-color\)/)
+  assert.match(css, /@keyframes ys-help-fan-in/)
+  assert.match(css, /\.ys-help__bubble strong \{[^}]*color: #fff/)
+  assert.match(css, /\.ys-help__bubble p \{[^}]*color: #fff/)
+  for (const topic of ['start', 'move', 'furniture', 'change', 'yuvi']) {
     assert.ok(he[`YuviStudio.help.topic.${topic}`], `YuviStudio.help.topic.${topic} is missing`)
     assert.ok(he[`YuviStudio.help.body.${topic}`], `YuviStudio.help.body.${topic} is missing`)
   }
+  assert.match(studioHelp, /onOpenRoomDesign/)
+  assert.match(studioHelp, /onOpenYuviDesign/)
+  assert.match(studio, /onOpenRoomDesign=\{\(\) => \{ setHelpOpen\(false\); setActiveHelpTopic\(null\); goToStation\('room'\) \}\}/)
 })
 
 test('two fingers zoom and pan', () => {

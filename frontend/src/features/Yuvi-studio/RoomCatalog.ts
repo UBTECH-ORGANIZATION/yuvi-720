@@ -1266,6 +1266,7 @@ export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', '
 
 /** Surprise props are resolvable by the renderer but never sold in the room menu. */
 export const WEEKLY_SURPRISE_COVERED = 'weekly_surprise_covered'
+export const WEEKLY_SURPRISE_READY = 'weekly_surprise_ready'
 const surpriseBall = (kit: RoomKit, color: THREE.ColorRepresentation, stripe = false) => {
   const ball = kit.sph(0.27, kit.mat('gloss', color))
   if (stripe) {
@@ -1290,26 +1291,25 @@ const surprisePoster = (kit: RoomKit, tint: THREE.Color) => {
   }
   return group
 }
+const surpriseBox = (kit: RoomKit, ready = false) => {
+  const group = new THREE.Group()
+  const box = kit.mat('gloss', 0x426fc7)
+  const ribbon = kit.mat('gloss', 0xffd166)
+  if (ready) group.add(at(kit.halo(2.05, 0x67efe1, 0.52), 0, 0.86, 0.12))
+  group.add(at(kit.rbox(0.82, 0.62, 0.72, 0.07, box), 0, 0.31, 0))
+  group.add(at(kit.rbox(0.9, 0.12, 0.8, 0.05, box), 0, 0.67, 0))
+  group.add(at(kit.rbox(0.1, 0.75, 0.74, 0.025, ribbon), 0, 0.37, 0))
+  group.add(at(kit.rbox(0.84, 0.035, 0.1, 0.02, ribbon), 0, 0.735, 0))
+  for (const sx of [-0.13, 0.13]) {
+    const bow = at(kit.sph(0.16, ribbon), sx, 0.8, 0)
+    bow.scale.set(1.35, 0.45, 0.7)
+    group.add(bow)
+  }
+  return group
+}
 export const WEEKLY_SURPRISE_ITEMS: RoomItemSpec[] = [
-  {
-    id: WEEKLY_SURPRISE_COVERED, category: 'play', placement: 'floor', radius: 0.46, height: 0.78,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const box = kit.mat('gloss', 0x426fc7)
-      const ribbon = kit.mat('gloss', 0xffd166)
-      // A sealed, fixed-size present hides every reward equally well.
-      group.add(at(kit.rbox(0.82, 0.62, 0.72, 0.07, box), 0, 0.31, 0))
-      group.add(at(kit.rbox(0.9, 0.12, 0.8, 0.05, box), 0, 0.67, 0))
-      group.add(at(kit.rbox(0.1, 0.75, 0.74, 0.025, ribbon), 0, 0.37, 0))
-      group.add(at(kit.rbox(0.84, 0.035, 0.1, 0.02, ribbon), 0, 0.735, 0))
-      for (const sx of [-0.13, 0.13]) {
-        const bow = at(kit.sph(0.16, ribbon), sx, 0.8, 0)
-        bow.scale.set(1.35, 0.45, 0.7)
-        group.add(bow)
-      }
-      return group
-    },
-  },
+  { id: WEEKLY_SURPRISE_COVERED, category: 'play', placement: 'floor', radius: 0.46, height: 0.78, build: (kit) => surpriseBox(kit) },
+  { id: WEEKLY_SURPRISE_READY, category: 'play', placement: 'floor', radius: 0.46, height: 0.78, build: (kit) => surpriseBox(kit, true) },
   {
     id: 'surprise_arcade', category: 'play', placement: 'floor', radius: 0.65, height: 1.5, tintable: true, tint: '#4eeef0',
     build: (kit, tint) => {
@@ -1423,6 +1423,12 @@ export function roomItemSpec(id: string): RoomItemSpec | undefined {
 
 export function itemsInCategory(category: RoomItemCategory): RoomItemSpec[] {
   return ROOM_ITEMS.filter((spec) => spec.category === category)
+}
+
+/** Collected surprises are private inventory, separate from the regular shop. */
+export function claimedSurpriseItems(rewardKinds: string[]): RoomItemSpec[] {
+  const owned = new Set(rewardKinds)
+  return WEEKLY_SURPRISE_ITEMS.filter((spec) => spec.id !== WEEKLY_SURPRISE_COVERED && owned.has(spec.id))
 }
 
 // Incremental 3D thumbnail cache. Rendering the whole catalog on opening the

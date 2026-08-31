@@ -11,7 +11,7 @@ import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { roomStandingSpot } from './YuviLabRoom'
@@ -33,7 +33,7 @@ const ROOM_ICONS: Record<RoomItemCategory, string> = {
   seating: 'sofa', desk: 'book', play: 'gamepad', nature: 'leaf',
   light: 'lightbulb', tech: 'chip', wall: 'image',
 }
-type RoomTab = RoomItemCategory | 'general'
+type RoomTab = RoomItemCategory | 'general' | 'surprises'
 const ROOM_STYLE_TABS: Array<{ id: Exclude<RoomTab, RoomItemCategory>; labelKey: string; icon: string }> = [
   { id: 'general', labelKey: 'YuviStudio.room.general', icon: 'home' },
 ]
@@ -115,7 +115,12 @@ export function StudioContent({
   const [colorPicker, setColorPicker] = useState<{ uid: string; kind: string } | null>(null)
   const [surpriseNotice, setSurpriseNotice] = useState(false)
   const roomState = useRoomDesign(true, user?.user_id)
-  const weeklySurprise = useWeeklyStudioSurprise(user?.user_id, roomState.loaded && roomState.room.introDone)
+  const { surprise: weeklySurprise, claimedRewards, claim: claimWeeklySurprise } = useWeeklyStudioSurprise(
+    user?.user_id,
+    roomState.loaded && roomState.room.introDone,
+  )
+  const [claimingSurprise, setClaimingSurprise] = useState(false)
+  const [claimedRewardKind, setClaimedRewardKind] = useState<string | null>(null)
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
   const roomStyle = useMemo(
@@ -126,14 +131,14 @@ export function StudioContent({
   // must not also draw it standing at the spot it is being moved from.
   const movingUid = placing?.uid ?? null
   const weeklyUid = weeklySurprise?.week ? `weekly-surprise:${weeklySurprise.week}` : ''
-  useEffect(() => {
-    if (weeklySurprise?.state !== 'revealed' || !weeklySurprise.reward_kind || !weeklyUid) return
-    void roomState.materializeWeeklyReward(weeklyUid, weeklySurprise.reward_kind, WEEKLY_SURPRISE_POSITION.x, WEEKLY_SURPRISE_POSITION.z, WEEKLY_SURPRISE_POSITION.rot)
-  }, [weeklySurprise?.state, weeklySurprise?.reward_kind, weeklyUid, roomState.materializeWeeklyReward])
   const visibleRoomItems = useMemo(() => {
     const userItems = movingUid ? roomState.items.filter((item) => item.uid !== movingUid) : roomState.items
-    if (weeklySurprise?.available && weeklySurprise.state === 'covered') {
-      return [...userItems, { uid: weeklyUid, kind: WEEKLY_SURPRISE_COVERED, ...WEEKLY_SURPRISE_POSITION }]
+    if (weeklySurprise?.available && (weeklySurprise.state === 'covered' || weeklySurprise.state === 'ready')) {
+      return [...userItems, {
+        uid: weeklyUid,
+        kind: weeklySurprise.state === 'ready' ? WEEKLY_SURPRISE_READY : WEEKLY_SURPRISE_COVERED,
+        ...WEEKLY_SURPRISE_POSITION,
+      }]
     }
     return userItems
   }, [roomState.items, movingUid, weeklySurprise, weeklyUid])
@@ -155,6 +160,16 @@ export function StudioContent({
     }
     setSurpriseNotice(false)
     setPropMenu((current) => menu && current?.uid === menu.uid ? current : menu)
+  }
+  const openWeeklySurprise = async () => {
+    if (claimingSurprise || weeklySurprise?.state !== 'ready') return
+    setClaimingSurprise(true)
+    try {
+      const rewardKind = await claimWeeklySurprise()
+      setSurpriseNotice(false)
+      setClaimedRewardKind(rewardKind)
+    } catch { /* The box remains ready for a later attempt. */ }
+    finally { setClaimingSurprise(false) }
   }
   const deferPropMenuClose = () => {
     clearPropMenuClose()
@@ -459,6 +474,7 @@ export function StudioContent({
             footer={introScene === 1 ? undefined : footerFor('room')}
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
+            surpriseRewards={claimedRewards}
             t={t}
           />
         )}
@@ -619,6 +635,12 @@ export function StudioContent({
               onItemMenu={!placing ? showPropMenu : undefined}
               onItemMenuLeave={!placing ? () => { deferPropMenuClose(); setSurpriseNotice(false) } : undefined}
               onNearRoomItem={(uid) => { if (uid === weeklyUid) setSurpriseNotice(true) }}
+              onRoomItemTap={(uid) => {
+                if (uid !== weeklyUid) return false
+                if (weeklySurprise?.state === 'ready') void openWeeklySurprise()
+                else setSurpriseNotice(true)
+                return true
+              }}
               lockRoam={mode !== 'roam' || introScene !== null}
               label={t('YuviStudio.avatarAlt')}
             />
@@ -691,6 +713,8 @@ export function StudioContent({
                   onClose={() => { setHelpOpen(false); setActiveHelpTopic(null) }}
                   onSelectTopic={setActiveHelpTopic}
                   onCloseTopic={() => setActiveHelpTopic(null)}
+                  onOpenRoomDesign={() => { setHelpOpen(false); setActiveHelpTopic(null); goToStation('room') }}
+                  onOpenYuviDesign={() => { setHelpOpen(false); setActiveHelpTopic(null); goToStation('avatar') }}
                   t={t}
                 />
               )}
@@ -759,6 +783,23 @@ export function StudioContent({
             </div>
             <p>{t('YuviStudio.surprise.notice')}</p>
           </aside>
+        )}
+        {claimedRewardKind && (
+          <>
+            <div className="ys-surprise-confetti" aria-hidden>
+              {Array.from({ length: 18 }, (_, index) => <i key={index} style={{ '--i': index } as React.CSSProperties} />)}
+            </div>
+            <aside className="ys-surprise-notice ys-surprise-notice--claimed" role="status">
+              <button type="button" className="ys-help__close" onClick={() => setClaimedRewardKind(null)} aria-label={t('YuviStudio.surprise.close')} title={t('YuviStudio.surprise.close')}>
+                <Icon name="close" size={15} />
+              </button>
+              <div className="ys-surprise-notice__head">
+                <span className="ys-surprise-notice__spark" aria-hidden="true"><Icon name="spark" size={21} /></span>
+                <strong>{t('YuviStudio.surprise.claimed.title')}</strong>
+              </div>
+              <p>{t('YuviStudio.surprise.claimed.notice')}</p>
+            </aside>
+          </>
         )}
       </section>
       </div>
@@ -1023,7 +1064,7 @@ function RoomColorDialog({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, footer, isPropLocked, requirementFor, t,
+  state, placing, setPlacing, onLeave, footer, isPropLocked, requirementFor, surpriseRewards, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
@@ -1033,14 +1074,17 @@ function RoomPanel({
   /** Furniture that has to be earned, and what earns it. */
   isPropLocked: (kind: string) => boolean
   requirementFor: (id: string) => string | undefined
+  surpriseRewards: string[]
   t: (key: string) => string
 }) {
   const [category, setCategory] = useState<RoomTab>('seating')
   const { room, items, full, selected, setSelectedUid } = state
-  const isItemCategory = ROOM_CATEGORIES.includes(category as RoomItemCategory)
+  const isItemCategory = ROOM_CATEGORIES.includes(category as RoomItemCategory) || category === 'surprises'
   const categoryItems = useMemo(
-    () => (isItemCategory ? itemsInCategory(category as RoomItemCategory) : []),
-    [category, isItemCategory],
+    () => category === 'surprises'
+      ? claimedSurpriseItems(surpriseRewards)
+      : ROOM_CATEGORIES.includes(category as RoomItemCategory) ? itemsInCategory(category as RoomItemCategory) : [],
+    [category, surpriseRewards],
   )
   const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
 
@@ -1070,6 +1114,7 @@ function RoomPanel({
             ...ROOM_CATEGORIES.map((id) => ({
               id, label: t(`YuviStudio.room.category.${id}`), icon: ROOM_ICONS[id],
             })),
+            { id: 'surprises', label: t('YuviStudio.room.category.surprises'), icon: 'spark' },
             ...ROOM_STYLE_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey), icon: tab.icon })),
           ]}
           value={category}
@@ -1116,6 +1161,9 @@ function RoomPanel({
             )
           })}
         </div>
+        {category === 'surprises' && categoryItems.length === 0 && (
+          <p className="ys-empty">{t('YuviStudio.room.surprises.empty')}</p>
+        )}
       </section>}
 
       {category === 'general' && (

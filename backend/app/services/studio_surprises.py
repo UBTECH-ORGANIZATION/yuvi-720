@@ -23,6 +23,14 @@ REWARD_KINDS = (
 )
 
 
+class SurpriseClaimError(ValueError):
+    """A learner tried to collect a surprise that is not ready yet."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -146,10 +154,72 @@ async def get_weekly_surprise(learner_id: str, moment: Optional[datetime] = None
             "reward_kind": _reward_kind(lid, week), "state": "covered", "created_at": _now(),
         })
     state = record.get("state", "covered")
-    result = {"available": True, "week": week, "state": state, "goal": {"title": record.get("goal_title", "")}}
-    if state == "revealed":
-        result["reward_kind"] = record.get("reward_kind")
-    return result
+    if state == "claimed":
+        return {"available": False, "week": week, "state": "claimed"}
+    # `revealed` is the durable internal approval state. The client calls it
+    # `ready`: the box can now draw attention, but never reveals its contents.
+    return {
+        "available": True,
+        "week": week,
+        "state": "ready" if state == "revealed" else "covered",
+        "goal": {"title": record.get("goal_title", "")},
+    }
+
+
+async def claim_weekly_surprise(learner_id: str, moment: Optional[datetime] = None) -> dict[str, Any]:
+    """Collect this week's approved surprise exactly once and reveal its item."""
+    lid = normalize_learner_id(learner_id)
+    week = week_key(moment)
+    record_id = _record_id(lid, week)
+    record = await _load(record_id)
+    if record is None:
+        raise SurpriseClaimError("not_found")
+    if record.get("state") == "claimed":
+        return {"week": week, "state": "claimed", "reward_kind": record.get("reward_kind")}
+    if record.get("state") != "revealed":
+        raise SurpriseClaimError("not_ready")
+
+    claimed_at = _now()
+    collection = _get_collection_named(COLLECTION)
+    if collection is not None:
+        try:
+            await collection.update_one(
+                {"_id": record_id, "state": "revealed"},
+                {"$set": {"state": "claimed", "claimed_at": claimed_at}},
+            )
+            stored = await collection.find_one({"_id": record_id})
+            if stored:
+                record = stored
+        except Exception as exc:  # pragma: no cover - fallback preserves the demo
+            print(f"weekly Studio surprise claim failed: {type(exc).__name__}")
+        else:
+            return {"week": week, "state": "claimed", "reward_kind": record.get("reward_kind")}
+
+    rows = _read_fallback()
+    for row in rows:
+        if row.get("id") == record_id:
+            row.update({"state": "claimed", "claimed_at": claimed_at})
+            _write_fallback(rows)
+            return {"week": week, "state": "claimed", "reward_kind": row.get("reward_kind")}
+    raise SurpriseClaimError("not_found")
+
+
+async def claimed_reward_kinds(learner_id: str) -> list[str]:
+    """Return each collected private prop once, in stable catalog order."""
+    lid = normalize_learner_id(learner_id)
+    rows: list[dict[str, Any]] = []
+    collection = _get_collection_named(COLLECTION)
+    if collection is not None:
+        try:
+            rows = await collection.find(
+                {"learner_id": lid, "state": "claimed"}, {"reward_kind": 1}
+            ).to_list(length=len(REWARD_KINDS))
+        except Exception as exc:  # pragma: no cover - fallback preserves the demo
+            print(f"weekly Studio surprise reward list failed: {type(exc).__name__}")
+    if not rows:
+        rows = [row for row in _read_fallback() if row.get("learner_id") == lid and row.get("state") == "claimed"]
+    owned = {str(row.get("reward_kind")) for row in rows}
+    return [kind for kind in REWARD_KINDS if kind in owned]
 
 
 async def reveal_approved_goal(learner_id: str, conversation_id: str, goal_id: str) -> None:
@@ -194,10 +264,10 @@ async def can_hold_reward(learner_id: str, kind: str) -> bool:
     collection = _get_collection_named(COLLECTION)
     if collection is not None:
         try:
-            return bool(await collection.find_one({"learner_id": lid, "reward_kind": kind, "state": "revealed"}, {"_id": 1}))
+            return bool(await collection.find_one({"learner_id": lid, "reward_kind": kind, "state": "claimed"}, {"_id": 1}))
         except Exception as exc:  # pragma: no cover
             print(f"weekly Studio surprise entitlement read failed: {type(exc).__name__}")
-    return any(row.get("learner_id") == lid and row.get("reward_kind") == kind and row.get("state") == "revealed" for row in _read_fallback())
+    return any(row.get("learner_id") == lid and row.get("reward_kind") == kind and row.get("state") == "claimed" for row in _read_fallback())
 
 
 async def ensure_indexes() -> None:

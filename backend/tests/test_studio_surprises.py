@@ -80,3 +80,21 @@ class StudioSurprisesTest(unittest.IsolatedAsyncioTestCase):
         record = self.records["learner-a:2026-W36"]
         self.assertEqual(record["state"], "revealed")
         self.assertEqual(record["goal_title"], "Goal goal-1")
+
+    async def test_claim_keeps_the_reward_private_until_the_box_is_opened(self):
+        record_id = "learner-a:2026-W36"
+        self.records[record_id] = {
+            "id": record_id, "learner_id": "learner-a", "week": "2026-W36",
+            "reward_kind": "surprise_basketball", "state": "revealed",
+        }
+        with patch("app.services.studio_surprises._load", new=AsyncMock(return_value=self.records[record_id])), \
+             patch("app.services.studio_surprises._get_collection_named", return_value=None), \
+             patch("app.services.studio_surprises._read_fallback", return_value=[self.records[record_id]]), \
+             patch("app.services.studio_surprises._write_fallback"):
+            before = await studio_surprises.get_weekly_surprise("learner-a", self.now)
+            claimed = await studio_surprises.claim_weekly_surprise("learner-a", self.now)
+
+        self.assertEqual(before["state"], "ready")
+        self.assertNotIn("reward_kind", before)
+        self.assertEqual(claimed["reward_kind"], "surprise_basketball")
+        self.assertEqual(self.records[record_id]["state"], "claimed")

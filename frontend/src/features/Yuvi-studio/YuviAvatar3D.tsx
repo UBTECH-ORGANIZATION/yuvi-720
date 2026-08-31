@@ -112,8 +112,10 @@ interface Props {
   onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
   /** The pointer has left the room canvas, so its menu may close. */
   onItemMenuLeave?: () => void
-    /** Fires once when Yuvi enters range of a special in-room object. */
-    onNearRoomItem?: (uid: string) => void
+  /** Fires once when Yuvi enters range of a special in-room object. */
+  onNearRoomItem?: (uid: string) => void
+  /** A short primary press on an in-room prop, before floor walking. */
+  onRoomItemTap?: (uid: string) => boolean | void
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -139,7 +141,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -177,7 +179,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const onPlaceAtRef = useRef(onPlaceAt)
   const onItemMenuRef = useRef(onItemMenu)
   const onItemMenuLeaveRef = useRef(onItemMenuLeave)
-    const onNearRoomItemRef = useRef(onNearRoomItem)
+  const onNearRoomItemRef = useRef(onNearRoomItem)
+  const onRoomItemTapRef = useRef(onRoomItemTap)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -217,6 +220,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { onItemMenuRef.current = onItemMenu }, [onItemMenu])
   useEffect(() => { onItemMenuLeaveRef.current = onItemMenuLeave }, [onItemMenuLeave])
   useEffect(() => { onNearRoomItemRef.current = onNearRoomItem }, [onNearRoomItem])
+  useEffect(() => { onRoomItemTapRef.current = onRoomItemTap }, [onRoomItemTap])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -340,7 +344,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // lens. `dolly` lets these two shots sit just outside the room's open
       // front — far enough back to see the whole floor, still too narrow to see
       // past a wall.
-      roam: { pos: [0, 2.9, 11.5], look: [0, 0.1, -1.6], yaw: null, fov: 46, dolly: 4 },
+      roam: { pos: [0, 2.1, 5.6], look: [0, 0.2, -1.2], yaw: null, fov: 38, dolly: 4 },
       // Decorating is the one shot that must not follow Yuvi: the learner is
       // looking at the floor plan, not at the robot standing on the station.
       room: { pos: [-0.7, 5.2, 21], look: [-0.7, -1.05, -2], yaw: null, anchored: false, fov: 62, dolly: 6 },
@@ -951,6 +955,15 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       })
       return true
     }
+    const pickRoomItemAt = (clientX: number, clientY: number) => {
+      if (!room) return null
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return null
+      ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      return room.pickItem(raycaster)
+    }
     const onPropHover = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || dragging || placingRef.current) return
       openMenuAt(event.clientX, event.clientY)
@@ -1041,6 +1054,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (firstPersonRef.current) return
       const travelled = Math.hypot(event.clientX - pressX, event.clientY - pressY)
       if (travelled > tapSlop || performance.now() - pressAt > 500) return
+      const tappedItem = pickRoomItemAt(event.clientX, event.clientY)
+      if (tappedItem && onRoomItemTapRef.current?.(tappedItem)) {
+        return
+      }
       const spot = pickFloor(event)
       if (!spot) return
       const placingNow = placingRef.current

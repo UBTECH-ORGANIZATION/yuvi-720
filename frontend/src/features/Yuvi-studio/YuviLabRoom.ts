@@ -1777,8 +1777,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   ]
 
   // ── Placement ghost ──────────────────────────────────────────────────────
-  // The preview is the real prop wearing a single hologram material, so what
-  // the learner sees before dropping is exactly what lands.
+  // The preview keeps the real object's colours at half opacity, so the learner
+  // can see what is being positioned as well as where it may be dropped.
   const ghostOkMat = track(new THREE.MeshBasicMaterial({
     color: CYAN, transparent: true, opacity: 0.42, depthWrite: false,
     blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide,
@@ -1793,34 +1793,61 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const ghostBodyHolder = new THREE.Group()
   ghostBodyHolder.scale.setScalar(PROP_SCALE)
   ghostGroup.add(ghostBodyHolder)
+  const ghostStationHolder = new THREE.Group()
+  ghostGroup.add(ghostStationHolder)
   const ghostRing = new THREE.Mesh(zoneRingGeo, ghostOkMat)
   ghostRing.rotation.x = -Math.PI / 2
   ghostRing.position.y = 0.02
   ghostGroup.add(ghostRing)
   let ghostKind: string | null = null
   let ghostBody: THREE.Object3D | null = null
+  let ghostStation: THREE.Object3D | null = null
+  const makeTransparent = (object: THREE.Object3D) => {
+    object.traverse((obj: any) => {
+      if (!obj.isMesh) return
+      const source = obj.material
+      const copy = (material: THREE.Material) => {
+        const transparent = track(material.clone())
+        transparent.transparent = true
+        transparent.opacity = Math.min(material.opacity ?? 1, 0.48)
+        transparent.depthWrite = false
+        return transparent
+      }
+      obj.material = Array.isArray(source) ? source.map(copy) : copy(source)
+    })
+    return object
+  }
 
   const setGhost = (kind: string | null, x = 0, z = 0, rot = 0, valid = true, tint?: string) => {
     if (!kind) {
       ghostGroup.visible = false
       return
     }
-    if (kind !== ghostKind) {
+    const key = `${kind}:${tint ?? ''}`
+    if (key !== ghostKind) {
       if (ghostBody) ghostBodyHolder.remove(ghostBody)
-      // A carried station shows only its footprint: dragging a translucent copy
-      // of the whole platform around would bury the room it is landing in.
+      if (ghostStation) ghostStationHolder.remove(ghostStation)
       const station = kind.startsWith('station:') ? (kind.slice(8) as StationId) : null
       const spec = station ? null : roomItemSpec(kind)
-      ghostBody = spec ? spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff')) : null
-      ghostKind = kind
+      ghostBody = spec ? makeTransparent(spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff'))) : null
+      // Both movable stations are shown at their actual size while being
+      // carried. Other stations are not learner-movable from this flow.
+      ghostStation = station === 'avatar'
+        ? makeTransparent(platform.clone(true))
+        : station === 'room' ? makeTransparent(bench.clone(true)) : null
+      if (ghostStation) {
+        ghostStation.position.set(0, 0, 0)
+        ghostStation.rotation.set(0, 0, 0)
+      }
+      ghostKind = key
       if (ghostBody) ghostBodyHolder.add(ghostBody)
+      if (ghostStation) ghostStationHolder.add(ghostStation)
       ghostRing.scale.setScalar(
         station ? STATION_RADIUS[station] : spec ? spec.radius * PROP_SCALE * 1.15 : 0.6,
       )
     }
     const mat = valid ? ghostOkMat : ghostBadMat
     ghostRing.material = mat
-    ghostBody?.traverse((obj: any) => { if (obj.isMesh) obj.material = mat })
     ghostGroup.position.set(x, FLOOR_Y, z)
     ghostGroup.rotation.y = rot
     ghostGroup.visible = true
@@ -1994,9 +2021,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const update = (t: number, dt: number) => {
     if (!reduceMotion) {
       for (const built of builtItems.values()) {
-        if (built.kind !== 'weekly_surprise_covered') continue
-        built.object.position.y = FLOOR_Y + Math.abs(Math.sin(t * 1.35)) * 0.06
-        built.object.rotation.z = Math.sin(t * 1.35) * 0.025
+        if (built.kind !== 'weekly_surprise_covered' && built.kind !== 'weekly_surprise_ready') continue
+        const ready = built.kind === 'weekly_surprise_ready'
+        built.object.position.y = FLOOR_Y + Math.abs(Math.sin(t * (ready ? 2.8 : 1.35))) * (ready ? 0.16 : 0.06)
+        built.object.rotation.z = Math.sin(t * (ready ? 2.8 : 1.35)) * (ready ? 0.06 : 0.025)
       }
       // The bay breathes: LEDs, floor pool and the light shaft all pulse on
       // slightly different periods so nothing ever looks looped.
