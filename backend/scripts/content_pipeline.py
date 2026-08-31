@@ -42,6 +42,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -188,7 +189,9 @@ async def _launch_url(component_id: str) -> str:
 
     context = await kata_client.create_launch_context(
         component_id=component_id,
-        student_id=f"pipeline-{datetime.now(timezone.utc):%Y%m%d}",
+        # Unique per mint: the player resumes per (student, component), so a
+        # reused id would drop a retry into the middle of last night's walk.
+        student_id=f"pipeline-{uuid4().hex[:12]}",
         platform_url="https://pipeline.invalid",
         # A sink, like teacher previews: Kata's forward simply fails, so the
         # probe pollutes no LRS and no learner history.
