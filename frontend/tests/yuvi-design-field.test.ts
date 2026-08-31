@@ -32,6 +32,12 @@ test('every Yuvi in the app reads the design from that same field', () => {
   assert.match(provider, /normalizeDesign\(state\.yuvi_design\)/)
 })
 
+test('legacy Yuvi-Girl designs fall back to the classic variant', () => {
+  const design = read('features/Yuvi-studio/YuviDesign.ts')
+  assert.match(design, /export type YuviVariant = 'classic'/)
+  assert.doesNotMatch(design, /record\.variant === 'girl'/)
+})
+
 test('the state DTO carries both fields, so neither can be typed away', () => {
   const api = read('services/api.ts')
   assert.match(api, /avatar\?: unknown/)

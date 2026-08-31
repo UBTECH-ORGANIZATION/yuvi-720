@@ -50,6 +50,7 @@
   background: var(--ys-panel-bg);
   box-shadow: var(--ys-panel-shadow);
 }
+.ys-panel--demo { pointer-events: none; }
 .ys-panel__head {
   display: flex; align-items: center; gap: 10px;
   padding: 16px 18px 14px;
@@ -158,6 +159,7 @@
 .ys-card:hover:not(:disabled) { transform: translateY(-2px); background: var(--ys-surface-hover); box-shadow: 0 10px 22px rgba(80, 60, 160, .14); }
 .ys-card.is-selected { border-color: var(--ys-accent); background: var(--ys-accent-soft); }
 .ys-card.is-previewing { border-color: #3fd9e0; background: rgba(63, 217, 224, .12); }
+.ys-card.is-highlighted { border-color: #ff5d73; box-shadow: 0 0 0 4px rgba(255, 93, 115, .18), 0 10px 22px rgba(255, 93, 115, .2); animation: ys-card-guide 1.25s ease-in-out infinite; }
 .ys-card:disabled { cursor: not-allowed; opacity: .45; }
 .ys-card__media { inline-size: 100%; block-size: 66px; display: grid; place-items: center; }
 /* A colour swatch needs far less room than a rendered item. */
@@ -203,6 +205,9 @@
 /* A buyable item stays inviting rather than greyed out. */
 .ys-card.is-buyable .ys-card__media img { filter: grayscale(.55) drop-shadow(0 4px 7px rgba(80, 60, 160, .16)); }
 .ys-card.is-buyable:hover .ys-card__media img { filter: none; }
+@keyframes ys-card-guide { 50% { transform: translateY(-3px) scale(1.025); } }
+.ys-swatches--guided { padding: 5px; border-radius: 8px; box-shadow: 0 0 0 2px rgba(255, 93, 115, .48); animation: ys-swatch-guide 1.25s ease-in-out infinite; }
+@keyframes ys-swatch-guide { 50% { box-shadow: 0 0 0 5px rgba(255, 93, 115, .14); } }
 
 .ys-wallet {
   margin-inline-start: auto;
@@ -790,6 +795,28 @@
   transform: rotate(45deg);
 }
 .ys-propmenu--left::after { inset-inline-start: auto; inset-inline-end: -6px; }
+
+/* First visit: the scene stays visible while Yuvi introduces the two stations. */
+.ys-welcome {
+  position: absolute; inset: 0; z-index: 11; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: clamp(18px, 4vw, 44px);
+  background: rgba(7, 11, 35, .38);
+  animation: ys-welcome-in .35s ease-out both;
+}
+.ys-welcome__copy {
+  inline-size: min(380px, 100%); padding: 20px; border-radius: 8px;
+  background: var(--ys-panel-bg); color: var(--ys-ink); pointer-events: auto;
+  box-shadow: 0 18px 42px rgba(2, 5, 24, .34);
+}
+.ys-welcome__eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: var(--ys-accent-ink); }
+.ys-welcome__copy p { margin: 10px 0 18px; font-size: 16px; font-weight: 700; line-height: 1.5; }
+.ys-welcome__copy .ys-btn { display: inline-flex; align-items: center; gap: 8px; }
+.ys-welcome__markers { display: flex; justify-content: space-between; gap: 16px; color: #fff; font-size: 13px; font-weight: 800; }
+.ys-welcome__markers span { display: inline-flex; align-items: center; gap: 6px; opacity: .32; transition: opacity .3s ease, transform .3s ease; }
+.ys-welcome__markers .is-active { opacity: 1; transform: translateY(-4px); }
+@keyframes ys-welcome-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ys-welcome { animation-duration: .12s; } }
 .ys-propmenu__title {
   padding: 4px 10px 6px;
   font-size: 11.5px; font-weight: 800; color: var(--ys-ink-soft);

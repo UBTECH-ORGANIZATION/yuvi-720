@@ -15,7 +15,7 @@ import { roomItemSpec } from './RoomCatalog'
  * the same boolean `save()` — so the studio's one exit guard can watch both the
  * avatar and the room without special cases.
  */
-export function useRoomDesign(autoLoad = true) {
+export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const [loaded, setLoaded] = useState(false)
   const [room, setRoom] = useState<RoomDesign>(() => cloneRoom(DEFAULT_ROOM))
   const [baseline, setBaseline] = useState<RoomDesign>(() => cloneRoom(DEFAULT_ROOM))
@@ -28,6 +28,7 @@ export function useRoomDesign(autoLoad = true) {
   useEffect(() => { roomRef.current = room }, [room])
 
   const load = useCallback(async () => {
+    setLoaded(false)
     try {
       const state = await getLearnerState()
       const stored = normalizeRoom(state.room)
@@ -35,7 +36,7 @@ export function useRoomDesign(autoLoad = true) {
       setBaseline(cloneRoom(stored))
     } catch { /* an empty room is a perfectly good starting point */ }
     setLoaded(true)
-  }, [])
+  }, [reloadKey])
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
 
@@ -135,6 +136,13 @@ export function useRoomDesign(autoLoad = true) {
     return save(next)
   }
 
+  /** The welcome sequence is remembered separately from the room tutorial. */
+  const completeIntro = async () => {
+    const next = { ...cloneRoom(roomRef.current), introDone: true }
+    setRoom(next)
+    return save(next)
+  }
+
   /** True while the room on screen is not the room on the server. */
   const dirty = loaded && !sameRoom(room, baseline)
   const selected = room.items.find((item) => item.uid === selectedUid) ?? null
@@ -143,7 +151,7 @@ export function useRoomDesign(autoLoad = true) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear,
-    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, reset, save, load,
+    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

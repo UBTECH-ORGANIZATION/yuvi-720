@@ -5,9 +5,9 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
-import { buildBlondeHair, buildEyebrowsBundle, getAsset } from '../Yuvi-studio/YuviAssets'
+import { getAsset } from '../Yuvi-studio/YuviAssets'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
-import { normalizeDesign, type YuviDesign, type YuviSlot, type YuviVariant } from '../Yuvi-studio/YuviDesign'
+import { normalizeDesign, type YuviDesign, type YuviSlot } from '../Yuvi-studio/YuviDesign'
 
 const INTRO_PEEK_DURATION = 2.55
 const INTRO_SETTLE_DURATION = 1.0
@@ -650,8 +650,6 @@ export function YuviRobot3D({
     anchors.body.position.set(0, 0.82, 0.04)
     robot.add(anchors.body)
 
-    const variantGroup = new THREE.Group()
-    head.add(variantGroup)
     const equippedObjects: Partial<Record<YuviSlot, THREE.Group>> = {}
     const disposeGroup = (object: THREE.Object3D) => {
       object.traverse((child) => {
@@ -681,18 +679,6 @@ export function YuviRobot3D({
       anchor.add(object)
       equippedObjects[slot] = object
     }
-    const setVariant = (variant: YuviVariant) => {
-      activeDesign.variant = variant
-      while (variantGroup.children.length) {
-        const child = variantGroup.children[0]
-        variantGroup.remove(child)
-        disposeGroup(child)
-      }
-      if (variant === 'girl') {
-        variantGroup.add(buildBlondeHair())
-        variantGroup.add(buildEyebrowsBundle())
-      }
-    }
     const setColors = (colors: YuviDesign['colors']) => {
       activeDesign.colors = { ...colors }
       const bodyColor = new THREE.Color(colors.body)
@@ -715,7 +701,6 @@ export function YuviRobot3D({
     const applyDesign = (next: YuviDesign) => {
       const normalized = normalizeDesign(next)
       setColors(normalized.colors)
-      setVariant(normalized.variant)
       ;(Object.keys(anchors) as YuviSlot[]).forEach((slot) => {
         equip(slot, normalized.equipped[slot] ?? null)
       })

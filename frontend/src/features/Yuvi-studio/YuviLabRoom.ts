@@ -128,7 +128,7 @@ export function roomStandingSpot(bench: { x: number; z: number; rot?: number }):
 }
 
 /** Footprint each station needs clear around it. */
-export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.4 }
+export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.4, explore: 1.4, mission: 1.0 }
 
 /**
  * Placed props are built at catalog scale and then grown, so one number covers
@@ -617,10 +617,16 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const stations: RoomStations = {
     avatar: { ...DEFAULT_STATIONS.avatar },
     room: { ...DEFAULT_STATIONS.room },
+    explore: { ...DEFAULT_STATIONS.explore },
+    mission: { ...DEFAULT_STATIONS.mission },
   }
   // The bench and its floor shadow move as one.
   const bench = new THREE.Group()
   group.add(bench)
+  let explore: THREE.Group | null = null
+  let mission: THREE.Group | null = null
+  let exploreShadow: THREE.Mesh | null = null
+  let missionShadow: THREE.Mesh | null = null
 
   if (rich) {
     // ── MAKE ───────────────────────────────────────────────────────────────
@@ -667,13 +673,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     addRounded(make, darkMat, [0.1, 0.32, 0.1], [0.94, 1.14, -0.22], 0.03)
 
     // ── EXPLORE ────────────────────────────────────────────────────────────
-    const explore = new THREE.Group()
+    explore = new THREE.Group()
     explore.position.set(EXPLORE_AT[0], FLOOR_Y, EXPLORE_AT[1])
     explore.rotation.y = -0.7
     group.add(explore)
     // No lit ring here: only the platform and the room bench are walk-in
     // stations, and a glowing pad under scenery reads as one.
-    addPropShadow(3.4, 2.6, EXPLORE_AT[0], EXPLORE_AT[1])
+    exploreShadow = addPropShadow(3.4, 2.6, EXPLORE_AT[0], EXPLORE_AT[1])
 
     // Plinth for the holo globe: heavy base, glass collar, inset trim.
     addRounded(explore, brushedMat, [1.5, 0.92, 1.5], [0, 0.46, 0], 0.09)
@@ -725,12 +731,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     // ── MISSION ────────────────────────────────────────────────────────────
     // A kiosk angled at the platform, mid-ground on the right. It reads as the
     // secondary focus: something is waiting to be done.
-    const mission = new THREE.Group()
+    mission = new THREE.Group()
     mission.position.set(MISSION_AT[0], FLOOR_Y, MISSION_AT[1])
     mission.rotation.y = -0.72
     mission.scale.setScalar(0.82)
     group.add(mission)
-    addPropShadow(2.4, 2.4, MISSION_AT[0], MISSION_AT[1])
+    missionShadow = addPropShadow(2.4, 2.4, MISSION_AT[0], MISSION_AT[1])
 
     addRounded(mission, brushedMat, [1.4, 0.14, 0.92], [0, 0.07, 0], 0.05)
     addBox(mission, accentStripMat, [1.2, 0.018, 0.03], [0, 0.14, 0.44])
@@ -1527,10 +1533,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   /** Where each station's ring and sign live — under the feet, or on the bench. */
   const padSpot = (id: LabRoomZoneId) => (id === 'avatar' ? stations.avatar : stations.room)
 
-  // Scenery Yuvi walks around that the learner cannot move.
-  const DECOR_BLOCKERS: LabRoomCircle[] = [
-    { x: EXPLORE_AT[0], z: EXPLORE_AT[1], radius: 1.4 },
-    { x: MISSION_AT[0], z: MISSION_AT[1], radius: 1.0 },
+  const decorBlockers = (): LabRoomCircle[] => [
+    { x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore },
+    { x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission },
   ]
 
   const zonePads = new Map<LabRoomZoneId, {
@@ -1607,10 +1612,18 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const setStations = (next: RoomStations) => {
     stations.avatar = { ...next.avatar }
     stations.room = { ...next.room }
+    stations.explore = { ...next.explore }
+    stations.mission = { ...next.mission }
     platform.position.set(stations.avatar.x, 0, stations.avatar.z)
     platform.rotation.y = stations.avatar.rot
     bench.position.set(stations.room.x, FLOOR_Y, stations.room.z)
     bench.rotation.y = stations.room.rot
+    explore?.position.set(stations.explore.x, FLOOR_Y, stations.explore.z)
+    if (explore) explore.rotation.y = stations.explore.rot
+    mission?.position.set(stations.mission.x, FLOOR_Y, stations.mission.z)
+    if (mission) mission.rotation.y = stations.mission.rot
+    exploreShadow?.position.set(stations.explore.x, FLOOR_Y + 0.006, stations.explore.z)
+    missionShadow?.position.set(stations.mission.x, FLOOR_Y + 0.006, stations.mission.z)
 
     const stand = roomStandingSpot(stations.room)
     for (const zone of ZONES) {
@@ -1707,21 +1720,24 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   /** Circles Yuvi must walk around. Rebuilt whenever the layout changes. */
   const blockers = (): LabRoomCircle[] => [
     { x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room },
-    ...DECOR_BLOCKERS,
+    ...decorBlockers(),
     ...userBlockers,
   ]
 
-  /** The station under this ray, if the learner right-clicked one. */
+  /** The station under this ray. Decorative light effects are never clickable. */
   const pickStation = (raycaster: THREE.Raycaster): StationId | null => {
-    if (raycaster.intersectObject(platform, true).length) return 'avatar'
+    if (raycaster.intersectObject(podium, true).length) return 'avatar'
     if (raycaster.intersectObject(bench, true).length) return 'room'
+    if (explore && raycaster.intersectObject(explore, true).length) return 'explore'
+    if (mission && raycaster.intersectObject(mission, true).length) return 'mission'
     return null
   }
 
   /** A world point just above a station, so UI can be pinned to it. */
   const stationAnchor = (id: StationId): THREE.Vector3 => {
-    const spot = id === 'avatar' ? stations.avatar : stations.room
-    return new THREE.Vector3(spot.x, FLOOR_Y + (id === 'avatar' ? 0.9 : 2.3), spot.z)
+    const spot = stations[id]
+    const height = id === 'avatar' ? 0.9 : id === 'room' ? 2.3 : id === 'explore' ? 2.1 : 1.8
+    return new THREE.Vector3(spot.x, FLOOR_Y + height, spot.z)
   }
 
   /** The placed prop under this ray, nearest first. */
@@ -1748,13 +1764,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
    * so a station is never blocked by the hole it just left.
    */
   const noBuildZones = (exclude?: StationId): LabRoomCircle[] => [
-    ...DECOR_BLOCKERS,
-    ...(exclude === 'room' ? [] : [
-      { x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room },
-    ]),
-    ...(exclude === 'avatar' ? [] : [
-      { x: stations.avatar.x, z: stations.avatar.z, radius: STATION_RADIUS.avatar },
-    ]),
+    ...(['avatar', 'room', 'explore', 'mission'] as StationId[])
+      .filter((id) => id !== exclude)
+      .map((id) => ({ x: stations[id].x, z: stations[id].z, radius: STATION_RADIUS[id] })),
     ...ZONES.filter((zone) => zone.id !== exclude).map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
   ]
 

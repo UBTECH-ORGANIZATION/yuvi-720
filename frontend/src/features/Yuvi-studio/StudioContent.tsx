@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useResponsive } from '../../hooks/useResponsive'
+import { useAuth } from '../../providers/AuthProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
 import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
-import type { YuviColors, YuviSlot, YuviVariant } from './YuviDesign'
+import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
 import { getRoomThumbnails, ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
@@ -19,6 +20,7 @@ import { ItemCard } from './panel/ItemCard'
 import { ContextBar } from './panel/ContextBar'
 import { PropMenu, type PropMenuState } from './panel/PropMenu'
 import { StudioTutorial, type TutorialStepView } from './panel/StudioTutorial'
+import { StudioWelcome } from './panel/StudioWelcome'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
@@ -47,6 +49,7 @@ const STEP_OFF: [number, number] = [0, 4.5]
 
 // Anything the learner can recolour uses the same friendly palette.
 const ITEM_TINTS = ['#7C6BFF', '#4eeef0', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0', '#4cc9f0', '#ff7a3d', '#f3ecdd', '#9a6b40']
+const INTRO_ROOM_ITEM = { uid: '__intro-beanbag', kind: 'beanbag', x: -2.2, z: 1.9, rot: -0.25, tint: '#FF8FD0' }
 
 // ── Room-design walkthrough ───────────────────────────────────────────────
 // The first lesson of the room is that the room is furniture: the two stations
@@ -106,6 +109,7 @@ export function StudioContent({
   onClose: () => void
 }) {
   const { t } = useI18n()
+  const { user } = useAuth()
   const { isTouch } = useResponsive()
   // Four hints name a mouse the learner may not have. On a school tablet they
   // described a wheel, arrow keys and a right-click — including inside the
@@ -138,7 +142,7 @@ export function StudioContent({
   const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
   const propMenuCloseTimer = useRef<number | null>(null)
   const [colorPicker, setColorPicker] = useState<{ uid: string; kind: string } | null>(null)
-  const roomState = useRoomDesign()
+  const roomState = useRoomDesign(true, user?.user_id)
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
   const roomStyle = useMemo(
@@ -172,7 +176,7 @@ export function StudioContent({
   useEffect(() => () => clearPropMenuClose(), [])
   const {
     avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
-    saving, dirty, isLocked, isPropLocked, requirementFor, equip, setVariant, setColor, reset, save,
+    saving, dirty, isLocked, isPropLocked, requirementFor, equip, setColor, reset, save,
     wallet, priceOf, buy, buying,
   } = studio
 
@@ -181,7 +185,25 @@ export function StudioContent({
   // asks for is a real edit to their real room, so there is nothing to undo
   // when it finishes — they simply end up with a room they placed themselves.
   const [tutorial, setTutorial] = useState<TutorialStep | null>(null)
+  const [introScene, setIntroScene] = useState<number | null>(null)
+  const [introBeanbagTintPicked, setIntroBeanbagTintPicked] = useState(false)
+  const [introBeanbagPlaced, setIntroBeanbagPlaced] = useState(false)
+  const [introAvatarChanged, setIntroAvatarChanged] = useState(false)
+  const [introCheckFailed, setIntroCheckFailed] = useState(false)
+  const [introSaveFailed, setIntroSaveFailed] = useState(false)
   const tutorialArmed = useRef(false)
+  const introBeanbagCount = useRef(0)
+
+  useEffect(() => {
+    tutorialArmed.current = false
+    setIntroScene(null)
+    setIntroBeanbagTintPicked(false)
+    setIntroBeanbagPlaced(false)
+    setIntroAvatarChanged(false)
+    setIntroCheckFailed(false)
+    setIntroSaveFailed(false)
+  }, [user?.user_id])
+
   const stations = roomState.room.stations
   /** The layout as the current step found it, so a step cannot pass for free. */
   const stepStart = useRef<{ room: typeof stations.room; avatar: typeof stations.avatar } | null>(null)
@@ -189,9 +211,23 @@ export function StudioContent({
   useEffect(() => {
     if (!roomState.loaded || tutorialArmed.current) return
     tutorialArmed.current = true
-    if (roomState.room.tutorialDone) return
-    setTutorial('benchPlace')
-  }, [roomState.loaded, roomState.room.tutorialDone])
+    if (!roomState.room.introDone) { setIntroScene(0); return }
+  }, [roomState.loaded, roomState.room.introDone, roomState.room.tutorialDone])
+
+  useEffect(() => {
+    if (introScene === null) return
+    if (introScene === 1) {
+      setMode('room')
+      avatarRef.current?.focus('room')
+    } else if (introScene === 2) {
+      setMode('avatar')
+      setActiveTab('colors')
+      avatarRef.current?.focus('full')
+    } else {
+      setMode('roam')
+      avatarRef.current?.focus('roam')
+    }
+  }, [introScene, avatarRef, setActiveTab])
 
   // Snapshot first, so the step that just started measures against where the
   // room actually was rather than against the previous step's baseline.
@@ -317,6 +353,53 @@ export function StudioContent({
     avatarRef.current?.focus('roam')
     await roomState.completeTutorial()
   }
+  const endIntro = async () => {
+    setIntroSaveFailed(false)
+    const saved = await saveAll()
+    const completed = await roomState.completeIntro()
+    if (!saved || !completed) {
+      setIntroSaveFailed(true)
+      return
+    }
+    setIntroScene(null)
+    setMode('roam')
+    avatarRef.current?.focus('roam')
+  }
+  const continueIntro = () => {
+    if (introScene === null) return
+    if (introScene === 0) {
+      introBeanbagCount.current = roomState.items.filter((item) => item.kind === 'beanbag').length
+      setIntroBeanbagTintPicked(false)
+      setIntroBeanbagPlaced(false)
+      setIntroCheckFailed(false)
+      setIntroScene(1)
+      return
+    }
+    if (introScene === 1) {
+      const addedBeanbag = roomState.items.filter((item) => item.kind === 'beanbag').length > introBeanbagCount.current
+      if (!addedBeanbag || !introBeanbagTintPicked) { setIntroCheckFailed(true); return }
+      setIntroCheckFailed(false)
+      setIntroAvatarChanged(false)
+      setIntroScene(2)
+      return
+    }
+    if (introScene === 2) {
+      if (!introAvatarChanged) { setIntroCheckFailed(true); return }
+      setIntroCheckFailed(false)
+      setIntroScene(3)
+      return
+    }
+    void endIntro()
+  }
+  const startTutorial = () => {
+    if (introScene !== null || tutorial) return
+    setPlacing(null)
+    setPropMenu(null)
+    setFirstPerson(false)
+    setMode('roam')
+    avatarRef.current?.focus('room')
+    setTutorial('benchPlace')
+  }
   const carryStation = (id: StationId, rot: number) => {
     setPropMenu(null)
     setPlacing({ kind: `station:${id}`, station: id, rot, rot0: rot })
@@ -421,6 +504,8 @@ export function StudioContent({
       roomState.place(placing.kind, x, z, placing.rot ?? 0)
     }
     setPlacing(null)
+    if (introScene === 1 && placing.kind === 'beanbag' && !placing.uid) setIntroBeanbagPlaced(true)
+    setIntroCheckFailed(false)
   }
 
   /** "Move" on the prop menu picks the prop — or the whole station — up. */
@@ -521,9 +606,10 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
-            footer={footerFor('room')}
+            footer={introScene === 1 ? undefined : footerFor('room')}
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
+            highlightBeanbag={introScene === 1 && !introBeanbagPlaced && placing?.kind !== 'beanbag'}
             t={t}
           />
         )}
@@ -576,25 +662,22 @@ export function StudioContent({
                 )}
               />
             )}
-            footer={footerFor('avatar')}
+            footer={introScene === 2 ? undefined : footerFor('avatar')}
           >
-            {activeTab === 'colors' ? (              <ColorsPanel design={design} onPick={setColor} t={t} />
+            {activeTab === 'colors' ? (
+              <ColorsPanel
+                design={design}
+                onPick={(key, hex) => {
+                  setColor(key, hex)
+                  if (introScene === 2) {
+                    setIntroAvatarChanged(true)
+                    setIntroCheckFailed(false)
+                  }
+                }}
+                t={t}
+              />
             ) : (
               <>
-                {activeTab === 'headTop' && (
-                  <div className="ys-variant-row">
-                    {(['classic', 'girl'] as YuviVariant[]).map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`ys-variant${design.variant === v ? ' is-active' : ''}`}
-                        onClick={() => setVariant(v)}
-                      >
-                        {t(`YuviStudio.variant.${v}`)}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 <section className="ys-section">
                   <div className="ys-section__head">
                     <h2 className="ys-section__title">{t(`YuviStudio.category.${activeTab}`)}</h2>
@@ -681,29 +764,49 @@ export function StudioContent({
               stations={roomState.room.stations}
               roomStyle={roomStyle}
               placing={placing}
+              presenting={introScene !== null && introScene !== 3}
+              presentingSide="left"
               placeTarget={placeTarget}
               onPlaceAt={handlePlaceAt}
               onItemMenu={!placing ? showPropMenu : undefined}
               onItemMenuLeave={!placing ? deferPropMenuClose : undefined}
-              lockRoam={mode !== 'roam' || Boolean(tutorial)}
+              lockRoam={mode !== 'roam' || Boolean(tutorial) || introScene !== null}
               label={t('YuviStudio.avatarAlt')}
             />
           )}
         </div>
-        <div className="ys-hint">
-          {savedNow
-            ? t('YuviStudio.saved')
-            : tutorial
-              ? t('YuviStudio.tut.hint')
-              : placing
-                ? t(placing.uid || placing.station ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint')
-                : mode === 'room'
-                  ? hint('YuviStudio.room.menuHint')
-                  : mode === 'roam'
-                    ? firstPerson ? t('YuviStudio.fpv.hint') : hint('YuviStudio.roam.hint')
-                    : hint('YuviStudio.hint')}
-        </div>
-        {mode === 'roam' && !firstPerson && !tutorial && (
+        {introScene !== null && (
+          <StudioWelcome
+            scene={introScene}
+            copy={{
+              title: t('YuviStudio.intro.title'),
+              body: t(
+                introSaveFailed
+                  ? 'YuviStudio.intro.saveFailed'
+                  : introScene === 1
+                    ? introBeanbagPlaced
+                      ? 'YuviStudio.intro.room.done'
+                      : placing?.kind === 'beanbag'
+                      ? introBeanbagTintPicked ? 'YuviStudio.intro.room.place' : 'YuviStudio.intro.room.color'
+                      : introCheckFailed ? 'YuviStudio.intro.room.missing' : 'YuviStudio.intro.room.pick'
+                    : introScene === 2
+                      ? introAvatarChanged ? 'YuviStudio.intro.avatar.done' : introCheckFailed ? 'YuviStudio.intro.avatar.missing' : 'YuviStudio.intro.avatar.pick'
+                      : `YuviStudio.intro.scene${introScene}`,
+              ),
+              avatar: t('YuviStudio.zone.avatar'),
+              room: t('YuviStudio.zone.room'),
+              action: introScene === 0
+                ? t('YuviStudio.intro.continue')
+                : introScene === 1
+                  ? t('YuviStudio.intro.next')
+                  : introScene === 2
+                    ? t('YuviStudio.intro.next')
+                  : t('YuviStudio.intro.finish'),
+            }}
+            onContinue={continueIntro}
+          />
+        )}
+        {mode === 'roam' && !firstPerson && !tutorial && introScene === null && (
           // Two doors, always visible: dress Yuvi, or build the room.
           <div className="ys-stations">
             <button
@@ -721,6 +824,14 @@ export function StudioContent({
             >
               <Icon name="home" size={16} />
               <span>{t('YuviStudio.zone.room')}</span>
+            </button>
+            <button
+              type="button"
+              className="ys-station ys-station--help"
+              onClick={startTutorial}
+            >
+              <Icon name="help" size={16} />
+              <span>{t('YuviStudio.tut.help')}</span>
             </button>
           </div>
         )}
@@ -803,7 +914,13 @@ export function StudioContent({
           onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
           colors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable ? ITEM_TINTS.slice(0, 5) : undefined}
           onTint={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
-            ? (hex) => roomState.tint(menuItem!.uid, hex)
+            ? (hex) => {
+              roomState.tint(menuItem!.uid, hex)
+              if (introScene === 1 && introBeanbagPlaced && menuItem!.kind === 'beanbag') {
+                setIntroBeanbagTintPicked(true)
+                setIntroCheckFailed(false)
+              }
+            }
             : undefined}
           onMoreColors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
             ? () => { setColorPicker({ uid: menuItem!.uid, kind: menuItem!.kind }); setPropMenu(null) }
@@ -1048,7 +1165,7 @@ function RoomColorDialog({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, footer, isPropLocked, requirementFor, t,
+  state, placing, setPlacing, onLeave, footer, isPropLocked, requirementFor, highlightBeanbag, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
@@ -1058,11 +1175,11 @@ function RoomPanel({
   /** Furniture that has to be earned, and what earns it. */
   isPropLocked: (kind: string) => boolean
   requirementFor: (id: string) => string | undefined
+  highlightBeanbag?: boolean
   t: (key: string) => string
 }) {
   const [category, setCategory] = useState<RoomTab>('seating')
   const { room, items, full, selected, setSelectedUid } = state
-  const selectedSpec = selected ? roomItemSpec(selected.kind) : null
   const isItemCategory = ROOM_CATEGORIES.includes(category as RoomItemCategory)
   const categoryItems = useMemo(
     () => (isItemCategory ? itemsInCategory(category as RoomItemCategory) : []),
@@ -1076,10 +1193,6 @@ function RoomPanel({
     if (!spec) return
     setSelectedUid(null)
     setPlacing({ kind, tint: spec.tintable ? spec.tint : undefined, rot: 0 })
-  }
-  const spinGhost = (delta: number) => {
-    if (!placing) return
-    setPlacing({ ...placing, rot: (placing.rot ?? 0) + delta })
   }
 
   const generalStyles = [
@@ -1106,45 +1219,11 @@ function RoomPanel({
           onChange={setCategory}
         />
       )}
-      context={placing
-        ? (
-          <ContextBar
-            tag={t(placing.uid || placing.station ? 'YuviStudio.room.move' : 'YuviStudio.room.placing')}
-            title={placing.station
-              ? t(`YuviStudio.zone.${placing.station}`)
-              : t(`YuviStudio.room.item.${placing.kind}`)}
-            note={t(placing.uid || placing.station ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint')}
-            actions={(
-              <>
-                <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => spinGhost(Math.PI / 8)}>
-                  {t('YuviStudio.room.rotate')}
-                </button>
-                <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setPlacing(null)}>
-                  {t('YuviStudio.room.cancel')}
-                </button>
-              </>
-            )}
-          />
-        )
-        : selected
+      context={!placing && selected
           ? (
             <ContextBar
               tag={t('YuviStudio.room.selected')}
               title={t(`YuviStudio.room.item.${selected.kind}`)}
-              aside={selectedSpec?.tintable ? (
-                <div className="ys-swatches">
-                  {ITEM_TINTS.map((hex) => (
-                    <button
-                      key={hex}
-                      type="button"
-                      aria-label={hex}
-                      className={`ys-swatch${(selected.tint ?? '').toLowerCase() === hex.toLowerCase() ? ' is-active' : ''}`}
-                      style={{ background: hex }}
-                      onClick={() => state.tint(selected.uid, hex)}
-                    />
-                  ))}
-                </div>
-              ) : undefined}
             />
           )
           : null}
@@ -1172,6 +1251,7 @@ function RoomPanel({
                 thumb={roomThumbnails[spec.id]}
                 dot={spec.tint ?? 'var(--ys-accent)'}
                 selected={!placing?.uid && placing?.kind === spec.id}
+                highlighted={highlightBeanbag && spec.id === 'beanbag'}
                 locked={locked}
                 tip={locked ? t(requirementFor(spec.id) ?? 'YuviStudio.unlock.achievement') : undefined}
                 disabled={full || locked}

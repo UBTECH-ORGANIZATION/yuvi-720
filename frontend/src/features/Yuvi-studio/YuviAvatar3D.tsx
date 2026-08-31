@@ -5,8 +5,8 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
-import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
-import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
+import type { YuviColors, YuviDesign, YuviSlot } from './YuviDesign'
+import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
 import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
 import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
@@ -30,7 +30,6 @@ export interface YuviPlacing {
 export interface YuviAvatarHandle {
   equip: (slot: YuviSlot, id: string | null, animate?: boolean) => void
   setColors: (colors: YuviColors, animate?: boolean) => void
-  setVariant: (variant: YuviVariant, animate?: boolean) => void
   applyDesign: (design: YuviDesign, animate?: boolean) => void
   /** Glide the studio camera to the part of Yuvi the learner is editing. */
   focus: (view: YuviFocus) => void
@@ -218,7 +217,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
     setColors: (colors, animate = false) => controllerRef.current?.setColors(colors, animate),
-    setVariant: (variant, animate = true) => controllerRef.current?.setVariant(variant, animate),
     applyDesign: (design, animate = false) => controllerRef.current?.applyDesign(design, animate),
     focus: (view) => controllerRef.current?.focus(view),
     walkTo: (x, z, station = null) => controllerRef.current?.walkTo(x, z, station),
@@ -738,7 +736,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     anchors.back.position.set(0, 0.9, -0.22); robot.add(anchors.back)
     anchors.handR.position.set(0.058, -0.56, 0.12); armR.add(anchors.handR)
     anchors.body.position.set(0, 0.82, 0.04); robot.add(anchors.body)
-    const variantGroup = new THREE.Group(); head.add(variantGroup)
 
     // ── equip / variant / colours ──
     const equippedObjects: Partial<Record<YuviSlot, THREE.Group>> = {}
@@ -774,11 +771,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         }
       }
     }
-    function setVariant(variant: YuviVariant, animate = true) {
-      design.variant = variant
-      while (variantGroup.children.length) { const c = variantGroup.children[0]; variantGroup.remove(c); disposeGroup(c) }
-      if (variant === 'girl') { variantGroup.add(buildBlondeHair()); variantGroup.add(buildEyebrowsBundle()); if (animate) playTransform(variantGroup) }
-    }
     function setColors(colors: YuviColors, animate = false) {
       design.colors = { ...colors }
       const b = new THREE.Color(colors.body)
@@ -801,7 +793,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
     function applyDesign(next: YuviDesign, animate = false) {
       setColors(next.colors, false)
-      setVariant(next.variant, animate)
       for (const slot of Object.keys(anchors) as YuviSlot[]) equip(slot, next.equipped[slot] ?? null, animate)
     }
     const focus = (view: YuviFocus) => {
@@ -815,7 +806,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // Choosing a category is a request for that exact shot.
       resetUserView()
     }
-    controllerRef.current = { equip, setColors, setVariant, applyDesign, focus, walkTo, recenter }
+    controllerRef.current = { equip, setColors, applyDesign, focus, walkTo, recenter }
     applyDesign(design, false)
     castShadows(robot)
 

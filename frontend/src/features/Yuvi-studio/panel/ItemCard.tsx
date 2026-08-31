@@ -5,7 +5,7 @@ import { Icon } from '../../../components/primitives'
  * option — is this card. One shape, one selected state, one badge slot.
  */
 export function ItemCard({
-  label, thumb, dot, none, selected, previewing, locked, isNew, price, tip, disabled, onClick,
+  label, thumb, dot, none, selected, previewing, highlighted, locked, isNew, price, tip, disabled, onClick,
 }: {
   label: string
   /** Rendered image for avatar gear or room props. */
@@ -15,6 +15,7 @@ export function ItemCard({
   none?: boolean
   selected?: boolean
   previewing?: boolean
+  highlighted?: boolean
   locked?: boolean
   isNew?: boolean
   price?: number | null
@@ -28,6 +29,7 @@ export function ItemCard({
     dot && !thumb ? 'ys-card--dot' : '',
     selected ? 'is-selected' : '',
     previewing ? 'is-previewing' : '',
+    highlighted ? 'is-highlighted' : '',
     locked ? 'is-locked' : '',
     buyable ? 'is-buyable' : '',
   ].filter(Boolean).join(' ')

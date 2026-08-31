@@ -414,34 +414,6 @@ function buildCyberMask() {
   }
   return g
 }
-/** Kept for the girl variant bundle only — brows are no longer a shop item. */
-function buildEyebrows() {
-  const g = new THREE.Group()
-  for (const side of [-1, 1]) {
-    const brow = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.03, 0.03, 3, 0.014), mat('#4a3a2a'))
-    brow.position.set(0.17 * side, 0.22, 0.505); brow.rotation.z = -0.12 * side; g.add(brow)
-  }
-  return g
-}
-/** Eyebrows reused inside the girl-variant bundle. */
-export function buildEyebrowsBundle() {
-  return buildEyebrows()
-}
-// ── girl variant bundle (hair + eyebrows), applied separately from slots ──
-export function buildBlondeHair() {
-  const g = new THREE.Group()
-  const hairMat = mat('#f3d27a', { roughness: 0.55 })
-  const top = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat)
-  top.scale.set(1.02, 0.8, 1.02); top.position.y = 0.12; g.add(top)
-  for (const side of [-1, 1]) {
-    const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.32, 6, 14), hairMat)
-    tail.position.set(0.62 * side, -0.2, -0.05); tail.rotation.z = 0.2 * side; g.add(tail)
-    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.03, 8, 16), emissive('#ff5d73', 0.6))
-    tie.position.set(0.62 * side, 0.0, -0.05); tie.rotation.y = Math.PI / 2; g.add(tie)
-  }
-  g.position.y = 0.28
-  return g
-}
 // ── hand (anchor sits in the right palm) ──
 function buildSkate() {
   const g = new THREE.Group()

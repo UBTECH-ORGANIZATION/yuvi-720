@@ -7,7 +7,7 @@ import { useRewards } from '../../providers/RewardsProvider'
 import type { YuviAvatarHandle } from './YuviAvatar3D'
 import {
   DEFAULT_DESIGN, cloneDesign, normalizeDesign,
-  type YuviColors, type YuviDesign, type YuviSlot, type YuviVariant,
+  type YuviColors, type YuviDesign, type YuviSlot,
 } from './YuviDesign'
 import { type YuviAsset } from './YuviAssets'
 import { useYuviDesign } from './YuviDesignProvider'
@@ -105,10 +105,6 @@ export function useStudioDesign(autoLoad = true) {
     setDesign((prev) => ({ ...prev, equipped: { ...prev.equipped, [slot]: id } }))
     avatarRef.current?.equip(slot, id, true)
   }
-  const setVariant = (variant: YuviVariant) => {
-    setDesign((prev) => ({ ...prev, variant }))
-    avatarRef.current?.setVariant(variant, true)
-  }
   const setColor = (key: keyof YuviColors, hex: string) => {
     setDesign((prev) => {
       const colors = { ...prev.colors, [key]: hex }
@@ -145,7 +141,7 @@ export function useStudioDesign(autoLoad = true) {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
     muted, setMuted, justSaved, saving, dirty,
     isLocked, isPropLocked, requirementFor, streak,
-    equip, setVariant, setColor, reset, save, load,
+    equip, setColor, reset, save, load,
     wallet, priceOf, canAfford, buy, buying,
   }
 }
