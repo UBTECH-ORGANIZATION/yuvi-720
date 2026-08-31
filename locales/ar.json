@@ -990,8 +990,6 @@
   "sdash.subjects.subtitle": "شاهد ما اكتمل، وأين أنت، وما الذي يأتي بعد ذلك.",
   "sdash.subjects.all": "كل التعلّم",
   "sdash.subjects.path": "مسار أهداف التعلّم",
-  "sdash.subjects.filter": "تصفية حسب المادة",
-  "sdash.subjects.filter.all": "الكل",
   "sdash.subjects.pick": "اختر مادة لرؤية أهداف التعلّم داخلها.",
   "sdash.subjects.back": "العودة إلى المواد",
   "sdash.subjects.objectives": "أهداف التعلّم في {subject}",

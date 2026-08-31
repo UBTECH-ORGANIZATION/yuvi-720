@@ -990,8 +990,6 @@
   "sdash.subjects.subtitle": "See what is complete, where you are, and what comes next.",
   "sdash.subjects.all": "All learning",
   "sdash.subjects.path": "Learning objective path",
-  "sdash.subjects.filter": "Filter by subject",
-  "sdash.subjects.filter.all": "All",
   "sdash.subjects.pick": "Pick a subject to see the learning objectives inside it.",
   "sdash.subjects.back": "Back to subjects",
   "sdash.subjects.objectives": "Learning objectives in {subject}",
