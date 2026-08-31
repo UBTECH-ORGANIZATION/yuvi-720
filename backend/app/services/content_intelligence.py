@@ -41,10 +41,22 @@ from typing import Any, Iterable, Optional
 
 SCHEMA_VERSION = 1
 
-#: Stamped into every generated text. Bump when a generation prompt changes in
-#: a way that makes previously stored texts wrong — they all go stale at once
-#: and the next nightly run regenerates them (question_topics precedent).
-PROMPT_VERSION = "cp-v1"
+#: Stamped into every generated text. Bump a kind's entry in PROMPT_VERSIONS
+#: when ITS generation prompt changes in a way that makes previously stored
+#: texts wrong — that kind goes stale at once and the next nightly run
+#: regenerates it, while the other kinds keep their texts (question_topics
+#: precedent, refined per kind). PROMPT_VERSION stays the default for kinds
+#: whose prompt never changed.
+# cp-v2 (2026-08-31): intros became openers — orient and invite, never
+# paraphrase the question/screen or foreshadow the answer (the balloon-intro
+# feedback) — and every kind may now use light markdown emphasis, matching
+# what the live coach writes and what the chat renders.
+PROMPT_VERSION = "cp-v2"
+PROMPT_VERSIONS: dict[str, str] = {}
+
+
+def prompt_version_for(kind: str) -> str:
+    return PROMPT_VERSIONS.get(kind, PROMPT_VERSION)
 
 #: Text kinds by scope. The pipeline generates them; the coach serves them.
 COMPONENT_TEXT_KINDS = ("lesson_welcome",)
@@ -433,7 +445,7 @@ def pregen_text(
     block = (record.get("texts") or {}).get(kind)
     if not _valid_generation_block(block):
         return None
-    if block.get("prompt_version") != PROMPT_VERSION:
+    if block.get("prompt_version") != prompt_version_for(kind):
         return None
     if block.get("source_fingerprint") != record.get("fingerprint"):
         return None  # the file itself is internally inconsistent

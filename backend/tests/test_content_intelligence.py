@@ -55,8 +55,10 @@ def _prints() -> tuple[str, str, str]:
     return q, i, c
 
 
-def _block(text: str, fingerprint: str, prompt_version: str = ci.PROMPT_VERSION) -> dict:
-    return {"he": text, "prompt_version": prompt_version,
+def _block(text: str, fingerprint: str, prompt_version: str | None = None,
+           kind: str = "lesson_welcome") -> dict:
+    return {"he": text,
+            "prompt_version": prompt_version or ci.prompt_version_for(kind),
             "source_fingerprint": fingerprint,
             "generated_at": "2026-08-31T01:00:00Z", "model": "mini"}
 
@@ -89,7 +91,8 @@ def _shard(**overrides) -> dict:
                     "question_id": "q1",
                     "question_text": "מהי מסה?",
                     "fingerprint": q_print,
-                    "texts": {"question_intro": _block("שאלה ראשונה לפניך", q_print)},
+                    "texts": {"question_intro": _block(
+                        "שאלה ראשונה לפניך", q_print, kind="question_intro")},
                 }],
             }],
         }],

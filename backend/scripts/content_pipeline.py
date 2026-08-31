@@ -323,14 +323,18 @@ _KIND_RULES = {
         "פסקת פתיחה קצרה לשיעור — מה לומדים בו ולמה זה מעניין. בלי שם הלומד/ת, "
         "בלי ברכת שלום (היא נוספת בנפרד), בלי אימוג'י, ניסוח נטול מגדר."),
     "lesson_step_intro": (
-        "משפט–שניים שמציגים את המסך: מה עומדים לראות או לקרוא ומה כדאי לשים לב "
-        "אליו. בלי לחשוף תשובות, ניסוח נטול מגדר."),
+        "פתיח קצר וקליל למסך — משפט אחד שמסמן על מה המסך ומזמין להיכנס אליו. "
+        "פתיח, לא תקציר: אסור לסכם או לחזור על התוכן שמופיע במסך עצמו, אסור "
+        "לחשוף תשובות. בלי אימוג'י, ניסוח נטול מגדר."),
     "video_summary": (
         "סיכום קצר של מה שמלמד הסרטון או המדיה שבמסך, מבוסס אך ורק על הטקסט "
         "שסופק. בלי להמציא פרטים שלא נכתבו."),
     "question_intro": (
-        "משפט–שניים שמציגים את השאלה שמופיעה על המסך ומזמינים לנסות — בלי לרמוז "
-        "לתשובה, בלי לצטט את השאלה מילה במילה, ניסוח נטול מגדר."),
+        "פתיח קצר לשאלה — משפט אחד-שניים שאומרים באיזה נושא השאלה עוסקת ואיזה "
+        "סוג חשיבה היא מבקשת (השערה, חישוב, השוואה…), ומזמינים לנסות. פתיח, "
+        "לא ניסוח מחדש: אסור לחזור על תוכן השאלה או לנסח אותה מחדש במילים "
+        "אחרות — היא כבר כתובה על המסך. אסור לרמוז לתשובה או לכיוון פתרון. "
+        "ניסוח נטול מגדר."),
     "hint_l1": (
         "רמז ראשון ועדין: לאן להסתכל או איך לגשת — צעד חשיבה אחד, לא התשובה "
         "ולא חלק ממנה. אסור שהתשובה הנכונה תופיע בטקסט."),
@@ -343,6 +347,8 @@ _GENERATION_PROMPT = """אתה כותב טקסטים קצרים בעברית ע�
 כל שורה למטה היא בקשה אחת: סוג טקסט + ההקשר המלא שלו. כתוב אך ורק מתוך ההקשר
 שסופק — אסור להמציא עובדות, מספרים או דוגמאות שאינם בו. אם ההקשר דל מכדי לכתוב
 טקסט מבוסס, דלג על השורה (אל תחזיר אותה).
+מותר עיצוב מרקדאון קל: **הדגשה** למונח מפתח אחד או שניים בהודעה, כשזה מוסיף
+בהירות. בלי כותרות, בלי רשימות, בלי קישורים.
 
 {rows}
 
@@ -352,7 +358,10 @@ _GENERATION_PROMPT = """אתה כותב טקסטים קצרים בעברית ע�
 
 
 def _normalized(text: str) -> str:
-    return " ".join(str(text or "").split()).strip().lower()
+    # Markdown emphasis must not hide an echoed answer ("**12.1**" or a bolded
+    # word inside the answer phrase), so strip it before comparing.
+    stripped = re.sub(r"[*_`]", "", str(text or ""))
+    return " ".join(stripped.split()).strip().lower()
 
 
 def _echoes_an_answer(text: str, correct: list[str]) -> bool:
@@ -367,10 +376,10 @@ def collect_generation_targets(
 ) -> list[dict[str, Any]]:
     """Every text slot whose authored source drifted from its stored block."""
 
-    def _stale(existing: Optional[dict], fingerprint: str) -> bool:
+    def _stale(existing: Optional[dict], fingerprint: str, kind: str) -> bool:
         return not (
             isinstance(existing, dict)
-            and existing.get("prompt_version") == ci.PROMPT_VERSION
+            and existing.get("prompt_version") == ci.prompt_version_for(kind)
             and existing.get("source_fingerprint") == fingerprint
             and str(existing.get("he") or "").strip())
 
@@ -379,7 +388,7 @@ def collect_generation_targets(
         old = committed.get(cid) or {}
         old_slides = {s.get("item_id"): s for s in old.get("slides") or []}
         if _stale((old.get("texts") or {}).get("lesson_welcome"),
-                  comp["component_fingerprint"]):
+                  comp["component_fingerprint"], "lesson_welcome"):
             targets.append({
                 "id": f"{cid}|||lesson_welcome", "kind": "lesson_welcome",
                 "fingerprint": comp["component_fingerprint"], "correct": [],
@@ -407,7 +416,7 @@ def collect_generation_targets(
                     slide["information_to_bot"] or enrichment.get("visible_text")):
                 wanted_kinds.append("video_summary")
             for kind in wanted_kinds:
-                if _stale(old_texts.get(kind), slide["fingerprint"]):
+                if _stale(old_texts.get(kind), slide["fingerprint"], kind):
                     targets.append({
                         "id": f"{cid}|{slide['item_id']}||{kind}", "kind": kind,
                         "fingerprint": slide["fingerprint"], "correct": [],
@@ -419,7 +428,7 @@ def collect_generation_targets(
                 old_q_texts = (old_questions.get(question["question_id"]) or {}) \
                     .get("texts") or {}
                 for kind in ci.QUESTION_TEXT_KINDS:
-                    if _stale(old_q_texts.get(kind), question["fingerprint"]):
+                    if _stale(old_q_texts.get(kind), question["fingerprint"], kind):
                         targets.append({
                             "id": (f"{cid}|{slide['item_id']}|"
                                    f"{question['question_id']}|{kind}"),
@@ -491,7 +500,7 @@ async def generate_texts(
                 continue  # a hint that says the answer is not a hint
             generated[target["id"]] = {
                 "he": text,
-                "prompt_version": ci.PROMPT_VERSION,
+                "prompt_version": ci.prompt_version_for(target["kind"]),
                 "source_fingerprint": target["fingerprint"],
                 "generated_at": generated_at,
                 "model": "mini",
@@ -509,9 +518,9 @@ def build_shards(
 ) -> dict[Path, dict[str, Any]]:
     """Relative shard path → shard document, answers stripped by construction."""
 
-    def _keep(existing: Optional[dict], fingerprint: str) -> Optional[dict]:
+    def _keep(existing: Optional[dict], fingerprint: str, kind: str) -> Optional[dict]:
         if (isinstance(existing, dict)
-                and existing.get("prompt_version") == ci.PROMPT_VERSION
+                and existing.get("prompt_version") == ci.prompt_version_for(kind)
                 and existing.get("source_fingerprint") == fingerprint
                 and str(existing.get("he") or "").strip()):
             return existing
@@ -522,7 +531,7 @@ def build_shards(
         out = {}
         for kind in kinds:
             block = generated.get(f"{target_prefix}|{kind}") \
-                or _keep(existing.get(kind), fingerprint)
+                or _keep(existing.get(kind), fingerprint, kind)
             if block:
                 out[kind] = block
         return out

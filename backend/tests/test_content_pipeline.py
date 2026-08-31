@@ -63,7 +63,7 @@ def _generated_for(model: dict) -> dict:
         for target in targets:
             out[target["id"]] = {
                 "he": "טקסט שנוצר מראש",
-                "prompt_version": ci.PROMPT_VERSION,
+                "prompt_version": ci.prompt_version_for(target["kind"]),
                 "source_fingerprint": target["fingerprint"],
                 "generated_at": "2026-08-31T01:00:00Z",
                 "model": "mini",
@@ -166,7 +166,8 @@ class GenerationTrustsNothing(unittest.TestCase):
         generated, targets = self._generate([payload])
         self.assertEqual(len(generated), len(targets) - 1)
         block = generated[targets[0]["id"]]
-        self.assertEqual(block["prompt_version"], ci.PROMPT_VERSION)
+        self.assertEqual(block["prompt_version"],
+                         ci.prompt_version_for(targets[0]["kind"]))
         self.assertEqual(block["source_fingerprint"], targets[0]["fingerprint"])
 
     def test_renamed_rows_cannot_be_matched_back(self):
@@ -193,6 +194,14 @@ class GenerationTrustsNothing(unittest.TestCase):
         hint = next(t for t in targets if t["kind"] == "hint_l1")
         generated, _ = self._generate([json.dumps(
             {"rows": [{"id": hint["id"], "text": "התשובה היא גרם כמובן"}]},
+            ensure_ascii=False)])
+        self.assertNotIn(hint["id"], generated)
+
+    def test_markdown_emphasis_cannot_hide_an_echoed_answer(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        hint = next(t for t in targets if t["kind"] == "hint_l1")
+        generated, _ = self._generate([json.dumps(
+            {"rows": [{"id": hint["id"], "text": "התשובה היא **גר**ם כמובן"}]},
             ensure_ascii=False)])
         self.assertNotIn(hint["id"], generated)
 
