@@ -25,6 +25,8 @@ from app.brain.activeness import (  # noqa: E402
     COMPETENCY_KEYS,
     MAX_DRIFT,
     MIN_CAUSE_CONF,
+    WINDOW_DAYS,
+    _TAG_FACTS,
     effective_activeness,
 )
 
@@ -181,6 +183,31 @@ def test_self_awareness_up_when_reflecting():
     assert not _is_drag(d["causes"])
 
 
+def test_reflections_outside_the_window_are_not_credited_to_it():
+    """Having reflected months ago is not reflecting now.
+
+    The count used to fall back to the all-time list whenever the window came up
+    empty, which credits a learner who has stopped reflecting with reflections
+    they did not make.
+    """
+    events = [_ev(verb="completed", obj=f"o{i}", days_ago=i) for i in range(4)]
+    stale = [
+        {"at": (NOW - timedelta(days=WINDOW_DAYS + 10 + i)).isoformat()}
+        for i in range(4)
+    ]
+    d = _dom(_brain(reflections=stale), "self_awareness", events)
+    never = _dom(_brain(), "self_awareness", events)
+    assert d["value"] == never["value"]
+    assert d["causes"][0] == "low_reflection"
+
+
+def test_undated_reflections_still_count():
+    """Dropping the all-time fallback must not start discarding undated entries."""
+    events = [_ev(verb="completed", obj=f"o{i}", days_ago=i) for i in range(4)]
+    d = _dom(_brain(reflections=[{}, {}, {}, {}]), "self_awareness", events)
+    assert d["value"] > BASE["self_awareness"]
+
+
 # ── support_emotional — healthy help-seeking is GOOD; isolation is the drag ───
 def test_support_up_when_help_seeking_is_healthy():
     events = [_ev(success=(i > 0), score=(1.0 if i > 0 else 0.0),
@@ -304,3 +331,271 @@ def test_value_clamps_at_ceiling_and_floor():
     down = [_ev(success=False, score=0.0, obj=f"o{i}", days_ago=3) for i in range(6)]
     lo = _dom(_brain(base={"growth_mindset": 5}), "growth_mindset", down)
     assert lo["value"] >= 0
+
+
+# ── Drivers — what the learner actually did, signed ──────────────────────────
+def test_drivers_name_what_went_well_not_only_drags():
+    """`causes` answers "what should I work on" and so only reports drags. A
+    domain that ROSE still has to be able to say why, which is what drivers add.
+    """
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(9)]
+    events += [_ev(obj=f"o{i}", days_ago=i) for i in range(5)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["value"] > BASE["motivation_relevance"]
+    assert not _is_drag(d["causes"])                       # nothing to work on
+    assert d["drivers"], "a rise with no driver has no reason to show"
+    assert all(x["dir"] == "up" for x in d["drivers"])
+
+
+def test_drivers_carry_the_drag_direction_when_things_slipped():
+    """The case the whole thing exists for: a learner who was showing up and
+    then went quiet. The current window still holds activity, so nothing in
+    today's numbers reads as a problem — only the comparison does."""
+    events = [_ev(obj=f"o{d}", days_ago=d) for d in range(22, 28) for _ in range(2)]
+    events += [_ev(obj="recent", days_ago=0) for _ in range(5)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    down = [x["tag"] for x in d["drivers"] if x["dir"] == "down"]
+    assert "inconsistent" in down
+
+
+def test_a_dip_is_explained_even_when_every_current_signal_is_positive():
+    """Drivers describe the CHANGE, not the state. Reading the state instead
+    left a dipped domain with nothing but good news to report, and a coach
+    asked "why did this go down?" answered with generic hypotheses."""
+    # Strong, regular week three weeks back; a thinner week now.
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(verb="completed", obj="now", days_ago=1) for _ in range(4)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["drivers"], "a movement with no driver leaves the coach guessing"
+    assert any(x["dir"] == "down" for x in d["drivers"])
+
+
+def test_drivers_stay_silent_without_enough_evidence():
+    # Same rule as `causes`: no blame, and no praise, on one event.
+    d = _dom(_brain(), "self_regulation", [_ev(success=False, score=0.0, dur=2.0)])
+    assert d["confidence"] < MIN_CAUSE_CONF
+    assert d["drivers"] == []
+
+
+def test_every_driver_the_model_emits_has_a_localized_reason():
+    """The learner UI renders `actmap.why.<tag>.<dir>`, and `t()` falls back to
+    the raw key — so a tag with no string puts `actmap.why.guessing.up` in front
+    of a child. Same guarantee the cause hints already get.
+    """
+    import json
+    import pathlib
+
+    locales = pathlib.Path(__file__).resolve().parents[2] / "locales"
+    bundles = {
+        lang: json.loads((locales / f"{lang}.json").read_text(encoding="utf8"))
+        for lang in ("he", "en", "ar")
+    }
+
+    emitted = set()
+    for _label, brain, events, decisions in _all_scenarios():
+        out = effective_activeness(brain, events, decisions)
+        for key in COMPETENCY_KEYS:
+            for driver in out[key]["drivers"]:
+                emitted.add((driver["tag"], driver["dir"]))
+    assert emitted, "scenarios produced no drivers — coverage check is vacuous"
+
+    for tag, direction in sorted(emitted):
+        key = f"actmap.why.{tag}.{direction}"
+        for lang, bundle in bundles.items():
+            assert key in bundle, f"{key} missing from {lang}.json"
+            assert bundle[key].strip(), f"{key} is blank in {lang}.json"
+
+
+# ── The learner who stops coming ─────────────────────────────────────────────
+def test_a_learner_who_stops_coming_is_told_why():
+    """The movement that most needs explaining used to be the one silenced.
+
+    Confidence came from the current window, which is empty precisely BECAUSE
+    they stopped — so the drop showed no arrow, no reason, and the coach had
+    nothing to answer with. The absence is the finding, and the week they did
+    show up is evidence enough to say what changed.
+    """
+    events = [
+        _ev(verb="completed", obj=f"p{d}", days_ago=d)
+        for d in range(22, 28)
+    ] + [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["value"] < d["prior_value"], "a week away has to read as a decline"
+    assert d["change_confidence"] >= MIN_CAUSE_CONF, "the arrow would stay hidden"
+    down = [x for x in d["drivers"] if x["dir"] == "down"]
+    assert down, "a drop with no driver leaves the coach with nothing to say"
+    assert down[0]["tag"] == "inconsistent"
+    assert down[0]["facts"]["active_days"] == 0
+    assert down[0]["facts"]["active_days_prior"] > 0
+
+
+def test_doing_nothing_is_never_reported_as_improvement():
+    """The mirror of the fix, and the reason it is limited to declines.
+
+    Scores drift back toward the questionnaire base as evidence runs out, so a
+    struggling learner who simply stops would drift UPWARD. Relaxing the gate in
+    both directions would congratulate a child for the week they skipped.
+    """
+    events = [
+        _ev(success=False, score=0.0, obj=f"p{d}", days_ago=d)
+        for d in range(22, 28) for _ in range(3)
+    ]
+    for key in COMPETENCY_KEYS:
+        d = _dom(_brain(base={key: 20}), key, events)
+        if d["value"] > d["prior_value"]:
+            assert d["change_confidence"] == d["confidence"], (
+                f"{key}: a rise is being vouched for by an empty week"
+            )
+
+
+def test_a_present_learner_is_unaffected_by_the_absence_rule():
+    """Someone who is here keeps being judged on what they did while here."""
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["change_confidence"] == d["confidence"]
+
+
+def test_the_absence_rule_never_buys_an_arrow_it_cannot_explain():
+    """Scores drift toward base as evidence thins, so a domain can slide with no
+    signal behind it. Vouching for that slide would put an arrow on the card and
+    nothing in the tooltip — the "why?" with no answer, which is the whole
+    defect this card was built to remove."""
+    events = [
+        _ev(verb="completed", obj=f"p{d}", days_ago=d)
+        for d in range(22, 28)
+    ] + [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28)]
+    for key in COMPETENCY_KEYS:
+        d = _dom(_brain(), key, events)
+        if not d["drivers"]:
+            assert d["change_confidence"] == d["confidence"], (
+                f"{key}: vouching for a move with nothing to say about it"
+            )
+
+
+def test_hint_use_is_windowed_so_leaning_on_help_can_register_as_a_change():
+    """An unwindowed count is the same number at both ends of the comparison, so
+    hint-shaped causes could never move. Two of the seven were inert."""
+    events = [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28) for _ in range(3)]
+    events += [_ev(obj=f"n{d}", days_ago=d) for d in range(0, 6) for _ in range(3)]
+    decisions = [
+        {"strategy": "hint", "hint_level": 1, "at": (NOW - timedelta(days=d)).isoformat()}
+        for d in range(0, 6) for _ in range(6)
+    ] + [{"strategy": "hint", "hint_level": 1, "at": (NOW - timedelta(days=25)).isoformat()}]
+
+    d = _dom(_brain(), "initiative_responsibility", events, decisions)
+    row = next((x for x in d["drivers"] if x["tag"] == "hint_reliance"), None)
+    assert row, "leaning on hints far more than last week has to be sayable"
+    assert row["dir"] == "down"
+    assert row["facts"]["n_hint"] > row["facts"]["n_hint_prior"]
+
+
+def test_no_arrow_the_drivers_contradict():
+    """The card and the chat must never describe the same week differently.
+
+    `value` is confidence-scaled while drivers compare raw contributions, so a
+    domain can slide while the behaviour behind it improved — more evidence of a
+    still-negative signal drags the score down even as the signal gets better.
+    A real learner saw a declining self-awareness emblem and was told in chat,
+    the same minute, that it was improving. Neither was lying; they were reading
+    different halves of one calculation.
+    """
+    for _label, brain, events, decisions in _all_scenarios():
+        out = effective_activeness(brain, events, decisions)
+        for key in COMPETENCY_KEYS:
+            row = out[key]
+            moved = row["value"] - row["prior_value"]
+            if not moved:
+                continue
+            want = "up" if moved > 0 else "down"
+            assert any(d["dir"] == want for d in row["drivers"]), (
+                f"{key}: arrow says {want} with nothing pointing that way "
+                f"({row['prior_value']}->{row['value']}, "
+                f"drivers={[(d['tag'], d['dir']) for d in row['drivers']]})"
+            )
+
+
+def test_prior_value_is_the_same_score_one_week_back():
+    """The card draws its arrow from `value` vs `prior_value`. Both must come
+    from this engine — deriving the arrow from a separately stored snapshot let
+    a domain show a dip the event data could not explain, so the card asked
+    "why?" in the one place there was no answer."""
+    # Nothing until this week, then a solid week of finishing work.
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["prior_value"] < d["value"], "a week of new work has to read as a rise"
+    assert any(x["dir"] == "up" for x in d["drivers"])
+
+
+def test_a_gap_in_the_record_is_not_reported_as_movement():
+    """A learner who was active, then vanishes from the record, then reappears.
+
+    That shape is what a dead xAPI relay leaves behind, and the empty stretch
+    reads as inactivity — so ingest merely coming back online would be reported
+    to the learner as improvement. Silence beats a rise nobody earned.
+    """
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(40, 48)]
+    events += [_ev(verb="completed", obj=f"n{d}", days_ago=d) for d in range(0, 6)]
+    events += [_ev(obj=f"n{d}", days_ago=d) for d in range(0, 6)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["drivers"] == []
+    assert d["prior_value"] == d["value"], "no vouched-for prior, so claim no move"
+
+
+def test_a_beginner_is_not_mistaken_for_a_gap():
+    """Same empty prior window, opposite meaning: nothing came before it, so the
+    learner is simply new and their first week is a real rise, not an artefact.
+    """
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["prior_value"] < d["value"]
+    assert any(x["dir"] == "up" for x in d["drivers"])
+
+
+# ── Driver facts — the counts that make an explanation specific ──────────────
+def test_a_driver_carries_the_counts_behind_it():
+    """A tag alone can only ever produce one sentence per cause. The counts are
+    what let the card and the coach describe THIS learner's week."""
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(verb="completed", obj="now", days_ago=1) for _ in range(4)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    facts = next((x.get("facts") for x in d["drivers"] if x["tag"] == "inconsistent"), None)
+    assert facts, "a driver with no counts leaves every learner the same sentence"
+    assert "active_days" in facts and "active_days_prior" in facts
+    assert facts["active_days"] != facts["active_days_prior"], "a diff that shows no diff"
+
+
+def test_two_learners_with_the_same_tag_get_different_counts():
+    """The whole point: same cause, different week, different explanation."""
+    quiet = [_ev(obj="o1", days_ago=d) for d in range(22, 28)]
+    quiet += [_ev(obj="o1", days_ago=1)]
+    busy = [_ev(obj="o1", days_ago=d) for d in range(22, 28)]
+    busy += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 5) for _ in range(3)]
+
+    def days(events):
+        drivers = _dom(_brain(), "motivation_relevance", events)["drivers"]
+        row = next((x for x in drivers if x["tag"] == "inconsistent"), None)
+        return (row or {}).get("facts", {}).get("active_days")
+
+    assert days(quiet) != days(busy)
+
+
+def test_facts_never_leak_a_field_the_cause_does_not_use():
+    """Facts are prompt material for the coach, so each cause carries only the
+    counts it is actually about — not a dump of every metric."""
+    events = [_ev(verb="completed", obj=f"o{i}", days_ago=i) for i in range(6)]
+    for key in COMPETENCY_KEYS:
+        for driver in _dom(_brain(), key, events)["drivers"]:
+            allowed = set(_TAG_FACTS.get(driver["tag"], ()))
+            allowed |= {f"{f}_prior" for f in allowed}
+            assert set(driver.get("facts", {})) <= allowed
+
+
+def test_prior_value_exists_even_with_no_activity_at_all():
+    out = effective_activeness(_brain(), [], [])
+    for key in COMPETENCY_KEYS:
+        assert out[key]["prior_value"] == BASE[key], key

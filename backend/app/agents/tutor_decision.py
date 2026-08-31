@@ -29,7 +29,8 @@ INTENTIONS = (
 
 MAX_HINT_LEVEL = 1
 _indexes_ready = False
-
+# A learner can log thousands of these; the fetch is bounded by time instead.
+DECISION_FETCH_CEILING = 20000
 # Chat-originated hints must use the same controlled support lane as the hint
 # button. We recognize all common forms of the Hebrew ר-מ-ז root, but consume a
 # hint only when that form occurs in a request, never in a definition question.
@@ -283,16 +284,32 @@ async def ensure_indexes() -> None:
         print(f"⚠️ tutor_decisions index setup skipped: {type(exc).__name__}")
 
 
-async def recent_tutor_decisions(learner_id: str, limit: int = 300) -> list[dict[str, Any]]:
+# The (learner_id, at) index above is what keeps the `since` range below cheap.
+async def recent_tutor_decisions(
+    learner_id: str,
+    limit: int = 300,
+    since: Optional[datetime] = None,
+) -> list[dict[str, Any]]:
     """Recent coach decisions (hint/explain/worked-example + hint_level) for a
     learner — best-effort evidence for the activeness help/hint signals. Returns
-    an empty list when the collection is unavailable (never raises)."""
+    an empty list when the collection is unavailable (never raises).
+
+    `since` bounds by time and replaces `limit`. Rows come back newest-first, so
+    a row cap drops the oldest — the week any comparison is measured against. A
+    learner can accumulate thousands of these, which a 300-row cap spends in
+    days.
+    """
     try:
         from app.brain.repository import _get_collection_named
         collection = _get_collection_named("tutor_decisions")
         if collection is None:
             return []
-        cursor = collection.find({"learner_id": learner_id}).sort("at", -1).limit(limit)
+        query: dict[str, Any] = {"learner_id": learner_id}
+        cap = limit
+        if since is not None:
+            query["at"] = {"$gte": since.isoformat()}
+            cap = DECISION_FETCH_CEILING
+        cursor = collection.find(query).sort("at", -1).limit(cap)
         return [d async for d in cursor]
     except Exception:
         return []

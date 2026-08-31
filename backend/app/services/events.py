@@ -21,7 +21,7 @@ import os
 import re
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from app.brain import detectors
@@ -622,19 +622,51 @@ async def get_recent_events(
     return events[:limit]
 
 
-async def get_learner_events(learner_id: str, limit: int = 500) -> list[dict[str, Any]]:
-    """Return bounded event evidence for learner-owned aggregate projections."""
+# Clock skew is the only way `stored_at` lands before `occurred_at`; measured at
+# under 3s across the collection, so minutes of slack keeps the filter a superset.
+_STORED_AT_SKEW = timedelta(minutes=5)
+EVENT_FETCH_CEILING = 20000
+
+
+async def get_learner_events(
+    learner_id: str,
+    limit: int = 500,
+    since: Optional[datetime] = None,
+) -> list[dict[str, Any]]:
+    """Return bounded event evidence for learner-owned aggregate projections.
+
+    `since` bounds by time and replaces `limit`. Events come back newest-first,
+    so a row cap drops the OLDEST rows — which for a busy learner is the whole
+    of last week, the half every week-over-week comparison is measured against.
+    A learner doing ~200 events a day exhausts a 500-row cap in under three days
+    and then reads as having no history at all.
+
+    The floor is applied to `stored_at`: it is the sort key, uniformly
+    formatted, and never earlier than `occurred_at` by more than clock skew, so
+    it yields a superset that the caller's own window then trims exactly.
+    `occurred_at` is stored in two different string shapes, so a range query on
+    it would silently mis-order.
+    """
     safe_id = normalize_learner_id(learner_id)
+    query: dict[str, Any] = {"learner_id": safe_id}
+    cap = limit
+    floor = ""
+    if since is not None:
+        floor = (since - _STORED_AT_SKEW).isoformat()
+        query["stored_at"] = {"$gte": floor}
+        cap = EVENT_FETCH_CEILING
     collection = await _events_collection()
     if collection is not None:
         try:
-            cursor = collection.find({"learner_id": safe_id}).sort("stored_at", -1).limit(limit)
+            cursor = collection.find(query).sort("stored_at", -1).limit(cap)
             return [event async for event in cursor]
         except Exception as exc:
             print(f"⚠️ learner events read failed, using fallback: {exc}")
     events = [event for event in _fallback_read().values() if event.get("learner_id") == safe_id]
+    if floor:
+        events = [e for e in events if str(e.get("stored_at") or "") >= floor]
     events.sort(key=lambda event: event.get("stored_at", ""), reverse=True)
-    return events[:limit]
+    return events[:cap]
 
 
 async def get_session_events(learner_id: str, session_id: str) -> list[dict[str, Any]]:

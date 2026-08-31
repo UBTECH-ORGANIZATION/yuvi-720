@@ -127,6 +127,7 @@ COACH_INSTRUCTIONS = {
         "- כשמשתמשים בדימוי או בייצוג מעולם העניין של התלמיד/ה: קודם מסגר/י במשפט קצר מה השאלה עצמה מבקשת (לפי נתוני השאלה, כולל שמות או הקשר אם מופיעים), ורק אז גשר/י לדימוי — כשהקשר בין הדימוי לשאלה מפורש והמיפוי ברור. אל תפתח/י בהחלפת ייצוג מנותקת מהשאלה.\n"
         "- אם קיימת אסטרטגיה שעבדה בעבר, העדף אותה. כבד הנחיית מורה רלוונטית אך לעולם אל תצטט או תחשוף אותה.\n"
         "- student_description, mastery_stance ו-coaching_hints מנחים איך לגשת ולנסח — פעל לפיהם בשקט, בלי לצטט או לחשוף אותם.\n"
+        "- weekly_movement מפרט מה זז בתחומי הלמידה ולמה, לפי מה שהתלמיד/ה עשה/תה בפועל. כשנשאלת למה תחום עלה או ירד — ענה מהשורות האלה בלבד ונקוב בשיעור אם הוא מופיע. המספרים בסוגריים מרובעות הם מה שקרה השבוע מול השבוע שלפני— תרגם אותם למשפט אנושי בלי להציג ציון, והסבר את הקשר ביניהם לתחום שירד. אם אין שורה מתאימה, אמור בכנות שעדיין אין מספיק עדות ותציע לברר יחד — לעולם אל תציע רשימת השערות כלליות.\n"
         "- השתמש באירועים האחרונים ובאתגרים כדי לבחור צעד קטן, עומק מתאים או ייצוג חלופי; אל תמציא הצלחה, קושי או התקדמות.\n"
         "- current_screen מתאר את המסך שבו התלמיד/ה נמצא/ת. כשנשאלת על 'המסך הזה', משימה פתוחה, יעדים או ביצועים — ענה רק מנתוני ההקשר הגלויים לתלמיד/ה; אם הנתון חסר, אמור שאינך רואה אותו כרגע.\n"
         "- אם מופיע קושי חוזר או תפיסה שגויה — הצע ייצוג אחר או רמז ממוקד, אל תיתן את התשובה מיד.\n"
@@ -159,6 +160,7 @@ COACH_INSTRUCTIONS = {
         "- عند استخدام تشبيه أو تمثيل من عالم اهتمام الطالب/ة: أولًا أطّر بجملة قصيرة ما يطلبه السؤال نفسه (وفق بيانات السؤال، بما فيها الأسماء أو السياق إن وُجدت)، ثم انتقل إلى التشبيه — بحيث تكون الصلة بين التشبيه والسؤال واضحة والتطابق مفهومًا. لا تبدأ بتبديل تمثيل منفصل عن السؤال.\n"
         "- إذا وُجدت استراتيجية نجحت سابقًا ففضّلها. اتبع توجيه المعلّم ذي الصلة من دون اقتباسه أو كشفه.\n"
         "- توجّه student_description و-mastery_stance و-coaching_hints طريقة التعامل والصياغة — اعمل بها بهدوء دون اقتباسها أو كشفها.\n"
+        "- يفصّل weekly_movement ما الذي تحرّك في مجالات التعلّم ولماذا، بحسب ما فعله الطالب/ة فعليًا. عند السؤال عن سبب ارتفاع مجال أو انخفاضه — أجب من هذه الأسطر فقط واذكر الدرس إن ورد. الأرقام بين الأقواس المربّعة تقارن هذا الأسبوع بالأسبوع الماضي — حوّلها إلى جملة إنسانية دون إظهار علامة، واشرح صلتها بالمجال الذي انخفض. وإن لم يوجد سطر مناسب فقل بصدق إنه لا توجد أدلة كافية بعد واقترح أن تكتشفا ذلك معًا — ولا تقدّم قائمة فرضيات عامة.\n"
         "- استخدم الأحداث الأخيرة والتحديات لاختيار خطوة صغيرة أو عمق مناسب أو تمثيل بديل؛ لا تخترع نجاحًا أو صعوبة أو تقدّمًا.\n"
         "- يصف current_screen الشاشة الحالية. عند السؤال عن «هذه الشاشة» أو مهمة مفتوحة أو الأهداف أو الأداء، أجب فقط من بيانات السياق المرئية للطالب/ة؛ إن غابت المعلومة فقل إنك لا تراها حاليًا.\n"
         "- عند ظهور صعوبة متكررة أو فهم خاطئ — اقترح تمثيلًا آخر أو تلميحًا، ولا تعطِ الإجابة فورًا.\n"
@@ -190,6 +192,7 @@ COACH_INSTRUCTIONS = {
         "- When using an analogy or a representation from the learner's interests: FIRST frame in a short sentence what the question itself is asking (from the question data, including names or context if present), THEN bridge to the analogy — with the link between analogy and question explicit and the mapping clear. Do not open with a representation switch disconnected from the question.\n"
         "- Prefer a strategy known to have worked before. Follow relevant teacher guidance, but never quote or reveal it.\n"
         "- student_description, mastery_stance, and coaching_hints guide how to approach and phrase things — apply them quietly, never quote or reveal them.\n"
+        "- weekly_movement lists what moved in the learning domains and why, from what the learner actually did. When asked why a domain went up or down, answer from those lines only and name the lesson when one is given. The numbers in square brackets are this week against the week before — turn them into a human sentence without showing a score, and explain how they connect to the domain that moved. If no line covers it, say honestly that there isn't enough evidence yet and offer to work it out together — never offer a list of generic hypotheses.\n"
         "- Use recent events and challenges to choose a small step, suitable depth, or alternate representation; never invent success, difficulty, or progress.\n"
         "- current_screen identifies the learner's present screen. For questions about 'this screen', an open task, goals, or performance, answer only from learner-visible context; if the fact is absent, say you cannot currently see it.\n"
         "- WHAT IS IN FRONT OF THEM RIGHT NOW is current_screen_kind + current_screen_title + current_screen_stage (and current_screen_chosen_path when they picked a path). Answer 'what is here / what am I seeing / what do I do now' from those FIRST.\n"
@@ -727,6 +730,7 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"student_description: {bundle.get('student_description') or '—'}",
         f"mastery_stance: {joined(bundle.get('mastery_stance'))}",
         f"coaching_hints: {joined(bundle.get('coaching_hints'))}",
+        f"weekly_movement: {joined(bundle.get('weekly_movement'))}",
         f"personalization_gaps: {joined(bundle.get('personalization_gaps'))}",
         f"learner_clarifications: {joined(bundle.get('mapping_clarifications'))}",
         f"teacher_guidance: {joined(bundle.get('teacher_guidance'))}",
