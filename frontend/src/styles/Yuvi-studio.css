@@ -727,6 +727,47 @@
 .ys-station:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 12px 26px rgba(20, 12, 60, .34); }
 .ys-station:active { transform: translateY(1px); }
 
+/* The requested geometry is physical: the menu opens to Help's left and the
+   selected answer sits to the menu's right, independent of document direction. */
+.ys-help { position: relative; display: inline-flex; }
+.ys-help__layer { position: absolute; inset-block-end: calc(100% + 10px); inset-inline-end: 0; z-index: 25; }
+.ys-help__menu,
+.ys-help__bubble {
+  inline-size: 224px;
+  padding: 12px;
+  border: 1px solid var(--ys-line);
+  border-radius: 8px;
+  background: var(--ys-panel-bg);
+  box-shadow: 0 16px 34px rgba(20, 12, 60, .28);
+  animation: ys-help-in .18s ease-out both;
+}
+.ys-help__menu { position: absolute; inset-block-end: 0; right: calc(100% + 10px); }
+/* Unlike the menu, the selected explanation belongs to the Help control. */
+.ys-help__bubble { position: absolute; inset-block-end: 0; left: 10px; }
+@keyframes ys-help-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ys-help__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-block-end: 8px; font-size: 14px; }
+.ys-help__close {
+  display: grid; place-items: center; flex: 0 0 auto;
+  inline-size: 28px; block-size: 28px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ys-ink-soft); cursor: pointer;
+}
+.ys-help__close:hover { background: color-mix(in srgb, var(--ys-danger) 11%, transparent); color: var(--ys-danger); }
+.ys-help__topics { display: grid; gap: 3px; }
+.ys-help__topic,
+.ys-help__topic {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  inline-size: 100%; border: 0; border-radius: 6px; padding: 8px;
+  background: transparent; color: var(--ys-ink); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; text-align: start;
+}
+.ys-help__topic:hover,
+.ys-help__topic.is-active { background: var(--ys-surface); color: var(--ys-accent-ink); }
+.ys-help__bubble { padding-inline-end: 38px; }
+.ys-help__bubble .ys-help__close { position: absolute; inset-block-start: 7px; inset-inline-end: 7px; }
+.ys-help__bubble strong { display: block; font-size: 13px; }
+.ys-help__bubble p { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; line-height: 1.5; color: var(--ys-ink-soft); }
+.ys-help__close:focus-visible,
+.ys-help__topic:focus-visible { outline: none; box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28)); }
+
 /* A chip is a setting (floor, wall, light). A card is a thing you own. Keeping
    those two apart is what stopped the room panel reading as one long list. */
 .ys-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -756,6 +797,8 @@
   color: #baf3ff;
   backdrop-filter: blur(14px);
 }
+[data-theme='dark'] .ys-help__menu,
+[data-theme='dark'] .ys-help__bubble { border-color: rgba(145, 228, 246, .16); }
 
 /* Hover menu on a placed prop. It is pinned to a projected 3D point, so it
   sits over the furniture rather than beside a list of it. */
@@ -1003,6 +1046,8 @@
     animation-name: ys-sheet-in;
   }
   .ys-stations { inset-block-end: 70svh; }
+  .ys-help__menu { right: 0; inset-block-end: calc(100% + 10px); }
+  .ys-help__bubble { left: auto; right: 0; inset-block-end: calc(100% + 10px); transform: translateY(calc(-100% - 10px)); }
   .ys-grid { grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); }
 }
 @keyframes ys-sheet-in {

@@ -1616,8 +1616,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     stations.mission = { ...next.mission }
     platform.position.set(stations.avatar.x, 0, stations.avatar.z)
     platform.rotation.y = stations.avatar.rot
+    platform.visible = stations.avatar.placed
     bench.position.set(stations.room.x, FLOOR_Y, stations.room.z)
     bench.rotation.y = stations.room.rot
+    bench.visible = stations.room.placed
     explore?.position.set(stations.explore.x, FLOOR_Y, stations.explore.z)
     if (explore) explore.rotation.y = stations.explore.rot
     mission?.position.set(stations.mission.x, FLOOR_Y, stations.mission.z)
@@ -1630,7 +1632,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       const spot = zone.id === 'avatar' ? stations.avatar : stand
       zone.x = spot.x
       zone.z = spot.z
+      zone.radius = stations[zone.id].placed ? ZONE_PADS[zone.id].radius : 0
       const pad = zonePads.get(zone.id)!
+      pad.ring.visible = stations[zone.id].placed
+      pad.glow.visible = stations[zone.id].placed
+      pad.marker.visible = stations[zone.id].placed
       const padAt = padSpot(zone.id)
       pad.ring.position.x = padAt.x
       pad.ring.position.z = padAt.z
@@ -1719,15 +1725,15 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   /** Circles Yuvi must walk around. Rebuilt whenever the layout changes. */
   const blockers = (): LabRoomCircle[] => [
-    { x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room },
+    ...(stations.room.placed ? [{ x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room }] : []),
     ...decorBlockers(),
     ...userBlockers,
   ]
 
   /** The station under this ray. Decorative light effects are never clickable. */
   const pickStation = (raycaster: THREE.Raycaster): StationId | null => {
-    if (raycaster.intersectObject(podium, true).length) return 'avatar'
-    if (raycaster.intersectObject(bench, true).length) return 'room'
+    if (stations.avatar.placed && raycaster.intersectObject(podium, true).length) return 'avatar'
+    if (stations.room.placed && raycaster.intersectObject(bench, true).length) return 'room'
     if (explore && raycaster.intersectObject(explore, true).length) return 'explore'
     if (mission && raycaster.intersectObject(mission, true).length) return 'mission'
     return null
@@ -1765,7 +1771,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
    */
   const noBuildZones = (exclude?: StationId): LabRoomCircle[] => [
     ...(['avatar', 'room', 'explore', 'mission'] as StationId[])
-      .filter((id) => id !== exclude)
+      .filter((id) => id !== exclude && stations[id].placed)
       .map((id) => ({ x: stations[id].x, z: stations[id].z, radius: STATION_RADIUS[id] })),
     ...ZONES.filter((zone) => zone.id !== exclude).map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
   ]

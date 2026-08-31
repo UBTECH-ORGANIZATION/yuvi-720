@@ -88,7 +88,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
       ...prev,
       stations: {
         ...prev.stations,
-        [id]: { x, z, rot: rot ?? prev.stations[id].rot },
+        [id]: { x, z, rot: rot ?? prev.stations[id].rot, placed: true },
       },
     }))
   }

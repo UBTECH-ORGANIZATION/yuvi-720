@@ -32,6 +32,7 @@ const roomState = read('frontend/src/features/Yuvi-studio/useRoomDesign.ts')
 const welcome = read('frontend/src/features/Yuvi-studio/panel/StudioWelcome.tsx')
 const itemCard = read('frontend/src/features/Yuvi-studio/panel/ItemCard.tsx')
 const labRoom = read('frontend/src/features/Yuvi-studio/YuviLabRoom.ts')
+const studioHelp = read('frontend/src/features/Yuvi-studio/panel/StudioHelp.tsx')
 const css = read('frontend/src/styles/Yuvi-studio.css')
 const he = JSON.parse(read('locales/he.json')) as Record<string, string>
 
@@ -99,9 +100,10 @@ test('room styles share the General Room tab', () => {
   assert.equal(he['YuviStudio.room.general'], 'חדר כללי')
 })
 
-test('a first visit gets a four-step in-world welcome while the room tutorial stays on demand', () => {
+test('a first visit gets a four-step in-world welcome without reopening the old practical tutorial', () => {
   assert.match(roomDesign, /introDone: false/)
-  assert.match(roomDesign, /base\.introDone = record\.introDone === true/)
+  assert.match(roomDesign, /const introDone = record\.introDone === true/)
+  assert.match(roomDesign, /base\.introDone = introDone/)
   assert.match(roomState, /const completeIntro = async \(\) => \{[\s\S]{0,180}introDone: true/)
   assert.match(roomState, /export function useRoomDesign\(autoLoad = true, reloadKey\?: string\)/)
   assert.match(roomState, /setLoaded\(false\)[\s\S]{0,360}\}, \[reloadKey\]\)/)
@@ -109,33 +111,60 @@ test('a first visit gets a four-step in-world welcome while the room tutorial st
   assert.match(studio, /useRoomDesign\(true, user\?\.user_id\)/)
   assert.match(studio, /tutorialArmed\.current = false[\s\S]{0,260}\[user\?\.user_id\]/)
   assert.match(studio, /if \(!roomState\.room\.introDone\) \{ setIntroScene\(0\); return \}/)
-  assert.doesNotMatch(studio, /if \(!roomState\.room\.tutorialDone\) setTutorial\('benchPlace'\)/)
-  assert.match(studio, /lockRoam=\{mode !== 'roam' \|\| Boolean\(tutorial\) \|\| introScene !== null\}/)
+  assert.doesNotMatch(studio, /setTutorial\(/)
+  assert.match(studio, /lockRoam=\{mode !== 'roam' \|\| introScene !== null\}/)
   assert.match(studio, /<StudioWelcome/)
   assert.match(studio, /await roomState\.completeIntro\(\)/)
-  assert.match(studio, /const \[introBeanbagTintPicked, setIntroBeanbagTintPicked\] = useState\(false\)/)
-  assert.match(studio, /const \[introBeanbagPlaced, setIntroBeanbagPlaced\] = useState\(false\)/)
   assert.match(studio, /const \[introAvatarChanged, setIntroAvatarChanged\] = useState\(false\)/)
-  assert.match(studio, /addedBeanbag = roomState\.items\.filter\(\(item\) => item\.kind === 'beanbag'\)\.length > introBeanbagCount\.current/)
-  assert.match(studio, /if \(!addedBeanbag \|\| !introBeanbagTintPicked\)/)
+  assert.match(roomDesign, /placed: false/)
+  assert.match(roomState, /\[id\]: \{ x, z, rot: rot \?\? prev\.stations\[id\]\.rot, placed: true \}/)
+  assert.match(labRoom, /platform\.visible = stations\.avatar\.placed/)
+  assert.match(labRoom, /bench\.visible = stations\.room\.placed/)
+  assert.match(studio, /carryStation\('room', stations\.room\.rot\)/)
+  assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed\)/)
+  assert.match(studio, /placing\.station === 'room'/)
+  assert.match(studio, /station: 'avatar'/)
+  assert.match(studio, /goToStation\('avatar'\)/)
   assert.match(studio, /const saved = await saveAll\(\)[\s\S]{0,100}await roomState\.completeIntro\(\)/)
-  assert.match(studio, /highlightBeanbag=\{introScene === 1 && !introBeanbagPlaced && placing\?\.kind !== 'beanbag'\}/)
-  assert.match(studio, /introBeanbagPlaced\s+\? 'YuviStudio\.intro\.room\.done'/)
-  assert.match(studio, /introScene === 1 && introBeanbagPlaced && menuItem!\.kind === 'beanbag'/)
+  assert.doesNotMatch(studio, /introBeanbag|INTRO_ROOM_ITEM/)
+  assert.match(studio, /YuviStudio\.intro\.station\.room/)
+  assert.match(studio, /YuviStudio\.intro\.station\.avatar/)
+  assert.match(studio, /YuviStudio\.intro\.station\.done/)
   assert.match(studio, /if \(introScene === 2\) \{[\s\S]{0,100}setIntroAvatarChanged\(true\)/)
-  assert.match(studio, /const startTutorial = \(\) => \{[\s\S]{0,260}setTutorial\('benchPlace'\)/)
   assert.match(studio, /YuviStudio\.tut\.help/)
   assert.match(itemCard, /highlighted \? 'is-highlighted' : ''/)
   assert.match(welcome, /role="dialog"/)
   assert.equal(he['YuviStudio.intro.continue'], 'יאללה, בונים')
-  assert.equal(he['YuviStudio.intro.room.pick'], 'מתחילים: הפוף המודגש מחכה לכם. לחצו עליו כדי לבחור אותו.')
-  assert.match(he['YuviStudio.intro.room.done'], /אחרי המדריך תוכלו לחזור לכאן/)
-  assert.equal(he['YuviStudio.intro.finish'], 'שומרים ויוצאים לשחק')
+  assert.match(he['YuviStudio.intro.station.room'], /שולחן עיצוב החדר/)
+  assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שני הרהיטים בחדר, אפשר להמשיך.')
+  assert.match(he['YuviStudio.intro.avatar.done'], /עיצוב יובי/)
+  assert.equal(he['YuviStudio.intro.finish'], 'יוצאים לשחק')
 })
 
 test('the Yuvi-Girl selector is not offered in the studio', () => {
   assert.doesNotMatch(studio, /YuviStudio\.variant\.girl/)
   assert.doesNotMatch(studio, /YuviVariant/)
+})
+
+test('Help presents all topics and anchors an independently dismissible explanation at Help', () => {
+  assert.match(studio, /const \[helpOpen, setHelpOpen\] = useState\(false\)/)
+  assert.match(studio, /const \[activeHelpTopic, setActiveHelpTopic\] = useState<StudioHelpTopic \| null>\(null\)/)
+  assert.match(studio, /const helpRef = useRef<HTMLDivElement \| null>\(null\)/)
+  assert.match(studio, /if \(!helpOpen\) return[\s\S]{0,360}document\.addEventListener\('pointerdown', closeOutsideHelp\)/)
+  assert.match(studio, /!helpRef\.current\?\.contains\(event\.target\)[\s\S]{0,120}setHelpOpen\(false\)/)
+  assert.match(studio, /removeEventListener\('pointerdown', closeOutsideHelp\)/)
+  assert.match(studio, /className="ys-help" ref=\{helpRef\}/)
+  assert.doesNotMatch(studio, /className="ys-station ys-station--help"\s+onClick=\{startTutorial\}/)
+  assert.match(studio, /<StudioHelp/)
+  assert.match(studioHelp, /const TOPICS: StudioHelpTopic\[\] = \['start', 'move', 'furniture', 'change', 'yuvi', 'save', 'firstPerson', 'locked', 'resetCamera'\]/)
+  assert.doesNotMatch(studioHelp, /ys-help__more|ys-help__guide|onStartTutorial/)
+  assert.match(studioHelp, /onCloseTopic/)
+  assert.match(css, /\.ys-help__menu \{ position: absolute;[\s\S]{0,120}right: calc\(100% \+ 10px\)/)
+  assert.match(css, /\.ys-help__bubble \{ position: absolute;[\s\S]{0,120}left: 10px/)
+  for (const topic of ['start', 'move', 'furniture', 'change', 'yuvi', 'save', 'firstPerson', 'locked', 'resetCamera']) {
+    assert.ok(he[`YuviStudio.help.topic.${topic}`], `YuviStudio.help.topic.${topic} is missing`)
+    assert.ok(he[`YuviStudio.help.body.${topic}`], `YuviStudio.help.body.${topic} is missing`)
+  }
 })
 
 test('two fingers zoom and pan', () => {
@@ -159,26 +188,21 @@ test('a gesture that became something else does not also walk Yuvi', () => {
   assert.match(avatar, /if \(consumed \|\| !wasOrbit/)
 })
 
-test('the hints stop describing a mouse nobody has', () => {
-  assert.match(studio, /const hint = \(key: string\) => t\(isTouch \? `\$\{key\}\.touch` : key\)/)
-  for (const key of [
-    'YuviStudio.hint', 'YuviStudio.roam.hint',
-    'YuviStudio.room.menuHint', 'YuviStudio.tut.turn.tip',
-  ]) {
+test('touch help and furniture guidance avoid desktop-only instructions', () => {
+  for (const key of ['YuviStudio.hint', 'YuviStudio.roam.hint', 'YuviStudio.room.menuHint']) {
     assert.ok(he[`${key}.touch`], `${key}.touch is missing from the source locale`)
     assert.ok(!/ימנית|בחצים|לגלגל/.test(he[`${key}.touch`]), `${key}.touch still names a mouse`)
   }
 })
 
-test('desktop tutorial guidance uses the furniture hover menu', () => {
-  assert.equal(he['YuviStudio.tut.turn.tip'], 'גם בהמשך אפשר לסובב כל רהיט: מרחפים עליו ואז בוחרים ״סיבוב״.')
-  assert.equal(he['YuviStudio.tut.done.tip'], 'אפשר תמיד להזיז תחנה שוב: מרחפים עליה ואז בוחרים ״הזזה״.')
+test('Help explains the desktop and touch furniture menu', () => {
+  assert.match(he['YuviStudio.help.body.change'], /מרחפים על פריט.*לחיצה ארוכה/)
 })
 
 test('first person is not offered where it cannot be driven', () => {
   // In first person the floor tap is deliberately dead and the arrow keys are
   // the only way to move, so on a tablet the button is a room with no exit.
-  assert.match(studio, /mode === 'roam' && !tutorial && !isTouch/)
+  assert.match(studio, /mode === 'roam' && !isTouch/)
 })
 
 test('the prop menu rows are finger-sized on touch', () => {
