@@ -268,7 +268,13 @@ def _project_competencies(
             # sits where it does. The map gates its change arrow on this so it can
             # never claim a movement it couldn't explain (seeded/fabricated
             # history with no events behind it → no arrow).
-            "evidenceBacked": float(eff.get("confidence") or 0) >= MIN_CAUSE_CONF,
+            #
+            # Gated on the CHANGE confidence: a learner who stopped coming has no
+            # current evidence, and reading that as "nothing to say" hid the one
+            # movement that most needs saying.
+            "evidenceBacked": float(
+                eff.get("change_confidence", eff.get("confidence")) or 0
+            ) >= MIN_CAUSE_CONF,
         })
     return out
 

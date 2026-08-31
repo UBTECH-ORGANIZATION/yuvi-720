@@ -386,7 +386,16 @@ def _drivers(
     }
     per_obj = m.get("per_obj") or {}
     out: list[dict[str, Any]] = []
-    for tag, delta in sorted(moved.items(), key=lambda x: -abs(x[1])):
+    # Attendance leads when it moved. It is upstream of the rest — activities go
+    # unfinished and mistakes go unrevisited largely because nobody was there —
+    # so telling a learner who barely showed up that they left work unfinished
+    # answers a smaller question than the one they asked. It only ever appears
+    # here when it genuinely shifted, so promoting it invents nothing.
+    def rank(item: tuple[str, float]) -> tuple[int, float]:
+        tag, delta = item
+        return (0 if tag == "inconsistent" else 1, -abs(delta))
+
+    for tag, delta in sorted(moved.items(), key=rank):
         if abs(delta) < MOVED_POINTS:
             continue
         direction = "up" if delta > 0 else "down"
@@ -447,15 +456,30 @@ def effective_activeness(
         prior_value = int(round(_clamp(
             base + _clamp(prior_conf * GAIN * sum(p for _, p in prior_contribs),
                           -MAX_DRIFT, MAX_DRIFT), 0, 100)))
+        # Confidence that the CHANGE is real, which is not the same as confidence
+        # in today's score. A learner who stopped coming has no current evidence,
+        # and that absence IS the finding — the week they did show up is evidence
+        # enough to say what changed. Only ever for a decline: a rise has to be
+        # earned by something observed, never by the absence of it, or a learner
+        # who drifts back toward base by doing nothing gets congratulated.
+        change_conf = max(conf, prior_conf) if value <= prior_value else conf
         # Claim no movement at all rather than movement we cannot vouch for.
         blind = silent_gap and prior_conf < MIN_CAUSE_CONF
+        drivers = [] if blind else _drivers(contribs, prior_contribs, change_conf, m, prior)
+        # Borrowing last week's confidence is only justified if it buys an
+        # explanation. Scores drift as evidence thins, so without this a domain
+        # can slide purely because confidence fell — an arrow with no reason,
+        # which is the "why?" with no answer this card exists to avoid.
+        if not drivers:
+            change_conf = conf
         out[key] = {
             "base": int(round(base)),
             "value": value,
             "delta": round(delta, 1),
             "confidence": round(conf, 2),
+            "change_confidence": round(change_conf, 2),
             "causes": _cause_tags(key, contribs, value, conf),
-            "drivers": [] if blind else _drivers(contribs, prior_contribs, conf, m, prior),
+            "drivers": drivers,
             "prior_value": value if blind else prior_value,
         }
     return out

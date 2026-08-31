@@ -408,6 +408,73 @@ def test_every_driver_the_model_emits_has_a_localized_reason():
             assert bundle[key].strip(), f"{key} is blank in {lang}.json"
 
 
+# ── The learner who stops coming ─────────────────────────────────────────────
+def test_a_learner_who_stops_coming_is_told_why():
+    """The movement that most needs explaining used to be the one silenced.
+
+    Confidence came from the current window, which is empty precisely BECAUSE
+    they stopped — so the drop showed no arrow, no reason, and the coach had
+    nothing to answer with. The absence is the finding, and the week they did
+    show up is evidence enough to say what changed.
+    """
+    events = [
+        _ev(verb="completed", obj=f"p{d}", days_ago=d)
+        for d in range(22, 28)
+    ] + [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["value"] < d["prior_value"], "a week away has to read as a decline"
+    assert d["change_confidence"] >= MIN_CAUSE_CONF, "the arrow would stay hidden"
+    down = [x for x in d["drivers"] if x["dir"] == "down"]
+    assert down, "a drop with no driver leaves the coach with nothing to say"
+    assert down[0]["tag"] == "inconsistent"
+    assert down[0]["facts"]["active_days"] == 0
+    assert down[0]["facts"]["active_days_prior"] > 0
+
+
+def test_doing_nothing_is_never_reported_as_improvement():
+    """The mirror of the fix, and the reason it is limited to declines.
+
+    Scores drift back toward the questionnaire base as evidence runs out, so a
+    struggling learner who simply stops would drift UPWARD. Relaxing the gate in
+    both directions would congratulate a child for the week they skipped.
+    """
+    events = [
+        _ev(success=False, score=0.0, obj=f"p{d}", days_ago=d)
+        for d in range(22, 28) for _ in range(3)
+    ]
+    for key in COMPETENCY_KEYS:
+        d = _dom(_brain(base={key: 20}), key, events)
+        if d["value"] > d["prior_value"]:
+            assert d["change_confidence"] == d["confidence"], (
+                f"{key}: a rise is being vouched for by an empty week"
+            )
+
+
+def test_a_present_learner_is_unaffected_by_the_absence_rule():
+    """Someone who is here keeps being judged on what they did while here."""
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 6)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    assert d["change_confidence"] == d["confidence"]
+
+
+def test_the_absence_rule_never_buys_an_arrow_it_cannot_explain():
+    """Scores drift toward base as evidence thins, so a domain can slide with no
+    signal behind it. Vouching for that slide would put an arrow on the card and
+    nothing in the tooltip — the "why?" with no answer, which is the whole
+    defect this card was built to remove."""
+    events = [
+        _ev(verb="completed", obj=f"p{d}", days_ago=d)
+        for d in range(22, 28)
+    ] + [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28)]
+    for key in COMPETENCY_KEYS:
+        d = _dom(_brain(), key, events)
+        if not d["drivers"]:
+            assert d["change_confidence"] == d["confidence"], (
+                f"{key}: vouching for a move with nothing to say about it"
+            )
+
+
 def test_prior_value_is_the_same_score_one_week_back():
     """The card draws its arrow from `value` vs `prior_value`. Both must come
     from this engine — deriving the arrow from a separately stored snapshot let
