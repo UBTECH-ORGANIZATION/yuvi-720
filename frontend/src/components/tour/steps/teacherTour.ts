@@ -15,25 +15,12 @@
  * remembered.
  */
 
-export type Placement = 'top' | 'bottom' | 'start' | 'end' | 'center'
+import { STUDENT_TOKEN, type TourDefinition, type TourStep } from './types.ts'
 
-export interface TourStep {
-  id: string
-  /** `data-tour` value of the element to spotlight; `null` centres the card. */
-  target: string | null
-  /** Route to be on for this step. Omitted means "wherever we already are". */
-  route?: string
-  titleKey: string
-  bodyKey: string
-  placement: Placement
-  /** Extra px of breathing room around the cutout. */
-  padding?: number
-  /** Let clicks through to the target (for steps that ask you to try it). */
-  interactive?: boolean
-}
-
-/** Routes containing this token are resolved against the tour's params. */
-export const STUDENT_TOKEN = ':studentId'
+export {
+  STUDENT_TOKEN, physicalSide, routeForStep, tourLocaleKeys,
+  type Placement, type TourStep,
+} from './types.ts'
 
 export const TEACHER_TOUR_ID = 'teacher'
 
@@ -156,37 +143,12 @@ export const teacherTourSteps: TourStep[] = [
   },
 ]
 
-/**
- * Resolve a step's route against the tour params.
- *
- * Returns `null` when the step needs a student and none was resolved — the
- * provider treats that exactly like a missing DOM target and skips the step,
- * so a teacher with an empty roster still gets a complete, coherent tour.
- */
-export function routeForStep(
-  step: TourStep,
-  params: { studentId?: string | null },
-): string | null | undefined {
-  if (!step.route) return undefined
-  if (!step.route.includes(STUDENT_TOKEN)) return step.route
-  if (!params.studentId) return null
-  return step.route.replace(STUDENT_TOKEN, encodeURIComponent(params.studentId))
-}
-
-/**
- * Which side the card sits on, mirrored for right-to-left.
- *
- * `top`/`bottom` are unaffected — vertical placement has no direction — but
- * `start`/`end` are logical, so they resolve to opposite physical sides in he/ar
- * and in en. Doing this here rather than in CSS keeps it unit-testable.
- */
-export function physicalSide(placement: Placement, isRtl: boolean): 'top' | 'bottom' | 'left' | 'right' | 'center' {
-  if (placement === 'start') return isRtl ? 'right' : 'left'
-  if (placement === 'end') return isRtl ? 'left' : 'right'
-  return placement
-}
-
-/** Every locale key the tour needs — the parity test asserts on exactly this. */
-export function tourLocaleKeys(steps: TourStep[] = teacherTourSteps): string[] {
-  return steps.flatMap((step) => [step.titleKey, step.bodyKey])
+/* The card presentation, unchanged: the flying guide is the learner tour's
+   language, and switching this over is a deliberate future decision, not a
+   side effect of adding one. */
+export const teacherTour: TourDefinition = {
+  id: TEACHER_TOUR_ID,
+  steps: teacherTourSteps,
+  guide: 'card',
+  dismissible: true,
 }

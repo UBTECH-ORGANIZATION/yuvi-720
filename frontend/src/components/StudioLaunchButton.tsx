@@ -25,6 +25,7 @@ export function StudioLaunchButton() {
       ref={buttonRef}
       className={`studio-launch${transition?.isOpen ? ' is-active' : ''}`}
       type="button"
+      data-tour="learner.studio"
       title={t('YuviStudio.subtitle')}
       aria-label={`${t('YuviStudio.title')} — ${t('YuviStudio.launcher')}`}
       onClick={openStudio}

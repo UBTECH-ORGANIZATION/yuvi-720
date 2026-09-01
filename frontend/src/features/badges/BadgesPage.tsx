@@ -134,7 +134,7 @@ export function BadgesPage() {
           <p>{t.lead}</p>
         </header>
 
-        <div className="badges-layout">
+        <div className="badges-layout" data-tour="learner.badges">
           {/* sticky profile — stays visible on the side as the shelf scrolls */}
           <aside className="badges-profile">
             <YuviHeadIcon className="badges-profile__mascot" />

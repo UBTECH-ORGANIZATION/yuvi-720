@@ -9,7 +9,9 @@
  *
  * Clicks: the overlay swallows them by default, so a teacher cannot wander off
  * mid-tour into a half-explained screen. A step marked `interactive` lets them
- * through to the target only.
+ * through to the target only. Clicking the scrim closes the tour ONLY when it
+ * is dismissible — the learner's first run has no way out but finishing it, and
+ * a stray click on a dimmed page must not count as a decision to leave.
  */
 
 import type { TargetRect } from './useTargetRect'
@@ -20,7 +22,7 @@ interface Props {
   padding: number
   interactive: boolean
   reducedMotion: boolean
-  onDismiss: () => void
+  onDismiss?: () => void
 }
 
 /** Matches `--sp-radius-lg`; the cutout hugs the card rather than boxing it. */
@@ -31,11 +33,11 @@ export function SpotlightOverlay(
 ) {
   const box = rect
     ? {
-        x: Math.max(0, rect.left - padding),
-        y: Math.max(0, rect.top - padding),
-        width: rect.width + padding * 2,
-        height: rect.height + padding * 2,
-      }
+      x: Math.max(0, rect.left - padding),
+      y: Math.max(0, rect.top - padding),
+      width: rect.width + padding * 2,
+      height: rect.height + padding * 2,
+    }
     : null
 
   return (

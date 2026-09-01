@@ -24,26 +24,45 @@ import {
 import { navigate, useRoute } from '../../app/router'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth } from '../../providers/AuthProvider'
+import { useOnboarding } from '../../providers/OnboardingProvider'
 import { SpotlightOverlay } from './SpotlightOverlay'
+import { TourGuide } from './TourGuide'
 import { TourStepCard } from './TourStepCard'
+import { TEACHER_TOUR_ID, canTakeTeacherTour, teacherTour } from './steps/teacherTour'
+import { LEARNER_TOUR_ID, canTakeLearnerTour, learnerTour } from './steps/learnerTour'
 import {
-  TEACHER_TOUR_ID, canTakeTeacherTour, routeForStep, teacherTourSteps, type TourStep,
-} from './steps/teacherTour'
+  needsStudentParam, routeForStep, type TourDefinition, type TourStep,
+} from './steps/types'
 import { useTargetRect } from './useTargetRect'
 
-interface TourParams { studentId?: string | null }
+interface TourParams {
+  studentId?: string | null
+  /** Interpolated into the step strings — today just the learner's name. */
+  values?: Record<string, string | number>
+}
 
 interface TourValue {
   isActive: boolean
+  /** Yuvi is out flying the tour, so the dock must not render a second one. */
+  isGuideFlying: boolean
   hasCompleted: (tourId: string) => boolean
   startTour: (tourId: string, params?: TourParams) => void
 }
 
 const TourContext = createContext<TourValue | null>(null)
 
-const TOURS: Record<string, TourStep[]> = { [TEACHER_TOUR_ID]: teacherTourSteps }
+const TOURS: Record<string, TourDefinition> = {
+  [TEACHER_TOUR_ID]: teacherTour,
+  [LEARNER_TOUR_ID]: learnerTour,
+}
 
 const DEFAULT_PADDING = 10
+
+/* Yuvi greets a child the way a person would. A display name carries a family
+   name the learner never uses about themselves. */
+function firstNameOf(name: string) {
+  return name.trim().split(/\s+/)[0] || name
+}
 
 interface ProviderProps {
   children: ReactNode
@@ -56,6 +75,7 @@ interface ProviderProps {
 export function TourProvider({ children, resolveParams }: ProviderProps) {
   const { user, updatePreferences } = useAuth()
   const { direction } = useI18n()
+  const { stage, verified } = useOnboarding()
   const route = useRoute()
 
   const [tourId, setTourId] = useState<string | null>(null)
@@ -72,19 +92,29 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
   const completed = useMemo(
     () => new Set(user?.preferences?.tours_completed ?? []), [user])
 
-  const steps = tourId ? TOURS[tourId] ?? [] : []
+  const steps = tourId ? TOURS[tourId]?.steps ?? [] : []
   const step: TourStep | null = steps[index] ?? null
+  const guideStyle = tourId ? TOURS[tourId]?.guide ?? 'card' : 'card'
+  const dismissible = tourId ? TOURS[tourId]?.dismissible ?? true : true
 
   const startTour = useCallback((id: string, next: TourParams = {}) => {
-    if (!TOURS[id]) return
-    setParams(next)
+    const definition = TOURS[id]
+    if (!definition) return
+    /* The name is filled in here rather than at each call site: every entry
+       point wants the same greeting, and a caller that forgets would render a
+       raw `{name}` at a child. */
+    const values = {
+      name: firstNameOf(user?.display_name ?? ''),
+      ...(next.values ?? {}),
+    }
+    setParams({ ...next, values })
     stride.current = 1
     setIndex(0)
     setTourId(id)
-    // Resolved in the background: the first steps do not need it, and blocking
-    // the tour on a roster fetch would put a spinner in front of a welcome card.
-    // If it never resolves, the profile steps skip themselves.
-    if (!next.studentId && resolveParams) {
+    /* Only tours that actually name a student pay for the lookup. The resolver
+       reads the teacher roster, so firing it for the learner tour would have a
+       child's browser call two endpoints their account is forbidden from. */
+    if (!next.studentId && resolveParams && needsStudentParam(definition.steps)) {
       setParamsReady(false)
       void resolveParams()
         .then((resolved) => setParams((current) => ({ ...current, ...resolved })))
@@ -93,16 +123,26 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     } else {
       setParamsReady(true)
     }
-  }, [resolveParams])
+  }, [resolveParams, user])
+
+  /* Record a tour as seen. Append-only and slug-validated on the server, so
+     calling it twice is free and calling it early is safe. Retried once,
+     because the entire "shown exactly once" guarantee rests on this write
+     landing — a dropped request means the tour greets the child again on their
+     next login, which is the failure this whole preference exists to prevent. */
+  const markSeen = useCallback((id: string) => {
+    void updatePreferences({ tours_completed: [id] })
+      .catch(() => new Promise((resolve) => window.setTimeout(resolve, 2000))
+        .then(() => updatePreferences({ tours_completed: [id] })))
+      .catch(() => undefined)
+  }, [updatePreferences])
 
   const finish = useCallback((id: string | null) => {
     setTourId(null)
     setIndex(0)
     if (!id) return
-    // Fire-and-forget: a failed write means the tour offers itself again, which
-    // is a far better failure than blocking the teacher behind a spinner.
-    void updatePreferences({ tours_completed: [id] }).catch(() => undefined)
-  }, [updatePreferences])
+    markSeen(id)
+  }, [markSeen])
 
   // Route the step needs. `undefined` = stay put, `null` = unresolvable → skip.
   const wantedRoute = step ? routeForStep(step, params) : undefined
@@ -112,6 +152,16 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     setIndex((current) => current + by)
   }, [])
 
+  /* A step the learner completes by going somewhere themselves. While they are
+     on the awaited route the step's own route is NOT enforced below, or the
+     click the step just asked for would be undone in the same commit. */
+  const arrived = Boolean(step?.awaitRoute)
+    && route.split('?')[0] === step?.awaitRoute
+
+  useEffect(() => {
+    if (arrived) advance(1)
+  }, [arrived, advance])
+
   // Land on the step's route before measuring, or the target is guaranteed
   // missing and every cross-route step would skip itself.
   // Matched on PATHNAME only, both sides: a step may carry a query
@@ -119,16 +169,16 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
   // not echo back — comparing it verbatim would re-navigate every render,
   // which is the exact loop the route-remount comment in App.tsx records.
   useEffect(() => {
-    if (!step || !wantedRoute) return
+    if (!step || !wantedRoute || arrived) return
     if (route.split('?')[0] !== wantedRoute.split('?')[0]) navigate(wantedRoute)
-  }, [step, wantedRoute, route])
+  }, [step, wantedRoute, route, arrived])
 
   /* Both signals, because they mean different things: the stored preference is
      a choice made inside the product, the media query is the one made at OS
      level. Either is enough to stop the tour animating. */
   const reducedMotion = Boolean(user?.preferences?.reduced_motion)
     || (typeof window !== 'undefined'
-        && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
 
   const onRoute = !wantedRoute || route.split('?')[0] === wantedRoute.split('?')[0]
   const rect = useTargetRect(step && onRoute ? step.target : null, reducedMotion)
@@ -150,10 +200,14 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     if (step.target && onRoute && rect === 'missing') advance(stride.current || 1)
   }, [step, wantedRoute, onRoute, rect, paramsReady, advance])
 
-  // Auto-start once, on a teacher's first arrival in the teacher app.
-  const autoStarted = useRef(false)
+  // Auto-start once per tour, on the first arrival in the app it belongs to.
+  // A Set rather than one flag: an account that both teaches and learns must be
+  // able to receive each tour on its own lane, and a single latch would give
+  // whichever lane they opened first and silently swallow the other.
+  const autoStarted = useRef(new Set<string>())
+
   useEffect(() => {
-    if (autoStarted.current || !user) return
+    if (!user || autoStarted.current.has(TEACHER_TOUR_ID)) return
     if (!route.startsWith('/teacher')) return
     /* The teacher role, not "teacher or admin" — App.tsx guards `/teacher` on
        exactly `isTeacher`, so an admin-only account lands on an error page
@@ -162,15 +216,47 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
        get it, because they hold both roles. */
     if (!canTakeTeacherTour(user.roles)) return
     if (completed.has(TEACHER_TOUR_ID)) return
-    autoStarted.current = true
+    autoStarted.current.add(TEACHER_TOUR_ID)
     startTour(TEACHER_TOUR_ID)
   }, [user, route, completed, startTour])
 
+  useEffect(() => {
+    if (!user || autoStarted.current.has(LEARNER_TOUR_ID)) return
+    if (!route.startsWith('/student-dashboard')) return
+    if (!canTakeLearnerTour(user.roles)) return
+    /* Onboarding owns the screen until mapping and profile verification are
+       done, and it is already a Yuvi-led flow. A tour opening over it would put
+       two companions on one screen — and the dashboard it narrates is not even
+       reachable yet.
+       `verified`, not just `done`: a failed learner-state read also resolves to
+       `done` so nobody is trapped, and offering the one-time tour on the back of
+       a request that never answered would spend it on a network blip. */
+    if (stage !== 'done' || !verified) return
+    if (completed.has(LEARNER_TOUR_ID)) return
+    autoStarted.current.add(LEARNER_TOUR_ID)
+    /* Recorded the moment it is OFFERED, not when it is finished. What must
+       happen exactly once is the offer: a child who closes the tab on step two
+       has still had their first-login tour, and greeting them with it again on
+       every login until they sit through the whole thing is the behaviour this
+       is here to prevent. The menu keeps a way back in for anyone who wants it.
+       The teacher tour deliberately still records on completion — a teacher can
+       dismiss theirs, so for them "seen" really does mean "got to the end". */
+    markSeen(LEARNER_TOUR_ID)
+    startTour(LEARNER_TOUR_ID)
+  }, [user, route, stage, verified, completed, startTour, markSeen])
+
+  /* Yuvi cannot be in two places. While the guide is up the dock stands its own
+     avatar down, and on the `landing` step the guide bows out so the dock is
+     the one he arrives at — which is also why only one WebGL context is ever
+     alive. */
+  const guideFlying = tourId !== null && guideStyle === 'flying' && !step?.landing
+
   const value = useMemo<TourValue>(() => ({
     isActive: tourId !== null,
+    isGuideFlying: guideFlying,
     hasCompleted: (id: string) => completed.has(id),
     startTour,
-  }), [tourId, completed, startTour])
+  }), [tourId, guideFlying, completed, startTour])
 
   const measured = rect && rect !== 'missing' ? rect : null
   /* Show the card as soon as we are on the right route, even while the target
@@ -190,11 +276,21 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
             padding={step.padding ?? DEFAULT_PADDING}
             interactive={Boolean(step.interactive)}
             reducedMotion={reducedMotion}
-            onDismiss={() => finish(tourId)}
+            onDismiss={dismissible ? () => finish(tourId) : undefined}
           />
+          {guideFlying ? (
+            <TourGuide
+              rect={measured}
+              placement={step.placement}
+              padding={step.padding ?? DEFAULT_PADDING}
+              isRtl={direction === 'rtl'}
+              reducedMotion={reducedMotion}
+            />
+          ) : null}
           <TourStepCard
             titleKey={step.titleKey}
             bodyKey={step.bodyKey}
+            values={params.values}
             placement={step.placement}
             rect={measured}
             index={index}
@@ -202,7 +298,7 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
             isRtl={direction === 'rtl'}
             onBack={() => advance(-1)}
             onNext={() => advance(1)}
-            onSkip={() => finish(tourId)}
+            onSkip={dismissible ? () => finish(tourId) : undefined}
           />
         </>
       ) : null}
@@ -212,7 +308,12 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
 
 export function useTour(): TourValue {
   const value = useContext(TourContext)
-  // A no-op outside the provider: the learner app mounts no tour today, and a
-  // shared button should not have to know which shell it is in.
-  return value ?? { isActive: false, hasCompleted: () => true, startTour: () => undefined }
+  // A no-op outside the provider: a shared button should not have to know which
+  // shell it is in, and the landing page mounts neither.
+  return value ?? {
+    isActive: false,
+    isGuideFlying: false,
+    hasCompleted: () => true,
+    startTour: () => undefined,
+  }
 }

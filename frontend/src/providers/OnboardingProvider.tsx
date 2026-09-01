@@ -19,6 +19,12 @@ export const STAGE_ROUTE: Record<Exclude<OnboardingStage, 'loading' | 'done'>, s
 
 interface OnboardingContextValue {
   stage: OnboardingStage
+  /* `stage === 'done'` is also what a FAILED read falls back to, deliberately —
+     a network blip must not trap a learner. So anything irreversible needs to
+     know the difference between "their saved state says they finished" and "we
+     could not ask". The learner tour does: it is offered once, ever, and
+     burning that on a dropped request would cost a child their first run. */
+  verified: boolean
   refresh: () => void
 }
 
@@ -32,6 +38,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const learnerId = user?.user_id ?? null
   const [stage, setStage] = useState<OnboardingStage>('loading')
+  const [verified, setVerified] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), [])
@@ -45,6 +52,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!learnerId) {
       setStage('loading')
+      setVerified(false)
       return
     }
     if (stage === 'done') return
@@ -56,11 +64,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         const results = state.profile_summary_progress as Progress | null | undefined
         if (!mapping?.completed) setStage('mapping')
         else if (!results?.completed) setStage('results')
-        else setStage('done')
+        else { setStage('done'); setVerified(true) }
       })
       .catch(() => {
         // Never trap a learner behind a failed read — let the route through and
-        // let the page itself surface the error.
+        // let the page itself surface the error. Not `verified`: we did not
+        // learn that they finished, we only stopped blocking them.
         if (active) setStage('done')
       })
     return () => {
@@ -70,7 +79,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [learnerId, reloadKey, key])
 
   return (
-    <OnboardingContext.Provider value={{ stage, refresh }}>{children}</OnboardingContext.Provider>
+    <OnboardingContext.Provider value={{ stage, verified, refresh }}>{children}</OnboardingContext.Provider>
   )
 }
 
