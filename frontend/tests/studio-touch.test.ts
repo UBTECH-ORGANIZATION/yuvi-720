@@ -149,13 +149,25 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.equal(he['YuviStudio.intro.finish'], 'יוצאים לשחק')
 })
 
-test('placing a station shows its translucent model as well as its valid placement ring', () => {
+test('placing a station shows a hologram of it as well as its valid placement ring', () => {
   assert.match(labRoom, /const ghostStationHolder = new THREE\.Group\(\)/)
-  assert.match(labRoom, /const makeTransparent = \(object: THREE\.Object3D\) => \{[\s\S]{0,700}transparent\.transparent = true/)
+  // The carried preview is re-skinned in the lab's additive glow — the faded
+  // half-opacity clone was invisible against the busy room (intro feedback).
+  assert.match(labRoom, /const makeHologram = \(object: THREE\.Object3D\) => \{[\s\S]{0,900}obj\.material = ghostOkMat/)
+  // An unplaced station's mesh is hidden and a clone inherits that; the intro
+  // carries exactly such stations, so the hologram must force itself visible.
+  assert.match(labRoom, /const makeHologram = \(object: THREE\.Object3D\) => \{[\s\S]{0,400}object\.visible = true/)
+  assert.match(labRoom, /const ghostWireOkMat = track\(new THREE\.MeshBasicMaterial\(\{\s*\n?\s*color: CYAN, wireframe: true/)
   assert.match(labRoom, /station === 'avatar'[\s\S]{0,180}platform\.clone\(true\)/)
-  assert.match(labRoom, /station === 'room' \? makeTransparent\(bench\.clone\(true\)\)/)
-  assert.match(labRoom, /ghostRing\.material = mat/)
-  assert.doesNotMatch(labRoom, /ghostBody\?\.traverse\(\(obj: any\) => \{ if \(obj\.isMesh\) obj\.material = mat \}\)/)
+  assert.match(labRoom, /station === 'room' \? makeHologram\(bench\.clone\(true\)\)/)
+  // Validity recolours the WHOLE hologram, not only the ring.
+  assert.match(labRoom, /ghostRing\.material = valid \? ghostRingOkMat : ghostRingBadMat/)
+  assert.match(labRoom, /for \(const mesh of ghostSolids\) mesh\.material = mat/)
+  assert.match(labRoom, /for \(const wire of ghostWires\) wire\.material = wireMat/)
+  // The body blends normally — additive stacking made the shape "swell" into a
+  // washed-out mass against walls; the additive glow lives only in the thin
+  // wireframe and the floor ring, where fragments cannot pile up.
+  assert.doesNotMatch(labRoom, /const ghostOkMat = track\(new THREE\.MeshBasicMaterial\(\{[^}]*AdditiveBlending/)
 })
 
 test('the Yuvi-Girl selector is not offered in the studio', () => {

@@ -875,18 +875,27 @@
   from { opacity: 0; transform: translate(calc(-100% - 14px), calc(-50% + 6px)) scale(.97); }
   to { opacity: 1; transform: translate(calc(-100% - 14px), -50%) scale(1); }
 }
-/* The tail points back at the pointer that opened the menu. */
+/* The tail points back at the pointer that opened the menu. PHYSICAL sides on
+   purpose: the anchor is a projected 3D point and the --left/--right side
+   classes are physical screen directions, so logical `inset-inline-*` here
+   flipped the tail to the far edge on the RTL page — the menu sat beside the
+   object while its arrow pointed away from it. */
 .ys-propmenu::after {
   content: '';
-  position: absolute; inset-block-start: 50%; inset-inline-start: -6px;
-  inline-size: 12px; block-size: 12px;
-  margin-block-start: -6px;
+  position: absolute; top: 50%; left: -6px;
+  width: 12px; height: 12px;
+  margin-top: -6px;
   background: var(--ys-panel-bg);
-  border-inline-end: 1px solid var(--ys-line);
-  border-block-end: 1px solid var(--ys-line);
+  border-left: 1px solid var(--ys-line);
+  border-bottom: 1px solid var(--ys-line);
   transform: rotate(45deg);
 }
-.ys-propmenu--left::after { inset-inline-start: auto; inset-inline-end: -6px; }
+.ys-propmenu--left::after {
+  left: auto; right: -6px;
+  border-left: none; border-bottom: none;
+  border-top: 1px solid var(--ys-line);
+  border-right: 1px solid var(--ys-line);
+}
 
 /* First visit: the scene stays visible while Yuvi introduces the two stations. */
 .ys-welcome {

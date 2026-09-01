@@ -79,9 +79,14 @@ async def task_summary(task: dict[str, Any]) -> dict[str, Any]:
         "average_score": round(sum(scores) / len(scores)) if scores else None,
         "launch_count": len(launches),
         "open_launches": len([row for row in launches if row.get("status") == "active"]),
-        # A failed generation pass stays visible after a retry.
-        "generation_failures": [entry for entry in (task.get("generation") or [])
-                                if not entry.get("ok")],
+        # Judged per component by its LATEST pass: a component that failed once
+        # and then generated fine is not missing, and saying it is teaches
+        # teachers to ignore the warning.
+        "generation_failures": [
+            entry for entry in {
+                e.get("component"): e for e in task.get("generation") or []
+            }.values() if not entry.get("ok")
+        ],
     }
 
 
