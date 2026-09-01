@@ -162,7 +162,7 @@ function StudentGoalsPage() {
           if (saved.open) setComposerOpen(true)
         }
       })
-      .catch(() => { })
+      .catch(() => {})
   }, [])
 
   // Persist the draft: a "paused" (open:false) snapshot flushes immediately so a
@@ -171,18 +171,18 @@ function StudentGoalsPage() {
     setDraft(next)
     if (draftTimer.current) window.clearTimeout(draftTimer.current)
     if (!next.open) {
-      updateLearnerState({ mentoring_draft: next }).catch(() => { })
+      updateLearnerState({ mentoring_draft: next }).catch(() => {})
       return
     }
     draftTimer.current = window.setTimeout(() => {
-      updateLearnerState({ mentoring_draft: next }).catch(() => { })
+      updateLearnerState({ mentoring_draft: next }).catch(() => {})
     }, 600)
   }, [])
 
   const clearDraft = useCallback(() => {
     setDraft(null)
     if (draftTimer.current) window.clearTimeout(draftTimer.current)
-    updateLearnerState({ mentoring_draft: null }).catch(() => { })
+    updateLearnerState({ mentoring_draft: null }).catch(() => {})
   }, [])
 
   const changeStatus = async (goal: MentoringGoal, conversation: MentoringConversation, status: GoalStatus) => {
@@ -424,8 +424,8 @@ function GoalCard({ goal, conversation, language, updating, helping, flash, onSt
         {!isDone && (goal.needs_help
           ? <span className="mt-dgoal__helped"><Icon name="check" size={13} />{t('mentoring.student.status.helpSent')}</span>
           : <button className="mt-text-button mt-dgoal__help" type="button" disabled={helping} onClick={onHelp}>
-            <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
-          </button>
+              <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
+            </button>
         )}
         <button className="mt-text-button mt-dgoal__talk" type="button" onClick={onOpenTalk}>
           <Icon name="message" size={13} />
@@ -685,12 +685,12 @@ function ConversationComposer({ initialDraft, onPersist, onClear, onClose, onSav
     const goal: GoalDraft = { title: rec.title, next_steps: rec.next_steps, deadline: rec.deadline, from_yuvi: true }
     setGoals((current) => [...current, goal])
     setOpenGoal(null)   // added and complete → show it collapsed
-    setRecommendationStatus(rec.id, 'accepted').catch(() => { })
+    setRecommendationStatus(rec.id, 'accepted').catch(() => {})
     setRec(null)
   }
   const dismissRec = () => {
     if (!rec) return
-    setRecommendationStatus(rec.id, 'dismissed').catch(() => { })
+    setRecommendationStatus(rec.id, 'dismissed').catch(() => {})
     setRec(null)
   }
 
@@ -718,7 +718,7 @@ function ConversationComposer({ initialDraft, onPersist, onClear, onClose, onSav
     setRecLoading(true)
     recommendGoal({ language, notes, feeling })
       .then((r) => { if (r && (r.title || r.next_steps)) setRec(r) })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => { setRecLoading(false); setRecDone(true) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
@@ -758,227 +758,227 @@ function ConversationComposer({ initialDraft, onPersist, onClear, onClose, onSav
 
   return (
     <>
-      <div className="mt-modal-backdrop" role="presentation">
-        <section className="mt-modal mt-composer" role="dialog" aria-modal="true" aria-labelledby="mt-composer-title" onMouseDown={(event) => event.stopPropagation()}>
-          <button className="mt-icon-button" type="button" onClick={requestClose} aria-label={t('mentoring.student.close')}><Icon name="close" size={21} /></button>
-          <div className="mt-composer__intro">
-            <span className="mt-composer__badge" aria-hidden="true"><Icon name="message" size={22} /></span>
-            <h2 id="mt-composer-title">{t('mentoring.student.composer.heading')}</h2>
-            <p className="mt-composer__sub">{t('mentoring.student.composer.lead')}</p>
+    <div className="mt-modal-backdrop" role="presentation">
+      <section className="mt-modal mt-composer" role="dialog" aria-modal="true" aria-labelledby="mt-composer-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="mt-icon-button" type="button" onClick={requestClose} aria-label={t('mentoring.student.close')}><Icon name="close" size={21} /></button>
+        <div className="mt-composer__intro">
+          <span className="mt-composer__badge" aria-hidden="true"><Icon name="message" size={22} /></span>
+          <h2 id="mt-composer-title">{t('mentoring.student.composer.heading')}</h2>
+          <p className="mt-composer__sub">{t('mentoring.student.composer.lead')}</p>
+        </div>
+
+        <ol className="mt-stepper" aria-label={t('mentoring.student.composer.stepsAria')}>
+          {COMPOSER_STEPS.map((key, index) => (
+            <li key={key} className={index < step ? 'is-complete' : index === step ? 'is-current' : ''}>
+              <span>{index < step ? <Icon name="check" size={14} /> : index + 1}</span>
+              <small>{t(`mentoring.student.composer.step.${key}`)}</small>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-step-body">
+          <div className="mt-step-guide">
+            <h3>{t(`mentoring.student.composer.guide.${COMPOSER_STEPS[step]}.title`)}</h3>
+            <p>{t(`mentoring.student.composer.guide.${COMPOSER_STEPS[step]}.desc`)}</p>
           </div>
-
-          <ol className="mt-stepper" aria-label={t('mentoring.student.composer.stepsAria')}>
-            {COMPOSER_STEPS.map((key, index) => (
-              <li key={key} className={index < step ? 'is-complete' : index === step ? 'is-current' : ''}>
-                <span>{index < step ? <Icon name="check" size={14} /> : index + 1}</span>
-                <small>{t(`mentoring.student.composer.step.${key}`)}</small>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-step-body">
-            <div className="mt-step-guide">
-              <h3>{t(`mentoring.student.composer.guide.${COMPOSER_STEPS[step]}.title`)}</h3>
-              <p>{t(`mentoring.student.composer.guide.${COMPOSER_STEPS[step]}.desc`)}</p>
-            </div>
-            {step === 0 && (
-              <div className="mt-field">
-                <div className="mt-feeling-options">
-                  {(['good', 'thoughtful', 'difficult'] as const).map((option) => (
-                    <button key={option} type="button" className={!feelingOther && feeling === option ? 'is-selected' : ''} onClick={() => { setFeeling(option); setFeelingOther(false) }}>
-                      {t(`mentoring.student.composer.feeling.${option}`)}
-                    </button>
-                  ))}
-                  {feelingOther ? (
-                    <input
-                      className="mt-feeling-other"
-                      autoFocus
-                      value={feeling}
-                      onChange={(event) => setFeeling(event.target.value)}
-                      placeholder={t('mentoring.student.composer.feeling.otherPlaceholder')}
-                      dir={direction}
-                      maxLength={80}
-                    />
-                  ) : (
-                    <button type="button" onClick={() => { setFeelingOther(true); if (KNOWN_FEELINGS.includes(feeling)) setFeeling('') }}>
-                      {t('mentoring.student.composer.feeling.other')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {step === 1 && (
-              <div className="mt-field mt-write">
-                {/* Primary — the child writes the documentation here by default */}
-                <div className="mt-draft">
-                  <label className="mt-draft__label" htmlFor="mt-composer-notes">
-                    <Icon name="document" size={15} />{t('mentoring.student.composer.draftLabel')}
-                  </label>
-                  <textarea id="mt-composer-notes" autoFocus dir={direction} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t('mentoring.student.composer.draftPlaceholder')} />
-                </div>
-
-                {/* Optional aid — Yuvi, only when the child wants help phrasing */}
-                {yuviOpen ? (
-                  <div className="mt-help" role="group" aria-label={t('mentoring.student.composer.yuvi.helpTitle')}>
-                    <div className="mt-help__bar">
-                      <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={17} /></span>
-                      <strong>{t('mentoring.student.composer.yuvi.helpTitle')}</strong>
-                      <button type="button" className="mt-icon-button mt-icon-button--sm mt-help__close" onClick={closeYuvi} aria-label={t('mentoring.student.close')}><Icon name="close" size={18} /></button>
-                    </div>
-                    <div className="mt-help__bubble" dir="auto">
-                      {yuviBusy && !yuviQuestion
-                        ? <span className="mt-yuvi-typing" aria-label={t('mentoring.student.composer.yuvi.thinking')}><span /><span /><span /></span>
-                        : (yuviPhase === 'ready' && !yuviQuestion ? t('mentoring.student.composer.yuvi.ready') : yuviQuestion)}
-                    </div>
-                    {yuviPhase === 'ready' ? (
-                      <div className="mt-help__done">
-                        <button type="button" className="mt-btn" onClick={closeYuvi}><Icon name="check" size={16} />{t('mentoring.student.composer.yuvi.finish')}</button>
-                        <button type="button" className="mt-help__more" disabled={yuviBusy} onClick={moreQuestion}><Icon name="plus" size={15} />{t('mentoring.student.composer.yuvi.more')}</button>
-                      </div>
-                    ) : (
-                      <>
-                        {!ownMode ? (
-                          <div className="mt-help__chips">
-                            {yuviOptions.map((opt, index) => (
-                              <button key={index} type="button" className="mt-chip" disabled={yuviBusy} onClick={() => answerYuvi(opt)} dir="auto">{opt}</button>
-                            ))}
-                            <button type="button" className="mt-chip mt-chip--own" disabled={yuviBusy} onClick={() => setOwnMode(true)}>
-                              <Icon name="message" size={14} />{t('mentoring.student.composer.yuvi.own')}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="mt-help__own">
-                            <input ref={ownRef} dir={direction} value={ownText} onChange={(event) => setOwnText(event.target.value)} placeholder={t('mentoring.student.composer.yuvi.ownPlaceholder')} maxLength={300} disabled={yuviBusy} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); answerYuvi(ownText) } }} />
-                            <button type="button" className="mt-btn" disabled={yuviBusy || !ownText.trim()} onClick={() => answerYuvi(ownText)}><Icon name="check" size={16} />{t('mentoring.student.composer.yuvi.addToDraft')}</button>
-                          </div>
-                        )}
-                        <button type="button" className="mt-help__more" disabled={yuviBusy} onClick={moreQuestion}>
-                          <Icon name="plus" size={15} />{t('mentoring.student.composer.yuvi.more')}
-                        </button>
-                      </>
-                    )}
-                  </div>
+          {step === 0 && (
+            <div className="mt-field">
+              <div className="mt-feeling-options">
+                {(['good', 'thoughtful', 'difficult'] as const).map((option) => (
+                  <button key={option} type="button" className={!feelingOther && feeling === option ? 'is-selected' : ''} onClick={() => { setFeeling(option); setFeelingOther(false) }}>
+                    {t(`mentoring.student.composer.feeling.${option}`)}
+                  </button>
+                ))}
+                {feelingOther ? (
+                  <input
+                    className="mt-feeling-other"
+                    autoFocus
+                    value={feeling}
+                    onChange={(event) => setFeeling(event.target.value)}
+                    placeholder={t('mentoring.student.composer.feeling.otherPlaceholder')}
+                    dir={direction}
+                    maxLength={80}
+                  />
                 ) : (
-                  <button type="button" className="mt-help-trigger" onClick={openYuvi}>
-                    <Icon name="spark" size={15} />{t('mentoring.student.composer.yuvi.trigger')}
+                  <button type="button" onClick={() => { setFeelingOther(true); if (KNOWN_FEELINGS.includes(feeling)) setFeeling('') }}>
+                    {t('mentoring.student.composer.feeling.other')}
                   </button>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {step === 2 && (
-              <div className="mt-goals-editor">
-                {recLoading && (
-                  <div className="mt-rec mt-rec--loading">
-                    <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={16} /></span>
-                    <span className="mt-yuvi-typing" aria-label={t('mentoring.student.composer.rec.loading')}><span /><span /><span /></span>
-                    <span>{t('mentoring.student.composer.rec.loading')}</span>
+          {step === 1 && (
+            <div className="mt-field mt-write">
+              {/* Primary — the child writes the documentation here by default */}
+              <div className="mt-draft">
+                <label className="mt-draft__label" htmlFor="mt-composer-notes">
+                  <Icon name="document" size={15} />{t('mentoring.student.composer.draftLabel')}
+                </label>
+                <textarea id="mt-composer-notes" autoFocus dir={direction} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t('mentoring.student.composer.draftPlaceholder')} />
+              </div>
+
+              {/* Optional aid — Yuvi, only when the child wants help phrasing */}
+              {yuviOpen ? (
+                <div className="mt-help" role="group" aria-label={t('mentoring.student.composer.yuvi.helpTitle')}>
+                  <div className="mt-help__bar">
+                    <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={17} /></span>
+                    <strong>{t('mentoring.student.composer.yuvi.helpTitle')}</strong>
+                    <button type="button" className="mt-icon-button mt-icon-button--sm mt-help__close" onClick={closeYuvi} aria-label={t('mentoring.student.close')}><Icon name="close" size={18} /></button>
                   </div>
-                )}
-                {rec && (
-                  <div className="mt-rec">
-                    <div className="mt-rec__head">
-                      <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={17} /></span>
-                      <div><strong>{t('mentoring.student.composer.rec.title')}</strong><small>{t('mentoring.student.composer.rec.aiNote')}</small></div>
-                    </div>
-                    <p className="mt-rec__goal" dir="auto">{rec.title}</p>
-                    {rec.next_steps && <p className="mt-rec__step" dir="auto"><Icon name="check" size={15} />{rec.next_steps}</p>}
-                    <p className="mt-rec__when"><Icon name="calendar" size={15} />{t('mentoring.student.composer.rec.within')} · {formatDate(rec.deadline, language)}</p>
-                    {rec.rationale && <p className="mt-rec__why" dir="auto">{rec.rationale}</p>}
-                    <div className="mt-rec__actions">
-                      <button type="button" className="mt-btn" onClick={acceptRec}><Icon name="plus" size={16} />{t('mentoring.student.composer.rec.add')}</button>
-                      <button type="button" className="mt-btn mt-btn--quiet" onClick={dismissRec}>{t('mentoring.student.composer.rec.dismiss')}</button>
-                    </div>
+                  <div className="mt-help__bubble" dir="auto">
+                    {yuviBusy && !yuviQuestion
+                      ? <span className="mt-yuvi-typing" aria-label={t('mentoring.student.composer.yuvi.thinking')}><span /><span /><span /></span>
+                      : (yuviPhase === 'ready' && !yuviQuestion ? t('mentoring.student.composer.yuvi.ready') : yuviQuestion)}
                   </div>
-                )}
-                {goals.map((goal, index) => {
-                  const open = openGoal === index
-                  const label = goal.title.trim() || goal.next_steps.trim()
-                  const needsDate = Boolean(label) && !goal.deadline
-                  return (
-                    <div className={`mt-goal${open ? ' is-open' : ''}${needsDate ? ' has-warn' : ''}`} key={index}>
-                      <button type="button" className="mt-goal__row" onClick={() => toggleGoal(index)} aria-expanded={open}>
-                        <Icon name="chevronUp" size={16} className="mt-goal__chev" />
-                        <span className={`mt-goal__label${label ? '' : ' is-empty'}`} dir="auto">{label || t('mentoring.student.composer.goalUntitled')}</span>
-                        {goal.from_yuvi && <YuviTag />}
-                        {needsDate
-                          ? <span className="mt-goal__needdate"><Icon name="alert" size={13} />{t('mentoring.student.composer.deadlineMissing')}</span>
-                          : <span className="mt-goal__draft">{t('mentoring.student.composer.goalDraftBadge')}</span>}
-                      </button>
-                      {open && (
-                        <div className="mt-goal__body">
-                          <input value={goal.title} onChange={(event) => setGoal(index, { title: event.target.value })} placeholder={t('mentoring.student.composer.goal.placeholder')} dir="auto" />
-                          <textarea value={goal.next_steps} onChange={(event) => setGoal(index, { next_steps: event.target.value })} placeholder={t('mentoring.student.composer.nextStep.placeholder')} dir="auto" />
-                          <label className="mt-goal-editor__date">{t('mentoring.student.composer.when')} *<input type="date" required value={goal.deadline} onChange={(event) => setGoal(index, { deadline: event.target.value })} /></label>
-                          {needsDate && <p className="mt-goal__datewarn"><Icon name="alert" size={14} />{t('mentoring.student.composer.deadlineRequired')}</p>}
-                          <button type="button" className="mt-btn mt-btn--quiet mt-goal__remove" onClick={() => removeGoal(index)}>
-                            <Icon name="trash" size={16} />{t('mentoring.student.composer.removeGoal')}
+                  {yuviPhase === 'ready' ? (
+                    <div className="mt-help__done">
+                      <button type="button" className="mt-btn" onClick={closeYuvi}><Icon name="check" size={16} />{t('mentoring.student.composer.yuvi.finish')}</button>
+                      <button type="button" className="mt-help__more" disabled={yuviBusy} onClick={moreQuestion}><Icon name="plus" size={15} />{t('mentoring.student.composer.yuvi.more')}</button>
+                    </div>
+                  ) : (
+                    <>
+                      {!ownMode ? (
+                        <div className="mt-help__chips">
+                          {yuviOptions.map((opt, index) => (
+                            <button key={index} type="button" className="mt-chip" disabled={yuviBusy} onClick={() => answerYuvi(opt)} dir="auto">{opt}</button>
+                          ))}
+                          <button type="button" className="mt-chip mt-chip--own" disabled={yuviBusy} onClick={() => setOwnMode(true)}>
+                            <Icon name="message" size={14} />{t('mentoring.student.composer.yuvi.own')}
                           </button>
                         </div>
+                      ) : (
+                        <div className="mt-help__own">
+                          <input ref={ownRef} dir={direction} value={ownText} onChange={(event) => setOwnText(event.target.value)} placeholder={t('mentoring.student.composer.yuvi.ownPlaceholder')} maxLength={300} disabled={yuviBusy} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); answerYuvi(ownText) } }} />
+                          <button type="button" className="mt-btn" disabled={yuviBusy || !ownText.trim()} onClick={() => answerYuvi(ownText)}><Icon name="check" size={16} />{t('mentoring.student.composer.yuvi.addToDraft')}</button>
+                        </div>
                       )}
-                    </div>
-                  )
-                })}
-                {!rec && !recLoading && (
-                  <button type="button" className="mt-btn mt-btn--quiet mt-goals-editor__add" onClick={addGoal}>
-                    <Icon name="plus" size={16} />{t(goals.length ? 'mentoring.student.composer.addAnotherGoal' : 'mentoring.student.composer.addGoal')}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="mt-review">
-                <div className="mt-review__row"><span>{t('mentoring.student.conversation.feeling')}</span><strong dir="auto">{feeling ? feelingLabel(t, feeling) : '—'}</strong></div>
-                <div className="mt-review__row"><span>{t('mentoring.student.conversation.discussed')}</span><strong dir="auto">{notes || '—'}</strong></div>
-                <div className="mt-review__goals">
-                  <span>{t('mentoring.student.goals.title')}</span>
-                  {cleanGoals.length ? (
-                    <ul>
-                      {cleanGoals.map((goal, index) => (
-                        <li key={index}>
-                          <strong dir="auto">{goal.title.trim() || goal.next_steps.trim()}</strong>
-                          {goal.from_yuvi && <YuviTag />}
-                          {goal.deadline && <small>{t('mentoring.student.active.deadline')}: {formatDate(goal.deadline, language)}</small>}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-review__empty">{t('mentoring.student.summary.noGoals')}</p>
+                      <button type="button" className="mt-help__more" disabled={yuviBusy} onClick={moreQuestion}>
+                        <Icon name="plus" size={15} />{t('mentoring.student.composer.yuvi.more')}
+                      </button>
+                    </>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
+              ) : (
+                <button type="button" className="mt-help-trigger" onClick={openYuvi}>
+                  <Icon name="spark" size={15} />{t('mentoring.student.composer.yuvi.trigger')}
+                </button>
+              )}
+            </div>
+          )}
 
+          {step === 2 && (
+            <div className="mt-goals-editor">
+              {recLoading && (
+                <div className="mt-rec mt-rec--loading">
+                  <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={16} /></span>
+                  <span className="mt-yuvi-typing" aria-label={t('mentoring.student.composer.rec.loading')}><span /><span /><span /></span>
+                  <span>{t('mentoring.student.composer.rec.loading')}</span>
+                </div>
+              )}
+              {rec && (
+                <div className="mt-rec">
+                  <div className="mt-rec__head">
+                    <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={17} /></span>
+                    <div><strong>{t('mentoring.student.composer.rec.title')}</strong><small>{t('mentoring.student.composer.rec.aiNote')}</small></div>
+                  </div>
+                  <p className="mt-rec__goal" dir="auto">{rec.title}</p>
+                  {rec.next_steps && <p className="mt-rec__step" dir="auto"><Icon name="check" size={15} />{rec.next_steps}</p>}
+                  <p className="mt-rec__when"><Icon name="calendar" size={15} />{t('mentoring.student.composer.rec.within')} · {formatDate(rec.deadline, language)}</p>
+                  {rec.rationale && <p className="mt-rec__why" dir="auto">{rec.rationale}</p>}
+                  <div className="mt-rec__actions">
+                    <button type="button" className="mt-btn" onClick={acceptRec}><Icon name="plus" size={16} />{t('mentoring.student.composer.rec.add')}</button>
+                    <button type="button" className="mt-btn mt-btn--quiet" onClick={dismissRec}>{t('mentoring.student.composer.rec.dismiss')}</button>
+                  </div>
+                </div>
+              )}
+              {goals.map((goal, index) => {
+                const open = openGoal === index
+                const label = goal.title.trim() || goal.next_steps.trim()
+                const needsDate = Boolean(label) && !goal.deadline
+                return (
+                  <div className={`mt-goal${open ? ' is-open' : ''}${needsDate ? ' has-warn' : ''}`} key={index}>
+                    <button type="button" className="mt-goal__row" onClick={() => toggleGoal(index)} aria-expanded={open}>
+                      <Icon name="chevronUp" size={16} className="mt-goal__chev" />
+                      <span className={`mt-goal__label${label ? '' : ' is-empty'}`} dir="auto">{label || t('mentoring.student.composer.goalUntitled')}</span>
+                      {goal.from_yuvi && <YuviTag />}
+                      {needsDate
+                        ? <span className="mt-goal__needdate"><Icon name="alert" size={13} />{t('mentoring.student.composer.deadlineMissing')}</span>
+                        : <span className="mt-goal__draft">{t('mentoring.student.composer.goalDraftBadge')}</span>}
+                    </button>
+                    {open && (
+                      <div className="mt-goal__body">
+                        <input value={goal.title} onChange={(event) => setGoal(index, { title: event.target.value })} placeholder={t('mentoring.student.composer.goal.placeholder')} dir="auto" />
+                        <textarea value={goal.next_steps} onChange={(event) => setGoal(index, { next_steps: event.target.value })} placeholder={t('mentoring.student.composer.nextStep.placeholder')} dir="auto" />
+                        <label className="mt-goal-editor__date">{t('mentoring.student.composer.when')} *<input type="date" required value={goal.deadline} onChange={(event) => setGoal(index, { deadline: event.target.value })} /></label>
+                        {needsDate && <p className="mt-goal__datewarn"><Icon name="alert" size={14} />{t('mentoring.student.composer.deadlineRequired')}</p>}
+                        <button type="button" className="mt-btn mt-btn--quiet mt-goal__remove" onClick={() => removeGoal(index)}>
+                          <Icon name="trash" size={16} />{t('mentoring.student.composer.removeGoal')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {!rec && !recLoading && (
+                <button type="button" className="mt-btn mt-btn--quiet mt-goals-editor__add" onClick={addGoal}>
+                  <Icon name="plus" size={16} />{t(goals.length ? 'mentoring.student.composer.addAnotherGoal' : 'mentoring.student.composer.addGoal')}
+                </button>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="mt-review">
+              <div className="mt-review__row"><span>{t('mentoring.student.conversation.feeling')}</span><strong dir="auto">{feeling ? feelingLabel(t, feeling) : '—'}</strong></div>
+              <div className="mt-review__row"><span>{t('mentoring.student.conversation.discussed')}</span><strong dir="auto">{notes || '—'}</strong></div>
+              <div className="mt-review__goals">
+                <span>{t('mentoring.student.goals.title')}</span>
+                {cleanGoals.length ? (
+                  <ul>
+                    {cleanGoals.map((goal, index) => (
+                      <li key={index}>
+                        <strong dir="auto">{goal.title.trim() || goal.next_steps.trim()}</strong>
+                        {goal.from_yuvi && <YuviTag />}
+                        {goal.deadline && <small>{t('mentoring.student.active.deadline')}: {formatDate(goal.deadline, language)}</small>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-review__empty">{t('mentoring.student.summary.noGoals')}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-composer__actions">
+          {step > 0 ? (
+            <button className="mt-btn mt-btn--quiet" type="button" onClick={goBack}>{t('mentoring.student.composer.back')}</button>
+          ) : (
+            <button className="mt-btn mt-btn--quiet" type="button" onClick={requestClose}>{t('mentoring.student.composer.cancel')}</button>
+          )}
+          {isLast ? (
+            <button className="mt-btn" type="button" disabled={busy || !canSave} onClick={submit}>{t('mentoring.student.composer.save')}</button>
+          ) : (
+            <button className="mt-btn" type="button" disabled={!stepValid[step]} onClick={goNext}>{t('mentoring.student.composer.next')}</button>
+          )}
+        </div>
+      </section>
+    </div>
+    {confirmClose && (
+      <div className="mt-modal-backdrop mt-confirm-backdrop">
+        <section className="mt-modal mt-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="mt-close-title" aria-describedby="mt-close-desc">
+          <Icon name="alert" size={24} />
+          <h2 id="mt-close-title">{t('mentoring.student.composer.close.title')}</h2>
+          <p id="mt-close-desc">{t('mentoring.student.composer.close.body')}</p>
           <div className="mt-composer__actions">
-            {step > 0 ? (
-              <button className="mt-btn mt-btn--quiet" type="button" onClick={goBack}>{t('mentoring.student.composer.back')}</button>
-            ) : (
-              <button className="mt-btn mt-btn--quiet" type="button" onClick={requestClose}>{t('mentoring.student.composer.cancel')}</button>
-            )}
-            {isLast ? (
-              <button className="mt-btn" type="button" disabled={busy || !canSave} onClick={submit}>{t('mentoring.student.composer.save')}</button>
-            ) : (
-              <button className="mt-btn" type="button" disabled={!stepValid[step]} onClick={goNext}>{t('mentoring.student.composer.next')}</button>
-            )}
+            <button className="mt-btn mt-btn--quiet" type="button" onClick={() => setConfirmClose(false)}>{t('mentoring.student.composer.close.stay')}</button>
+            <button className="mt-btn mt-btn--danger" type="button" onClick={() => { setConfirmClose(false); discardAndClose() }}>{t('mentoring.student.composer.close.leave')}</button>
           </div>
         </section>
       </div>
-      {confirmClose && (
-        <div className="mt-modal-backdrop mt-confirm-backdrop">
-          <section className="mt-modal mt-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="mt-close-title" aria-describedby="mt-close-desc">
-            <Icon name="alert" size={24} />
-            <h2 id="mt-close-title">{t('mentoring.student.composer.close.title')}</h2>
-            <p id="mt-close-desc">{t('mentoring.student.composer.close.body')}</p>
-            <div className="mt-composer__actions">
-              <button className="mt-btn mt-btn--quiet" type="button" onClick={() => setConfirmClose(false)}>{t('mentoring.student.composer.close.stay')}</button>
-              <button className="mt-btn mt-btn--danger" type="button" onClick={() => { setConfirmClose(false); discardAndClose() }}>{t('mentoring.student.composer.close.leave')}</button>
-            </div>
-          </section>
-        </div>
-      )}
+    )}
     </>
   )
 }
