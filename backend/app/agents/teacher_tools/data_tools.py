@@ -300,16 +300,19 @@ async def _get_group_learning_gaps(context: TeacherToolContext, args: dict) -> d
     # every reason not to hold a roster slice, so they are dropped here rather
     # than scrubbed generically.
     dropped = {"learner_ids", "mastered_ids"}
-    return {
-        "data": [
-            {k: v for k, v in scrub(gap).items() if k not in dropped} for gap in gaps
-        ],
-        # The same deterministic teaching moves the gaps card shows — one per
-        # gap, derived from the gap's own shape, no learner ids inside.
-        "recommendations": scrub(
-            group_analytics.group_recommendations(gaps, context.language)
-        ),
-    }
+    result = {"data": [
+        {k: v for k, v in scrub(gap).items() if k not in dropped} for gap in gaps
+    ]}
+    # The same deterministic teaching moves the gaps card shows — one per gap,
+    # derived from the gap's own shape, no learner ids inside. Decoration, not
+    # the answer: a gap row missing a field the derivation wants must cost the
+    # moves, never the gaps themselves.
+    try:
+        result["recommendations"] = scrub(
+            group_analytics.group_recommendations(gaps, context.language))
+    except Exception as exc:
+        print(f"⚠️ gap recommendations skipped: {type(exc).__name__}")
+    return result
 
 
 #: The written notes behind the mood numbers are the heaviest part of the
