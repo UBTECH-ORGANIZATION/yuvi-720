@@ -1,0 +1,110 @@
+"""Point at a region of the lesson screen while answering.
+
+The model selects a REGION from a static vocabulary — never coordinates. The
+handler resolves geometry server-side from the nightly capture
+(``content_intelligence.screen_anchors``), so nothing the model says can move
+the overlay somewhere untrue. Missing or stale geometry still accepts the
+intent with ``region: None``: the frontend renders its whole-frame glow, which
+communicates "look at the lesson" without asserting a position we don't have.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+from app.agents.coach_modes import CoachMode
+from app.agents.coach_tools.registry import CoachTool, CoachToolContext, register
+
+
+def pointing_enabled() -> bool:
+    return (os.environ.get("COACH_POINTING_ENABLED") or "1").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
+async def _point_at_screen(
+    context: CoachToolContext, args: dict[str, Any]
+) -> dict[str, Any]:
+    if not pointing_enabled():
+        return {"status": "not_applicable", "reason": "pointing_disabled"}
+    if context.pointer_requests:
+        # One pointer per turn — a second call would fight the first for the
+        # learner's attention.
+        return {"status": "accepted",
+                "data": {"region": context.pointer_requests[0].get("region")}}
+    current = (context.bundle or {}).get("current") or {}
+    component_id = str(current.get("component_id") or "")
+    item_id = str(current.get("item_id") or "")
+    if not component_id or not item_id:
+        return {"status": "not_applicable", "reason": "no_screen"}
+
+    from app.services import content_intelligence
+
+    region = str(args["region"])
+    anchors = content_intelligence.screen_anchors(component_id, item_id)
+    question_key = "|".join(
+        (component_id, item_id, str(current.get("question_id") or "")))
+    entries = (anchors or {}).get("regions", {}).get(region) or []
+    if entries:
+        # An ordinal narrows the highlight to one element of the region — the
+        # second option, the first image — when the capture kept parts. The
+        # narrowing applies per breakpoint (each width has its own parts).
+        part = args.get("part")
+        breakpoints = []
+        for entry in entries:
+            rect = entry["rect"]
+            parts = entry.get("parts") or []
+            if isinstance(part, int) and 1 <= part <= len(parts):
+                rect = parts[part - 1]
+            breakpoints.append({
+                "w": entry["w"], "h": entry["h"],
+                "content_w": entry["content_w"],
+                "content_h": entry["content_h"], "rect": rect,
+            })
+        context.pointer_requests.append({
+            "region": region,
+            "breakpoints": breakpoints,
+            "question_key": question_key,
+        })
+        return {"status": "accepted", "data": {"region": region}}
+    context.pointer_requests.append({
+        "region": None,
+        "breakpoints": [],
+        "question_key": question_key,
+    })
+    return {"status": "accepted", "data": {"region": "whole_screen"}}
+
+
+register(CoachTool(
+    name="point_at_screen",
+    description=(
+        "הדגשה ויזואלית של אזור במסך הלמידה, מסונכרנת עם התשובה שלך. השתמש/י "
+        "כשהלומד/ת שואל/ת על משהו שנראה על המסך, או כשרמז מתייחס לחלק מסוים "
+        "(השאלה, האפשרויות, שדות מילוי/בחירה, תמונה, סרטון, תרשים/יישומון, "
+        "טבלה, הוראות). "
+        "ההודעה שלך צריכה להתייחס למה שמודגש, בלי לתאר את פעולת ההדגשה עצמה."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "region": {
+                "type": "string",
+                # Static on purpose (schemas bake at import): the vocabulary is
+                # the region taxonomy, and the handler decides availability.
+                "enum": ["question", "options", "input", "image", "video",
+                         "diagram", "table", "instruction"],
+            },
+            "part": {
+                "type": "integer",
+                "description": (
+                    "מספר סידורי של פריט בתוך האזור (1 = הראשון), למשל "
+                    "האפשרות השנייה או התמונה הראשונה. השמט כדי להדגיש את "
+                    "האזור כולו. הקונטקסט מציין כמה פריטים יש לכל אזור."),
+            },
+        },
+        "required": ["region"],
+    },
+    handler=_point_at_screen,
+    allowed_modes=frozenset({CoachMode.LESSON}),
+))

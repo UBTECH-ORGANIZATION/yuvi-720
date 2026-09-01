@@ -37,6 +37,14 @@ from app.services import learning_timing
 # `learning_events`, and this is the durable per-learner record that a task was
 # done. It carries no component/item/question, so `question_summary` skips it;
 # the identifier lives in `meta.task_id`.
+# Subjects the school is not running this year. Hidden at THIS seam — the one
+# join every analytic surface reads its activity rows through — so the rows
+# disappear from the teacher's learnings, per-student activity and subject
+# chips alike without touching the stored evidence. The catalogue itself only
+# names math/science/other (``kata_client.subject_from_objective``); "english"
+# reaches us solely as the content vendor's own tag on historical events.
+HIDDEN_SUBJECTS = frozenset({"english"})
+
 KINDS = {"hint", "explanation", "video_summary", "different_way", "yuvi_chat", "content_hint",
          "content_choice", "task"}
 #: Kinds that are not per-question and must never open a `question_summary` row.
@@ -328,7 +336,7 @@ async def question_summary(
         if field:
             slot[field] += 1
 
-    result = list(rows.values())
+    result = [r for r in rows.values() if r["subject"] not in HIDDEN_SUBJECTS]
     if component_id:
         result = [r for r in result if r["component_id"] == component_id]
     if subject:

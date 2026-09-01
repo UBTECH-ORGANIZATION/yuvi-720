@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "prompt_version": "cp-v2",
+  "generated_at": "2026-09-01T12:23:35Z",
+  "shards": [
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL",
+      "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL.json",
+      "lomdot": 10
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT",
+      "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT.json",
+      "lomdot": 10
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE",
+      "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE.json",
+      "lomdot": 9
+    },
+    {
+      "subject": "other",
+      "objective_id": "MOE.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER",
+      "path": "other/MOE.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER.json",
+      "lomdot": 1
+    },
+    {
+      "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET.json",
+      "lomdot": 2
+    },
+    {
+      "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE.json",
+      "lomdot": 4
+    },
+    {
+      "subject": "science",
+      "objective_id": "MOE.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO",
+      "path": "science/MOE.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO.json",
+      "lomdot": 9
+    }
+  ],
+  "backlog": {
+    "browse": [
+      "CET.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER-00001",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00002",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00006",
+      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
+      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006"
+    ]
+  },
+  "stats": {
+    "lomdot": 45,
+    "slides": 204,
+    "questions": 273,
+    "texts_generated": 0,
+    "texts_pending": 0,
+    "removed": []
+  }
+}

@@ -340,9 +340,6 @@
 
 .tch-dock__bubble--error { color: var(--sp-ink-chat-alert); }
 
-/* An answer with nothing behind it must not look like every other answer. */
-.tch-dock__bubble--ungrounded { border-inline-start: 3px solid var(--sp-ink-chat-warn); }
-
 /* Prose inside a bubble: paragraphs, short lists, and the blocks the shared
    renderer brings with it — a table for a comparison, a diagram for a process. */
 .tch-dock__para { margin: 0; }
@@ -482,14 +479,6 @@
 /* No opacity dimming: at .8 the reason fell to 3.40:1 on the shell's own card.
    The row's colour already says how the call went. */
 .tch-trace__reason { color: inherit; }
-
-.tch-trace--none {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  margin: 0;
-  color: var(--sp-ink-chat-warn);
-}
 
 /* ── composer ──────────────────────────────────────────────────────────────*/
 

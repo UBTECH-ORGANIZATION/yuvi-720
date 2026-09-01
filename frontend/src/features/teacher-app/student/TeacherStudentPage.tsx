@@ -25,7 +25,7 @@ import {
 } from '../../../components/charts'
 import {
   Card, ErrorState, Icon, Panel, SectionHeader, Skeleton,
-  Hint, SkeletonRows, StatusPill, Tooltip,
+  Hint, StatusPill, Tooltip,
 } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
@@ -40,7 +40,7 @@ import {
   generateTopicDigest, getFocusRoadmap, getLearnerRead, getPinnedNext,
   getStudentActivity,
   getStudentDetail,
-  getStudentGoals, getStudentObjectives, getStudentScores, getStudentTrends,
+  getStudentObjectives, getStudentScores, getStudentTrends,
   getTopicDigest,
   unpinNext,
   type RoadmapStep,
@@ -48,16 +48,15 @@ import {
   type ObjectiveBreakdownRow,
   type PlannerFocus, type PortraitBlock, type PortraitLine,
   type QuestionRow, type StudentScores,
-  type StrengthDetail, type StudentDetail, type StudentGoal,
+  type StrengthDetail, type StudentDetail,
   type StudentPortrait, type StruggleItem, type SubjectProgress,
   type TeacherRecommendation,
-  type TopicDigest, type TopicDigestItem,
+  type TopicDigest,
 } from '../../../services/teacher'
 import {
   RawEvidence, RecommendationCard, withFallback,
 } from '../shared/EvidenceDisclosure'
-import { GoalProgressLine } from './TeacherGoals'
-import { GoalDialog } from '../goals/GoalDialog'
+import { MentoringSection } from './MentoringSection'
 import { TeacherWellbeing } from './TeacherWellbeing'
 import { getStudentBadges, type TeacherBadge } from '../../../services/teacher'
 import { Badge, type BadgeGlyph, type BadgeTier } from '../../../components/Badge'
@@ -140,6 +139,14 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   /* The full disclosure records live behind the compact card, in a dialog —
      a deep link means "open it", not just "scroll near it". */
   const [wbOpen, setWbOpen] = useState(false)
+  /* The standing good-word door (#485/#495): open for EVERY child, always —
+     the win-row praise below stays the recommended moment, but a teacher who
+     wants to encourage a struggling child must never find the door gated on a
+     computed achievement. Memoized so a page re-render (presence polling)
+     doesn't reset the dialog's typed message via its strength-change effect. */
+  const [praiseOpen, setPraiseOpen] = useState(false)
+  const generalPraise = useMemo(
+    () => ({ id: '', title: '', learnerIds: [learnerId] }), [learnerId])
 
   useEffect(() => {
     if (!wantsWellbeing || !detail) return
@@ -416,9 +423,25 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
               dialog's charts. Each stat is the score itself, a door to the
               why-is-it-down dialog; its hover hint carries the window and
               the partial-signals marker. */}
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm tch-student__praiseBtn"
+            onClick={() => setPraiseOpen(true)}
+          >
+            <Icon name="spark" size={14} aria-hidden />
+            {t('tch.recs.praise')}
+          </button>
           <ScoreStats scores={scores} />
         </div>
       </header>
+
+      {praiseOpen ? (
+        <PraiseDialog
+          strength={generalPraise}
+          names={new Map([[learnerId, name]])}
+          onClose={() => setPraiseOpen(false)}
+        />
+      ) : null}
 
       {/* The strip of attention flags that used to sit here is gone.
           It listed every criterion that fired, which was the right instinct
@@ -466,7 +489,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
               digestState={digestState}
               onBuildTask={buildTask}
             />
-            <GoalsCard learnerId={learnerId} name={name} />
           </div>
 
           <div className="tch-student__side">
@@ -494,6 +516,11 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 
           </div>
         </div>
+
+        {/* The child's whole mentoring loop — approve, the talk log, both
+            composers — a full-width row of its own (#497): two lanes inside,
+            so the record reads sideways instead of stacking down the page. */}
+        <MentoringSection learnerId={learnerId} name={name} />
 
         {/* The sometimes-reading, behind doors: who this child is, what they
             are strong and weak in, the month's shape — and the wellbeing
@@ -532,7 +559,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 
         {/* The full records, with the words, the reply and the actions —
             exactly the screen the safety flow was built as, one door in. */}
-        <Modal open={wbOpen} onClose={() => setWbOpen(false)}
+        <Modal open={wbOpen} onClose={() => setWbOpen(false)} withClose
                titleId="tch-wb-dialog" className="tch-student__moreDialog">
           <h2 id="tch-wb-dialog" className="sp-sr-only">
             {t('tch.student.wellbeingTitle')}
@@ -554,6 +581,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
         titleId="tch-student-builder-title"
         className="tch-builder__modal"
         dismissible={false}
+        withClose
       >
         <div className="tch-builder__head">
           <h2 id="tch-student-builder-title" className="tch-builder__modalTitle" dir="auto">
@@ -862,7 +890,7 @@ function TrendChip({ momentum }: {
   if (!momentum) return null
   return (
     <Hint text={momentum.why} className="tch-trendHint">
-      <span className={`tch-trend is-${momentum.dir}`} tabIndex={0}>
+      <span className={`tch-momentum is-${momentum.dir}`} tabIndex={0}>
         {momentum.dir !== 'flat' ? (
           <Icon name={momentum.dir === 'up' ? 'trendUp' : 'chevronDown'}
                 size={11} aria-hidden />
@@ -1092,7 +1120,7 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
             about ONE child. */}
         {/* The panel carries its own heading now — the modal borrows it as
             the accessible title instead of stacking a second one above it. */}
-        <Modal open={pinOpen} onClose={() => setPinOpen(false)}
+        <Modal open={pinOpen} onClose={() => setPinOpen(false)} withClose
                titleId="tch-focus-panel-title" className="tch-focusModal">
           {pinOpen && groupId ? (
             <FocusPanel
@@ -1188,7 +1216,7 @@ function RoadmapDialog({ learnerId, open, onClose }: {
 
   return (
     <Modal open={open} onClose={onClose} titleId="tch-roadmap-title"
-           className="tch-roadmapDialog">
+           className="tch-roadmapDialog" withClose>
       <h2 id="tch-roadmap-title" className="tch-builder__modalTitle" dir="auto">
         {t('tch.student.roadmapTitle')}
       </h2>
@@ -1259,8 +1287,11 @@ function RoadmapDialog({ learnerId, open, onClose }: {
 }
 
 /* One subject's objectives, each with its own measured position — the list a
- * dial's "1 of 3" summarises. Everything here is catalogue + mastery data;
- * the percentage is mastery's own score, never an estimate made for display. */
+ * dial's "1 of 3" summarises — and, inside each, the objective's lomdot as a
+ * timeline wearing the SAME projected states the child's own track shows.
+ * The percentage is mastery's own score, never an estimate made for display;
+ * the counted evidence (successes of attempts) rides the status's tooltip
+ * instead of standing as a row of figures. */
 function ObjectivesDialog({ learnerId, subject, onClose }: {
   learnerId: string
   subject: string | null
@@ -1280,7 +1311,7 @@ function ObjectivesDialog({ learnerId, subject, onClose }: {
   }, [learnerId, subject, language])
 
   return (
-    <Modal open={subject !== null} onClose={onClose}
+    <Modal open={subject !== null} onClose={onClose} withClose
            titleId="tch-obj-dialog" className="tch-objDialog">
       <h2 id="tch-obj-dialog" className="tch-builder__modalTitle" dir="auto">
         {subject ? t('tch.student.objTitle', { subject: subjectLabel(subject, t) }) : ''}
@@ -1294,48 +1325,72 @@ function ObjectivesDialog({ learnerId, subject, onClose }: {
       ) : (
         <ul className="tch-objDialog__list">
           {rows.map((row) => (
-            <li key={row.objective_id} className="tch-objDialog__row">
-              <span className="tch-objDialog__nameCell">
-                <span className="tch-objDialog__name" dir="auto">
-                  {row.title || row.objective_id}
-                  {row.needs_review ? (
-                    <span className="tch-objDialog__review">
-                      {t('tch.student.objReview')}
+            /* A drawer per objective — open where the child actually IS, so
+               the dialog lands showing the live material, not a wall of
+               every timeline at once. */
+            <li key={row.objective_id} className="tch-objDialog__objective">
+              <details className={`tch-objDialog__drawer is-${row.status}`}
+                       open={row.status === 'in_progress'}>
+                <summary className="tch-objDialog__row">
+                  <span className="tch-objDialog__name" dir="auto">
+                    {row.title || row.objective_id}
+                    {row.needs_review ? (
+                      <span className="tch-objDialog__review">
+                        {t('tch.student.objReview')}
+                      </span>
+                    ) : null}
+                  </span>
+                  {row.last_at ? (
+                    <span className="tch-objDialog__when">
+                      {agoLabel(row.last_at, t)}
                     </span>
                   ) : null}
-                </span>
-                {/* What actually happened there, in one quiet line — the
-                    numbers a teacher asks right after "where do they stand". */}
-                {row.questions > 0 ? (
-                  <span className="tch-objDialog__meta">
-                    {t('tch.student.objMeta', {
-                      questions: row.questions, minutes: row.minutes,
-                      help: row.help_used,
-                    })}
-                    {row.last_at ? ` · ${agoLabel(row.last_at, t)}` : ''}
-                  </span>
-                ) : null}
-              </span>
-              <span className="tch-objDialog__bar" aria-hidden="true">
-                <i className={`is-${row.status}`}
-                   style={{ inlineSize: `${row.percent}%` }} />
-              </span>
-              <span className="tch-objDialog__figures">
-                <strong className={`is-${row.status}`}>
-                  {row.status === 'mastered'
-                    ? t('tch.student.objStatus.mastered')
-                    : row.status === 'in_progress'
-                      ? `${row.percent}%`
-                      : t('tch.student.objStatus.notStarted')}
-                </strong>
-                {row.attempts > 0 ? (
-                  <span className="tch-objDialog__evidence">
-                    {t('tch.student.objAttempts', {
-                      successes: row.successes, attempts: row.attempts,
-                    })}
-                  </span>
-                ) : null}
-              </span>
+                  <strong
+                    className={`tch-objDialog__status is-${row.status}`}
+                    title={row.attempts > 0
+                      ? t('tch.student.objAttempts', {
+                          successes: row.successes, attempts: row.attempts })
+                      : undefined}
+                  >
+                    {row.status === 'mastered'
+                      ? t('tch.student.objStatus.mastered')
+                      : row.status === 'in_progress'
+                        ? `${row.percent}%`
+                        : t('tch.student.objStatus.notStarted')}
+                  </strong>
+                  <Icon name="chevronDown" size={14} aria-hidden
+                        className="tch-objDialog__chevron" />
+                </summary>
+                {row.components?.length ? (
+                  /* The lomdot, as the timeline they are — the roadmap's own
+                     grammar, each stop wearing the path engine's state. */
+                  <ol className="tch-roadmap tch-objDialog__steps">
+                    {row.components.map((component, index) => (
+                      <li key={component.id ?? index}
+                          className={`tch-roadmap__step is-${component.state}${
+                            component.state === 'current' ? ' is-now' : ''}`}>
+                        <span className="tch-roadmap__marker" aria-hidden="true">
+                          {component.state === 'completed' ? (
+                            <Icon name="check" size={10} aria-hidden />
+                          ) : component.state === 'locked' ? (
+                            <Icon name="lock" size={9} aria-hidden />
+                          ) : null}
+                        </span>
+                        <div className="tch-roadmap__body">
+                          <span className="tch-roadmap__title" dir="auto">
+                            {component.title}
+                          </span>
+                          <span className="tch-objDialog__stepState">
+                            {t(`learning.roadmap.state.${component.state}`)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="tch-objDialog__none">{t('tch.student.objEmpty')}</p>
+                )}
+              </details>
             </li>
           ))}
         </ul>
@@ -1595,93 +1650,6 @@ function RecsPanel({ learnerId, rows, recommendations, focus, progress, onBuildT
   )
 }
 
-/* ── goals: a card, not a screen ────────────────────────────────────────────
- *
- * The full goal experience (drafts, data-based suggestions, the learner-read
- * context column) lives in `GoalDialog`, the same dialog the goals board
- * opens — one composer, everywhere. The card only answers "what goals are
- * live and how are they going", and the + hands over to the dialog with this
- * child already chosen.
- */
-
-function GoalsCard({ learnerId, name }: { learnerId: string; name: string }) {
-  const { t } = useI18n()
-  const [goals, setGoals] = useState<StudentGoal[] | null>(null)
-  const [isComposing, setComposing] = useState(false)
-  const [version, setVersion] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    getStudentGoals(learnerId)
-      .then((response) => {
-        if (!active) return
-        setGoals((response.conversations ?? []).flatMap((row) => row.goals ?? []))
-      })
-      .catch(() => { if (active) setGoals([]) })
-    return () => { active = false }
-  }, [learnerId, version])
-
-  return (
-    <section id="goals" className="tch-student__goals">
-      <Panel className="tch-goalsCard">
-        <SectionHeader
-          title={t('tch.student.goalsCard')}
-          action={(
-            <button
-              type="button"
-              className="sp-btn sp-btn--ghost sp-btn--sm"
-              onClick={() => setComposing(true)}
-            >
-              <Icon name="plus" size={14} aria-hidden />
-              {t('tch.goalsPage.create')}
-            </button>
-          )}
-        />
-        {goals === null ? (
-          <SkeletonRows rows={2} />
-        ) : goals.length ? (
-          <ul className="tch-goalsCard__list">
-            {goals.slice(0, 5).map((goal) => (
-              <li key={goal.id} className="tch-goalsCard__goal">
-                {/* Title and stage share one line; the stage is a chip beside
-                    the words, never a full-width bar under them. */}
-                <div className="tch-goalsCard__goalHead">
-                  <strong dir="auto">{goal.title}</strong>
-                  {goal.progress_stage ? (
-                    <StatusPill tone={goal.progress_stage === 'summarized' ? 'strong' : 'neutral'}>
-                      {t(`tch.goals.stage.${goal.progress_stage}`)}
-                    </StatusPill>
-                  ) : null}
-                  {goal.deadline ? (
-                    <span className="tch-goalsCard__deadline">
-                      {t('tch.goals.deadline', { date: goal.deadline })}
-                    </span>
-                  ) : null}
-                </div>
-                <GoalProgressLine goal={goal} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="tch-goalsCard__none">{t('tch.student.goalsNone')}</p>
-        )}
-      </Panel>
-
-      <GoalDialog
-        open={isComposing}
-        learnerId={learnerId}
-        candidates={[{ id: learnerId, name }]}
-        onPick={() => { /* one candidate, already chosen */ }}
-        onClose={() => setComposing(false)}
-        onAssigned={() => {
-          setComposing(false)
-          setVersion((value) => value + 1)
-        }}
-      />
-    </section>
-  )
-}
-
 /* ── the sometimes-reading, behind doors ───────────────────────────────────── */
 
 function MoreDialogs({ detail, trends, learnerId, onModelChanged, extra }: {
@@ -1727,20 +1695,20 @@ function MoreDialogs({ detail, trends, learnerId, onModelChanged, extra }: {
       ))}
       {extra}
 
-      <Modal open={open === 'portrait'} onClose={() => setOpen(null)}
+      <Modal open={open === 'portrait'} onClose={() => setOpen(null)} withClose
              titleId="tch-more-portrait" className="tch-student__moreDialog">
         <h2 id="tch-more-portrait" className="sp-sr-only">{t('tch.student.portrait')}</h2>
         <PortraitPanel portrait={detail.portrait} described={described}
                        learnerId={learnerId} onModelChanged={onModelChanged} />
       </Modal>
 
-      <Modal open={open === 'balance'} onClose={() => setOpen(null)}
+      <Modal open={open === 'balance'} onClose={() => setOpen(null)} withClose
              titleId="tch-more-balance" className="tch-student__moreDialog">
         <h2 id="tch-more-balance" className="sp-sr-only">{t('tch.student.balanceBtn')}</h2>
         <Balance strengths={detail.strengths_detail ?? []} difficulties={evidenced} />
       </Modal>
 
-      <Modal open={open === 'trend'} onClose={() => setOpen(null)}
+      <Modal open={open === 'trend'} onClose={() => setOpen(null)} withClose
              titleId="tch-more-trend" className="tch-student__moreDialog">
         <h2 id="tch-more-trend" className="sp-sr-only">{t('tch.student.trend')}</h2>
         <TrendStrip trends={trends} />
@@ -2334,96 +2302,6 @@ function buildTopicSections(rows: QuestionRow[]): { subject: string; topics: Top
   return sections
 }
 
-function TopicRow({ topic, learnerId, digestItem, digestState, onBuildTask }: {
-  topic: Topic
-  learnerId: string
-  digestItem: TopicDigestItem | null
-  digestState: DigestState
-  onBuildTask: (seed: TaskSeed) => void
-}) {
-  const { t } = useI18n()
-  const percent = Math.round(topic.rate * 100)
-  const tone = topic.rate < 0.5 ? 'danger' : topic.rate < 0.7 ? 'warn' : 'success'
-
-  /* A closed drawer per topic: the summary row carries the topic, its subject
-     and its numbers; opening it reveals the digested "why" and the build-task
-     act. The list stays scannable, the depth stays one click away. */
-  return (
-    <details className="tch-topics__topic">
-      <summary className="tch-topics__row">
-        <span className="tch-topics__name" dir="auto">
-          {topic.label}
-          {topic.level !== 'objective' ? (
-            /* A unit or lesson title standing in for a topic says which level
-               it is naming — never dressed up as an idea it is not. */
-            <span className="tch-topics__levelTag">
-              {t(`tch.student.topicLevel.${topic.level}`)}
-            </span>
-          ) : null}
-        </span>
-        {topic.subject ? (
-          <span className={`tch-topics__subj is-${topic.subject}`} dir="auto">
-            {subjectLabel(topic.subject, t)}
-          </span>
-        ) : null}
-        <span className="tch-topics__bar" aria-hidden="true">
-          <i className={`is-${tone}`} style={{ inlineSize: `${percent}%` }} />
-        </span>
-        <span className="tch-topics__figures">
-          <span className={`tch-topics__value is-${tone}`}>
-            {/* A topic never answered right is the headline — and at the
-                floor a percentage compares nothing, so the fraction is
-                written in words instead. */}
-            {topic.correct === 0
-              ? t('tch.student.topicFloor', { attempts: topic.attempts })
-              : `${percent}%`}
-          </span>
-          {/* How much is behind the number, quietly — a real pattern and a
-              thin one must not wear the same paint. */}
-          <span className="tch-topics__evidence">
-            {t(countKey('tch.student.topicQuestions', topic.questions), { count: topic.questions })}
-            {' · '}
-            {t(countKey('tch.student.topicAttempts', topic.attempts), { count: topic.attempts })}
-          </span>
-        </span>
-        <span className="tch-topics__chevron" aria-hidden="true">
-          <Icon name="chevronDown" size={14} />
-        </span>
-      </summary>
-      <div className="tch-topics__detail">
-        {/* One short paragraph on why this topic is hard — grounded in the
-            content's own descriptions and the numbers, written once and
-            cached. The raw source texts never render here. */}
-        {digestItem ? (
-          <p className="tch-topics__why" dir="auto">{digestItem.sentences.join(' ')}</p>
-        ) : digestState === 'generating' ? (
-          <p className="tch-topics__digestWait" aria-live="polite">
-            {t('tch.student.digestGenerating')}
-          </p>
-        ) : null}
-        {/* The finding's next move, on the finding itself — the same seed the
-            dashboard's gap rows plant: the builder opens on this objective,
-            and the child rides along to the send dialog. */}
-        <button
-          type="button"
-          className="sp-btn sp-btn--ghost sp-btn--sm tch-topics__assign"
-          onClick={() => {
-            onBuildTask({
-              title: t('tch.gaps.taskTitle', { label: topic.label }),
-              topic: topic.label,
-              objectiveId: topic.objectiveId,
-              learnerIds: [learnerId],
-            })
-          }}
-        >
-          <Icon name="backpack" size={14} aria-hidden />
-          {t('tch.student.topicAssign')}
-        </button>
-      </div>
-    </details>
-  )
-}
-
 function TopicsPanel({ rows, learnerId, digest, digestState, onBuildTask }: {
   rows: QuestionRow[] | null
   learnerId: string
@@ -2433,29 +2311,50 @@ function TopicsPanel({ rows, learnerId, digest, digestState, onBuildTask }: {
 }) {
   const { t } = useI18n()
 
-  /* Hardest TOPICS first — "שאלה 2 הקשתה" is a fact a teacher can do nothing
-     with; "מערכת צירים הקשתה" is a lesson plan. */
+  /* The topics are no longer shown — they are the EVIDENCE the points rest
+     on: validation keys, source labels, and the task seed's objective. */
   const topicSections = useMemo(() => buildTopicSections(rows ?? []), [rows])
-  /* Which subject's topics are shown — 'all' until the teacher narrows. */
   const [filter, setFilter] = useState('all')
-  const digestByKey = useMemo(() => {
-    const map = new Map<string, TopicDigestItem>()
-    for (const item of digest?.topics ?? []) map.set(item.key, item)
+  const topicByKey = useMemo(() => {
+    const map = new Map<string, Topic>()
+    for (const section of topicSections) {
+      for (const topic of section.topics) map.set(topic.key, topic)
+    }
     return map
-  }, [digest])
+  }, [topicSections])
 
-  /* The panel's own wait, wearing the panel's own heading: the teacher can
-     see a ranked list of hard topics is coming here, rather than a floating
-     grey card that could turn out to be anything. */
+  /* The panel IS these points now: practical "do this with the student"
+     lines, written by one cached call over the hard-topic evidence. The
+     server guarantees every point stands on topics that really exist. */
+  const focusPoints = useMemo(
+    () => (digest?.focus_points ?? [])
+      .map((point) => ({
+        ...point,
+        sources: point.keys
+          .map((key) => topicByKey.get(key))
+          .filter((topic): topic is Topic => Boolean(topic)),
+      }))
+      .filter((point) => point.sources.length > 0),
+    [digest, topicByKey])
+
+  /* The subject chips filter the POINTS — offered only when there is more
+     than one subject to tell apart. */
+  const subjects = useMemo(
+    () => [...new Set(focusPoints.map((point) => point.subject)
+      .filter((subject): subject is string => Boolean(subject)))],
+    [focusPoints])
+  const shown = focusPoints.filter(
+    (point) => filter === 'all' || point.subject === filter)
+
   if (!rows) {
     return (
       <Panel aria-busy="true">
         <SectionHeader
-          title={t('tch.student.hardest')}
-          subtitle={t('tch.student.hardestSubtitle')}
+          title={t('tch.student.focus.title')}
+          subtitle={t('tch.student.focus.subtitle')}
         />
         <div className="sp-skeleton__rows">
-          {[0, 1, 2, 3].map((index) => <Skeleton key={index} h={34} />)}
+          {[0, 1, 2].map((index) => <Skeleton key={index} h={34} />)}
         </div>
       </Panel>
     )
@@ -2464,49 +2363,87 @@ function TopicsPanel({ rows, learnerId, digest, digestState, onBuildTask }: {
 
   return (
     <Panel>
-      {/* No refresh button. It appeared only when the digest had gone stale,
-          which made it a control that exists on some visits and not others —
-          and what it offered was to re-word a summary of rows the teacher can
-          already read underneath it. The rows are always current; the summary
-          catches up on its own. */}
       <SectionHeader
-        title={t('tch.student.hardest')}
-        subtitle={t('tch.student.hardestSubtitle')}
+        title={t('tch.student.focus.title')}
+        subtitle={t('tch.student.focus.subtitle')}
       />
-      {/* One flat list, a subject chip on every row — the subject headings
-          became a filter. Rows stay ranked within their subject (sections
-          are concatenated, never re-sorted across subjects). */}
-      {topicSections.length > 1 ? (
+
+      {subjects.length > 1 ? (
         <div className="tch-builder__chips tch-topics__filter">
           <button type="button" className={`tch-chip${filter === 'all' ? ' is-on' : ''}`}
                   aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
             {t('tch.tasks.allSubjects')}
           </button>
-          {topicSections.map((section) => (
-            <button key={section.subject || 'other'} type="button"
-                    className={`tch-chip${filter === section.subject ? ' is-on' : ''}`}
-                    aria-pressed={filter === section.subject}
-                    onClick={() => setFilter(section.subject)}>
-              {subjectLabel(section.subject, t) || t('tch.subject.other')}
+          {subjects.map((subject) => (
+            <button key={subject} type="button"
+                    className={`tch-chip${filter === subject ? ' is-on' : ''}`}
+                    aria-pressed={filter === subject}
+                    onClick={() => setFilter(subject)}>
+              {subjectLabel(subject, t) || t('tch.subject.other')}
             </button>
           ))}
         </div>
       ) : null}
-      <div className="tch-topics">
-        {topicSections
-          .filter((section) => filter === 'all' || section.subject === filter)
-          .flatMap((section) => section.topics)
-          .map((topic) => (
-            <TopicRow
-              key={topic.key}
-              topic={topic}
-              learnerId={learnerId}
-              digestItem={digestByKey.get(topic.key) ?? null}
-              digestState={digestState}
-              onBuildTask={onBuildTask}
-            />
+
+      {/* Flat rows, one practical instruction each. Opening a row reveals
+          what the platform identified and what to sit on with the student,
+          the learnings behind it, and a task seeded on exactly this skill. */}
+      {shown.length ? (
+        <ul className="tch-focus">
+          {shown.map((point) => (
+            <li key={point.point}>
+              <details className="tch-focus__item">
+                <summary className="tch-focus__row">
+                  {point.subject ? (
+                    <span className={`tch-topics__subj is-${point.subject}`} dir="auto">
+                      {subjectLabel(point.subject, t)}
+                    </span>
+                  ) : null}
+                  <strong className="tch-focus__point" dir="auto">{point.point}</strong>
+                  <span className="tch-focus__chevron" aria-hidden="true">
+                    <Icon name="chevronDown" size={14} />
+                  </span>
+                </summary>
+                <div className="tch-focus__detail">
+                  {point.explanation ? (
+                    <p className="tch-focus__why" dir="auto">{point.explanation}</p>
+                  ) : null}
+                  <div className="tch-focus__foot">
+                    {/* The learnings this rests on — labels, not doors: the
+                        door that matters is the task button beside them. */}
+                    <span className="tch-focus__sources" dir="auto">
+                      {point.sources.map((topic) => (
+                        <span key={topic.key} className="tch-focus__src" dir="auto">
+                          {topic.label}
+                        </span>
+                      ))}
+                    </span>
+                    <button
+                      type="button"
+                      className="sp-btn sp-btn--ghost sp-btn--sm"
+                      onClick={() => onBuildTask({
+                        title: t('tch.gaps.taskTitle', { label: point.point }),
+                        topic: point.point,
+                        objectiveId: point.sources[0]?.objectiveId ?? undefined,
+                        learnerIds: [learnerId],
+                      })}
+                    >
+                      <Icon name="backpack" size={14} aria-hidden />
+                      {t('tch.student.topicAssign')}
+                    </button>
+                  </div>
+                </div>
+              </details>
+            </li>
           ))}
-      </div>
+        </ul>
+      ) : digestState === 'generating' ? (
+        <p className="tch-focus__wait" aria-live="polite">
+          {t('tch.student.digestGenerating')}
+        </p>
+      ) : (
+        <p className="tch-focus__none">{t('tch.student.focus.none')}</p>
+      )}
     </Panel>
   )
 }

@@ -52,7 +52,7 @@ import { MomentsAlbum } from '../moments/MomentsAlbum'
 import { bookEdition } from '../moments/bookModel'
 import { BandFace, type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
-import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
+import { gapToDifficultyItem } from './gapsModel'
 import { MoodDialog } from './MoodDialog'
 import { MoodDonut, MoodKey, overallValence } from './MoodViz'
 import { ValenceFace } from '../../checkin/ValenceFaces'
@@ -60,7 +60,7 @@ import { PeriodControl } from './PeriodControl'
 import { PraiseDialog } from '../shared/PraiseDialog'
 import { Sparkline } from './Sparkline'
 import {
-  DEFAULT_PERIOD, delta, isPeriodId, periodDays, topicShift,
+  DEFAULT_PERIOD, delta, isPeriodId, periodDays,
   type PeriodId,
 } from '../shared/periodModel'
 import { subjectLabel } from '../shared/subjectLabel'
@@ -89,7 +89,6 @@ export function TeacherHomePage() {
   const [snapshot, setSnapshot] = useState<GroupInsight | null>(null)
   const [engagement, setEngagement] = useState<Engagement | null>(null)
   const [gaps, setGaps] = useState<LearningGap[]>([])
-  const [previousGaps, setPreviousGaps] = useState<LearningGap[]>([])
   const [mood, setMood] = useState<ClassMood | null>(null)
   const [moments, setMoments] = useState<Moment[]>([])
   const [momentsLoading, setMomentsLoading] = useState(true)
@@ -128,7 +127,6 @@ export function TeacherHomePage() {
         setSnapshot(snapshotResult)
         setEngagement(engagementResult)
         setGaps(gapsResult.gaps)
-        setPreviousGaps(gapsResult.previous_gaps ?? [])
         setMood(moodResult)
       })
       .catch(() => { if (active) setError(true) })
@@ -276,23 +274,20 @@ export function TeacherHomePage() {
           <div className="tch-bands__bar">
             <div className="tch-bands__titles">
               <h2>{t('tch.band.title')}</h2>
-              <p>{t('tch.band.subtitle')}</p>
             </div>
             <div className="tch-bands__tools">
-              {/* The four chips, worded — inert spans rather than disabled
-                  buttons, so nothing looks pressable before it is. Only each
-                  chip's count is still a question. */}
+              {/* The four chips, icon + count like the real ones — inert spans
+                  rather than disabled buttons, so nothing looks pressable
+                  before it is. Only each chip's count is still a question. */}
               <div className="tch-bands__filters">
                 {(['red', 'orange', 'green'] as const).map((band) => (
                   <span key={band} className={`tch-bands__chip is-${band}`}>
                     <BandFace band={band} size={20} />
-                    {t(`tch.band.${band}`)}
                     <Skeleton w={16} h={14} r={999} />
                   </span>
                 ))}
                 <span className="tch-bands__chip is-fresh">
                   <Icon name="pulse" size={14} aria-hidden />
-                  {t('tch.band.freshFilter')}
                   <Skeleton w={16} h={14} r={999} />
                 </span>
               </div>
@@ -323,25 +318,8 @@ export function TeacherHomePage() {
   }
   if (!groupId) return <EmptyState title={t('tch.noGroups')} />
 
-  /* The shift moved here from the KPI it used to live on. It belongs beside
-     the topic, not in a summary tile: "also last period" is the difference
-     between a class that is stuck and one that is working through something,
-     and that is exactly the WHY #500 asks the card to show. */
-  const blockingGap = mostBlockingGap(gaps)
-  /* What the class was stuck on in the window before this one, ranked by the
-     SAME rule — "what to teach next" is only actionable if a teacher can see
-     whether last period's answer worked. */
-  const shift = topicShift(blockingGap, mostBlockingGap(previousGaps))
-  const shiftNote = shift.kind === 'same' ? t('tch.kpi.blockingTopic.same')
-    : shift.kind === 'moved' ? t('tch.kpi.blockingTopic.was', { label: shift.from })
-      : null
-  /* Declared AFTER the two above, and not one line earlier: the callback reads
-     both, so hoisting the rows above them puts the map inside their temporal
-     dead zone. It survived review because a window with no gap rows never runs
-     the callback — the three-day view was clean and the week crashed. */
   const gapItems = gaps.filter((gap) => gap.kind === 'gap')
-    .map((gap) => gapToDifficultyItem(
-      gap, t, gap.objective_id === blockingGap?.objective_id ? shiftNote : null))
+    .map((gap) => gapToDifficultyItem(gap, t))
   const strengths = gaps.filter((gap) => gap.kind === 'strength')
 
   /* One child, one side.
@@ -400,7 +378,6 @@ export function TeacherHomePage() {
     ? `${t(`tch.gaps.card.title.${shape}`)} ${
       t('tch.gaps.card.inSubject', { subject: subjectLabel(subject, t) })}`
     : t(`tch.gaps.card.title.${shape}`)
-  const gapsSubtitle = t(`tch.gaps.card.sub.${shape}`)
 
   /* Every "nothing here" on this screen has to name the window it is about.
      Narrowed to three days, a class that simply has not opened anything yet
@@ -469,10 +446,11 @@ export function TeacherHomePage() {
                   />
                 </span>
                 <span className="tch-stat__hint">
+                  {/* "41 מתוך 41 פעילים" — the window is not repeated here:
+                      the period control above is the one place that names it. */}
                   {t('tch.pulse.activeOf', {
                     active: engagement?.active_students ?? 0,
                     total: engagement?.students_total ?? 0,
-                    days: engagement?.window_days ?? days,
                   })}
                 </span>
               </span>
@@ -642,10 +620,11 @@ export function TeacherHomePage() {
           quiet book. Carrying the same class keeps the spacing with the tour
           anchor rather than in a second place that can drift. */}
       <div data-tour="teacher.gaps" className="tch-home__zone">
+      {/* No subtitle line: the two column headings inside already say what
+          each half is, and the sentence above them restated both. */}
       <DifficultiesCard
         className="tch-home__gaps"
         title={gapsTitle}
-        subtitle={gapsSubtitle}
         items={gapItems}
         names={rosterNames}
         emptyLabel={t('tch.gaps.noneInPeriod', { when: inWhen })}

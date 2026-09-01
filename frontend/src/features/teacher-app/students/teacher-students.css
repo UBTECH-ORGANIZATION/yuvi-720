@@ -3,6 +3,25 @@
 /* Container metrics come from teacher-shared.css. */
 
 .tch-roster__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); }
+
+/* The live mark beside the title — a breathing green dot, all that remains of
+   the retired "עדכון חי" chip. Drawn only while the feed is connected. */
+.tch-roster__title { display: flex; align-items: center; gap: var(--sp-2); }
+.tch-roster__liveDot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: var(--sp-success-600);
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tch-roster__liveDot { animation: tch-roster-live 2.4s var(--sp-ease) infinite; }
+}
+@keyframes tch-roster-live {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sp-success-600) 45%, transparent); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 .tch-roster__subtitle { margin: var(--sp-1) 0 var(--sp-4); color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
 /* The KPI strip is the first thing on the page after the title, so it owns the
@@ -213,31 +232,31 @@
 /* The class subtitle, promoted. It says which slice of the class everything
    below is about, so it carries the weight of a control rather than a caption. */
 
-/* ── the class's named slices, as cards ────────────────────────────────────
-   A row of chips with a hidden caret menu said "filter" and hid "manage". These
-   say "objects you own": size, who is in them, and both actions in the open.
-   Selecting one is still what scopes the page. */
+/* ── the class's named slices, as one row of compact chips ─────────────────
+   Full cards with a names preview each spent a whole band of the screen
+   restating what the edit dialog holds. A chip carries the glance: name,
+   size, two actions. Selecting one is still what scopes the page. */
 .tch-subgroups {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--sp-2);
-  margin-block-start: var(--sp-3);
+  margin-block-start: var(--sp-2);
   /* The scope control and the numbers it scopes were touching, so the group
-     cards read as part of the KPI strip rather than as the thing above it. */
-  margin-block-end: var(--sp-5);
+     chips read as part of the KPI strip rather than as the thing above it. */
+  margin-block-end: var(--sp-4);
 }
 
 .tch-subgroup {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  padding: var(--sp-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
   border: 1px solid var(--sp-border);
-  border-radius: 14px;
+  border-radius: var(--sp-radius-pill);
   background: var(--sp-surface);
-  text-align: start;
   font: inherit;
+  font-size: var(--sp-fs-sm);
   cursor: pointer;
   transition: border-color var(--sp-dur-fast) var(--sp-ease),
               box-shadow var(--sp-dur-fast) var(--sp-ease);
@@ -245,56 +264,45 @@
 .tch-subgroup:hover { border-color: var(--tch-hover-ring, var(--sp-primary-500)); }
 .tch-subgroup.is-active {
   border-color: var(--sp-primary-600);
-  box-shadow: 0 0 0 1px var(--sp-primary-600) inset;
+  background: var(--sp-primary-050);
 }
 
-/* The named card is a container, so its own selection lives on an inner button
+/* The named chip is a container, so its own selection lives on an inner button
    — the two actions must not be nested inside the thing that selects. */
-.tch-subgroup--named { padding: 0; }
+.tch-subgroup--named { padding-inline-end: var(--sp-1); }
 .tch-subgroup__pick {
-  display: grid;
-  gap: 2px;
-  padding: var(--sp-3);
-  padding-inline-end: calc(var(--sp-3) + 56px);
-  border: 0;
-  border-radius: 14px;
-  background: none;
-  text-align: start;
-  font: inherit;
-  cursor: pointer;
-}
-
-.tch-subgroup__name { font-weight: 600; color: var(--sp-ink-900); }
-.tch-subgroup__count {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
-  font-size: var(--sp-fs-sm);
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  min-inline-size: 0;
+}
+
+.tch-subgroup__name {
+  font-weight: 600;
+  color: var(--sp-ink-900);
+  max-inline-size: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tch-subgroup__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--sp-fs-xs);
   color: var(--sp-ink-400);
   font-variant-numeric: tabular-nums;
 }
 .tch-subgroup__dropped { color: var(--sp-warn-600); font-size: var(--sp-fs-xs); }
 
-/* Who is in it. One line, clipped — the card is a glance, and the dialog is
-   where the full list lives. */
-.tch-subgroup__who {
-  font-size: var(--sp-fs-xs, 0.78rem);
-  color: var(--sp-ink-300);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tch-subgroup__actions {
-  position: absolute;
-  inset-block-start: var(--sp-2);
-  inset-inline-end: var(--sp-2);
-  display: flex;
-  gap: 2px;
-}
 .tch-subgroup__action {
   display: inline-flex;
-  padding: 5px;
+  padding: 3px;
   border: 0;
   border-radius: 8px;
   background: none;
@@ -305,15 +313,11 @@
 .tch-subgroup__action--danger:hover { color: var(--sp-danger-600, #d1495b); }
 
 .tch-subgroup--new {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
   border-style: dashed;
   background: none;
   color: var(--sp-primary-600);
 }
-.tch-subgroup--new .tch-subgroup__name { color: inherit; }
+.tch-subgroup--new .tch-subgroup__name { color: inherit; font-weight: var(--sp-fw-medium); }
 
 /* ── the dialog that makes one ─────────────────────────────────────────────── */
 .tch-subgroupDialog { width: min(520px, 100%); max-block-size: min(86vh, 820px); }

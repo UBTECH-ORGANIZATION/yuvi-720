@@ -110,7 +110,7 @@ Answer with JSON only:
                them. This is the first paragraph the teacher reads; it must
                say something a glance at the numbers would not.",
   "subjects": [{{"subject": "a subject id copied exactly from the evidence
-                 (e.g. math, science, english) — only subjects the evidence
+                 (e.g. math, science) — only subjects the evidence
                  actually says something about",
     "summary": "one or two SHORT sentences in your own words: how the
                 student is actually doing in this subject — what goes well,
@@ -278,8 +278,12 @@ async def _evidence(learner_id: str, language: str,
     except Exception:  # pragma: no cover - the read survives without rows
         rows = []
 
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+
     progress = []
     for subject_id, stats in (student.get("progress") or {}).items():
+        if subject_id in HIDDEN_SUBJECTS:
+            continue
         total = stats.get("objectives_total") or 0
         if not total:
             continue
@@ -301,7 +305,7 @@ async def _evidence(learner_id: str, language: str,
         {a["subject"] for a in anchors if a.get("subject")}
         | {str(s) for s in (student.get("objectives_progress") or {})}
         | {str(s) for s in (student.get("progress") or {})}
-    )
+    ) - HIDDEN_SUBJECTS
 
     evidence = {
         "difficulties_recorded": [
@@ -359,12 +363,16 @@ def _clean(payload: Any, anchors: list[dict[str, Any]],
     def line(key: str) -> str:
         return str(payload.get(key) or "").strip()[:MAX_POINT_CHARS]
 
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+
     subjects: list[dict[str, Any]] = []
     for item in (payload.get("subjects") or [])[:MAX_SUBJECTS]:
         if not isinstance(item, dict):
             continue
         subject_id = str(item.get("subject") or "").strip()
-        if not subject_id or (known_subjects and subject_id not in known_subjects):
+        if not subject_id or subject_id in HIDDEN_SUBJECTS:
+            continue
+        if known_subjects and subject_id not in known_subjects:
             continue
         summary = str(item.get("summary") or "").strip()[:MAX_POINT_CHARS]
         points = [
@@ -438,6 +446,25 @@ async def generate(learner_id: str, teacher_id: str, *, language: str = "he",
     return read
 
 
+def _without_hidden(read: dict[str, Any]) -> dict[str, Any]:
+    """Strip hidden-subject sections at serving time.
+
+    Generation already refuses them, but a read cached BEFORE a subject was
+    hidden would keep showing it for up to a day — the stored row is served
+    as-is, so the filter has to ride the way out.
+    """
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+
+    sections = read.get("subjects")
+    if not isinstance(sections, list):
+        return read
+    return {**read, "subjects": [
+        section for section in sections
+        if not (isinstance(section, dict)
+                and section.get("subject") in HIDDEN_SUBJECTS)
+    ]}
+
+
 async def get(learner_id: str, teacher_id: str, *, language: str = "he",
               subject: Optional[str] = None,
               refresh: bool = False) -> dict[str, Any]:
@@ -456,15 +483,16 @@ async def get(learner_id: str, teacher_id: str, *, language: str = "he",
             existing = None
 
     if existing and is_fresh(existing) and not refresh:
-        return {**existing["read"], "generated_at": existing["generated_at"],
-                "cached": True}
+        return {**_without_hidden(existing["read"]),
+                "generated_at": existing["generated_at"], "cached": True}
 
     try:
         read = await generate(learner_id, teacher_id, language=language, subject=subject)
     except Exception as exc:
         if existing and existing.get("read"):
             print(f"⚠️ learner read refresh failed, serving stale: {type(exc).__name__}")
-            return {**existing["read"], "generated_at": existing["generated_at"],
+            return {**_without_hidden(existing["read"]),
+                    "generated_at": existing["generated_at"],
                     "cached": True, "stale": True}
         raise
 

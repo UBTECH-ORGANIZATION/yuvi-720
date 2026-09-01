@@ -14,7 +14,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { Icon, Panel, SectionHeader, Tooltip } from '../../../components/primitives'
+import { Hint, Icon, Panel, SectionHeader, Tooltip } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import type { GapDiagnosis } from '../../../services/teacher'
 import type { TaskSeed } from '../tasks/taskSeed'
@@ -43,55 +43,6 @@ export interface DifficultyItem {
   seed: TaskSeed
   /** Suggested name for a sub-group made of these learners. */
   subgroupName: string
-  /** How the group divides on this — struggling / mastered / not yet tried.
-   *  Rendered as a proportion bar beside the sentence, because "15 מתוך 33"
-   *  is a fact a teacher has to do arithmetic on before it means anything,
-   *  and the shape says it at a glance (ADO #500, #501). Optional: the lomda
-   *  screen's rows have no class-wide split to show. */
-  split?: { struggling: number; mastered: number; tried: number; groupSize: number }
-  /** A short standing note about the row — "also last period". Answers #500's
-   *  ask for WHY this topic, by saying whether it is persistent or new. */
-  note?: string | null
-}
-
-/* Struggling / mastered / tried-but-neither / never attempted, as one bar.
- *
- * The last band matters most and is the one the sentence omits: a topic
- * "15 of 33 struggling" in a class of 41 has eight children who have not
- * touched it at all, and a teacher deciding whether to reteach needs to see
- * that the evidence covers four fifths of the room rather than all of it. */
-function SplitBar({ split, t }: {
-  split: NonNullable<DifficultyItem['split']>
-  t: (key: string, params?: Record<string, string | number>) => string
-}) {
-  const neither = Math.max(0, split.tried - split.struggling - split.mastered)
-  const untried = Math.max(0, split.groupSize - split.tried)
-  const bands = [
-    { key: 'struggling', value: split.struggling },
-    { key: 'neither', value: neither },
-    { key: 'mastered', value: split.mastered },
-    { key: 'untried', value: untried },
-  ].filter((band) => band.value > 0)
-  if (!bands.length) return null
-
-  return (
-    <span
-      className="tch-split"
-      role="img"
-      aria-label={bands
-        .map((band) => `${t(`tch.gaps.split.${band.key}`)}: ${band.value}`)
-        .join(', ')}
-    >
-      {bands.map((band) => (
-        <span
-          key={band.key}
-          className={`tch-split__seg tch-split__seg--${band.key}`}
-          style={{ flexGrow: band.value }}
-          title={`${t(`tch.gaps.split.${band.key}`)}: ${band.value}`}
-        />
-      ))}
-    </span>
-  )
 }
 
 /** A topic the class has, on the whole, got — the other half of the same
@@ -183,10 +134,6 @@ export function DifficultiesCard({
                 {item.subtitle ? (
                   <span className="tch-difficulty__where" dir="auto">{item.subtitle}</span>
                 ) : null}
-                {item.split ? <SplitBar split={item.split} t={t} /> : null}
-                {item.note ? (
-                  <span className="tch-difficulty__note" dir="auto">{item.note}</span>
-                ) : null}
               </div>
               <div className="tch-difficulty__actions">
                 <StudentFacepile
@@ -201,29 +148,38 @@ export function DifficultiesCard({
                 {/* No one is currently stuck on it (everyone who tried got
                     there in the end) → a finding without a fix-list: the
                     evidence stays, the actions have nobody to act on. */}
+                {/* Icon-only, each explaining itself on hover/focus: two
+                    worded buttons on every row made the actions the loudest
+                    text on the card, repeated once per gap. The name lives in
+                    the tooltip and the aria-label — never dropped, just moved
+                    off the scan path. */}
                 {item.learnerIds.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      className="sp-btn sp-btn--ghost sp-btn--sm"
-                      onClick={() => onBuildTask(item.seed)}
-                    >
-                      <Icon name="backpack" size={14} aria-hidden />
-                      {t('tch.learnings.diffBuildTask')}
-                    </button>
+                  <span className="tch-difficulty__quick">
+                    <Hint text={t('tch.learnings.diffBuildTask')}>
+                      <button
+                        type="button"
+                        className="sp-btn sp-btn--ghost sp-btn--sm tch-difficulty__iconBtn"
+                        aria-label={t('tch.learnings.diffBuildTask')}
+                        onClick={() => onBuildTask(item.seed)}
+                      >
+                        <Icon name="backpack" size={15} aria-hidden />
+                      </button>
+                    </Hint>
                     {/* A sub-group of one is not a group — a single stuck
                         learner gets a task, not an organisational unit. */}
                     {item.learnerIds.length >= 2 && (
-                      <button
-                        type="button"
-                        className="sp-btn sp-btn--ghost sp-btn--sm"
-                        onClick={() => onCreateSubgroup(item)}
-                      >
-                        <Icon name="users" size={14} aria-hidden />
-                        {t('tch.learnings.diffSubgroup')}
-                      </button>
+                      <Hint text={t('tch.learnings.diffSubgroup')}>
+                        <button
+                          type="button"
+                          className="sp-btn sp-btn--ghost sp-btn--sm tch-difficulty__iconBtn"
+                          aria-label={t('tch.learnings.diffSubgroup')}
+                          onClick={() => onCreateSubgroup(item)}
+                        >
+                          <Icon name="users" size={15} aria-hidden />
+                        </button>
+                      </Hint>
                     )}
-                  </>
+                  </span>
                 ) : (
                   <span className="tch-difficulty__resolved">
                     {t('tch.learnings.diffResolved')}

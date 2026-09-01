@@ -20,7 +20,9 @@ import { optionalExtra as findOptionalExtra, previousStation, whatNowKey } from 
 import { noteLoad, playbackMode } from '../learning/embedGuard'
 import { useBadgeMoments } from '../badges/useBadgeMoments'
 import { LessonRewards } from './LessonRewards'
+import { LessonPointLayer } from './LessonPointLayer'
 import { ReflectionPanel } from './ReflectionPanel'
+import type { CoachPointerFrame } from '../../services/agents'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import './lesson-workspace.css'
 
@@ -77,6 +79,11 @@ export function LessonPage() {
   // "view performance" or "redo". Until they choose, we hold a light overlay
   // over the (resumed) content. Only "redo" launches a fresh attempt (restart).
   const [reentryOpen, setReentryOpen] = useState(false)
+  // Yuvi's "look here" overlay. Arrives from the companion over the yuvilab
+  // event channel (the coach stream flushed a pointer frame), and must never
+  // outlive its moment: the screen it describes, the session it arrived in, or
+  // a few seconds of attention.
+  const [coachPointer, setCoachPointer] = useState<CoachPointerFrame | null>(null)
   // True when the launch already found this component finished. The completion
   // POLL below only reads catalog STATE, so on re-entry it sees `completed` —
   // which was already true — and threw the celebration dialog up a few seconds
@@ -316,6 +323,23 @@ export function LessonPage() {
       window.removeEventListener('yuvilab:xapi-completion', handleXapiCompletion)
     }
   }, [learnerId, refreshBrain, session])
+
+  // Yuvi's pointer: adopt it when the companion broadcasts one, drop it when
+  // the companion says the screen moved (detail: null) or the learner taps
+  // the dismiss chip — no timer: attention decides, not a clock. A new
+  // session also clears it — the overlay would otherwise point into a freshly
+  // remounted iframe showing something else.
+  useEffect(() => {
+    const handlePoint = (event: Event) => {
+      const detail = (event as CustomEvent<CoachPointerFrame | null>).detail
+      setCoachPointer(detail ?? null)
+    }
+    window.addEventListener('yuvilab:coach-point', handlePoint)
+    return () => window.removeEventListener('yuvilab:coach-point', handlePoint)
+  }, [])
+  useEffect(() => {
+    setCoachPointer(null)
+  }, [session?.session_id])
 
   useEffect(() => {
     if (!completed) return
@@ -606,6 +630,12 @@ export function LessonPage() {
                 // even prompt. Harmless for content that never asks.
                 allow="autoplay; storage-access"
                 onLoad={handleFrameLoad}
+              />
+              <LessonPointLayer
+                pointer={coachPointer}
+                playback={playback}
+                language={language}
+                onDismiss={() => setCoachPointer(null)}
               />
               </>
               )}

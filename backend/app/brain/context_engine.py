@@ -435,7 +435,7 @@ async def build_coach_bundle(
         classify_query_intent,
         memory_defaults,
     )
-    from app.services import kata_catalog, kata_client
+    from app.services import content_intelligence, kata_catalog, kata_client
     from app.services.kata_catalog import get_component, localized_objective_title
     from app.services.events import get_recent_events
 
@@ -613,6 +613,76 @@ async def build_coach_bundle(
         )
         if reconciled and reconciled != item_id:
             item_id = reconciled
+
+    # Entered the lesson, but the player has not reported a screen yet — some
+    # providers (CET) send xAPI only on answers, so on arrival the pointer is
+    # empty and EVERYTHING keyed by (component, item) — the catalog question,
+    # the nightly enrichment/anchors, the pregen texts — goes dark, exactly
+    # when the learner asks "מה אני רואה?". Ground on the best guess, flagged
+    # as ASSUMED: the coach may use the content but must never assert the
+    # position as fact.
+    #
+    # The guess itself is progress-aware. Resumable players (CET saves per
+    # student+component) put a returning learner back MID-lomda, so "screen
+    # one" is provably wrong the moment any event exists for this component —
+    # the learner's own last screen there is where the player reopened.
+    # Only a truly fresh component falls back to its first screen.
+    position_assumed = False
+    if component_id and not item_id:
+        try:
+            history = await get_recent_events(
+                learner_id or "", component_id=component_id, limit=5
+            )
+        except Exception:
+            history = []
+        last_screen = next(
+            (e for e in history if e.get("sub_item_id")), None)
+        if last_screen is not None:
+            raw_item = str(last_screen.get("sub_item_id"))
+            item_id = kata_catalog.resolve_catalog_item_id(
+                component_id,
+                raw_item,
+                question_id=last_screen.get("question_id"),
+                seen_item_ids=[
+                    e.get("runtime_item_id") for e in history
+                    if e.get("runtime_item_id")
+                ],
+            ) or raw_item
+            position_assumed = True
+        else:
+            first_rows = (
+                (provider_component or {}).get("items")
+                or kata_catalog.item_profiles(component_id)
+                or []
+            )
+            first_id = str((first_rows[0] or {}).get("id") or "") if first_rows else ""
+            if first_id:
+                item_id = first_id
+                position_assumed = True
+
+    # Look-alike variants: the catalog can hold several items with identical
+    # question texts of which the player deals the learner ONE (COMPL-00001
+    # items 1/2 mirror each other's data). Until the learner ANSWERS on this
+    # screen, nothing proves WHICH sibling they were dealt — a page-level
+    # navigation event names the page, and an assumed position guesses — so
+    # a coach that quotes the grounded sibling's coordinates confidently
+    # misleads. Detected via the shared learner-visible ordinal, surfaced so
+    # the prompt can demand hedging; an answer on this item settles it.
+    screen_has_variants = False
+    if item_id:
+        ordinals = kata_catalog.question_item_ordinals(component_id)
+        own = ordinals.get(item_id)
+        has_siblings = own is not None and any(
+            key != item_id and "|" not in key and value == own
+            for key, value in ordinals.items()
+        )
+        if has_siblings:
+            answered_here = any(
+                e.get("verb") in ("answered", "attempted", "scored")
+                and e.get("sub_item_id") == item_id
+                for e in recent
+            )
+            screen_has_variants = position_assumed or not answered_here
 
     recent_view = [
         {
@@ -860,6 +930,36 @@ async def build_coach_bundle(
             # simulation is a learning step. Without this the coach treated every
             # screen as a question and had nothing to say on the others.
             "item": current_item,
+            # What the slide LOOKS like to the learner — text and media the
+            # nightly browser pass read off the real screen. Served only while
+            # provably fresh (content_intelligence fingerprint gate); the
+            # authored note above stays the primary grounding. Screen text is
+            # vendor/browser content — neutralized like every other context line.
+            "screen_enrichment": (
+                {
+                    "visible_text": safe_text(screen_enrichment.get("visible_text"), 700),
+                    "media": [safe_text(m, 90) for m in screen_enrichment.get("media") or []],
+                }
+                if (screen_enrichment := (
+                    content_intelligence.enrichment(component_id, item_id)
+                    if component_id and item_id else None
+                )) else None
+            ),
+            # Which regions of THIS screen the pointing overlay can highlight
+            # (nightly-captured geometry, same freshness gate). Names + part
+            # counts only — the tool handler resolves the rects; the model
+            # never sees them.
+            "screen_anchor_regions": sorted(
+                f"{region}(x{parts})" if parts > 1 else region
+                for region, parts in (
+                    (region, max((len(e.get("parts") or [])
+                                  for e in entries), default=0))
+                    for region, entries in (
+                        (content_intelligence.screen_anchors(
+                            component_id, item_id) or {}).get("regions") or {}
+                    ).items()
+                )
+            ) if component_id and item_id else [],
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
             # Ids for the per-question message key (chat scoping), so a stored
@@ -867,6 +967,13 @@ async def build_coach_bundle(
             "component_id": component_id,
             "item_id": item_id,
             "question_id": question_id,
+            # True when item_id is the entry-fallback guess, not learner
+            # evidence — the coach grounds on it but never asserts position.
+            "position_assumed": position_assumed,
+            # True when the assumed screen has look-alike catalog siblings
+            # (same question texts, different data) — the grounding may be
+            # the WRONG variant, so specifics need verifying with the learner.
+            "screen_has_variants": screen_has_variants,
         },
         "query_intent": intent,
         "portrait": (

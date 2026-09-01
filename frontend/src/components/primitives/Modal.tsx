@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../../i18n/I18nProvider'
+import { Icon } from './Icon'
 
 /* Shared modal primitive.
 
@@ -28,14 +29,18 @@ interface ModalProps {
    *  past the edge of a dialog is not. Callers that turn this off should be
    *  keeping the draft anyway, so neither exit loses anything. */
   dismissible?: boolean
+  /** Render a close X in the dialog's top corner. For dialogs whose only other
+   *  exits are the backdrop and Escape — both invisible affordances. */
+  withClose?: boolean
 }
 
 export function Modal({
   open, onClose, titleId, children, className, overlay = true, dismissible = true,
+  withClose = false,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
-  const { direction } = useI18n()
+  const { direction, t } = useI18n()
 
   // Held in a ref so the focus effect below can depend on `open` alone. Callers
   // routinely pass an inline arrow, and if that identity were a dependency the
@@ -130,6 +135,16 @@ export function Modal({
         dir={direction}
         onClick={(event) => event.stopPropagation()}
       >
+        {withClose ? (
+          <button
+            type="button"
+            className="sp-modal__close"
+            onClick={onClose}
+            aria-label={t('modal.close')}
+          >
+            <Icon name="close" size={16} aria-hidden />
+          </button>
+        ) : null}
         {children}
       </div>
     </div>,

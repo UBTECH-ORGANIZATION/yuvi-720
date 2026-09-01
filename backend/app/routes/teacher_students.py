@@ -271,9 +271,14 @@ async def group_learnings(
         return _denied()
     from app.services import learning_analytics
     lang = normalize_language(language)
-    view = await learning_analytics.group_learnings(
-        group_id, subject=subject, language=lang
+    import asyncio as _asyncio
+    view, pulse = await _asyncio.gather(
+        learning_analytics.group_learnings(group_id, subject=subject, language=lang),
+        learning_analytics.learnings_pulse(group_id, subject=subject),
     )
+    # The KPI strip's week-over-week figures; the all-time totals stay for the
+    # catalogue coverage number.
+    view["pulse"] = pulse
     gaps = await group_analytics.learning_gaps(group_id, subject=subject)
     view["recommendations"] = group_analytics.group_recommendations(gaps, lang)
     await _report(session, "learning-group")
@@ -507,9 +512,43 @@ async def student_objectives(
         activity_rows = await learner_activity.question_summary(safe_id, subject=subject)
     except Exception:
         activity_rows = []
-    return _ok({"subject": subject, "objectives": insights.objective_breakdown(
-        brain, subject=subject, language=normalize_language(language),
-        activity_rows=activity_rows)})
+    lang = normalize_language(language)
+    rows = insights.objective_breakdown(
+        brain, subject=subject, language=lang, activity_rows=activity_rows)
+
+    # The hierarchy under each objective: its lomdot, wearing the SAME
+    # projected states the child's own track shows (completed / current /
+    # available / locked) — the ONE path engine, never a re-derivation.
+    # Best-effort: a projection that fails leaves that objective flat.
+    import asyncio as _asyncio
+
+    from app.services.learning_progress import project_unit_roadmap
+
+    unit_jobs: list[tuple[str, dict]] = []
+    for objective in kata_catalog.objectives_for(subject):
+        objective_id = str(objective.get("id") or "")
+        for unit_id in objective.get("unit_ids") or []:
+            unit = kata_catalog.get_unit(str(unit_id))
+            if unit:
+                unit_jobs.append((objective_id, unit))
+    projections = await _asyncio.gather(
+        *(project_unit_roadmap(unit, safe_id, locale=lang) for _, unit in unit_jobs),
+        return_exceptions=True,
+    )
+    components_of: dict[str, list[dict]] = {}
+    for (objective_id, _), projected in zip(unit_jobs, projections):
+        if isinstance(projected, BaseException) or not isinstance(projected, dict):
+            continue
+        for node in projected.get("components") or []:
+            components_of.setdefault(objective_id, []).append({
+                "id": node.get("id"),
+                "title": node.get("title"),
+                "state": node.get("progress_state") or "available",
+            })
+    for row in rows:
+        row["components"] = components_of.get(row["objective_id"], [])
+
+    return _ok({"subject": subject, "objectives": rows})
 
 
 @router.get("/students/{learner_id}/topics/digest")

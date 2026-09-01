@@ -5,6 +5,13 @@
    a solid midnight-violet base lit by two soft, unequal pools (a violet dawn
    top-left, a faint cool-blue depth bottom-right). No diagonal gradient band,
    so sparse screens read as calm ambient light rather than a lit "beam". */
+/* `--sp-bg` is declared only on the light `:root` (see the note in
+   teacher-shared.css for why it can't yet move into the dark token block).
+   Scoped overrides fix it inside page shells, but a Modal portals to <body>
+   and escapes every one of them — leaving anything inside a dark dialog that
+   recesses with `var(--sp-bg)` painted near-white under white ink. */
+[data-theme='dark'] .sp-modal { --sp-bg: #241d4b; }
+
 [data-theme='dark'] body {
   background-color: #0f0b24;
   background-image:

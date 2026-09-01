@@ -23,21 +23,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
-  Card, EmptyState, ErrorState, Icon, Panel, SkeletonCard, StatusPill,
+  Card, EmptyState, ErrorState, Hint, Icon, Panel, SkeletonCard, StatusPill,
 } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
   getGroupLearnings, type LearningRow, type LearningsView,
 } from '../../../services/teacher'
+import { StatDelta } from '../home/StatDelta'
 import { countKey } from '../shared/countLabel'
 import { LearningPreviewDialog } from '../shared/LearningPreviewDialog'
+import { delta } from '../shared/periodModel'
 import { ObjectiveLine, ObjectiveRef } from '../shared/ObjectiveRef'
 import { subjectLabel } from '../shared/subjectLabel'
 import { agoLabel } from '../live/LiveNow'
 import {
   byAttention, groupByObjective, learningName, needsAttention,
-  type ObjectiveGroup,
+  objectiveGroupName, type ObjectiveGroup,
 } from './learningRows'
 import './teacher-learnings.css'
 
@@ -99,6 +101,9 @@ export function TeacherLearningsPage() {
      at the top. Route state, deliberately not a route: the way back must also
      survive nothing — leaving the page and returning starts at the map. */
   const [openObjective, setOpenObjective] = useState<string | null>(null)
+  /* The first glance is only the objectives the class is actually working —
+     the full catalogue is one click below, not on the screen by default. */
+  const [showCatalog, setShowCatalog] = useState(false)
   /* One preview dialog for the whole page; each card only says which lomda. */
   const [preview, setPreview] = useState<{ id: string; title: string } | null>(null)
 
@@ -116,8 +121,12 @@ export function TeacherLearningsPage() {
   }, [groupId, language])
 
   /* A different class or a different subject lane is a different map — an open
-     objective from the old one must not keep the teacher trapped inside it. */
-  useEffect(() => { setOpenObjective(null) }, [groupId, subject])
+     objective from the old one must not keep the teacher trapped inside it,
+     and the catalogue folds back down too. */
+  useEffect(() => {
+    setOpenObjective(null)
+    setShowCatalog(false)
+  }, [groupId, subject])
 
   const filtered = useMemo(() => {
     const rows = view?.learnings ?? []
@@ -161,6 +170,16 @@ export function TeacherLearningsPage() {
       groups: bySubject.get(entry)!,
     }))
   }, [objectiveGroups, subjects])
+
+  /* The first glance: the five objectives the class is actually living in.
+     `groupByObjective` already orders trouble-first-then-recency, so the top
+     of that order IS "most active". Everything else — including untouched
+     material a teacher browses to assign next — waits under one fold. */
+  const activeTop = useMemo(
+    () => objectiveGroups.filter((group) => group.started > 0).slice(0, 5),
+    [objectiveGroups])
+  const catalogFolded = activeTop.length > 0
+    && activeTop.length < objectiveGroups.length
 
   /* Inside an objective — or under a search, which cuts across objectives —
      the body is lomda cards: the pinned went-badly group, then unit sections. */
@@ -243,6 +262,16 @@ export function TeacherLearningsPage() {
   if (!groupId) return <EmptyState title={t('tch.noGroups')} />
 
   const totals = view.totals
+  /* The strip's news: a trailing week vs the week before, both from the same
+     payload. `pulse` is optional in the type only for a stale client cache —
+     without it the values fall to zero and the chips simply do not render. */
+  const week = view.pulse?.current
+  const lastWeek = view.pulse?.previous
+  const comparedTo = t('tch.stat.comparedTo', { when: t('tch.period.prevBare.week') })
+  const successNow = week?.success_rate != null
+    ? Math.round(week.success_rate * 100) : null
+  const successBefore = lastWeek?.success_rate != null
+    ? Math.round(lastWeek.success_rate * 100) : null
 
   return (
     <div className="tch-learnings">
@@ -271,10 +300,10 @@ export function TeacherLearningsPage() {
                 {drill.objectiveId ? (
                   <ObjectiveRef
                     objectiveId={drill.objectiveId}
-                    fallback={drill.title ?? undefined}
+                    fallback={objectiveGroupName(drill) ?? undefined}
                     className="tch-learnings__drillRef"
                   />
-                ) : (drill.title ?? t('tch.learnings.noObjective'))}
+                ) : (objectiveGroupName(drill) ?? t('tch.learnings.noObjective'))}
               </h2>
               <p className="tch-learnings__drillMeta" dir="auto">
                 {[
@@ -304,21 +333,29 @@ export function TeacherLearningsPage() {
         </section>
       ) : (
         <>
-      {/* ── the class totals over everything they learned ─────────────────── */}
+      {/* ── the week's news, each figure against the week before it ─────────
+             All four are the SAME trailing week (the home dashboard's default
+             period), so the strip answers "how is the material doing right
+             now" — the all-time totals live on in the catalogue coverage
+             hint and the cards below. Label first: with a comparison chip
+             attached, value-then-label reads backwards (see the home strip). */}
       <section className="tch-stats" aria-label={t('tch.kpi.stripLabel')}>
         <Card className="tch-stat">
           <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
             <Icon name="library" size={18} />
           </span>
           <span className="tch-stat__text">
-            <strong className="tch-stat__value">
-              {totals.learnings}<small>/{totals.catalog_total}</small>
-            </strong>
-            <span className="tch-stat__label">{t('tch.learnings.kpi.learnings')}</span>
+            <span className="tch-stat__label">{t('tch.learnings.kpi.weekLearnings')}</span>
+            <span className="tch-stat__line">
+              <strong className="tch-stat__value">{week?.learnings_active ?? 0}</strong>
+              <StatDelta
+                delta={delta(week?.learnings_active, lastWeek?.learnings_active)}
+                label={t('tch.learnings.kpi.weekLearnings')}
+                when={comparedTo}
+              />
+            </span>
             <span className="tch-stat__hint">
-              {t('tch.learnings.kpi.activeOf', {
-                active: totals.active_learners, total: totals.group_size,
-              })}
+              {t('tch.learnings.kpi.ofCatalog', { total: totals.catalog_total })}
             </span>
           </span>
         </Card>
@@ -328,10 +365,22 @@ export function TeacherLearningsPage() {
             <Icon name="check" size={18} />
           </span>
           <span className="tch-stat__text">
-            <strong className="tch-stat__value">{ratePercent(totals.success_rate)}</strong>
             <span className="tch-stat__label">{t('tch.kpi.successRate')}</span>
+            <span className="tch-stat__line">
+              <strong className="tch-stat__value">
+                {successNow !== null ? `${successNow}%` : '—'}
+              </strong>
+              {/* Percentage-point delta — a rate's honest unit; "+246%" on a
+                  metric capped at 100 reads as a bug (see periodModel). */}
+              <StatDelta
+                delta={delta(successNow, successBefore, 'points')}
+                label={t('tch.kpi.successRate')}
+                when={comparedTo}
+              />
+            </span>
             <span className="tch-stat__hint">
-              {t('tch.kpi.successOf', { correct: totals.correct, attempts: totals.attempts })}
+              {t('tch.kpi.successOf', {
+                correct: week?.correct ?? 0, attempts: week?.attempts ?? 0 })}
             </span>
           </span>
         </Card>
@@ -341,28 +390,46 @@ export function TeacherLearningsPage() {
             <Icon name="clock" size={18} />
           </span>
           <span className="tch-stat__text">
-            {/* Wall-clock evidence or an honest dash — never a confident 0. */}
-            <strong className="tch-stat__value">
-              {totals.timing_available && totals.total_minutes !== null
-                ? totals.total_minutes : '—'}
-            </strong>
             <span className="tch-stat__label">{t('tch.learnings.kpi.classMinutes')}</span>
+            <span className="tch-stat__line">
+              {/* Wall-clock evidence or an honest dash — never a confident 0.
+                  No timing in EITHER window → delta gets nulls and says
+                  nothing. */}
+              <strong className="tch-stat__value">
+                {week?.timing_available && week.total_minutes !== null
+                  ? week.total_minutes : '—'}
+              </strong>
+              <StatDelta
+                delta={delta(
+                  week?.timing_available ? week.total_minutes : null,
+                  lastWeek?.timing_available ? lastWeek.total_minutes : null)}
+                label={t('tch.learnings.kpi.classMinutes')}
+                when={comparedTo}
+              />
+            </span>
             <span className="tch-stat__hint">
-              {totals.timing_available ? t('tch.kpi.acrossLearnings') : t('tch.pulse.noTiming')}
+              {week?.timing_available ? t('tch.kpi.acrossLearnings') : t('tch.pulse.noTiming')}
             </span>
           </span>
         </Card>
 
         <Card className="tch-stat">
-          <span className="tch-stat__icon tch-stat__icon--warn" aria-hidden="true">
-            <Icon name="lightbulb" size={18} />
+          <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
+            <Icon name="users" size={18} />
           </span>
           <span className="tch-stat__text">
-            <strong className="tch-stat__value">
-              {view.learnings.reduce((sum, row) => sum + row.hints_used, 0)}
-            </strong>
-            <span className="tch-stat__label">{t('tch.learnings.kpi.hints')}</span>
-            <span className="tch-stat__hint">{t('tch.learnings.kpi.hintsHint')}</span>
+            <span className="tch-stat__label">{t('tch.learnings.kpi.activeLearners')}</span>
+            <span className="tch-stat__line">
+              <strong className="tch-stat__value">{week?.active_learners ?? 0}</strong>
+              <StatDelta
+                delta={delta(week?.active_learners, lastWeek?.active_learners)}
+                label={t('tch.learnings.kpi.activeLearners')}
+                when={comparedTo}
+              />
+            </span>
+            <span className="tch-stat__hint">
+              {t('tch.learnings.kpi.ofClass', { total: totals.group_size })}
+            </span>
           </span>
         </Card>
       </section>
@@ -419,29 +486,75 @@ export function TeacherLearningsPage() {
       )}
 
       {/* ── the objectives map: the first glance, unless the teacher stepped
-             into one or a search cuts across them ──────────────────────────── */}
+             into one or a search cuts across them.
+
+             Live material first and ONLY, then the whole catalogue behind one
+             fold — the same rule the student track uses: one decision per
+             screen, not the whole curriculum at once. When nothing has
+             started yet the catalogue IS the content, so it shows unfolded. */}
       {!drill && !searching ? (
-        subjectSections.length ? (
-          subjectSections.map((section) => (
-            <section key={section.subject ?? 'none'} className="tch-learnings__unit">
-              <h2 className="tch-learnings__unitTitle" dir="auto">
+        objectiveGroups.length ? (
+          <>
+            {activeTop.length ? (
+              <section className="tch-learnings__unit">
+                <h2 className="tch-learnings__unitTitle" dir="auto">
+                  <Icon name="target" size={15} aria-hidden />
+                  {t('tch.learnings.activeObjectives')}
+                  <span className="tch-learnings__unitCount">{activeTop.length}</span>
+                </h2>
+                <div className="tch-learnings__grid">
+                  {activeTop.map((group) => (
+                    <ObjectiveCard
+                      key={group.key}
+                      group={group}
+                      showSubject={!subject}
+                      onOpen={() => setOpenObjective(group.key)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {catalogFolded ? (
+              <button
+                type="button"
+                className="tch-learnings__catalogToggle"
+                aria-expanded={showCatalog}
+                onClick={() => setShowCatalog((value) => !value)}
+              >
                 <Icon name="library" size={15} aria-hidden />
-                {section.subject
-                  ? subjectLabel(section.subject, t)
-                  : t('tch.learnings.noSubject')}
-                <span className="tch-learnings__unitCount">{section.groups.length}</span>
-              </h2>
-              <div className="tch-learnings__grid">
-                {section.groups.map((group) => (
-                  <ObjectiveCard
-                    key={group.key}
-                    group={group}
-                    onOpen={() => setOpenObjective(group.key)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))
+                {t('tch.learnings.allObjectives')}
+                <span className="tch-learnings__unitCount">{objectiveGroups.length}</span>
+                <Icon name={showCatalog ? 'chevronUp' : 'chevronDown'}
+                      size={15} aria-hidden />
+              </button>
+            ) : null}
+
+            {!activeTop.length || (catalogFolded && showCatalog) ? (
+              /* Skipped while the active five ARE the whole map — the same
+                 five cards again under a heading is not a catalogue. */
+              subjectSections.map((section) => (
+                <section key={section.subject ?? 'none'} className="tch-learnings__unit">
+                  <h2 className="tch-learnings__unitTitle" dir="auto">
+                    <Icon name="library" size={15} aria-hidden />
+                    {section.subject
+                      ? subjectLabel(section.subject, t)
+                      : t('tch.learnings.noSubject')}
+                    <span className="tch-learnings__unitCount">{section.groups.length}</span>
+                  </h2>
+                  <div className="tch-learnings__grid">
+                    {section.groups.map((group) => (
+                      <ObjectiveCard
+                        key={group.key}
+                        group={group}
+                        onOpen={() => setOpenObjective(group.key)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))
+            ) : null}
+          </>
         ) : (
           <EmptyState
             title={t('tch.learnings.empty')}
@@ -505,65 +618,87 @@ export function TeacherLearningsPage() {
 
 /** One learning objective, folded over its lomdot — the map's card.
  *
- *  Deliberately the same visual grammar as `LearningCard` (same classes, same
- *  rate line, same hot/idle states), because a card that opens a drill-down
- *  and a card that opens a detail page must not read as two different UIs.
+ *  The student track's goal-card grammar on purpose (state badge, name, one
+ *  meta line, a progress meter): a teacher flipping between their own view and
+ *  a child's should meet the same object. The meter is the class success rate
+ *  in the card's tone — the number says it once, the bar makes it scannable
+ *  across a row of five; the `correct/attempts` evidence moved to its title.
  */
-function ObjectiveCard({ group, onOpen }: {
+function ObjectiveCard({ group, showSubject = false, onOpen }: {
   group: ObjectiveGroup<LearningRow>
+  /** In the mixed most-active row the subject is not given by a heading. */
+  showSubject?: boolean
   onOpen: () => void
 }) {
   const { t } = useI18n()
   const tone = rateTone(group.successRate)
+  const state = group.attention ? 'hot' : group.started ? 'active' : 'idle'
+  const title = objectiveGroupName(group)
+  const percent = group.successRate === null
+    ? 0 : Math.round(group.successRate * 100)
 
   return (
-    <Panel
-      className={`tch-learning${group.attention ? ' tch-learning--hot' : ''}${
-        group.started ? '' : ' tch-learning--idle'}`}
-    >
-      <button type="button" className="tch-learning__open" onClick={onOpen}>
-        <div className="tch-learning__head">
-          <div className="tch-learning__titles">
-            <strong dir="auto">{group.title ?? t('tch.learnings.noObjective')}</strong>
-            <span className="tch-learning__meta" dir="auto">
-              {t(countKey('tch.learnings.lomdot', group.rows.length),
-                 { count: group.rows.length })}
+    <Panel className={`tch-objective is-${state}`}>
+      <button type="button" className="tch-objective__open" onClick={onOpen}>
+        <span className="tch-objective__head">
+          <span className="tch-objective__state" aria-hidden="true">
+            <Icon name={state === 'hot' ? 'alert' : state === 'active' ? 'pulse' : 'target'}
+                  size={17} />
+          </span>
+          <strong className="tch-objective__title" dir="auto">
+            {title ?? t('tch.learnings.noObjective')}
+          </strong>
+          {group.started ? (
+            /* The number wears its own name — "63%" alone read as anything
+               (progress? coverage?). The word is tiny and the evidence
+               (correct/attempts) stays on hover. */
+            <span
+              className="tch-objective__rateWrap"
+              title={t('tch.kpi.successOf', {
+                correct: group.correct, attempts: group.attempts })}
+            >
+              <strong className={`tch-objective__rate is-${tone}`} dir="ltr">
+                {ratePercent(group.successRate)}
+              </strong>
+              <span className="tch-objective__rateWord">
+                {t('tch.learnings.rateWord')}
+              </span>
             </span>
-          </div>
-        </div>
-      </button>
-
-      {group.started ? (
-        <div className="tch-learning__lines">
-          <p className={`tch-learning__line tch-learning__line--rate is-${tone}`}>
-            <strong>{ratePercent(group.successRate)}</strong>
-            <span>{t('tch.kpi.successOf', {
-              correct: group.correct, attempts: group.attempts })}</span>
-          </p>
-          <p className="tch-learning__line">
-            {t('tch.learnings.objStarted', {
-              started: group.started, total: group.rows.length })}
-          </p>
-          {group.attention ? (
-            <p className="tch-learning__struggling">
-              <Icon name="alert" size={14} aria-hidden />
-              {t(countKey('tch.learnings.objAttention', group.attention),
-                 { count: group.attention })}
-            </p>
           ) : null}
-        </div>
-      ) : (
-        /* Untouched is information, not an empty state — it is how a teacher
-           finds an objective to assign next. */
-        <p className="tch-learning__idle">
-          <Icon name="clock" size={14} aria-hidden />
-          {t('tch.learnings.objIdle')}
-        </p>
-      )}
+        </span>
 
-      <p className="tch-learning__when">
-        {group.started ? agoLabel(group.lastAt, t) : ''}
-      </p>
+        {group.started ? (
+          <span
+            className={`tch-objective__meter is-${tone}`}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            aria-label={t('tch.kpi.successRate')}
+          >
+            <span style={{ inlineSize: `${percent}%` }} />
+          </span>
+        ) : null}
+
+        <span className="tch-objective__meta" dir="auto">
+          {[
+            showSubject ? subjectLabel(group.subject, t) : null,
+            t(countKey('tch.learnings.lomdot', group.rows.length),
+              { count: group.rows.length }),
+            group.started
+              ? agoLabel(group.lastAt, t)
+              : t('tch.learnings.idleShort'),
+          ].filter(Boolean).join(' · ')}
+        </span>
+
+        {group.attention ? (
+          <span className="tch-objective__flag">
+            <Icon name="alert" size={13} aria-hidden />
+            {t(countKey('tch.learnings.objAttention', group.attention),
+               { count: group.attention })}
+          </span>
+        ) : null}
+      </button>
     </Panel>
   )
 }
@@ -598,8 +733,12 @@ function LearningCard({ row, groupId, onPreview, showObjective = true }: {
       >
         <Icon name="play" size={14} aria-hidden />
       </button>
-      <button type="button" className="tch-learning__open" onClick={open}>
-        <div className="tch-learning__head">
+      <div className="tch-learning__head">
+        {/* The open button stretches over the whole card via CSS (::after
+            overlay) — the card *is* the click target, and the preview,
+            objective and pill sit above the overlay as siblings, because a
+            button inside a button is not a thing a browser honours. */}
+        <button type="button" className="tch-learning__open" onClick={open}>
           <div className="tch-learning__titles">
             {/* A row the catalogue never named has only its id, and the teacher
                 still has to tell five of them apart — so the id is shown, but
@@ -616,11 +755,14 @@ function LearningCard({ row, groupId, onPreview, showObjective = true }: {
               ].filter(Boolean).join(' · ')}
             </span>
           </div>
-          {row.is_assessment ? (
+        </button>
+        {row.is_assessment ? (
+          <Hint text={t('tch.learnings.assessmentHint')}
+                className="tch-learning__assessment">
             <StatusPill tone="steady">{t('tch.learnings.assessment')}</StatusPill>
-          ) : null}
-        </div>
-      </button>
+          </Hint>
+        ) : null}
+      </div>
 
       {/* The objective this lesson serves, as a button rather than as text —
           OUTSIDE the card's own open button, because a button inside a button

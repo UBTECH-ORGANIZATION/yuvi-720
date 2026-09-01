@@ -375,6 +375,23 @@ def _object_tail(object_id: Any) -> str:
     return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
 
 
+def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
+    """An `initialized`/enter whose object names a PAGE we could not map.
+
+    CET narrates navigation with opaque per-page ids; until the nightly walk
+    has learned one, the id resolves to nothing — but the statement still
+    proves the learner changed screens. Component-level objects (the tail IS
+    the launched component) are lomda opens, not page moves, and stay out.
+    """
+    if event.get("verb") not in ("initialized", "enter"):
+        return False
+    if event.get("sub_item_id"):
+        return False
+    component_id = str(event.get("launch") or "")
+    tail = _object_tail(event.get("object_id"))
+    return bool(tail and component_id and tail != component_id)
+
+
 def is_learning_type_choice(event: dict[str, Any]) -> bool:
     """A 720 `selected` naming which REPRESENTATION the learner picked.
 
@@ -601,12 +618,19 @@ async def record_path_choice(
 
 
 async def get_recent_events(
-    learner_id: str, objective_id: Optional[str] = None, limit: int = 5
+    learner_id: str, objective_id: Optional[str] = None, limit: int = 5,
+    component_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Recent normalized events (newest first) — for the Coach bundle + triggers."""
+    """Recent normalized events (newest first) — for the Coach bundle + triggers.
+
+    ``component_id`` narrows to one lomda's events (the ``launch`` field) — the
+    resume-position probe needs the learner's last screen in THIS component,
+    which an objective-wide window can bury under a neighbour's activity."""
     query: dict[str, Any] = {"learner_id": normalize_learner_id(learner_id)}
     if objective_id:
         query["objective_id"] = objective_id
+    if component_id:
+        query["launch"] = component_id
     collection = await _events_collection()
     if collection is not None:
         try:
@@ -617,7 +641,8 @@ async def get_recent_events(
     # Fallback: filter the JSON store.
     events = list(_fallback_read().values())
     events = [e for e in events if e.get("learner_id") == query["learner_id"]
-              and (objective_id is None or e.get("objective_id") == objective_id)]
+              and (objective_id is None or e.get("objective_id") == objective_id)
+              and (component_id is None or e.get("launch") == component_id)]
     events.sort(key=lambda e: e.get("stored_at", ""), reverse=True)
     return events[:limit]
 
@@ -1530,6 +1555,19 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
                 set_updates["current_state.at"] = (
                     event.get("occurred_at") or event.get("stored_at")
                 )
+    elif _is_unmapped_screen_entry(event) and not pointer_is_stale:
+        # The player announced arrival at a page we cannot name (a CET page id
+        # the nightly walk has not yet learned). The learner has PROVABLY left
+        # wherever the pointer says — a stale position asserted as fact is how
+        # the coach quoted another screen's coordinates. Unknown beats wrong:
+        # the entry fallback re-grounds on their last recorded screen, flagged
+        # assumed, and the variant hedge applies.
+        set_updates["current_state.item_id"] = None
+        set_updates["current_state.question_id"] = None
+        if event_at:
+            set_updates["current_state.at"] = (
+                event.get("occurred_at") or event.get("stored_at")
+            )
     # Which representation the learner chose for a teaching screen ("listening"
     # = watch the clip, "cards" = flip the info cards). The screens themselves
     # are identical to us either way, so this is the only way the coach can talk

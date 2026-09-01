@@ -512,6 +512,17 @@ export interface TopicDigestItem {
 
 export interface TopicDigest {
   topics: TopicDigestItem[]
+  /** The panel's whole content now: practical "do this with the student"
+   *  points, each grounded in listed topic keys (server-validated, never
+   *  invented) and carrying the expandable depth behind it. Subject derived
+   *  from those topics; null when a point crosses subjects. */
+  focus_points?: {
+    point: string
+    /** What the platform identified and what to focus on — the click-open. */
+    explanation?: string
+    subject: string | null
+    keys: string[]
+  }[]
   cached: boolean
   generated_at: string | null
   /** True when the child's progress moved since this was written. */
@@ -573,6 +584,13 @@ export interface ObjectiveBreakdownRow {
   minutes: number
   help_used: number
   last_at: string | null
+  /** The lomdot inside this objective, in path order, each wearing the same
+   *  projected state the child's own track shows. */
+  components?: {
+    id: string | null
+    title: string | null
+    state: 'completed' | 'current' | 'available' | 'locked'
+  }[]
 }
 
 export function getStudentObjectives(learnerId: string, subject: string, language: string) {
@@ -1209,6 +1227,22 @@ export interface LearningsView {
     group_size: number
   }
   recommendations: GroupRecommendation[]
+  /** The KPI strip's news: a trailing week against the week before it. */
+  pulse?: {
+    window_days: number
+    current: LearningsPulseWindow
+    previous: LearningsPulseWindow
+  }
+}
+
+export interface LearningsPulseWindow {
+  learnings_active: number
+  attempts: number
+  correct: number
+  success_rate: number | null
+  total_minutes: number | null
+  timing_available: boolean
+  active_learners: number
 }
 
 export interface LearningDetail {

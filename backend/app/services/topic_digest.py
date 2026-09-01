@@ -1,12 +1,12 @@
-"""Why each hard topic is hard, in two sentences, cached until progress moves.
+"""Practical focus points from a child's hard topics, cached until progress moves.
 
 ## What it is for
 
-The profile's hardest-topics card groups a child's questions by objective and
-shows the numbers. The numbers say *that* a topic went badly; the content's own
-`teaches` texts say *what the child was actually being taught* — but raw they
-are a wall of authored prose no teacher reads. One mini-tier call turns them
-into a short paragraph per topic, written once and cached.
+The profile's "מה כדאי לחזק" card. The per-question numbers say *that* topics
+went badly; the content's own `teaches` texts say *what the child was actually
+being taught* — but raw they are a wall of authored prose no teacher reads.
+One mini-tier call turns them into a handful of practical "do this with the
+student" points, each with an expandable explanation, written once and cached.
 
 ## The aggregation runs here too, deliberately
 
@@ -40,17 +40,23 @@ COLLECTION = "topic_digests"
 
 #: Part of the cache id. Bump when the prompt or the output shape changes, so
 #: stale-shape rows are simply never found rather than migrated.
-PROMPT_VERSION = "v1"
+#: v3: the call distils ONLY `focus_points` — practical "do this with the
+#: student" actions, each carrying its own expandable explanation. The
+#: per-topic paragraphs of v1/v2 no longer render anywhere and are not asked
+#: for.
+PROMPT_VERSION = "v3"
 
 # Mirrors of the client's constants — the lockstep contract.
 TOPIC_MIN_ATTEMPTS = 4
 TOPICS_PER_SUBJECT = 8
 TOPIC_TEACHES_RATE = 0.7
 
-MAX_SENTENCES = 3
-MAX_SENTENCE_CHARS = 260
+#: The focus points: few and short, or they are just another list of topics.
+#: The explanation is the click-to-open depth behind each one.
+MAX_FOCUS_POINTS = 4
+MAX_POINT_CHARS = 90
+MAX_EXPLANATION_CHARS = 600
 
-_SURFACE = {"rate", "attempts", "questions", "zero_correct"}
 _LANG = {"he": "Hebrew", "ar": "Arabic", "en": "English"}
 
 #: One in-flight generation per cache key — two teachers opening the same
@@ -146,53 +152,64 @@ def build_topics(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # ── the one call ─────────────────────────────────────────────────────────────
 
-_PROMPT = """You are Yuvi, summarising for a teacher why each listed topic has
-been hard for one student. Everything you may use is below — the topic's
-numbers and the content's own descriptions of what the hard questions teach.
-You have not met this student.
+_PROMPT = """You are Yuvi, turning one student's hard topics into a short list
+of practical focus points for their teacher. Everything you may use is below —
+each topic's numbers and the content's own descriptions of what the hard
+questions teach. You have not met this student.
 
 TOPICS:
 {topics}
 
 Answer with JSON only:
-{{"topics": [{{"key": "the topic's key, copied exactly",
-  "sentences": ["...", "..."],
-  "surface": ["rate" | "attempts" | "questions" | "zero_correct", ...]}}, ...]}}
+{{"focus_points": [{{"point": "...", "explanation": "...",
+  "keys": ["topic keys this rests on"]}}, ...]}}
 
 Rules:
 - Write in {language}.
-- Per topic 2 short sentences, 3 at most: what the questions there teach (from
-  the descriptions, in your own plain words) and what the numbers show.
+- At most 4 points, worst first. Skip a point you cannot ground.
+- "point" is a PRACTICAL instruction to the teacher — what to do with the
+  student next, at most 10 words, starting with a verb (e.g. "לתרגלו חיסור
+  נטו מברוטו עם דוגמאות מחיי היומיום"). It targets the specific skill INSIDE
+  the topics that the descriptions say the hard questions actually teach —
+  more specific than the topic's own title whenever the descriptions allow.
+- "explanation" is the depth behind the point, 2–4 short sentences: what the
+  platform saw (what the hard questions teach, in your own plain words, and
+  what the numbers show) and what to focus on when sitting with the student.
 - Only claims the given numbers and descriptions support. Never invent a
   number, never diagnose, never describe character.
-- Do not quote ids, keys or field names in the sentences.
-- "surface" names which given numbers your sentences leaned on.
-- A topic with no description texts still gets its numbers sentence.
+- Do not quote ids, keys or field names.
+- "keys" lists the given topic keys the point rests on, copied exactly.
 - Gender-free phrasing where the language allows it.
 """
 
 
-def _clean(payload: Any, known_keys: set[str]) -> Optional[list[dict[str, Any]]]:
-    """Bound what came back. None when nothing usable — never cached as empty."""
-    if not isinstance(payload, dict) or not isinstance(payload.get("topics"), list):
+def _clean(payload: Any,
+           topics_by_key: dict[str, dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """Bound what came back. None when nothing usable — never cached as empty.
+
+    Each point must stand on topics WE offered; the subject is derived from
+    those topics, never taken from the model.
+    """
+    if not isinstance(payload, dict):
         return None
-    out: list[dict[str, Any]] = []
-    for item in payload["topics"]:
+    known_keys = set(topics_by_key)
+    points: list[dict[str, Any]] = []
+    for item in (payload.get("focus_points") or [])[:MAX_FOCUS_POINTS]:
         if not isinstance(item, dict):
             continue
-        key = str(item.get("key") or "")
-        if key not in known_keys:
-            continue  # an invented topic is exactly what must not reach a teacher
-        sentences = [
-            str(s).strip()[:MAX_SENTENCE_CHARS]
-            for s in (item.get("sentences") or [])[:MAX_SENTENCES]
-            if str(s or "").strip()
-        ]
-        if not sentences:
-            continue
-        surface = [s for s in (item.get("surface") or []) if s in _SURFACE]
-        out.append({"key": key, "sentences": sentences, "surface": surface})
-    return out or None
+        point = str(item.get("point") or "").strip()[:MAX_POINT_CHARS]
+        keys = [str(k) for k in (item.get("keys") or []) if str(k) in known_keys]
+        if not point or not keys:
+            continue  # a point that rests on nothing is an invention
+        subjects = {topics_by_key[k].get("subject") for k in keys}
+        points.append({
+            "point": point,
+            "explanation": str(item.get("explanation") or "")
+                .strip()[:MAX_EXPLANATION_CHARS],
+            "keys": keys,
+            "subject": next(iter(subjects)) if len(subjects) == 1 else None,
+        })
+    return {"focus_points": points} if points else None
 
 
 async def _generate(topics: list[dict[str, Any]], teacher_id: str, learner_id: str,
@@ -225,7 +242,7 @@ async def _generate(topics: list[dict[str, Any]], teacher_id: str, learner_id: s
     )
     if not raw:
         return None
-    return _clean(loads_model_json(raw), {t["key"] for t in topics})
+    return _clean(loads_model_json(raw), {t["key"]: t for t in topics})
 
 
 # ── the entry point ──────────────────────────────────────────────────────────
@@ -252,8 +269,8 @@ async def topic_digest(
     topics = build_topics(learning_analytics.label_learner_rows(rows, language=language))
 
     if not topics:
-        return {"topics": [], "cached": False, "generated_at": None,
-                "stale": False, "has_evidence": False}
+        return {"topics": [], "focus_points": [], "cached": False,
+                "generated_at": None, "stale": False, "has_evidence": False}
 
     print_fingerprint = fingerprint(topics)
     key = cache_id(learner_id, language, subject)
@@ -267,19 +284,20 @@ async def topic_digest(
 
     fresh = bool(existing) and existing.get("fingerprint") == print_fingerprint
     if existing and (fresh or not allow_generate):
-        return {"topics": existing.get("topics") or [],
+        return {"topics": [],
+                "focus_points": existing.get("focus_points") or [],
                 "cached": True,
                 "generated_at": existing.get("generated_at"),
                 "stale": not fresh,
                 "has_evidence": True}
     if not allow_generate:
-        return {"topics": [], "cached": False, "generated_at": None,
-                "stale": False, "has_evidence": True}
+        return {"topics": [], "focus_points": [], "cached": False,
+                "generated_at": None, "stale": False, "has_evidence": True}
 
     # One generation per key at a time; latecomers await the same task.
     task = _tasks.get(key)
     if task is None or task.done():
-        async def _run() -> Optional[list[dict[str, Any]]]:
+        async def _run() -> Optional[dict[str, Any]]:
             try:
                 return await _generate(topics, teacher_id, learner_id, language)
             finally:
@@ -295,12 +313,14 @@ async def topic_digest(
         # Not cached: a failed call must stay retryable, and yesterday's
         # paragraphs (if any) are still worth more than nothing.
         if existing:
-            return {"topics": existing.get("topics") or [],
+            return {"topics": [],
+                    "focus_points": existing.get("focus_points") or [],
                     "cached": True,
                     "generated_at": existing.get("generated_at"),
                     "stale": True, "has_evidence": True,
                     "unavailable": True}
-        return {"topics": [], "cached": False, "generated_at": None,
+        return {"topics": [], "focus_points": [], "cached": False,
+                "generated_at": None,
                 "stale": False, "has_evidence": True, "unavailable": True}
 
     at = _now_iso()
@@ -311,10 +331,12 @@ async def topic_digest(
                 {"$set": {"_id": key, "learner_id": learner_id,
                           "language": language, "subject": subject or None,
                           "fingerprint": print_fingerprint,
-                          "topics": digest, "generated_at": at}},
+                          "focus_points": digest["focus_points"],
+                          "generated_at": at}},
                 upsert=True,
             )
         except Exception as exc:  # pragma: no cover - the digest still returns
             print(f"⚠️ topic digest not cached: {type(exc).__name__}: {exc}")
-    return {"topics": digest, "cached": False, "generated_at": at,
+    return {"topics": [], "focus_points": digest["focus_points"],
+            "cached": False, "generated_at": at,
             "stale": False, "has_evidence": True}

@@ -141,10 +141,19 @@ def learner_signals(brain: dict[str, Any]) -> dict[str, Any]:
 
 
 def completed_component_ids(events: list[dict[str, Any]]) -> set[str]:
-    """Component ids the learner has a (non-failed) ``completed`` event for."""
+    """Component ids the learner has a (non-failed) ``completed`` event for.
+
+    COMPONENT-level completion only (``is_component_completion``): Kata also
+    emits ``completed`` per screen, and counting those here once made the hero
+    call a half-watched lomda done and deep-link the learner to the next one —
+    which the launch gate (reading ``learning_path``'s stricter projection)
+    rightly refused with 409. One definition of "done", shared with the gate.
+    """
+    from app.services.events import is_component_completion
+
     done: set[str] = set()
     for event in events or []:
-        if event.get("verb") != "completed":
+        if not is_component_completion(event):
             continue
         if (event.get("result") or {}).get("success") is False:
             continue

@@ -4,9 +4,10 @@
  * is what makes an assistant answer checkable rather than merely fluent — a
  * teacher can see the answer stands on three real reads, or on none.
  *
- * The ungrounded warning is deliberately loud. An answer with an empty trace is
- * the exact failure mode this phase exists to prevent, and if one ever reaches
- * a teacher it must not look like every other answer.
+ * An empty trace renders NOTHING — no warning. The server already blocks
+ * ungrounded factual claims (they arrive as refusal keys, never as text), so
+ * the only answers that ship without a trace are greetings and chit-chat, and
+ * a caution banner under "היי" taught teachers to ignore cautions.
  */
 
 import { Icon } from '../../../components/primitives/Icon'
@@ -21,17 +22,10 @@ const STATUS_ICON = {
   error: 'alert',
 } as const
 
-export function ToolTrace({ tools, grounded }: { tools: ToolTraceEntry[]; grounded: boolean }) {
+export function ToolTrace({ tools }: { tools: ToolTraceEntry[] }) {
   const { t } = useI18n()
 
-  if (!tools.length) {
-    return (
-      <p className="tch-trace tch-trace--none">
-        <Icon name="alert" size={14} aria-hidden />
-        {grounded ? t('tch.assistant.trace.none') : t('tch.assistant.ungrounded')}
-      </p>
-    )
-  }
+  if (!tools.length) return null
 
   return (
     <details className="tch-trace">

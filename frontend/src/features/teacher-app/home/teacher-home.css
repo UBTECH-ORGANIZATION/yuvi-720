@@ -483,9 +483,12 @@
 .tch-bands__chip.is-active.is-red { border-color: var(--sp-danger-600); background: var(--sp-danger-100); }
 .tch-bands__chip.is-active.is-orange { border-color: var(--sp-warn-600); background: var(--sp-warn-100); }
 .tch-bands__chip.is-active.is-green { border-color: var(--sp-success-600); background: var(--sp-success-100); }
+/* With the label moved to hover/aria, the count IS the chip's text — weighted
+   like content, not like the footnote it was beside a worded label. */
 .tch-bands__chipCount {
   font-variant-numeric: tabular-nums;
-  color: var(--sp-ink-500);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
 }
 
 .tch-bands__empty {
