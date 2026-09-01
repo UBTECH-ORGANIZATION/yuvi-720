@@ -743,4 +743,16 @@ def resolve_object_item(
     ]
     if len(owners) == 1:
         return owners[0], tail
+    # Last resort: the player's own page id, learned by the nightly walk from
+    # the wire (CET announces `initialized` per page with an opaque id the
+    # catalog never lists). This is what moves the pointer on NAVIGATION and
+    # on a resumed session, not only on answers.
+    try:
+        from app.services import content_intelligence
+
+        item_id = content_intelligence.vendor_screen_item(component_id, tail)
+        if item_id:
+            return item_id, None
+    except Exception:  # the map is an enhancement, never a dependency
+        pass
     return None, None

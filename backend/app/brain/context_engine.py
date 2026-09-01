@@ -543,18 +543,27 @@ async def build_coach_bundle(
 
     # Look-alike variants: the catalog can hold several items with identical
     # question texts of which the player deals the learner ONE (COMPL-00001
-    # items 1/2 mirror each other's data). An assumed position may then name
-    # the WRONG sibling — same words, different numbers — and a coach that
-    # quotes its coordinates confidently misleads. Detected via the shared
-    # learner-visible ordinal, and surfaced so the prompt can demand hedging.
+    # items 1/2 mirror each other's data). Until the learner ANSWERS on this
+    # screen, nothing proves WHICH sibling they were dealt — a page-level
+    # navigation event names the page, and an assumed position guesses — so
+    # a coach that quotes the grounded sibling's coordinates confidently
+    # misleads. Detected via the shared learner-visible ordinal, surfaced so
+    # the prompt can demand hedging; an answer on this item settles it.
     screen_has_variants = False
-    if position_assumed and item_id:
+    if item_id:
         ordinals = kata_catalog.question_item_ordinals(component_id)
         own = ordinals.get(item_id)
-        screen_has_variants = own is not None and any(
+        has_siblings = own is not None and any(
             key != item_id and "|" not in key and value == own
             for key, value in ordinals.items()
         )
+        if has_siblings:
+            answered_here = any(
+                e.get("verb") in ("answered", "attempted", "scored")
+                and e.get("sub_item_id") == item_id
+                for e in recent
+            )
+            screen_has_variants = position_assumed or not answered_here
 
     recent_view = [
         {

@@ -69,17 +69,17 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
 
   if (presentation.mode === 'rect') {
     const { rect } = presentation
-    // The chip hugs the highlight: centered under its bottom edge, jumping
-    // above it when the mark reaches the bottom of the frame, always clamped
-    // inside the box.
+    // The chip sits in the MIDDLE of the highlight — the mark and its
+    // control are one thing — clamped inside the box for slivers at the
+    // frame's edge.
     const chipLeft = Math.max(
       CHIP_HALF_WIDTH + 6,
       Math.min(box.w - CHIP_HALF_WIDTH - 6, rect.x + rect.w / 2),
     )
-    const below = rect.y + rect.h + 10
-    const chipTop = below + CHIP_HEIGHT <= box.h - 6
-      ? below
-      : Math.max(6, rect.y - CHIP_HEIGHT - 10)
+    const chipTop = Math.max(
+      CHIP_HEIGHT / 2 + 6,
+      Math.min(box.h - CHIP_HEIGHT / 2 - 6, rect.y + rect.h / 2),
+    )
     return (
       <div ref={layerRef} className="lesson-point-layer">
         <div
@@ -91,7 +91,7 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
         />
         {dismissChip({
           left: `${chipLeft}px`, top: `${chipTop}px`,
-          transform: 'translateX(-50%)',
+          transform: 'translate(-50%, -50%)',
         })}
       </div>
     )

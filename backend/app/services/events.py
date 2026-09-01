@@ -375,6 +375,23 @@ def _object_tail(object_id: Any) -> str:
     return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
 
 
+def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
+    """An `initialized`/enter whose object names a PAGE we could not map.
+
+    CET narrates navigation with opaque per-page ids; until the nightly walk
+    has learned one, the id resolves to nothing — but the statement still
+    proves the learner changed screens. Component-level objects (the tail IS
+    the launched component) are lomda opens, not page moves, and stay out.
+    """
+    if event.get("verb") not in ("initialized", "enter"):
+        return False
+    if event.get("sub_item_id"):
+        return False
+    component_id = str(event.get("launch") or "")
+    tail = _object_tail(event.get("object_id"))
+    return bool(tail and component_id and tail != component_id)
+
+
 def is_learning_type_choice(event: dict[str, Any]) -> bool:
     """A 720 `selected` naming which REPRESENTATION the learner picked.
 
@@ -1506,6 +1523,19 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
                 set_updates["current_state.at"] = (
                     event.get("occurred_at") or event.get("stored_at")
                 )
+    elif _is_unmapped_screen_entry(event) and not pointer_is_stale:
+        # The player announced arrival at a page we cannot name (a CET page id
+        # the nightly walk has not yet learned). The learner has PROVABLY left
+        # wherever the pointer says — a stale position asserted as fact is how
+        # the coach quoted another screen's coordinates. Unknown beats wrong:
+        # the entry fallback re-grounds on their last recorded screen, flagged
+        # assumed, and the variant hedge applies.
+        set_updates["current_state.item_id"] = None
+        set_updates["current_state.question_id"] = None
+        if event_at:
+            set_updates["current_state.at"] = (
+                event.get("occurred_at") or event.get("stored_at")
+            )
     # Which representation the learner chose for a teaching screen ("listening"
     # = watch the clip, "cards" = flip the info cards). The screens themselves
     # are identical to us either way, so this is the only way the coach can talk

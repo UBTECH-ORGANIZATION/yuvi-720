@@ -345,6 +345,15 @@ async def browse_component(
 
     screens = dump["screens"]
     mapped = map_screens_to_slides(screens, model["slides"])
+    # Ids that are NOT a page's own: the component itself, its catalog items,
+    # its question ids. What remains of a screen's announced object ids is the
+    # player's id for that page — the handle a live learner's navigation
+    # events will carry.
+    not_page_ids = {component_id}
+    for slide in model["slides"]:
+        not_page_ids.add(str(slide.get("item_id") or ""))
+        for q in slide.get("questions") or []:
+            not_page_ids.add(str(q.get("question_id") or ""))
     # A format-bump recapture replaces the enrichment wholesale, but the
     # vision descriptions in the committed shard are still true for any
     # graphic whose bytes (src digest) did not change — carry them over
@@ -390,6 +399,12 @@ async def browse_component(
             ],
             "capture_viewport": screen.get("capture_viewport") or {},
             "no_internal_scroll": bool(screen.get("no_internal_scroll")),
+            # The player's own id for this page (from its xAPI narration
+            # during the walk) — lets the runtime move the position pointer
+            # when a live learner navigates or resumes to it.
+            "vendor_page_id": next(
+                (str(t) for t in reversed(screen.get("vendor_page_ids") or [])
+                 if str(t) not in not_page_ids), ""),
             "capture_version": ci.CAPTURE_VERSION,
             "captured_at": probed_at,
         }

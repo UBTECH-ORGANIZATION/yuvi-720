@@ -54,7 +54,7 @@ def _answered(item_id):
 class ResumePositionTests(unittest.IsolatedAsyncioTestCase):
     async def _current(self, component_events, ordinals=PLAIN_ORDINALS):
         def recent(learner_id, objective_id=None, limit=5, component_id=None):
-            return component_events if component_id else []
+            return component_events
 
         with patch.object(context_engine, "view_for",
                           new=AsyncMock(return_value=BRAIN_NO_SCREEN)), \
@@ -88,10 +88,40 @@ class ResumePositionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(current.get("item_id"), "c-01-003")
         self.assertTrue(current.get("position_assumed"))
 
-    async def test_a_variant_screen_raises_the_hedge_flag(self):
+    async def test_an_answer_on_the_variant_screen_settles_which_one(self):
+        # The answered event PROVES which sibling was dealt — no hedge...
         current = await self._current(
             [_answered("c-01-002")], ordinals=VARIANT_ORDINALS)
         self.assertEqual(current.get("item_id"), "c-01-002")
+        # ...except the position itself is still assumed (resume guess), and
+        # an assumed position on a variant screen always hedges.
+        self.assertTrue(current.get("screen_has_variants"))
+
+    async def test_an_unanswered_variant_screen_hedges_even_when_reported(self):
+        # A page-level navigation event names the PAGE, not the variant — until
+        # an answer lands, quoting the grounded sibling's data would mislead.
+        brain = {"current_state": {"component_id": COMPONENT, "unit_id": "u-1",
+                                   "item_id": "c-01-002"},
+                 "goals": [], "identity": {"locale": "he"}}
+        with patch.object(context_engine, "view_for",
+                          new=AsyncMock(return_value=brain)), \
+             patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock()), \
+             patch("app.services.kata_catalog.get_component",
+                   return_value={"id": COMPONENT}), \
+             patch("app.services.kata_catalog.questions_for_item", return_value=[]), \
+             patch("app.services.kata_catalog.item_profile",
+                   side_effect=lambda c, i: next((r for r in ROWS if r["id"] == i), None)), \
+             patch("app.services.kata_catalog.question_item_ordinals",
+                   return_value=VARIANT_ORDINALS), \
+             patch("app.services.kata_catalog.resolve_catalog_item_id",
+                   side_effect=lambda c, i, **k: i), \
+             patch("app.services.events.get_recent_events",
+                   new=AsyncMock(return_value=[])):
+            bundle = await context_engine.build_coach_bundle(
+                "L", surface_context={"screen": "learning_lesson"},
+            )
+        current = bundle.get("current") or {}
+        self.assertFalse(current.get("position_assumed"))
         self.assertTrue(current.get("screen_has_variants"))
 
     async def test_a_screen_without_siblings_stays_unflagged(self):

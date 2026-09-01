@@ -337,6 +337,20 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
         self.write_shard(_shard())
         self.assertIsNone(ci.arrival_question_id(COMPONENT, "other-item"))
 
+    def test_vendor_page_id_maps_the_players_screen(self):
+        # The walk overheard the player announce this page id (CET narrates
+        # navigation with opaque ids the catalog never lists) — a live
+        # learner's page-enter must resolve to the slide that announced it.
+        shard = _shard()
+        shard["lomdot"][0]["slides"][0].setdefault("enrichment", {})
+        shard["lomdot"][0]["slides"][0]["enrichment"]["vendor_page_id"] = \
+            "mriro31m3ib50cl4i"
+        self.write_shard(shard)
+        self.assertEqual(
+            ci.vendor_screen_item(COMPONENT, "mriro31m3ib50cl4i"), ITEM)
+        self.assertIsNone(ci.vendor_screen_item(COMPONENT, "unknown-tail"))
+        self.assertIsNone(ci.vendor_screen_item("other-comp", "mriro31m3ib50cl4i"))
+
 
 class TheHitIsMeasured(ContentIntelWorld):
     def test_record_pregen_hit_swallows_metering_failures(self):

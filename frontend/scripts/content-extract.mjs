@@ -55,6 +55,32 @@ const page = await (await browser.newContext({
   locale: 'he-IL', viewport: { width: 1280, height: 860 },
 })).newPage()
 
+// The player narrates its own position over the wire, and the page id it
+// uses appears NOWHERE in the DOM — the wire is the only place to learn it.
+// CET posts `{"eventType":"page","verb":"viewed",…,"pageContentId":"…"}` to
+// its own /api/xapi-events/ (Kata later turns these into the `initialized`
+// statements a live learner's relay carries, object `…/{pageContentId}`);
+// other vendors may post real xAPI statements. Recording which ids fire
+// between screen advances pairs each captured screen with the exact id the
+// runtime will see in navigation/resume events. Ids only — bodies are never
+// persisted.
+const xapiObjectTails = []
+const PAGE_CONTENT_ID = /"pageContentId"\s*:\s*"([^"]+)"/g
+const XAPI_OBJECT_ID = /"object"\s*:\s*\{[^}]*?"id"\s*:\s*"([^"]+)"/g
+page.on('request', (request) => {
+  if (request.method() !== 'POST' && request.method() !== 'PUT') return
+  if (!/statements|xapi-events/i.test(request.url())) return
+  const body = request.postData() || ''
+  for (const match of body.matchAll(PAGE_CONTENT_ID)) {
+    if (match[1]) xapiObjectTails.push(match[1])
+  }
+  for (const match of body.matchAll(XAPI_OBJECT_ID)) {
+    const tail = match[1].replace(/\/+$/, '').split('/').pop() || ''
+    if (tail) xapiObjectTails.push(tail)
+  }
+})
+const drainObjectTails = () => xapiObjectTails.splice(0, xapiObjectTails.length)
+
 const finish = (payload) => {
   mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, JSON.stringify(payload, null, 1))
@@ -421,6 +447,11 @@ for (let index = 0; index < maxScreens; index += 1) {
   const hash = digest(captured.visible_text)
   if (seenHashes.has(hash)) break // a click that changed nothing means the end
   seenHashes.add(hash)
+  // The object ids the player announced while ARRIVING at this screen —
+  // everything since the previous screen's capture. The pipeline pairs the
+  // page-shaped one with this slide.
+  captured.vendor_page_ids = [...new Set(drainObjectTails())]
+    .filter((tail) => tail.length >= 6 && !/^q\d+$/i.test(tail))
   // Geometry pass: primary width first (it also marks the graphic surfaces
   // for element screenshots), then the other widths, then restore — the
   // advance clicks below must land on the primary layout.

@@ -93,7 +93,18 @@ FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 #: lesson box renders smaller geometry than any fixed-height capture; the
 #: runtime bilinear-interpolates. Height-independent players (CET) yield
 #: identical rows per height, making the height axis a natural no-op.
-CAPTURE_VERSION = 6
+#: v7: `vendor_page_id` — the player's own id for the page, read off its
+#: xAPI narration during the walk (CET pages announce `initialized` with an
+#: opaque id that exists NOWHERE in the DOM or catalog). Maps live
+#: navigation/resume events to catalog items, so the position pointer moves
+#: when the learner pages, not only when they answer.
+CAPTURE_VERSION = 7
+
+#: Capture formats the runtime still trusts. Serving is compatible one
+#: version back so a format bump does not blind every screen while the
+#: nightly walk backfills the new fields (v6 geometry is valid v7 geometry;
+#: v6 merely lacks vendor_page_id).
+CAPTURE_COMPAT = frozenset({6, CAPTURE_VERSION})
 
 #: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
 #: import time, and geometry resolution happens server-side per slide. Rects
@@ -368,6 +379,19 @@ def _ensure_loaded() -> None:
             continue
         _index_shard(shard, records)
     _STATE["records"] = records
+    # Player page id → catalog item, per component (v7 `vendor_page_id`).
+    # An id equality is content-neutral, so no freshness gate: a stale id
+    # simply never matches again, while a matching one names the same page.
+    vendor_screens: dict[tuple[str, str], str] = {}
+    for key, record in records.items():
+        enrichment_blob = record.get("enrichment")
+        vendor_id = (enrichment_blob or {}).get("vendor_page_id") \
+            if isinstance(enrichment_blob, dict) else ""
+        if vendor_id:
+            component_key, item_key = key.split("|")[0:2]
+            if item_key:
+                vendor_screens[(component_key, str(vendor_id))] = item_key
+    _STATE["vendor_screens"] = vendor_screens
     index_path = directory / "index.json"
     if index_path.exists():
         try:
@@ -488,6 +512,22 @@ def pregen_text(
     return {"text": text, "fingerprint": record["fingerprint"], "kind": kind}
 
 
+def vendor_screen_item(component_id: str, vendor_tail: str) -> Optional[str]:
+    """Map a player's page id (the tail of its xAPI object) to the catalog
+    item whose slide announced that id during the nightly walk, or None.
+
+    CET narrates navigation with opaque per-page ids that exist nowhere else
+    — not in the DOM, not in the catalog. The walk overhears them on the
+    wire; this lookup is what lets a live learner's page change (or resume)
+    move ``current_state`` instead of leaving the coach a screen behind.
+    """
+    if not enabled() or not component_id or not vendor_tail:
+        return None
+    _ensure_loaded()
+    return (_STATE.get("vendor_screens") or {}).get(
+        (str(component_id), str(vendor_tail)))
+
+
 def single_question_id(component_id: str, item_id: str) -> Optional[str]:
     """The slide's only question id, or None when it has zero or several."""
     if not enabled():
@@ -591,7 +631,7 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     if not record:
         return None
     raw = record.get("enrichment")
-    if not isinstance(raw, dict) or raw.get("capture_version") != CAPTURE_VERSION:
+    if not isinstance(raw, dict) or raw.get("capture_version") not in CAPTURE_COMPAT:
         return None
     if not is_fresh(key, record):
         return None  # stale geometry points at the wrong thing — worse than none
@@ -685,3 +725,4 @@ def reset_for_tests() -> None:
     _STATE["loaded"] = False
     _STATE["records"] = {}
     _STATE["meta"] = {}
+    _STATE["vendor_screens"] = {}
