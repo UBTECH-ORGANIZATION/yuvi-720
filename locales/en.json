@@ -3615,5 +3615,14 @@
   "actmap.why.low_engagement.down": "Some activities you started are still unfinished.",
   "actmap.change.moved.up.major": "A clear rise this past week",
   "actmap.why.low_reflection.down.fewer": "You stopped fewer times to note what helped you.",
-  "actmap.change.moved.up.minor": "A small rise this past week"
+  "actmap.change.moved.up.minor": "A small rise this past week",
+  "actmap.improve.motivation_relevance": "Come in to learn consistently, even briefly each time, and finish the activities you start.",
+  "actmap.improve.growth_mindset": "After a mistake, go back and try the same activity again instead of moving on — that's what drives this domain.",
+  "actmap.improve.initiative_responsibility": "Try to solve it yourself before opening a hint, and finish tasks without being reminded.",
+  "actmap.improve.self_regulation": "Read the question all the way through and take a moment to think before answering.",
+  "actmap.improve.self_awareness": "Stop at the end of every lesson and write one sentence about what helped you.",
+  "actmap.improve.support_emotional": "When you're stuck, ask for a hint or for help instead of staying stuck alone.",
+  "actmap.improve.fallback": "Every activity you do in this area starts to build it.",
+  "actmap.ask.improveCta": "Ask Yuvi how",
+  "actmap.ask.improveQuestion": "How can I get better at {topic}? What should I do this week?"
 }

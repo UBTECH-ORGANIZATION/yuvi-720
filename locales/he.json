@@ -3615,5 +3615,14 @@
   "actmap.why.low_engagement.down": "נשארו פעילויות שהתחלת ולא סיימת.",
   "actmap.change.moved.up.major": "עלייה משמעותית בשבוע האחרון",
   "actmap.why.low_reflection.down.fewer": "עצרת פחות פעמים לכתוב מה עזר לך.",
-  "actmap.change.moved.up.minor": "עלייה קטנה בשבוע האחרון"
+  "actmap.change.moved.up.minor": "עלייה קטנה בשבוע האחרון",
+  "actmap.improve.motivation_relevance": "היכנסו ללמוד בעקביות, גם לזמן קצר בכל פעם, וסיימו את הפעילויות שאתם מתחילים.",
+  "actmap.improve.growth_mindset": "אחרי טעות, חִזרו לנסות באותה פעילות במקום לעבור הלאה — זה מה שמניע את התחום הזה.",
+  "actmap.improve.initiative_responsibility": "נסו לפתור לבד לפני שפותחים רמז, וסיימו משימות בלי שמזכירים לכם.",
+  "actmap.improve.self_regulation": "קראו את השאלה עד הסוף וקחו רגע לחשוב לפני שעונים.",
+  "actmap.improve.self_awareness": "עצרו בסוף כל שיעור וכתבו במשפט אחד מה עזר לכם.",
+  "actmap.improve.support_emotional": "כשאתם נתקעים, בקשו רמז או עזרה במקום להישאר תקועים לבד.",
+  "actmap.improve.fallback": "כל פעילות שתעשו בתחום הזה תתחיל לבנות אותו.",
+  "actmap.ask.improveCta": "לשאול את יובי איך",
+  "actmap.ask.improveQuestion": "איך אני יכול/ה להשתפר ב{topic}? מה כדאי שאעשה השבוע?"
 }

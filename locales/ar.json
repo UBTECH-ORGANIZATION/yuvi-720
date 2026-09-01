@@ -3615,5 +3615,14 @@
   "actmap.why.low_engagement.down": "بقيت أنشطة بدأتها ولم تُنهِها.",
   "actmap.change.moved.up.major": "ارتفاع واضح خلال الأسبوع الماضي",
   "actmap.why.low_reflection.down.fewer": "توقّفت مرات أقل لتدوين ما ساعدك.",
-  "actmap.change.moved.up.minor": "ارتفاع طفيف خلال الأسبوع الماضي"
+  "actmap.change.moved.up.minor": "ارتفاع طفيف خلال الأسبوع الماضي",
+  "actmap.improve.motivation_relevance": "ادخلوا للتعلّم بانتظام، حتى لو لفترة قصيرة كل مرة، وأنهوا الأنشطة التي تبدأونها.",
+  "actmap.improve.growth_mindset": "بعد الخطأ، عودوا لمحاولة النشاط نفسه بدل الانتقال — هذا ما يحرّك هذا المجال.",
+  "actmap.improve.initiative_responsibility": "حاولوا الحل بأنفسكم قبل فتح تلميح، وأنهوا المهام دون أن يُذكِّركم أحد.",
+  "actmap.improve.self_regulation": "اقرأوا السؤال حتى النهاية وخذوا لحظة للتفكير قبل الإجابة.",
+  "actmap.improve.self_awareness": "توقّفوا في نهاية كل درس واكتبوا جملة واحدة عمّا ساعدكم.",
+  "actmap.improve.support_emotional": "عندما تعلقون، اطلبوا تلميحًا أو مساعدة بدل البقاء عالقين وحدكم.",
+  "actmap.improve.fallback": "كل نشاط تقومون به في هذا المجال يبدأ ببنائه.",
+  "actmap.ask.improveCta": "اسأل/ي يوفي كيف",
+  "actmap.ask.improveQuestion": "كيف يمكنني التحسّن في {topic}؟ وماذا يجدر بي أن أفعل هذا الأسبوع؟"
 }
