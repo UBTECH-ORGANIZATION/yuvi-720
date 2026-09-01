@@ -13,7 +13,7 @@
       "component_fingerprint": "432993f38f86be43",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:33:19Z",
+        "probed_at": "2026-09-01T11:47:28Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -54,7 +54,7 @@
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "שקופית פתיחה עם כותרת גדולה „מערכת צירים” ומתחתיה טקסט קטן „מיקום נקודה: דוגמה פתורה – איתי”."
+                "description": "לוח קואורדינטות ריק עם צירים מסומנים x ו-y, מספרים על הצירים, והוראה בעברית למצוא את מיקום הנקודה A(5,3)."
               }
             ],
             "question_rendering": "none",
@@ -282,8 +282,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:33:19Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:47:28Z"
           }
         }
       ]
@@ -297,7 +298,7 @@
       "component_fingerprint": "959343e555c6e4f6",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-01T09:27:56Z",
+        "probed_at": "2026-09-01T11:41:55Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -458,7 +459,7 @@
       "component_fingerprint": "afbb13924fea4fef",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:33:38Z",
+        "probed_at": "2026-09-01T11:47:47Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -499,13 +500,13 @@
                 "kind": "image",
                 "alt": "תמונה מוכלת",
                 "src_digest": "sha1:10a138e2671028b6",
-                "description": "אישה מחייכת ליד שולחן מחזיקה שלט עם הטקסט „הנקודה (6,5)”, מחשב נייד, מנורה, כוס ועטים."
+                "description": "אישה מחייכת מדברת בטלפון ליד שולחן, מחזיקה פתק עם הטקסט \"הנקודה (6,5)\", ועל השולחן מפה."
               },
               {
                 "kind": "image",
                 "alt": "נועה מחזיקה מפה שבה המטמון מסומן ב-x ומציגה אותה לחבריה.",
                 "src_digest": "sha1:8ba49aec936f1e8b",
-                "description": "מפה משובצת עם צירי מספרים, עצי דקל ואבנים/סלעים במיקומים שונים, ומסגרת כחולה סביב הקצה."
+                "description": "מפה משובצת עם צירים ומספרים, ועליה עצי דקל וסלעים מסומנים בנקודות שונות, מוקפת מסגרת כחולה וחולית."
               }
             ],
             "question_rendering": "none",
@@ -915,8 +916,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:33:38Z"
+            "vendor_page_id": "mriro31m3ib50cl4i",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:47:47Z"
           }
         },
         {
@@ -970,7 +972,7 @@
                 "kind": "image",
                 "alt": "אולם קולננוע",
                 "src_digest": "sha1:35d63d0680b79122",
-                "description": "אולם קולנוע עם מושבים אדומים מסודרים בשורות; בצד שמאל ובתחתית מופיעים מספרים לצירים."
+                "description": "שורות של מושבי קולנוע אדומים, עם מספרים לבנים בצד ובתחתית, ושתי מנורות קיר דולקות משני הצדדים."
               }
             ],
             "question_rendering": "none",
@@ -1809,8 +1811,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:33:38Z"
+            "vendor_page_id": "mrlmkvid1qspbvaxj",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:47:47Z"
           }
         },
         {
@@ -1839,7 +1842,7 @@
                 "kind": "image",
                 "alt": "אולם קולננוע",
                 "src_digest": "sha1:35d63d0680b79122",
-                "description": "שורת כיסאות אדומים באולם קטן, עם מספרים לאורך התחתית ובצד שמאל, ורקע כהה עם שני אורות קיר."
+                "description": "אולם קולנוע ריק עם מושבים אדומים מסודרים בשורות, מדרגות צדדיות וספרות 1–10 למטה ו-1–5 בצד שמאל."
               }
             ],
             "question_rendering": "none",
@@ -2678,8 +2681,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:33:38Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:47:47Z"
           }
         },
         {
@@ -2936,7 +2940,7 @@
       "component_fingerprint": "0498edf5171fb638",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:34:24Z",
+        "probed_at": "2026-09-01T11:48:34Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -3002,7 +3006,7 @@
                 "kind": "image",
                 "alt": "ברשת צירים הנקודה A ממוקמת 3 צעדים למעלה ו-2 צעדים ימינה מרשית הצירים, נקודה B ממוקמת 2 צעדים למעלה ו-7 צעדים ימינה, נקו",
                 "src_digest": "sha1:5086ccf395327ea8",
-                "description": "גרף קואורדינטות עם צירים x ו-y, רשת, ומסומנות נקודות A, B, C, D, E, F, G, H במיקומים שונים."
+                "description": "מערכת צירים עם גרף רשת, צירי x ו-y, ושש נקודות מסומנות באותיות A, B, C, D, E, F, G, H."
               }
             ],
             "question_rendering": "none",
@@ -3919,8 +3923,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:34:24Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:48:34Z"
           }
         },
         {
@@ -4024,7 +4029,7 @@
       "component_fingerprint": "1369245e93f78166",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:34:48Z",
+        "probed_at": "2026-09-01T11:48:58Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -4070,25 +4075,25 @@
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "מסך פתיחה עם הכותרת \"מערכת צירים\", כיתוב משנה וכפתור \"מתחילים\" במרכז."
+                "description": "מסך פתיחה עם הכותרת 'מערכת צירים', שורת משנה וכפתור 'מתחילים', על רקע עיצוב מופשט סגלגל."
               },
               {
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "מסך פתיחה עם הכותרת \"מערכת צירים\", כיתוב משנה וכפתור \"מתחילים\" במרכז."
+                "description": "מסך פתיחה עם הכותרת 'מערכת צירים', שורת משנה וכפתור 'מתחילים', על רקע עיצוב מופשט סגלגל."
               },
               {
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "מסך פתיחה עם הכותרת \"מערכת צירים\", כיתוב משנה וכפתור \"מתחילים\" במרכז."
+                "description": "מסך פתיחה עם הכותרת 'מערכת צירים', שורת משנה וכפתור 'מתחילים', על רקע עיצוב מופשט סגלגל."
               },
               {
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "חלק עליון של המסך עם הכותרת \"מערכת צירים\" בלבד."
+                "description": "חלק עליון של המסך עם הכותרת 'מערכת צירים' בלבד, על רקע בהיר."
               }
             ],
             "question_rendering": "none",
@@ -4615,8 +4620,9 @@
               "scroll_h": 1091
             },
             "no_internal_scroll": false,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:34:48Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:48:58Z"
           }
         }
       ]
@@ -4630,7 +4636,7 @@
       "component_fingerprint": "07f8abb2d5fcfd3b",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-01T09:28:06Z",
+        "probed_at": "2026-09-01T11:42:03Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -4836,7 +4842,7 @@
       "component_fingerprint": "75de2c5e8d8e6f91",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:35:08Z",
+        "probed_at": "2026-09-01T11:49:17Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -4902,7 +4908,7 @@
                 "kind": "image",
                 "alt": "במערכת צירים נמצא בוורוד כו אנעי לציר x ובסגול קו אופקי לציר x שני הקווים נחתכים ב-x ו-y חיוביים.",
                 "src_digest": "sha1:584e95ba36bbe355",
-                "description": "ציר קואורדינטות עם קו אנכי ורוד מסומן ״קו אנכי״, קו אופקי כחול מסומן ״קו אופקי״, וסימוני x ו-y."
+                "description": "צירי קואורדינטות עם קו אנכי ורוד וקו אופקי כחול, כיתוב 'קו אנכי' ו'קו אופקי' וסימוני x ו-y."
               }
             ],
             "question_rendering": "none",
@@ -5663,8 +5669,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:35:08Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:49:17Z"
           }
         },
         {
@@ -5884,7 +5891,7 @@
       "component_fingerprint": "7183baf83d75c562",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:35:33Z",
+        "probed_at": "2026-09-01T11:49:41Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -5931,6 +5938,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "c2dfae1b018f5bda",
                   "generated_at": "2026-08-31T11:27:12Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לבדוק את **מיקום הנקודות** ביחס לריבוע לפי ערכי ה־x וה־y שלהן: אם הנקודה בתוך הריבוע, על אחת הצלעות שלו או מחוצה לו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c2dfae1b018f5bda",
+                  "generated_at": "2026-09-01T12:09:46Z",
                   "model": "mini"
                 }
               }
@@ -6736,8 +6750,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:35:33Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:49:41Z"
           }
         },
         {
@@ -6760,6 +6775,20 @@
               ],
               "fingerprint": "0a7dcfa275ac964e",
               "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על **תזוזה במערכת הצירים**. נסו לחשוב על הפעולה ההפוכה כדי למצוא את המיקום המקורי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0a7dcfa275ac964e",
+                  "generated_at": "2026-09-01T12:09:46Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על **התנועה ההפוכה** לזו שמתוארת בשאלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0a7dcfa275ac964e",
+                  "generated_at": "2026-09-01T12:09:46Z",
+                  "model": "mini"
+                },
                 "explanation": {
                   "he": "כאן צריך לחשוב על **תנועה הפוכה** במערכת הצירים: אם נקודות הוזזו ממקומן, מחפשים איך חוזרים לאחור כדי לשחזר את המיקום המקורי. שימו לב לשינוי של ערכי ה־x וה־y בנפרד.",
                   "prompt_version": "cp-v2",
@@ -6874,7 +6903,7 @@
       "component_fingerprint": "423aa19f1864b387",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:35:56Z",
+        "probed_at": "2026-09-01T11:50:05Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -6933,7 +6962,7 @@
                 "kind": "image",
                 "alt": "במערכת צירים נקודה A נמצאת 5 יחידות למעלה ויחידה אחת ימינה מראשית הצירים, הנקודה B נמצאת יחידה אחת למעלה ו-5 יחידות ימינ",
                 "src_digest": "sha1:0aadfca5283ab78b",
-                "description": "גרף קואורדינטות עם צירים מסומנים, רשת וריבועים, ונקודות מסומנות באותיות A, B, C, D, E, F, G, H."
+                "description": "גרף קואורדינטות עם צירים מסומנים ונקודות A, B, C, D, E, F, G, H במיקומים שונים על הרשת."
               }
             ],
             "question_rendering": "none",
@@ -8162,8 +8191,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:35:56Z"
+            "vendor_page_id": "mq7uj8m819je5u65c",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:05Z"
           }
         },
         {
@@ -8249,7 +8279,7 @@
                 "kind": "image",
                 "alt": "במערכת צירים נמצא בוורוד כו אנעי לציר x ובסגול קו אופקי לציר x שני הקווים נחתכים ב-x ו-y חיוביים.",
                 "src_digest": "sha1:b323fceb343e21a0",
-                "description": "מערכת צירים עם ציר x וציר y, קו אנכי ורוד, קו אופקי כחול וטקסטים מסומנים לידם."
+                "description": "מערכת צירים עם קו אנכי ורוד וקו אופקי כחול, וסימוני צירים x ו-y וטקסטים בעברית."
               }
             ],
             "question_rendering": "radio",
@@ -9582,8 +9612,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:35:56Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:05Z"
           }
         },
         {
@@ -11034,8 +11065,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:35:56Z"
+            "vendor_page_id": "mqgf289l2bj21axcc",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:05Z"
           }
         }
       ]
@@ -11049,7 +11081,7 @@
       "component_fingerprint": "e08f2d9cb508c33b",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:36:32Z",
+        "probed_at": "2026-09-01T11:50:40Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
         "screens_mapped": 3
@@ -11115,7 +11147,7 @@
                 "kind": "image",
                 "alt": "במערכת צירים נקודה A נמצאת 5 יחידות למעלה ויחידה אחת ימינה מראשית הצירים, הנקודה B נמצאת יחידה אחת למעלה ו-5 יחידות ימינ",
                 "src_digest": "sha1:cc43c18a127c7af5",
-                "description": "מערכת צירים עם נקודות מסומנות באותיות A, B, C, D, E, F, G, H על גבי גרף."
+                "description": "תרשים צירים עם נקודות מסומנות באותיות A, B, C, D, E, F, G, H על מישור קואורדינטות."
               }
             ],
             "question_rendering": "none",
@@ -12344,8 +12376,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:36:32Z"
+            "vendor_page_id": "mq7uj8m819je5u65c",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:40Z"
           }
         },
         {
@@ -12400,7 +12433,7 @@
                 "kind": "image",
                 "alt": "במערכת צירים נמצא בוורוד קו אנכי לציר x.",
                 "src_digest": "sha1:7a33cfe75d94b4af",
-                "description": "מערכת צירים עם ציר y וציר x, וקו אנכי ורוד במרכז עם הכיתוב \"קו אנכי\"."
+                "description": "צירים מסומנים x ו-y, וקו אנכי ורוד במרכז עם הכיתוב ״קו אנכי״."
               }
             ],
             "question_rendering": "none",
@@ -13395,8 +13428,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:36:32Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:40Z"
           }
         },
         {
@@ -14847,8 +14881,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:36:32Z"
+            "vendor_page_id": "mqgf289l2bj21axcc",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:50:40Z"
           }
         }
       ]

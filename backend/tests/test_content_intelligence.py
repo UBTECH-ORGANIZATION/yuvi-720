@@ -351,6 +351,35 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
         self.assertIsNone(ci.vendor_screen_item(COMPONENT, "unknown-tail"))
         self.assertIsNone(ci.vendor_screen_item("other-comp", "mriro31m3ib50cl4i"))
 
+    def test_an_id_claimed_by_non_variants_is_dropped(self):
+        # A walk stuck on a drag-gated page stamped ONE physical page's id on
+        # several different slides (measured 2026-09-01 on COMPL-00001) —
+        # resolving any of them would move a live learner's pointer to the
+        # wrong item. The map refuses the whole claim: not moving beats wrong.
+        shard = _shard()
+        slides = shard["lomdot"][0]["slides"]
+        second = json.loads(json.dumps(slides[0]))
+        second["item_id"] = ITEM + "-b"
+        second["questions"][0]["question_text"] = "שאלה אחרת לגמרי"
+        slides.append(second)
+        for slide in slides:
+            slide.setdefault("enrichment", {})["vendor_page_id"] = "dup-page"
+        self.write_shard(shard)
+        self.assertIsNone(ci.vendor_screen_item(COMPONENT, "dup-page"))
+
+    def test_variant_siblings_keep_their_shared_page_id(self):
+        # Variants ARE one physical page — the shared claim is genuine; the
+        # first sibling anchors it and the variants hedge covers which one.
+        shard = _shard()
+        slides = shard["lomdot"][0]["slides"]
+        second = json.loads(json.dumps(slides[0]))
+        second["item_id"] = ITEM + "-b"   # identical question text = variant
+        slides.append(second)
+        for slide in slides:
+            slide.setdefault("enrichment", {})["vendor_page_id"] = "shared-page"
+        self.write_shard(shard)
+        self.assertEqual(ci.vendor_screen_item(COMPONENT, "shared-page"), ITEM)
+
 
 class TheHitIsMeasured(ContentIntelWorld):
     def test_record_pregen_hit_swallows_metering_failures(self):

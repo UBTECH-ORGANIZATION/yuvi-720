@@ -13,7 +13,7 @@
       "component_fingerprint": "b71895d564515320",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:47:53Z",
+        "probed_at": "2026-09-01T12:02:14Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 1
@@ -764,8 +764,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:47:53Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:02:14Z"
           }
         },
         {
@@ -1625,7 +1626,7 @@
       "component_fingerprint": "27c73737006c30ae",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:48:40Z",
+        "probed_at": "2026-09-01T12:03:01Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 1
@@ -1729,7 +1730,7 @@
                 "kind": "image",
                 "alt": "שחר, עדן ופלג מציגים את תוצאות המדידה",
                 "src_digest": "sha1:95fe1ce5cf81a8bb",
-                "description": "שלושה תלמידים בחלוקים לבנים יושבים ליד שולחן, במרכז מכשיר מדידה, וברקע כיתה עם ציוד ותלמידים נוספים."
+                "description": "שלושה תלמידים במעבדה, עומדים מאחורי מכשיר שקילה עם כלי זכוכית, עם שמות מסומנים בתחתית."
               }
             ],
             "question_rendering": "radio",
@@ -2789,8 +2790,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:48:40Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:03:01Z"
           }
         },
         {
@@ -3962,7 +3964,7 @@
       "component_fingerprint": "1923774df5662aaa",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:49:08Z",
+        "probed_at": "2026-09-01T12:03:29Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -4259,8 +4261,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:49:08Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:03:29Z"
           }
         },
         {
@@ -4342,13 +4345,13 @@
                 "kind": "image",
                 "alt": "מאזניים",
                 "src_digest": "sha1:8295f8ce6134f665",
-                "description": "מאזניים דיגיטליים כחולים עם משטח מתכת, תצוגה 00.00 וכפתור 'איפוס'."
+                "description": "מאזניים דיגיטליים כחולים עם משטח מתכת, תצוגה שמראה 00.00 וכפתור מסומן \"איפוס\"."
               },
               {
                 "kind": "image",
                 "alt": "כוס כימית",
                 "src_digest": "sha1:b8179ae53e65b8f0",
-                "description": "כוס מדידה/מיכל שקוף עם ידית וסימוני נפח מודפסים לאורך הדופן."
+                "description": "כוס מדידה שקופה עם ידית וסימוני נפח בצד."
               }
             ],
             "question_rendering": "drag",
@@ -5182,8 +5185,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:49:08Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:03:29Z"
           }
         },
         {
@@ -5360,7 +5364,7 @@
       "component_fingerprint": "dbbb5e102dcfc2e0",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:49:38Z",
+        "probed_at": "2026-09-01T12:04:00Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 3,
         "screens_mapped": 1
@@ -6213,8 +6217,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:49:38Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:04:00Z"
           }
         }
       ]

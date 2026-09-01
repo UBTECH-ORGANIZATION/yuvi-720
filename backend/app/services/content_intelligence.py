@@ -341,6 +341,13 @@ def _index_shard(shard: dict[str, Any], records: dict[str, dict[str, Any]]) -> N
                     str(q.get("question_id"))
                     for q in slide.get("questions") or [] if q.get("question_id")
                 ],
+                # Ordered question texts — what makes two slides the SAME
+                # learner-visible exercise (kata_catalog._variant_signature's
+                # notion); the vendor-page-id ambiguity guard compares these.
+                "question_texts": tuple(
+                    " ".join(str((q or {}).get("question_text") or "").split())
+                    for q in slide.get("questions") or []
+                ),
             }
             for question in slide.get("questions") or []:
                 qid = str(question.get("question_id") or "")
@@ -382,7 +389,13 @@ def _ensure_loaded() -> None:
     # Player page id → catalog item, per component (v7 `vendor_page_id`).
     # An id equality is content-neutral, so no freshness gate: a stale id
     # simply never matches again, while a matching one names the same page.
-    vendor_screens: dict[tuple[str, str], str] = {}
+    # An id claimed by slides that are NOT variants of one another names at
+    # most one of them (measured 2026-09-01: a walk stuck on a drag-gated
+    # page stamped its id on four different slides) — such claims are dropped
+    # entirely; moving a live learner's pointer to the wrong item is worse
+    # than not moving it. Variant siblings genuinely share their physical
+    # page: the first claims it, the variants hedge covers the ambiguity.
+    claims: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for key, record in records.items():
         enrichment_blob = record.get("enrichment")
         vendor_id = (enrichment_blob or {}).get("vendor_page_id") \
@@ -390,7 +403,16 @@ def _ensure_loaded() -> None:
         if vendor_id:
             component_key, item_key = key.split("|")[0:2]
             if item_key:
-                vendor_screens[(component_key, str(vendor_id))] = item_key
+                claims.setdefault((component_key, str(vendor_id)), []).append(
+                    {"item": item_key, "record": record})
+    vendor_screens: dict[tuple[str, str], str] = {}
+    for claim_key, claimants in claims.items():
+        signatures = {
+            tuple(c["record"].get("question_texts") or ()) for c in claimants}
+        if len(claimants) > 1 and (len(signatures) != 1
+                                   or not any(any(s) for s in signatures)):
+            continue
+        vendor_screens[claim_key] = claimants[0]["item"]
     _STATE["vendor_screens"] = vendor_screens
     index_path = directory / "index.json"
     if index_path.exists():

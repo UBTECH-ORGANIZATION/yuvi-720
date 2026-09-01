@@ -13,7 +13,7 @@
       "component_fingerprint": "2b0acd2205271d17",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:42:40Z",
+        "probed_at": "2026-09-01T11:56:52Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 6,
         "screens_mapped": 6
@@ -54,7 +54,7 @@
                 "kind": "image",
                 "alt": "צפרמול",
                 "src_digest": "sha1:34446d587f622c85",
-                "description": "אריזת שלפוחית של טבליות לבנות, חלק מהתאים ריקים ואחד פתוח."
+                "description": "אריזת בליסטר של טבליות לבנות עגולות על רקע בהיר."
               },
               {
                 "kind": "image",
@@ -66,13 +66,13 @@
                 "kind": "image",
                 "alt": "חומץ",
                 "src_digest": "sha1:3e48f30ddb3111e7",
-                "description": "בקבוק משקה זכוכית על שולחן עץ ליד צמח וכוס, ברקע חלון ופירות."
+                "description": "בקבוק משקה על שולחן עץ ליד צמחים ופירות."
               },
               {
                 "kind": "image",
                 "alt": "אדרנלין",
                 "src_digest": "sha1:ff17570a8f3ab9ca",
-                "description": "שני אנשים במבט מטושטש, אחד מרים ידיים; ברקע אורות צבעוניים מטושטשים."
+                "description": "שני אנשים חוגגים מול אורות צבעוניים, עם ידיים מורמות."
               }
             ],
             "question_rendering": "none",
@@ -638,8 +638,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "mskip3xh2m7dannom",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -668,13 +669,13 @@
                 "kind": "image",
                 "alt": "אצטון",
                 "src_digest": "sha1:75898b53e5c55edb",
-                "description": "מודל תלת־ממדי של מולקולה עם אטומי C, H ו-O, ולצידו יד לוחצת על מיכל כחול עם טקסט מסומן מתחת."
+                "description": "מודל מולקולרי משמאל, יד לוחצת על בקבוק פלסטיק משמאל מימין, וכפתורי בחירה עם טקסט מתחת."
               },
               {
                 "kind": "image",
                 "alt": "סוכרוז",
                 "src_digest": "sha1:d2a922dfa35a430a",
-                "description": "מודל תלת־ממדי מורכב של מולקולה, ולצידו ערימת אבקה לבנה על רקע כהה עם טקסט מסומן מתחת."
+                "description": "מודל מולקולרי משמאל, ערימת אבקה לבנה מימין, ומתחת כפתורי בחירה עם טקסט."
               }
             ],
             "question_rendering": "none",
@@ -1084,8 +1085,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "mskm7s3438n4tffmd",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -1114,25 +1116,25 @@
                 "kind": "image",
                 "alt": "אציטון",
                 "src_digest": "sha1:62c633c7b9aee003",
-                "description": "יד מחזיקה בקבוק פלסטיק כחול עם פקק לבן על שולחן עץ."
+                "description": "יד אוחזת בכוס פלסטיק כחולה עם מכסה לבן פתוח על שולחן עץ."
               },
               {
                 "kind": "image",
                 "alt": "מולקולת אצטון",
                 "src_digest": "sha1:bde533999c90d626",
-                "description": "מודל מולקולרי תלת־ממדי עם אטומי C, H ו-O מקושרים."
+                "description": "מודל מולקולרי תלת־ממדי עם אטומי C, H ו-O מסומנים בכדורים ובקשרים."
               },
               {
                 "kind": "image",
                 "alt": "סוכר",
                 "src_digest": "sha1:fd665386bf030647",
-                "description": "ערימת אבקה לבנה על רקע שחור."
+                "description": "ערימת אבקה לבנה מפוזרת על רקע שחור."
               },
               {
                 "kind": "image",
                 "alt": "מולקולת סוכרוז",
                 "src_digest": "sha1:79d1798f7262b423",
-                "description": "מודל מולקולרי תלת־ממדי מורכב מכדורים אפורים, אדומים ולבנים."
+                "description": "מודל מולקולרי תלת־ממדי צפוף של אטומים אדומים, לבנים ואפורים מחוברים בקשרים."
               }
             ],
             "question_rendering": "drag",
@@ -1698,8 +1700,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "mskn604t2kaomcbfl",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -1728,7 +1731,7 @@
                 "kind": "image",
                 "alt": "מולקולת מים",
                 "src_digest": "sha1:abef9a03a4637de0",
-                "description": "מודל כדורי של מולקולת מים עם אטום חמצן אדום ושני אטומי מימן אפורים, ולצדו טקסט בעברית."
+                "description": "מודל כדרורי של מולקולת מים עם אטום חמצן ושני אטומי מימן, ולצידו כוס מים ותרשים מולקולות."
               }
             ],
             "question_rendering": "none",
@@ -1956,8 +1959,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "mslh6hdj39rr44lwc",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -2214,8 +2218,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "mslkae4k39ohxscy7",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -2244,19 +2249,19 @@
                 "kind": "image",
                 "alt": "מודל של מולקולת מים",
                 "src_digest": "sha1:d0de923e7bfc4eb9",
-                "description": "מודל כדורי של מולקולת מים: כדור אדום עם O ושני כדורים אפורים עם H."
+                "description": "מולקולת מים תלת־ממדית: כדור אדום עם O ושני כדורים אפורים עם H."
               },
               {
                 "kind": "image",
                 "alt": "מודל של מולקולת מים",
                 "src_digest": "sha1:d0de923e7bfc4eb9",
-                "description": "מודל כדורי של מולקולת מים: כדור אדום עם O ושני כדורים אפורים עם H."
+                "description": "מולקולת מים תלת־ממדית: כדור אדום עם O ושני כדורים אפורים עם H."
               },
               {
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "מסך לימוד עם טקסט בעברית, נוסחה מרכזית 2H₂O, קווים מחברים וארבעה תיבות הסבר."
+                "description": "מסך לימוד עם נוסחת H2O במרכז, תיבות טקסט בעברית, קווים מחברים, ושתי מולקולות מים למעלה."
               }
             ],
             "question_rendering": "none",
@@ -2645,8 +2650,9 @@
               "scroll_h": 607
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:42:40Z"
+            "vendor_page_id": "msln8jr7n5vestha",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:56:52Z"
           }
         },
         {
@@ -2740,7 +2746,7 @@
       "component_fingerprint": "d58325c53aa8ae5a",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:43:42Z",
+        "probed_at": "2026-09-01T11:57:53Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 9,
         "screens_mapped": 9
@@ -2781,13 +2787,13 @@
                 "kind": "image",
                 "alt": "שוקולד",
                 "src_digest": "sha1:565c6150bc22feb3",
-                "description": "חפיסת שוקולד חומה עם עטיפה פתוחה ורדיד כסף, ושני חלקי שוקולד גלויים על רקע לבן."
+                "description": "טבלת שוקולד חומה עטופה חלקית בנייר כסף, עם קוביות שוקולד שבורות ופתיתים מסביב."
               },
               {
                 "kind": "image",
                 "alt": "כוס קולה",
                 "src_digest": "sha1:9a14ccbd36e71273",
-                "description": "כוס שתייה עם קוביות קרח, נוזל כהה, פלח לימון וקש מתכתי, על רקע לבן."
+                "description": "כוס משקה כהה עם קוביות קרח, קשית מתכת ופרוסת לימון בצד."
               }
             ],
             "question_rendering": "none",
@@ -3197,8 +3203,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msngwiz626qwxyl77",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -3227,7 +3234,7 @@
                 "kind": "image",
                 "alt": "כוס עם משקה תוסס",
                 "src_digest": "sha1:ed1e161899f0a8bd",
-                "description": "אישה יושבת בבית ומחזיקה קוביית שוקולד ליד פיה, ולידה כלב חום מביט בה בעיניים פקוחות."
+                "description": "אישה יושבת ליד כלב חום; מחזיקה גביע קטן ליד הפה, והכלב מביט בה בעיניים פעורות."
               }
             ],
             "question_rendering": "radio",
@@ -4144,8 +4151,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msr6h4551wylauvsp",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -4174,7 +4182,7 @@
                 "kind": "image",
                 "alt": "",
                 "src_digest": "sha1:ea7f96b911192ad1",
-                "description": "כלב עומד בדשא ליד סימן איסור אדום מעל חפיסת שוקולד."
+                "description": "כלב על דשא עם אייקון איסור אדום מעל חפיסת שוקולד."
               }
             ],
             "question_rendering": "drag",
@@ -4402,8 +4410,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msnh3if12bgyxyqwm",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -4432,7 +4441,7 @@
                 "kind": "image",
                 "alt": "כוס עם משקה תוסס",
                 "src_digest": "sha1:9f815bab49bc352b",
-                "description": "כוס משקה עם קרח וקשית על שולחן עץ, ליד כוס מים, בקבוקון ומפית; ברקע אנשים מטושטשים בבית קפה."
+                "description": "כוס משקה קר עם קרח וקשית על שולחן עץ, ליד מפית, כוס מים וטלפון; ברקע אנשים מטושטשים במסעדה."
               }
             ],
             "question_rendering": "radio",
@@ -5349,8 +5358,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "mslx2lq71teubii4s",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -5607,8 +5617,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msm0lv701szcm81d7",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -5637,7 +5648,7 @@
                 "kind": "image",
                 "alt": "מולקולת מים",
                 "src_digest": "sha1:2dde6a2c46d529f7",
-                "description": "מודל מולקולרי של פחמן דו-חמצני בתוך עיגול מואר."
+                "description": "מודל מולקולה של פחמן דו־חמצני: כדור אפור בין שני כדורים אדומים, בתוך עיגול מואר."
               }
             ],
             "question_rendering": "drag",
@@ -5865,8 +5876,9 @@
               "scroll_h": 870
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msndss4wqtmuyvhp",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -5895,7 +5907,7 @@
                 "kind": "image",
                 "alt": "תרכובת סוכרוז",
                 "src_digest": "sha1:a64903e1a38df53c",
-                "description": "כוס משקה קולה עם קוביות קרח, קש ופלח לימון."
+                "description": "כוס משקה מוגז עם קש ופלח לימון."
               }
             ],
             "question_rendering": "none",
@@ -6123,8 +6135,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msnjufv030xtfqock",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -6153,7 +6166,7 @@
                 "kind": "image",
                 "alt": "תרכובת סוכרוז",
                 "src_digest": "sha1:b43f2aab0d4aa39a",
-                "description": "מודל תלת־ממדי של מולקולה עם כדורים ומקלות, בצבעי אפור, אדום ולבן, ולצד ימין מקרא של יסודות: פחמן, מימן, חמצן."
+                "description": "מודל תלת־ממדי של מולקולה עם כדורים ומקלות בצבעי אפור, אדום ולבן; מימין מקרא עם פחמן, מימן וחמצן."
               }
             ],
             "question_rendering": "none",
@@ -7148,8 +7161,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "msoj51v6183cv0wda",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -7178,7 +7192,7 @@
                 "kind": "image",
                 "alt": "תרכובת סוכרוז",
                 "src_digest": "sha1:b43f2aab0d4aa39a",
-                "description": "מודל תלת־ממדי של מולקולה עם כדורים ומקלות בצבעי אפור, לבן ואדום; מקרא מימין עם סימני יסודות."
+                "description": "מודל תלת־ממדי של מולקולה עם כדורים אפורים, לבנים ואדומים; מקרא מימין עם סימוני פחמן, מימן וחמצן."
               }
             ],
             "question_rendering": "none",
@@ -8173,8 +8187,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:43:42Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:57:53Z"
           }
         },
         {
@@ -8228,7 +8243,7 @@
       "component_fingerprint": "0c4ba9a0d5353259",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:45:25Z",
+        "probed_at": "2026-09-01T11:59:36Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 5,
         "screens_mapped": 4
@@ -8294,7 +8309,7 @@
                 "kind": "image",
                 "alt": "מו",
                 "src_digest": "sha1:7220d9c744bfac46",
-                "description": "מודל תלת־ממדי של מולקולה: כדורים אפורים, לבנים ואדום מחוברים בקשרים, על רקע לבן."
+                "description": "מודל תלת־ממדי של מולקולה: כדורים אפורים, לבנים ואדומים מחוברים במקלות על רקע לבן."
               }
             ],
             "question_rendering": "radio",
@@ -9289,8 +9304,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:45:25Z"
+            "vendor_page_id": "mptti9na1c802zgwy",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:59:36Z"
           }
         },
         {
@@ -10403,8 +10419,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:45:25Z"
+            "vendor_page_id": "mrvwev80edhd6z37",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:59:36Z"
           }
         },
         {
@@ -10458,7 +10475,7 @@
                 "kind": "image",
                 "alt": "תמונה של מולקולה עם האותיות O S O",
                 "src_digest": "sha1:b3a23ee0728b2ef1",
-                "description": "מודל מולקולרי צבעוני: כדור צהוב עם האות S מחובר לשני כדורים אדומים עם האות O באמצעות קווים אדומים."
+                "description": "איור של מולקולה: כדור צהוב עם האות S במרכז, ושני כדורים אדומים עם האות O מחוברים אליו בקווים אדומים."
               }
             ],
             "question_rendering": "radio",
@@ -11453,8 +11470,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:45:25Z"
+            "vendor_page_id": "mrvxz28rffrk0ixr",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:59:36Z"
           }
         },
         {
@@ -12613,8 +12631,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:45:25Z"
+            "vendor_page_id": "mrvyhffu1uibz5l47",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T11:59:36Z"
           }
         }
       ]
@@ -12628,7 +12647,7 @@
       "component_fingerprint": "c60173ee0e3e19c3",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-01T09:28:15Z",
+        "probed_at": "2026-09-01T11:42:13Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -12789,7 +12808,7 @@
       "component_fingerprint": "db75a0a0ce39d02c",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:46:34Z",
+        "probed_at": "2026-09-01T12:00:43Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -12855,7 +12874,7 @@
                 "kind": "diagram",
                 "title": "",
                 "src_digest": null,
-                "description": "מקרא של ארבעה כדורים צבעוניים עם כיתובים בעברית: חמצן, חנקן, פחמן, מימן."
+                "description": "מקרא עם ארבעה עיגולים צבעוניים ולצידם כיתובים: חמצן, חנקן, פחמן, מימן."
               }
             ],
             "question_rendering": "none",
@@ -13317,8 +13336,9 @@
               "scroll_h": 940
             },
             "no_internal_scroll": false,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:46:34Z"
+            "vendor_page_id": "mrvwev80edhd6z37",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:00:43Z"
           }
         },
         {
@@ -13610,7 +13630,7 @@
       "component_fingerprint": "336ab91432ea340a",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-01T09:28:24Z",
+        "probed_at": "2026-09-01T11:42:23Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -13868,9 +13888,9 @@
       "component_fingerprint": "824e2a7ba490aed5",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-09-01T09:46:58Z",
+        "probed_at": "2026-09-01T12:01:07Z",
         "player_host": "learning.cet.ac.il",
-        "screens_seen": 2,
+        "screens_seen": 3,
         "screens_mapped": 1
       },
       "texts": {
@@ -14058,13 +14078,13 @@
                 "kind": "image",
                 "alt": "מודל כדורי",
                 "src_digest": "sha1:304e8f0f29ea8fe3",
-                "description": "מודל תלת־ממדי של מולקולה עם כדורים שחור, אדום ואפור וקשרים ביניהם; אטומי C, O ו-H מסומנים."
+                "description": "מודל תלת־ממדי של מולקולה עם כדורים ואטומים מסומנים C, H, O וקשרים בין האטומים."
               },
               {
                 "kind": "image",
                 "alt": "",
                 "src_digest": "sha1:bd9f5363c0dbedb1",
-                "description": "רקע לבן ריק ללא טקסט, צירים או אובייקטים נראים."
+                "description": "מסך לבן ריק ללא טקסט, צירים, תרשימים או אובייקטים נראים."
               }
             ],
             "question_rendering": "radio",
@@ -16541,8 +16561,9 @@
               "scroll_h": 1842
             },
             "no_internal_scroll": false,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:46:58Z"
+            "vendor_page_id": "mrvwev80edhd6z37",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:01:07Z"
           }
         }
       ]
@@ -16556,7 +16577,7 @@
       "component_fingerprint": "52801c57587ac964",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:47:31Z",
+        "probed_at": "2026-09-01T12:01:52Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -16628,7 +16649,7 @@
                 "kind": "image",
                 "alt": "מודל ג",
                 "src_digest": "sha1:43e40cc92d4e1776",
-                "description": "מודל תלת־ממדי של אוסף כדורים חומים צפופים, מסודרים במבנה קובייתי."
+                "description": "מודל תלת־ממדי של קבוצת כדורים חומים צפופים, מסודרים במבנה קובי, על רקע לבן."
               },
               {
                 "kind": "image",
@@ -17782,8 +17803,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:47:31Z"
+            "vendor_page_id": "mrvwev80edhd6z37",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:01:52Z"
           }
         },
         {

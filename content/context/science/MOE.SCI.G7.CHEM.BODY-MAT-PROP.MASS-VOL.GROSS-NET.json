@@ -13,7 +13,7 @@
       "component_fingerprint": "5bfcc764f96edea2",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:50:31Z",
+        "probed_at": "2026-09-01T12:04:52Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 5,
         "screens_mapped": 4
@@ -82,7 +82,7 @@
                 "kind": "image",
                 "alt": "שתי תיבות — אחת עם אוצר, אחת ריקה",
                 "src_digest": "sha1:32fe1e322deea7ae",
-                "description": "מאזני כפות מאוזנים עם תיבה גדולה משמאל ותיבה קטנה מימין, ולשתי הכפות תגיות ״10kg״."
+                "description": "מאזניים מאוזנים על שולחן, עם תיבה גדולה משמאל ותיבה קטנה מימין; מתחת לשתיהן כתוב 10kg."
               }
             ],
             "question_rendering": "radio",
@@ -765,8 +765,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:50:31Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:04:52Z"
           }
         },
         {
@@ -823,7 +824,7 @@
                 "kind": "image",
                 "alt": "שתי תיבות — אחת עם אוצר, אחת ריקה",
                 "src_digest": "sha1:32fe1e322deea7ae",
-                "description": "מאזניים מאוזנים עם שני ארונות/תיבות, כל אחת מסומנת 10kg, ורקע שולחן חום."
+                "description": "מאזני שקילה עם שני תיבות אוצר, אחת גדולה ואחת קטנה, ועל כל צד תגית 10kg."
               }
             ],
             "question_rendering": "radio",
@@ -1506,8 +1507,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:50:31Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:04:52Z"
           }
         },
         {
@@ -1561,7 +1563,7 @@
                 "kind": "image",
                 "alt": "שתי תיבות — אחת עם אוצר, אחת ריקה",
                 "src_digest": "sha1:32fe1e322deea7ae",
-                "description": "שתי תיבות אוצר על כןים עגולים, אחת גדולה ואחת קטנה, ולמעלה אייקון זכוכית מגדלת."
+                "description": "שתי תיבות אוצר על מעמדים עגולים, אחת גדולה ואחת קטנה, ובראש המסך אייקון חיפוש. למטה טקסט בעברית על רקע ורוד."
               }
             ],
             "question_rendering": "radio",
@@ -2244,8 +2246,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:50:31Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:04:52Z"
           }
         },
         {
@@ -2307,7 +2310,7 @@
                 "kind": "image",
                 "alt": "מזוודה",
                 "src_digest": "sha1:deb299adaa1d2174",
-                "description": "מזוודת טרולי כחולה כהה עומדת על רצפת עץ, עם ידית נשלפת וגלגלים."
+                "description": "מזוודת טרולי כחולה כהה עם ידית מתארכת וגלגלים, עומדת על רצפת עץ מול קיר בהיר."
               }
             ],
             "question_rendering": "none",
@@ -2834,8 +2837,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:50:31Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:04:52Z"
           }
         },
         {
@@ -3610,7 +3614,7 @@
       "component_fingerprint": "9b6df7a286c59a57",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-09-01T09:52:06Z",
+        "probed_at": "2026-09-01T12:06:27Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 1
@@ -3679,7 +3683,7 @@
                 "kind": "image",
                 "alt": "חטיף באריזה ואריזת פסטה עם תוכן",
                 "src_digest": "sha1:027db032a368df85",
-                "description": "שקית פסטה כחולה ומלפניה חטיף גרנולה ארוז על משטח בהיר, ובפינה הימנית העליונה אייקון זכוכית מגדלת."
+                "description": "שני מוצרים ארוזים על משטח בהיר: חטיף גרנולה קטן ושקית פסטה כחולה עם חלון שקוף."
               }
             ],
             "question_rendering": "none",
@@ -3907,8 +3911,9 @@
               "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 6,
-            "captured_at": "2026-09-01T09:52:06Z"
+            "vendor_page_id": "",
+            "capture_version": 7,
+            "captured_at": "2026-09-01T12:06:27Z"
           }
         },
         {

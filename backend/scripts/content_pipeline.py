@@ -256,6 +256,73 @@ def components_needing_recapture(
     )
 
 
+def _screen_page_id(screen: dict[str, Any], not_page_ids: set[str]) -> str:
+    """The page-shaped id among a screen's announced object ids (see
+    browse_component) — last announced wins, own/catalog ids excluded."""
+    return next(
+        (str(t) for t in reversed(screen.get("vendor_page_ids") or [])
+         if str(t) not in not_page_ids), "")
+
+
+def collapse_stuck_screens(
+    screens: list[dict[str, Any]], not_page_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Drop re-captures of a physical page the walk never actually left.
+
+    Measured 2026-09-01 on `COMPL-00001`: its first page gates navigation
+    behind a drag task the walk cannot perform, so every 'advance' click
+    re-captured page one — with enough answer-state noise to defeat the
+    visible-text hash. The positional mapper then spread FOUR captures of one
+    page across four catalog slides: wrong geometry, wrong vendor page id,
+    and a vendor map that would move a live learner's position to the wrong
+    item. Two same-page signals catch it: the page id the player announces
+    (a stuck page re-announces itself, never a new id) and byte-identical
+    measured geometry (for players that announce nothing)."""
+    kept: list[dict[str, Any]] = []
+    seen_page_ids: set[str] = set()
+    seen_geometry: set[str] = set()
+    for screen in screens:
+        page_id = _screen_page_id(screen, not_page_ids)
+        breakpoints = screen.get("anchor_breakpoints") or []
+        geometry = json.dumps(breakpoints, sort_keys=True, ensure_ascii=False)
+        if page_id and page_id in seen_page_ids:
+            continue
+        if breakpoints and geometry in seen_geometry:
+            continue
+        if page_id:
+            seen_page_ids.add(page_id)
+        if breakpoints:
+            seen_geometry.add(geometry)
+        kept.append(screen)
+    return kept
+
+
+def _variant_signature(slide: dict[str, Any]) -> tuple:
+    """Same notion as kata_catalog._variant_signature, over shard-model
+    slides: the ordered question texts; empty texts never match."""
+    texts = tuple(
+        " ".join(str((q or {}).get("question_text") or "").split())
+        for q in slide.get("questions") or [])
+    return texts if any(texts) else ()
+
+
+def blank_ambiguous_page_ids(slides: list[dict[str, Any]]) -> None:
+    """A page id claimed by slides that are NOT variants of one another names
+    at most one of them — mapping any is a coin flip that would move a live
+    learner's position pointer to the wrong item. Blank all such claims
+    (variant siblings genuinely share their physical page and keep theirs)."""
+    claims: dict[str, list[dict[str, Any]]] = {}
+    for slide in slides:
+        enrichment = slide.get("enrichment")
+        if isinstance(enrichment, dict) and enrichment.get("vendor_page_id"):
+            claims.setdefault(str(enrichment["vendor_page_id"]), []).append(slide)
+    for claimants in claims.values():
+        signatures = {_variant_signature(s) for s in claimants}
+        if len(claimants) > 1 and (len(signatures) != 1 or () in signatures):
+            for slide in claimants:
+                slide["enrichment"]["vendor_page_id"] = ""
+
+
 def map_screens_to_slides(
     screens: list[dict[str, Any]], slides: list[dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
@@ -343,8 +410,6 @@ async def browse_component(
                 "screens_seen": len((dump or {}).get("screens") or []),
                 "screens_mapped": 0}
 
-    screens = dump["screens"]
-    mapped = map_screens_to_slides(screens, model["slides"])
     # Ids that are NOT a page's own: the component itself, its catalog items,
     # its question ids. What remains of a screen's announced object ids is the
     # player's id for that page — the handle a live learner's navigation
@@ -354,6 +419,8 @@ async def browse_component(
         not_page_ids.add(str(slide.get("item_id") or ""))
         for q in slide.get("questions") or []:
             not_page_ids.add(str(q.get("question_id") or ""))
+    screens = collapse_stuck_screens(dump["screens"], not_page_ids)
+    mapped = map_screens_to_slides(screens, model["slides"])
     # A format-bump recapture replaces the enrichment wholesale, but the
     # vision descriptions in the committed shard are still true for any
     # graphic whose bytes (src digest) did not change — carry them over
@@ -402,9 +469,7 @@ async def browse_component(
             # The player's own id for this page (from its xAPI narration
             # during the walk) — lets the runtime move the position pointer
             # when a live learner navigates or resumes to it.
-            "vendor_page_id": next(
-                (str(t) for t in reversed(screen.get("vendor_page_ids") or [])
-                 if str(t) not in not_page_ids), ""),
+            "vendor_page_id": _screen_page_id(screen, not_page_ids),
             "capture_version": ci.CAPTURE_VERSION,
             "captured_at": probed_at,
         }
@@ -412,6 +477,7 @@ async def browse_component(
             carried = prior_descriptions.get(m.get("src_digest"))
             if carried and not m.get("description"):
                 m["description"] = carried
+    blank_ambiguous_page_ids(model["slides"])
     return {
         "verdict": "extracted" if len(mapped) == len(model["slides"]) else "partial",
         "probed_at": probed_at,

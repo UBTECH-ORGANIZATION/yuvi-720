@@ -310,5 +310,77 @@ class ScreensMapOntoSlides(unittest.TestCase):
         self.assertNotIn("c-002", mapped)
 
 
+class StuckWalksDoNotSpreadOnePage(unittest.TestCase):
+    """COMPL-00001's first page gates navigation behind a drag task the walk
+    cannot perform — every 'advance' re-captured page one with enough
+    answer-state noise to defeat the text hash, and the positional mapper
+    spread four captures of ONE page across four catalog slides."""
+
+    NOT_PAGE_IDS = {"c-01", "c-01-001", "c-01-002"}
+
+    def test_a_recaptured_page_id_collapses_to_its_first_capture(self):
+        screens = [
+            {"title": "עמוד 1", "vendor_page_ids": ["mr-page-1"],
+             "anchor_breakpoints": [{"w": 1280, "anchors": [1]}]},
+            {"title": "עמוד 1 אחרי קליק", "vendor_page_ids": ["mr-page-1"],
+             "anchor_breakpoints": [{"w": 1280, "anchors": [2]}]},
+            {"title": "עמוד 2", "vendor_page_ids": ["mr-page-2"],
+             "anchor_breakpoints": [{"w": 1280, "anchors": [3]}]},
+        ]
+        kept = pipeline.collapse_stuck_screens(screens, self.NOT_PAGE_IDS)
+        self.assertEqual([s["title"] for s in kept], ["עמוד 1", "עמוד 2"])
+
+    def test_identical_geometry_collapses_when_no_ids_fire(self):
+        # methodica announces no page ids — byte-identical measured geometry
+        # is the remaining same-page signal.
+        geometry = [{"w": 1280, "anchors": [{"region": "question"}]}]
+        screens = [
+            {"title": "א", "anchor_breakpoints": json.loads(json.dumps(geometry))},
+            {"title": "ב", "anchor_breakpoints": json.loads(json.dumps(geometry))},
+            {"title": "ג", "anchor_breakpoints": [{"w": 1280, "anchors": []}]},
+        ]
+        kept = pipeline.collapse_stuck_screens(screens, self.NOT_PAGE_IDS)
+        self.assertEqual([s["title"] for s in kept], ["א", "ג"])
+
+    def test_distinct_screens_all_survive(self):
+        screens = [
+            {"title": "א", "vendor_page_ids": ["mr-page-1"]},
+            {"title": "ב", "vendor_page_ids": ["mr-page-2"]},
+            {"title": "ג"},   # no ids, no geometry — nothing to match on
+        ]
+        kept = pipeline.collapse_stuck_screens(screens, self.NOT_PAGE_IDS)
+        self.assertEqual(len(kept), 3)
+
+    def test_an_ambiguous_claim_is_blanked_on_every_slide(self):
+        slides = [
+            {"item_id": "c-01-001",
+             "questions": [{"question_text": "שאלה על ריבוע"}],
+             "enrichment": {"vendor_page_id": "mr-dup"}},
+            {"item_id": "c-01-002",
+             "questions": [{"question_text": "שאלה על משולש"}],
+             "enrichment": {"vendor_page_id": "mr-dup"}},
+            {"item_id": "c-01-003",
+             "questions": [{"question_text": "שאלה שלישית"}],
+             "enrichment": {"vendor_page_id": "mr-solo"}},
+        ]
+        pipeline.blank_ambiguous_page_ids(slides)
+        self.assertEqual(slides[0]["enrichment"]["vendor_page_id"], "")
+        self.assertEqual(slides[1]["enrichment"]["vendor_page_id"], "")
+        self.assertEqual(slides[2]["enrichment"]["vendor_page_id"], "mr-solo")
+
+    def test_variant_siblings_keep_their_shared_claim(self):
+        slides = [
+            {"item_id": "c-01-001",
+             "questions": [{"question_text": "אותה שאלה בדיוק"}],
+             "enrichment": {"vendor_page_id": "mr-shared"}},
+            {"item_id": "c-01-002",
+             "questions": [{"question_text": "אותה שאלה בדיוק"}],
+             "enrichment": {"vendor_page_id": "mr-shared"}},
+        ]
+        pipeline.blank_ambiguous_page_ids(slides)
+        self.assertEqual(slides[0]["enrichment"]["vendor_page_id"], "mr-shared")
+        self.assertEqual(slides[1]["enrichment"]["vendor_page_id"], "mr-shared")
+
+
 if __name__ == "__main__":
     unittest.main()
