@@ -21,11 +21,12 @@ import os
 import re
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from app.brain import detectors
 from app.brain import mastery as mastery_model
+from app.core.env import signing_secret
 from app.brain.repository import (
     _get_collection_named,
     apply_brain_operators,
@@ -174,7 +175,7 @@ def _now() -> str:
 
 
 def _secret() -> bytes:
-    return (os.environ.get("SECRET_KEY") or "yuvi720-dev-secret").encode("utf-8")
+    return signing_secret().encode("utf-8")
 
 
 # ── slxapi launch token (stateless, HMAC-signed) ─────────────────────────────
@@ -374,6 +375,23 @@ def _object_tail(object_id: Any) -> str:
     return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
 
 
+def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
+    """An `initialized`/enter whose object names a PAGE we could not map.
+
+    CET narrates navigation with opaque per-page ids; until the nightly walk
+    has learned one, the id resolves to nothing — but the statement still
+    proves the learner changed screens. Component-level objects (the tail IS
+    the launched component) are lomda opens, not page moves, and stay out.
+    """
+    if event.get("verb") not in ("initialized", "enter"):
+        return False
+    if event.get("sub_item_id"):
+        return False
+    component_id = str(event.get("launch") or "")
+    tail = _object_tail(event.get("object_id"))
+    return bool(tail and component_id and tail != component_id)
+
+
 def is_learning_type_choice(event: dict[str, Any]) -> bool:
     """A 720 `selected` naming which REPRESENTATION the learner picked.
 
@@ -553,6 +571,9 @@ def normalize_statement(
 
 
 # ── Ingestion (idempotent) + brain update ────────────────────────────────────
+_indexes_ready = False
+
+
 async def _events_collection():
     return _get_collection_named("learning_events")
 
@@ -597,12 +618,19 @@ async def record_path_choice(
 
 
 async def get_recent_events(
-    learner_id: str, objective_id: Optional[str] = None, limit: int = 5
+    learner_id: str, objective_id: Optional[str] = None, limit: int = 5,
+    component_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Recent normalized events (newest first) — for the Coach bundle + triggers."""
+    """Recent normalized events (newest first) — for the Coach bundle + triggers.
+
+    ``component_id`` narrows to one lomda's events (the ``launch`` field) — the
+    resume-position probe needs the learner's last screen in THIS component,
+    which an objective-wide window can bury under a neighbour's activity."""
     query: dict[str, Any] = {"learner_id": normalize_learner_id(learner_id)}
     if objective_id:
         query["objective_id"] = objective_id
+    if component_id:
+        query["launch"] = component_id
     collection = await _events_collection()
     if collection is not None:
         try:
@@ -613,24 +641,57 @@ async def get_recent_events(
     # Fallback: filter the JSON store.
     events = list(_fallback_read().values())
     events = [e for e in events if e.get("learner_id") == query["learner_id"]
-              and (objective_id is None or e.get("objective_id") == objective_id)]
+              and (objective_id is None or e.get("objective_id") == objective_id)
+              and (component_id is None or e.get("launch") == component_id)]
     events.sort(key=lambda e: e.get("stored_at", ""), reverse=True)
     return events[:limit]
 
 
-async def get_learner_events(learner_id: str, limit: int = 500) -> list[dict[str, Any]]:
-    """Return bounded event evidence for learner-owned aggregate projections."""
+# Clock skew is the only way `stored_at` lands before `occurred_at`; measured at
+# under 3s across the collection, so minutes of slack keeps the filter a superset.
+_STORED_AT_SKEW = timedelta(minutes=5)
+EVENT_FETCH_CEILING = 20000
+
+
+async def get_learner_events(
+    learner_id: str,
+    limit: int = 500,
+    since: Optional[datetime] = None,
+) -> list[dict[str, Any]]:
+    """Return bounded event evidence for learner-owned aggregate projections.
+
+    `since` bounds by time and replaces `limit`. Events come back newest-first,
+    so a row cap drops the OLDEST rows — which for a busy learner is the whole
+    of last week, the half every week-over-week comparison is measured against.
+    A learner doing ~200 events a day exhausts a 500-row cap in under three days
+    and then reads as having no history at all.
+
+    The floor is applied to `stored_at`: it is the sort key, uniformly
+    formatted, and never earlier than `occurred_at` by more than clock skew, so
+    it yields a superset that the caller's own window then trims exactly.
+    `occurred_at` is stored in two different string shapes, so a range query on
+    it would silently mis-order.
+    """
     safe_id = normalize_learner_id(learner_id)
+    query: dict[str, Any] = {"learner_id": safe_id}
+    cap = limit
+    floor = ""
+    if since is not None:
+        floor = (since - _STORED_AT_SKEW).isoformat()
+        query["stored_at"] = {"$gte": floor}
+        cap = EVENT_FETCH_CEILING
     collection = await _events_collection()
     if collection is not None:
         try:
-            cursor = collection.find({"learner_id": safe_id}).sort("stored_at", -1).limit(limit)
+            cursor = collection.find(query).sort("stored_at", -1).limit(cap)
             return [event async for event in cursor]
         except Exception as exc:
             print(f"⚠️ learner events read failed, using fallback: {exc}")
     events = [event for event in _fallback_read().values() if event.get("learner_id") == safe_id]
+    if floor:
+        events = [e for e in events if str(e.get("stored_at") or "") >= floor]
     events.sort(key=lambda event: event.get("stored_at", ""), reverse=True)
-    return events[:limit]
+    return events[:cap]
 
 
 async def get_session_events(learner_id: str, session_id: str) -> list[dict[str, Any]]:
@@ -708,13 +769,39 @@ async def _attach_timing_evidence(event: dict[str, Any]) -> None:
     }
 
 
-async def _ensure_indexes(collection) -> None:
+async def ensure_indexes() -> None:
+    """Index the evidence store to match how it is actually read.
+
+    Every read here is one learner's slice in time order. Filtering on
+    `learner_id` alone leaves the sort to be done in memory over the learner's
+    whole history, which grows for a year and is never noticed — so the sort key
+    is part of each index.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = await _events_collection()
+    if collection is None:
+        return
     try:
-        await collection.create_index("learner_id")
-        await collection.create_index([("learner_id", 1), ("objective_id", 1)])
-        await collection.create_index([("learner_id", 1), ("session_id", 1)])
-    except Exception:  # pragma: no cover - best effort; _id is unique by default
-        pass
+        # `{learner_id} sort stored_at desc` — the Coach bundle, the triggers,
+        # and the dashboard's 500-event projection. Also serves the teacher's
+        # `{learner_id: $in, stored_at: $gte}` group scan.
+        await collection.create_index(
+            [("learner_id", 1), ("stored_at", -1)], name="learner_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("objective_id", 1), ("stored_at", -1)],
+            name="learner_objective_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("session_id", 1), ("occurred_at", 1)],
+            name="learner_session_occurred")
+        # The roadmap projection, which had no index of any kind.
+        await collection.create_index(
+            [("learner_id", 1), ("unit_id", 1), ("occurred_at", 1)],
+            name="learner_unit_occurred")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ learning_events index setup skipped: {type(exc).__name__}")
 
 
 async def _attach_answer_diagnostic(event: dict[str, Any]) -> None:
@@ -792,7 +879,7 @@ async def ingest_statement(
     is_new = True
     if collection is not None:
         try:
-            await _ensure_indexes(collection)
+            await ensure_indexes()
             res = await collection.update_one(
                 {"_id": event["_id"]},
                 {"$setOnInsert": event},
@@ -1468,6 +1555,19 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
                 set_updates["current_state.at"] = (
                     event.get("occurred_at") or event.get("stored_at")
                 )
+    elif _is_unmapped_screen_entry(event) and not pointer_is_stale:
+        # The player announced arrival at a page we cannot name (a CET page id
+        # the nightly walk has not yet learned). The learner has PROVABLY left
+        # wherever the pointer says — a stale position asserted as fact is how
+        # the coach quoted another screen's coordinates. Unknown beats wrong:
+        # the entry fallback re-grounds on their last recorded screen, flagged
+        # assumed, and the variant hedge applies.
+        set_updates["current_state.item_id"] = None
+        set_updates["current_state.question_id"] = None
+        if event_at:
+            set_updates["current_state.at"] = (
+                event.get("occurred_at") or event.get("stored_at")
+            )
     # Which representation the learner chose for a teaching screen ("listening"
     # = watch the clip, "cards" = flip the info cards). The screens themselves
     # are identical to us either way, so this is the only way the coach can talk

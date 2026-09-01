@@ -79,7 +79,8 @@ export function PraiseDialog({
     setState('sending')
     const results = await Promise.allSettled(chosen.map((learnerId) => sendKudos(
       learnerId, text, language,
-      { objective_id: strength!.id, kind: 'strength' },
+      /* A general good word (#485/#495) carries no topic — no moment. */
+      strength!.id ? { objective_id: strength!.id, kind: 'strength' } : undefined,
       { sparks, draftId },
     )))
     const failed = results.filter((row) => row.status === 'rejected').length
@@ -104,7 +105,9 @@ export function PraiseDialog({
         <h2 className="tch-praise__title" id="tch-praise-title">
           {t('tch.gaps.strength.praiseTitle')}
         </h2>
-        <p className="tch-praise__topic" dir="auto">{strength.title}</p>
+        {strength.title ? (
+          <p className="tch-praise__topic" dir="auto">{strength.title}</p>
+        ) : null}
 
         <fieldset className="tch-praise__who">
           <legend>{t('tch.gaps.strength.praiseWho', { count: chosen.length })}</legend>

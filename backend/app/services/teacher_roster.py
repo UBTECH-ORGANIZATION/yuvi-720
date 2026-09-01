@@ -11,10 +11,13 @@ learner behind a semaphore of 8 — the right thing for a dashboard, absurd for 
 name lookup that every teacher screen wants on mount. This is one org walk plus
 one projected query.
 
-**This serves the browser, never the tool layer.** The PII boundary is unchanged:
-`teacher_tools.data_tools` still scrubs `display_name` from everything the model
-sees, and the model still writes `{{student:<id>}}`. The substitution happens in
-the teacher's browser, from this.
+**This serves the browser — and one server-side matcher.** The PII boundary is
+unchanged: `teacher_tools.data_tools` still scrubs `display_name` from everything
+the model sees, and the model still writes `{{student:<id>}}`. The substitution
+happens in the teacher's browser, from this. The one other consumer is
+`find_student`, which *matches* a name the teacher typed against `names_for` on
+the server and returns ids only — a tool may consume names to match, never to
+return them.
 """
 
 from __future__ import annotations
@@ -25,7 +28,7 @@ from app.brain import org
 from app.brain.repository import _get_collection_named, _read_fallback
 
 
-async def _names_for(learner_ids: list[str]) -> dict[str, Optional[str]]:
+async def names_for(learner_ids: list[str]) -> dict[str, Optional[str]]:
     """Map learner id → display name, in one projected query.
 
     A learner who never finished the mapping flow has no `identity.display_name`
@@ -200,7 +203,7 @@ async def roster_for_teacher(teacher_id: str) -> dict[str, Any]:
             group_of[learner_id] = group_id
             order.append(learner_id)
 
-    names = await _names_for(order)
+    names = await names_for(order)
     chosen, decided = await _avatars_for(order)
     # Only for the learners who have not chosen: the derivation is a default,
     # and a default that overrode a choice would be a bug wearing a feature's

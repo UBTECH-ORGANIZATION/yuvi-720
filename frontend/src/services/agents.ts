@@ -93,6 +93,27 @@ export interface CoachActionOffer {
   category: 'navigation'
 }
 
+/** One grid sample of capture geometry: the target's rect and the content
+ *  extent, in document pixels as measured at viewport size `w`×`h`. */
+export interface PointerBreakpoint {
+  w: number
+  h: number
+  content_w: number
+  content_h: number
+  rect: { x: number; y: number; w: number; h: number }
+}
+
+/** A server-resolved "look here" directive: geometry from the nightly capture,
+ *  never from the model. `region` null / empty `breakpoints` = attention on
+ *  the lesson as a whole (the frontend renders its whole-frame glow). The
+ *  runtime interpolates the breakpoints to its live box width; valid only for
+ *  `question_key`'s screen. */
+export interface CoachPointerFrame {
+  region: string | null
+  breakpoints: PointerBreakpoint[]
+  question_key: string
+}
+
 /** Content-free, development-only record of a registered Coach tool call. */
 export interface CoachToolTraceStep {
   name: string
@@ -295,6 +316,7 @@ export async function streamAgent(
             visual?: CoachVisual
             can_visualize?: boolean
             actions?: CoachActionOffer[]
+            pointer?: CoachPointerFrame
             tool_trace?: CoachToolTraceStep[]
             query_intent?: string
             phase?: 'thinking' | 'speaking'
@@ -325,11 +347,6 @@ export async function streamAgent(
   }
 }
 
-export interface CompetencyChatMessage {
-  role: 'user' | 'assistant'
-  text: string
-}
-
 export type VisualMode = 'image' | 'video'
 
 /** On-demand visual: the learner asked to see a text-only reply as an image or
@@ -352,38 +369,6 @@ export async function requestVisualization(
     assistant_message_id: assistantMessageId,
   })
   return result.visual ?? null
-}
-
-/** Why did one activeness domain move since the learner last opened the map?
- * Returns a short verbal, non-numeric blurb (or null when none could be built). */
-export async function explainActivenessChange(
-  competency: string,
-  direction: 'up' | 'down',
-  language: string,
-): Promise<string | null> {
-  const result = await apiPost<{ text: string | null }>('/api/agent/activeness/change-explain', {
-    competency,
-    direction,
-    language,
-  })
-  return result.text ?? null
-}
-
-/** Ephemeral learning-map topic chat: the transcript lives only in the client
- * (never saved to conversation history); memory capture still runs server-side. */
-export function streamCompetencyChat(
-  competency: string,
-  messages: CompetencyChatMessage[],
-  conversationId: string,
-  language: string,
-  handlers: CoachStreamHandlers
-): Promise<void> {
-  return streamAgent('/api/agent/competency-chat', {
-    competency,
-    messages,
-    conversation_id: conversationId,
-    language,
-  }, handlers)
 }
 
 /** Silence that means a learner-facing stream has died rather than paused. The

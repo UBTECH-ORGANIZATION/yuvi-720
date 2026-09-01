@@ -35,6 +35,11 @@ class TourDefaults(unittest.IsolatedAsyncioTestCase):
     def test_the_teacher_tour_is_a_known_slug(self):
         self.assertIn("teacher", repository.TOUR_SLUGS)
 
+    def test_the_learner_tour_is_a_known_versioned_slug(self):
+        # Versioned because completion is permanent and there is no un-complete
+        # API: re-offering a redesigned tour means a new slug, not a migration.
+        self.assertIn("learner.v1", repository.TOUR_SLUGS)
+
     async def test_an_account_predating_the_phase_still_reads_a_list(self):
         """An old user document has no `tours_completed`; the default fills in."""
         with patch.object(repository, "get_user_by_id",

@@ -7,8 +7,9 @@ import { useAuth } from '../../providers/AuthProvider'
 import { useResponsive } from '../../hooks/useResponsive'
 import { apiGet, apiPatch, apiPost } from '../../services/api'
 import type { ChatMessage, LearnerGender, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
-import { YuviRobot3D, Yuvi_INTRO_READY_DELAY_MS } from './YuviRobot3D'
-import { PHASE_REWARDS, getAsset } from '../Yuvi-studio/YuviAssets'
+import { YuviRobot3D } from './YuviRobot3DLazy'
+import { Yuvi_INTRO_READY_DELAY_MS } from './yuviIntroTiming'
+import { PHASE_REWARDS, rewardLabelKey } from '../Yuvi-studio/yuviRewards'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
 import { Toast } from '../../components/Toast'
 
@@ -1105,22 +1106,18 @@ export function LearnerMappingPage() {
   return (
     <div className="learner-mapping-page">
       <AppBar activeStep={activeStep} />
-      {rewardAssetId && (() => {
-        const asset = getAsset(rewardAssetId)
-        if (!asset) return null
-        return (
-          <Toast
-            variant="reward"
-            icon="🎉"
-            title={t('YuviStudio.reward.title')}
-            body={t('YuviStudio.reward.body', { item: t(asset.labelKey) })}
-            actionLabel={t('YuviStudio.reward.cta')}
-            onAction={() => navigate('/yuvi-studio')}
-            onDismiss={() => setRewardAssetId(null)}
-            dismissLabel={t('YuviStudio.reward.dismiss')}
-          />
-        )
-      })()}
+      {rewardAssetId && (
+        <Toast
+          variant="reward"
+          icon="🎉"
+          title={t('YuviStudio.reward.title')}
+          body={t('YuviStudio.reward.body', { item: t(rewardLabelKey(rewardAssetId)) })}
+          actionLabel={t('YuviStudio.reward.cta')}
+          onAction={() => navigate('/yuvi-studio')}
+          onDismiss={() => setRewardAssetId(null)}
+          dismissLabel={t('YuviStudio.reward.dismiss')}
+        />
+      )}
       {showIncompleteReminder && (
         <Toast
           variant="info"

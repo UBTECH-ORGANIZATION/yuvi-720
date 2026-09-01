@@ -2,6 +2,7 @@ import type {
   AuthStatus,
   CoachDebugTrace,
   ConversationStatus,
+  EnvironmentBadge,
   Lead,
   LeadBoard,
   LeadFilters,
@@ -37,6 +38,10 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function getAuthStatus(signal?: AbortSignal): Promise<AuthStatus> {
   return apiFetch<AuthStatus>('/api/auth/status', { signal, cache: 'no-store' })
+}
+
+export function getEnvironmentBadge(signal?: AbortSignal): Promise<EnvironmentBadge> {
+  return apiFetch<EnvironmentBadge>('/api/environment', { signal, cache: 'no-store' })
 }
 
 export async function logout(): Promise<void> {

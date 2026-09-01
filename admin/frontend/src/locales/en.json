@@ -18,6 +18,7 @@
   "shell.signedInAs": "Signed in as",
   "shell.logout": "Sign out",
   "shell.publicAccess": "Temporary public access",
+  "shell.environment": "Environment",
   "nav.operations": "Operations and monitoring",
   "nav.aiUsage": "AI service usage",
   "nav.coachTraces": "Yuvi technical trace",

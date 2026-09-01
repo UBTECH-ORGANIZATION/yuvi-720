@@ -304,6 +304,106 @@
   font-size: var(--sp-fs-xs);
   margin-inline-end: var(--sp-2);
 }
+.tch-portrait__empty {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+/* A sentence the teacher asserted, attributed apart from the inferred ones —
+   the two voices are never merged (#454). */
+.tch-portrait__byTeacher {
+  display: inline-block;
+  margin-inline-start: var(--sp-2);
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-primary-200);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-600);
+  font-size: var(--sp-fs-xs);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* The regret path: a quiet link beside the chip, not a red button — the
+   withdrawal itself is also bi-temporal and recoverable. */
+.tch-portrait__undo {
+  margin-inline-start: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  text-decoration: underline;
+  cursor: pointer;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.tch-portrait__undo:hover { color: var(--sp-danger-600); }
+
+/* ── the teacher's insight entering the model (#454) ───────────────────────*/
+.tch-insight__door {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-block-start: var(--sp-3);
+  padding-block-start: var(--sp-3);
+  border-block-start: 1px solid var(--sp-border);
+}
+.tch-insight__savedNote { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-insight {
+  display: grid;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+}
+.tch-insight__intro {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-insight__field {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-insight__field textarea { resize: vertical; }
+.tch-insight__actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+.tch-insight__error { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+.tch-insight--warn { border-color: var(--sp-danger-600); }
+.tch-insight__warnTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-danger-600);
+}
+.tch-insight__reasons {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  display: grid;
+  gap: 2px;
+}
+.tch-insight__current {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-inline-start: 3px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+.tch-insight__currentLabel {
+  display: block;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
 
 /* ── the rebuilt header ─────────────────────────────────────────────────────*/
 
@@ -388,33 +488,6 @@
 }
 
 .tch-trend__quiet { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
-
-/* ── the topics that were hardest ──────────────────────────────────────────
-   One row per IDEA (objective, or its named fallback level), not per question
-   — every question on the topic summed into one rate, with the evidence
-   (questions · attempts) said next to the bar so a real pattern and a thin
-   one cannot wear the same paint. Each row expands to the content's own
-   `teaches` text and an assign-a-task action. */
-
-/* Bounded: past this the list scrolls inside its panel instead of pushing
-   the goals card (and the whole column) down the page. */
-.tch-topics {
-  display: grid;
-  gap: var(--sp-3);
-  max-block-size: 420px;
-  overflow-y: auto;
-  padding-inline-end: var(--sp-1);
-}
-.tch-topics__section { display: grid; gap: var(--sp-2); }
-
-.tch-topics__subject {
-  margin: 0;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--sp-ink-400);
-}
 
 /* The open-disclosure count on the wellbeing section header. Not the status
    token: an alert disc is the one element whose whole job is to be spotted in
@@ -648,7 +721,11 @@
   z-index: 2;
 }
 
-.tch-trend {
+/* `tch-momentum`, NOT `tch-trend`: the month panel already owns that name
+   (line ~427), and this chip's pill styles — inline-flex, 999px radius,
+   nowrap — silently won the collision and rendered the whole month dialog
+   as one giant pill. Two components, two names. */
+.tch-momentum {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -661,22 +738,22 @@
   cursor: help;
 }
 
-.tch-trend.is-up {
+.tch-momentum.is-up {
   color: var(--sp-success-600);
   background: color-mix(in srgb, var(--sp-success-600) 12%, transparent);
 }
 
-.tch-trend.is-down {
+.tch-momentum.is-down {
   color: var(--sp-warn-600);
   background: color-mix(in srgb, var(--sp-warn-600) 14%, transparent);
 }
 
-.tch-trend.is-flat {
+.tch-momentum.is-flat {
   color: var(--sp-ink-400);
   background: var(--sp-surface-2);
 }
 
-.tch-trend:focus-visible {
+.tch-momentum:focus-visible {
   outline: 2px solid var(--sp-primary-600);
   outline-offset: 1px;
 }
@@ -748,15 +825,7 @@
 
 /* ── the list behind a dial: one subject's objectives, measured ───────────── */
 
-.tch-objDialog { max-inline-size: 760px; inline-size: min(760px, 92vw); }
-
-.tch-objDialog__nameCell { display: grid; gap: 2px; min-inline-size: 0; }
-
-.tch-objDialog__meta {
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  font-variant-numeric: tabular-nums;
-}
+.tch-objDialog { max-inline-size: 640px; inline-size: min(640px, 92vw); }
 
 .tch-objDialog__loading { display: grid; gap: var(--sp-2); padding-block: var(--sp-3); }
 
@@ -767,26 +836,65 @@
   margin: 0;
   padding: 0;
   display: grid;
+  max-block-size: min(60vh, 520px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
+.tch-objDialog__objective { border-block-end: 1px solid var(--sp-border); }
+.tch-objDialog__objective:last-child { border-block-end: 0; }
+
+/* The drawer's summary line: name, when it was last touched, its state. */
 .tch-objDialog__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(90px, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
   padding-block: var(--sp-3);
-  border-block-end: 1px solid var(--sp-border);
+  cursor: pointer;
+  list-style: none;
 }
+.tch-objDialog__row::-webkit-details-marker { display: none; }
+.tch-objDialog__row::marker { content: ''; }
 
-.tch-objDialog__row:last-child { border-block-end: 0; }
+.tch-objDialog__chevron {
+  flex: none;
+  color: var(--sp-ink-300);
+  transition: transform var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-objDialog__drawer[open] .tch-objDialog__chevron { transform: rotate(180deg); }
 
 .tch-objDialog__name {
+  flex: 1;
   font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   min-inline-size: 0;
+}
+.tch-objDialog__drawer.is-not_started .tch-objDialog__name {
+  font-weight: var(--sp-fw-regular);
+  color: var(--sp-ink-500);
+}
+
+.tch-objDialog__when {
+  flex: none;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-objDialog__status {
+  flex: none;
+  font-size: var(--sp-fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tch-objDialog__status.is-mastered { color: var(--sp-success-600); }
+.tch-objDialog__status.is-in_progress { color: var(--sp-primary-600); }
+.tch-objDialog__status.is-not_started {
+  color: var(--sp-ink-400);
+  font-weight: var(--sp-fw-regular);
 }
 
 .tch-objDialog__review {
@@ -798,39 +906,42 @@
   white-space: nowrap;
 }
 
-.tch-objDialog__bar {
-  block-size: 6px;
-  border-radius: 999px;
-  background: var(--sp-border);
-  overflow: hidden;
+/* The lomdot timeline inside a drawer — the roadmap's grammar, indented
+   under its objective so the hierarchy is drawn, not implied. */
+.tch-objDialog__steps {
+  margin-block-end: var(--sp-3);
+  margin-inline-start: var(--sp-2);
 }
-
-.tch-objDialog__bar i {
-  display: block;
-  block-size: 100%;
-  border-radius: inherit;
+.tch-objDialog__steps .tch-roadmap__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 14px;
+  block-size: 14px;
+  color: transparent;
 }
-
-.tch-objDialog__bar .is-mastered { background: var(--sp-success-600); }
-.tch-objDialog__bar .is-in_progress { background: var(--sp-primary-500); }
-.tch-objDialog__bar .is-not_started { background: transparent; }
-
-.tch-objDialog__figures {
-  display: grid;
-  justify-items: end;
-  gap: 1px;
-  font-variant-numeric: tabular-nums;
+.tch-objDialog__steps .tch-roadmap__step.is-completed .tch-roadmap__marker {
+  border-color: var(--sp-success-600);
+  background: var(--sp-success-600);
+  color: #fff;
 }
-
-.tch-objDialog__figures strong { font-size: var(--sp-fs-sm); }
-.tch-objDialog__figures .is-mastered { color: var(--sp-success-600); }
-.tch-objDialog__figures .is-in_progress { color: var(--sp-ink-700); }
-.tch-objDialog__figures .is-not_started {
+.tch-objDialog__steps .tch-roadmap__step.is-locked .tch-roadmap__marker {
+  border-color: var(--sp-border);
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-300);
+}
+.tch-objDialog__steps .tch-roadmap__step.is-locked .tch-roadmap__title {
   color: var(--sp-ink-400);
   font-weight: var(--sp-fw-regular);
 }
-
-.tch-objDialog__evidence { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-objDialog__stepState {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-objDialog__steps .tch-roadmap__step.is-current .tch-objDialog__stepState {
+  color: var(--sp-primary-600);
+  font-weight: var(--sp-fw-semibold);
+}
 
 /* ── the planner's road, as a pipeline ────────────────────────────────────── */
 
@@ -1052,6 +1163,76 @@
   gap: var(--sp-2);
   color: var(--sp-success-600);
   font-size: var(--sp-fs-sm);
+}
+
+/* ── the mentoring section — the child's whole loop, on the child's page ─── */
+
+.tch-mentoringSec { display: grid; gap: var(--sp-3); align-content: start; }
+
+.tch-mentoringSec__actions { display: inline-flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* Quiet sub-headings inside one card: the card's title says "mentoring";
+   these say which of its three answers a block is. */
+.tch-mentoringSec__subhead {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+}
+
+/* Two lanes across the full row: the approve lane leads (inline start), the
+   talk log rides beside it. Each lane scrolls inside itself, so the card's
+   height is one lane, not the sum of both. */
+.tch-mentoringSec__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+.tch-mentoringSec__col {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  min-inline-size: 0;
+}
+@media (max-width: 980px) {
+  .tch-mentoringSec__cols { grid-template-columns: 1fr; }
+}
+
+/* The class inbox indents these rows under its avatars; here there is no
+   avatar to align to. */
+.tch-mentoringSec .tch-goalsPage__pendingGoals { padding-inline-start: 0; }
+.tch-mentoringSec__more { justify-self: start; }
+
+/* The counted progress as one chip — `3/1` with a ✓ when met; the sentence
+   it replaces rides the tooltip. */
+.tch-mentoringSec__prog {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.tch-mentoringSec__prog.is-met {
+  background: var(--sp-success-100);
+  color: var(--sp-success-600);
+}
+
+
+/* The log borrows the goals page's talk styles; inside this card the talks
+   scroll like the goal list does, so a term of records cannot stretch the
+   profile column. */
+.tch-mentoringSec .tch-goalsPage__talks {
+  max-block-size: 420px;
+  overflow-y: auto;
+  padding-inline-end: var(--sp-1);
 }
 
 /* ── goals: the card, not the screen ─────────────────────────────────────── */
@@ -1414,48 +1595,99 @@
 
 /* ── topics as drawers: name · subject · bar · figures, a rule between ───── */
 
-.tch-topics__topic {
+/* ── the focus points: practical instructions, flat rows, click-to-open ──── */
+
+.tch-focus {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  gap: var(--sp-1);
-  padding-block: var(--sp-3);
-  border-block-end: 1px solid var(--sp-border);
 }
 
-.tch-topics__topic:last-child { border-block-end: 0; padding-block-end: 0; }
+.tch-focus__item { border-block-end: 1px solid var(--sp-border); }
+.tch-focus li:last-child .tch-focus__item { border-block-end: 0; }
 
-/* Each topic is a <details> drawer: the summary row scans (name · subject ·
-   bar · figures), the drawer holds the "why" prose and the build-task act. */
-.tch-topics__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) auto minmax(80px, 1fr) auto auto;
+.tch-focus__row {
+  display: flex;
   align-items: center;
   gap: var(--sp-3);
+  padding-block: var(--sp-3);
   cursor: pointer;
   list-style: none;
-  /* The hover wash bleeds past the text without moving it. */
-  border-radius: var(--sp-radius-md);
-  padding-inline: var(--sp-2);
-  margin-inline: calc(-1 * var(--sp-2));
-  padding-block: var(--sp-1);
-  transition: background var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-focus__row::-webkit-details-marker { display: none; }
+.tch-focus__row::marker { content: ''; }
+.tch-focus__row:hover .tch-focus__point { color: var(--sp-primary-700); }
+
+.tch-focus__point {
+  flex: 1;
+  min-inline-size: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  overflow-wrap: anywhere;
 }
 
-.tch-topics__row:hover { background: var(--sp-surface-2); }
-
-/* The default disclosure triangle — the chevron at the row's end is the
-   affordance, drawn once instead of twice. */
-.tch-topics__row::-webkit-details-marker { display: none; }
-.tch-topics__row::marker { content: ''; }
-
-.tch-topics__chevron {
+.tch-focus__chevron {
+  flex: none;
   display: inline-flex;
   color: var(--sp-ink-300);
   transition: transform var(--sp-dur-fast) var(--sp-ease);
 }
+.tch-focus__item[open] .tch-focus__chevron { transform: rotate(180deg); }
 
-.tch-topics__topic[open] .tch-topics__chevron { transform: rotate(180deg); }
+/* The depth behind a point: what was identified, the learnings behind it,
+   and the task on exactly this skill. */
+.tch-focus__detail {
+  display: grid;
+  gap: var(--sp-2);
+  padding-block-end: var(--sp-3);
+}
 
-/* The subject on the row itself — same hue scheme as the roadmap's tags. */
+.tch-focus__why {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+  color: var(--sp-ink-500);
+}
+
+.tch-focus__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-focus__sources {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.tch-focus__src {
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: 1px var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  max-inline-size: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-focus__wait {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  animation: tch-digestWait 1.4s ease-in-out infinite alternate;
+}
+
+.tch-focus__none { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+/* The subject on a point (and wherever else a subject wears its hue). */
 .tch-topics__subj {
   font-size: var(--sp-fs-xs);
   border-radius: 999px;
@@ -1475,88 +1707,7 @@
   background: color-mix(in srgb, var(--sp-success-600) 10%, transparent);
 }
 
-.tch-topics__subj.is-english {
-  color: var(--sp-warn-600);
-  background: color-mix(in srgb, var(--sp-warn-600) 12%, transparent);
-}
-
-.tch-topics__detail {
-  display: grid;
-  gap: var(--sp-2);
-  justify-items: start;
-  padding-block-start: var(--sp-2);
-}
-
 .tch-topics__filter { margin-block-end: var(--sp-3); }
-
-.tch-topics__name {
-  font-weight: var(--sp-fw-semibold);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-900);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-inline-size: 0;
-}
-
-.tch-topics__levelTag {
-  flex: none;
-  font-size: 10px;
-  font-weight: var(--sp-fw-regular);
-  color: var(--sp-ink-400);
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  padding: 1px var(--sp-2);
-}
-
-.tch-topics__bar {
-  block-size: 8px;
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-bg-subtle);
-  overflow: hidden;
-}
-
-.tch-topics__bar i { display: block; block-size: 100%; border-radius: inherit; }
-.tch-topics__bar i.is-danger { background: var(--sp-danger-600); }
-.tch-topics__bar i.is-warn { background: var(--sp-warn-600); }
-.tch-topics__bar i.is-success { background: var(--sp-success-600); }
-
-.tch-topics__figures { display: grid; gap: 1px; justify-items: end; }
-
-.tch-topics__value {
-  font-weight: var(--sp-fw-bold);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--sp-fs-sm);
-}
-.tch-topics__value.is-danger { color: var(--sp-danger-600); }
-.tch-topics__value.is-warn { color: var(--sp-warn-600); }
-.tch-topics__value.is-success { color: var(--sp-success-600); }
-
-.tch-topics__evidence { font-size: var(--sp-fs-xs); color: var(--sp-ink-300); white-space: nowrap; }
-
-.tch-topics__assign { flex: none; }
-
-/* The digested "why" — a short paragraph under the row, never the vendor's
-   raw prose. */
-.tch-topics__why {
-  margin: 0;
-  font-size: var(--sp-fs-sm);
-  line-height: 1.6;
-  color: var(--sp-ink-500);
-}
-
-.tch-topics__digestWait {
-  margin: 0;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  animation: tch-digestWait 1.4s ease-in-out infinite alternate;
-}
-
-@media (max-width: 760px) {
-  .tch-topics__row { grid-template-columns: minmax(0, 1fr) auto auto; }
-  .tch-topics__bar { display: none; }
-  .tch-topics__subj { display: none; }
-}
 
 /* ── goal rows: one head line, a rule between goals ──────────────────────── */
 

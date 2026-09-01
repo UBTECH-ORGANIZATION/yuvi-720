@@ -86,6 +86,119 @@ export function needsAttention(row: RankableLearning): boolean {
   return row.success_rate !== null && row.success_rate < ATTENTION_MAX_SUCCESS
 }
 
+/* ── grouping by objective ─────────────────────────────────────────────────
+ *
+ * The first glance is objectives, not lomdot: forty learning cards is a wall,
+ * a dozen objective cards is a map. Clicking one opens the lomdot inside it.
+ */
+
+/** The fields grouping reads — a structural subset of `LearningRow`. */
+export interface GroupableLearning extends RankableLearning {
+  objective_id: string | null
+  objective_title: string | null
+  subject: string | null
+  attempts: number
+  correct: number
+}
+
+/** The bucket for rows that serve no catalogued objective. Not an id, so it
+ *  can never collide with one (same trick as the page's NO_UNIT). */
+export const NO_OBJECTIVE = '\u0000no-objective'
+
+/** One bucket per objective ID; a title without an id still gets its own
+ *  bucket rather than being lumped with the truly objective-less rows. */
+export function objectiveKeyOf(row: GroupableLearning): string {
+  if (row.objective_id) return row.objective_id
+  if (row.objective_title) return `\u0000t:${row.objective_title}`
+  return NO_OBJECTIVE
+}
+
+export interface ObjectiveGroup<T extends GroupableLearning> {
+  key: string
+  objectiveId: string | null
+  title: string | null
+  subject: string | null
+  rows: T[]
+  /** How many of the rows the class has opened at all. */
+  started: number
+  attempts: number
+  correct: number
+  /** Folded over raw attempts, never averaged over rates: two attempts on one
+   *  lomda must not weigh like two hundred on another. Null before any. */
+  successRate: number | null
+  /** How many rows would sit in the pinned "went badly" group — the card's
+   *  flag, so trouble stays visible from the objectives view too. */
+  attention: number
+  lastAt: string | null
+}
+
+/**
+ * The best name a group has when its objective was never titled.
+ *
+ * "ללא יעד" ×3 under one subject tells the teacher nothing — the cards are
+ * only distinguishable by what is INSIDE them, so that is where the name
+ * comes from: a single lomda lends its own name, several lomdot sharing one
+ * unit lend the unit's. Only a mixed bag with no shared unit stays nameless.
+ */
+export function objectiveGroupName<
+  T extends GroupableLearning & NameableLearning & { unit_title?: string | null },
+>(group: ObjectiveGroup<T>): string | null {
+  if (group.title) return group.title
+  if (group.rows.length === 1) {
+    const name = learningName(group.rows[0])
+    if (name.named) return name.title
+    // An unnamed lomda still falls through to its unit below.
+  }
+  const units = new Set(group.rows.map((row) => row.unit_title ?? ''))
+  if (units.size === 1) {
+    const only = [...units][0]
+    return only || null
+  }
+  return null
+}
+
+/**
+ * Bucket rows by objective. Objectives with trouble surface first, then the
+ * most recently worked — the same "live material on top" rule the unit
+ * sections use, with the same MoE C5 shape: these rank MATERIAL, and the rows
+ * carry no learner ids at all.
+ */
+export function groupByObjective<T extends GroupableLearning>(
+  rows: T[],
+): ObjectiveGroup<T>[] {
+  const buckets = new Map<string, ObjectiveGroup<T>>()
+  for (const row of rows) {
+    const key = objectiveKeyOf(row)
+    const group = buckets.get(key) ?? {
+      key,
+      objectiveId: row.objective_id ?? null,
+      title: row.objective_title ?? null,
+      subject: row.subject ?? null,
+      rows: [] as T[],
+      started: 0, attempts: 0, correct: 0,
+      successRate: null, attention: 0, lastAt: null,
+    }
+    group.rows.push(row)
+    if (row.started) group.started += 1
+    group.attempts += row.attempts
+    group.correct += row.correct
+    if (needsAttention(row)) group.attention += 1
+    if (row.last_activity_at && (group.lastAt ?? '') < row.last_activity_at) {
+      group.lastAt = row.last_activity_at
+    }
+    buckets.set(key, group)
+  }
+  return [...buckets.values()]
+    .map((group) => ({
+      ...group,
+      successRate: group.attempts ? group.correct / group.attempts : null,
+    }))
+    .sort((a, b) =>
+      Number(b.attention > 0) - Number(a.attention > 0)
+      || (b.lastAt ?? '').localeCompare(a.lastAt ?? '')
+      || (a.title ?? '').localeCompare(b.title ?? ''))
+}
+
 /**
  * Worst first, inside the pinned group.
  *

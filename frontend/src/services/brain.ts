@@ -209,6 +209,23 @@ export interface DashboardDTO {
     /** State-aware "how to improve" cause tags from live signals (behavioural,
      * no numbers). Empty when there's no activity evidence yet. */
     improve?: string[]
+    /** Where this domain stood about a week ago, from the same engine that
+     * produces `drivers`. The web prefers this over its own stored snapshot so
+     * an arrow always has a reason behind it. */
+    priorValue?: number | null
+    /** What actually moved this domain, strongest first, each with the direction
+     * it pushed. Unlike `improve` this includes what went well, so a domain that
+     * rose has a real behaviour to name. `lesson` is present only where the
+     * signal is lesson-shaped. */
+    drivers?: {
+        tag: string
+        dir: 'up' | 'down'
+        lesson?: string
+        /** This week's counts behind the cause, each paired with `<field>_prior`
+         *  from a week earlier. Lets the card pick wording that matches what
+         *  actually happened rather than one sentence per cause. */
+        facts?: Record<string, number>
+    }[]
     /** True only when there's enough real activity to explain *why* this domain
      * sits where it does. The activeness map gates its change arrow on this, so
      * it never shows a movement it can't ground in evidence. */
@@ -229,17 +246,6 @@ export function getCoachBundle(learnerId: string, signal?: AbortSignal) {
   return apiGet<CoachBundle>(
     `/api/brain/${encodeURIComponent(learnerId)}/context/coach`,
     signal ? { signal } : undefined
-  )
-}
-
-/** Create a learner self-goal derived from an activeness domain (mirrors to F4 goals). */
-export function createActivenessGoal(
-  learnerId: string,
-  payload: { domain: string; text: string },
-) {
-  return apiPost<{ id: string; text: string; domain: string }>(
-    `/api/brain/${encodeURIComponent(learnerId)}/activeness-goal`,
-    payload,
   )
 }
 

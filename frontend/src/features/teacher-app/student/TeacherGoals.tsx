@@ -1,4 +1,6 @@
-/* Goals tab: three AI drafts the teacher edits, and approval → sparks.
+/* Goal building blocks: AI drafts the teacher edits, and the counted-progress
+ * line — shared by the mentoring page, the profile's mentoring section and the
+ * goal dialog.
  *
  * Two rules the UI is built around.
  *
@@ -11,180 +13,84 @@
  * already summarized pays nothing, because the ledger row exists; the fifth
  * approval of a day pays nothing because of the cap. Both are reported as what
  * they are. Pretending otherwise would be easy and would make the wallet lie.
+ *
+ * (The standalone per-student goals TAB this file used to render is gone —
+ * the profile's `MentoringSection` is where that loop lives now, #497.)
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  EmptyState, Icon, Panel, SectionHeader, SkeletonCard, StatusPill,
+  EmptyState, Icon, Panel, SectionHeader,
 } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
-import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  approveStudentGoal, assignStudentGoal, getGoalSuggestions, getStudentGoals,
-  suggestStudentGoals,
-  type ApprovalResult, type GoalAction, type GoalConversation, type GoalDraft,
-  type StudentGoal,
+  assignStudentGoal, getGoalSuggestions, suggestStudentGoals,
+  type GoalAction, type GoalDraft, type StudentGoal,
 } from '../../../services/teacher'
-import { withFallback } from '../shared/EvidenceDisclosure'
 import { describeSignal } from '../shared/evidenceText'
 import './teacher-goals.css'
 
-interface Props { learnerId: string }
-
-export function TeacherGoals({ learnerId }: Props) {
-  const { t, language } = useI18n()
-  const { subject } = useTeacherScope()
-
-  const [conversations, setConversations] = useState<GoalConversation[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [nonce, setNonce] = useState(0)
-  const [outcome, setOutcome] = useState<ApprovalResult | null>(null)
-
-  const reload = useCallback(() => setNonce((value) => value + 1), [])
-
-  useEffect(() => {
-    let active = true
-    setIsLoading(true)
-    getStudentGoals(learnerId)
-      .then((result) => { if (active) setConversations(result.conversations ?? []) })
-      .catch(() => { if (active) setConversations([]) })
-      .finally(() => { if (active) setIsLoading(false) })
-    return () => { active = false }
-  }, [learnerId, nonce])
-
-  const rows = conversations.flatMap((conversation) =>
-    (conversation.goals ?? [])
-      .filter((goal) => goal.title || goal.next_steps)
-      .map((goal) => ({ goal, conversation })))
-
-  const pending = rows.filter(({ goal }) => !goal.approved_by)
-  const approved = rows.filter(({ goal }) => goal.approved_by)
-
-  const approve = async (goal: StudentGoal, conversationId: string) => {
-    const result = await approveStudentGoal(learnerId, goal.id, conversationId).catch(() => null)
-    if (result) { setOutcome(result); reload() }
-  }
-
-  if (isLoading) return <div aria-busy="true" style={{ display: 'grid', gap: 'var(--sp-3)' }}><SkeletonCard rows={2} /><SkeletonCard rows={3} /></div>
-
-  return (
-    <div className="tch-goals">
-      <GoalComposer
-        learnerId={learnerId}
-        language={language}
-        subject={subject ?? undefined}
-        onAssigned={reload}
-      />
-
-      {outcome ? <ApprovalOutcome result={outcome} onDismiss={() => setOutcome(null)} /> : null}
-
-      <section>
-        <SectionHeader
-          title={t('tch.goals.pending')}
-          subtitle={t('tch.goals.pending.hint', { count: pending.length })}
-        />
-        {pending.length ? (
-          <ul className="tch-goals__list">
-            {pending.map(({ goal, conversation }) => (
-              <GoalRow
-                key={goal.id}
-                goal={goal}
-                onApprove={() => void approve(goal, conversation.id)}
-              />
-            ))}
-          </ul>
-        ) : (
-          <EmptyState title={t('tch.goals.pending.none')} />
-        )}
-      </section>
-
-      {approved.length ? (
-        <section>
-          <SectionHeader title={t('tch.goals.approved')} />
-          <ul className="tch-goals__list">
-            {approved.map(({ goal }) => <GoalRow key={goal.id} goal={goal} />)}
-          </ul>
-        </section>
-      ) : null}
-    </div>
-  )
-}
-
-function GoalRow({ goal, onApprove }: { goal: StudentGoal; onApprove?: () => void }) {
-  const { t } = useI18n()
-  return (
-    <li className="tch-goal">
-      <div className="tch-goal__head">
-        <strong dir="auto">{goal.title}</strong>
-        <div className="tch-goal__meta">
-          <StatusPill tone={goal.approved_by ? 'strong' : 'neutral'}>
-            {withFallback(
-              t(`tch.goals.stage.${goal.progress_stage}`),
-              `tch.goals.stage.${goal.progress_stage}`,
-              goal.progress_stage,
-            )}
-          </StatusPill>
-          {goal.reward_value ? (
-            <span className="tch-goal__sparks">
-              <Icon name="spark" size={13} aria-hidden="true" />
-              {goal.reward_value}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      {goal.next_steps ? <p className="tch-goal__steps" dir="auto">{goal.next_steps}</p> : null}
-      <GoalProgressLine goal={goal} />
-      {goal.deadline ? (
-        <span className="tch-goal__deadline">{t('tch.goals.deadline', { date: goal.deadline })}</span>
-      ) : null}
-      {onApprove ? (
-        <button type="button" className="sp-btn sp-btn--sm" onClick={onApprove}>
-          {t('tch.goals.approve')}
-        </button>
-      ) : (
-        <span className="tch-goal__approved">
-          {t('tch.goals.approvedAt', { date: (goal.approved_at ?? '').slice(0, 10) })}
-        </span>
-      )}
-    </li>
-  )
-}
-
 /** What the platform counted for an action-tracked goal: "hints used 3/5 ✓".
  *  Exported for the class Goals page — the same number must read the same
- *  everywhere. Goals without an action render nothing, exactly as before. */
-export function GoalProgressLine({ goal }: { goal: StudentGoal }) {
-  const { t } = useI18n()
-  const progress = goal.progress
-  if (!progress) return null
-  return (
-    <p className={`tch-goal__progress${progress.met ? ' tch-goal__progress--met' : ''}`}
-       dir="auto">
-      <Icon name={progress.met ? 'check' : 'target'} size={13} aria-hidden="true" />
-      {t(`tch.goals.action.${progress.kind}`)}
-      {' · '}
-      {t('tch.goals.action.count', { count: progress.count, target: progress.target })}
-      {progress.met ? ` · ${t('tch.goals.action.met')}` : ''}
-    </p>
-  )
-}
-
-/** Says exactly what happened, including when that is "nothing". */
-function ApprovalOutcome({ result, onDismiss }: {
-  result: ApprovalResult
-  onDismiss: () => void
+ *  everywhere. Goals without an action render nothing, exactly as before.
+ *
+ *  For ask_yuvi the count is the SUBSTANTIVE message count (#462). `detailed`
+ *  (the approval inbox) additionally shows the verdict's basis — how many of
+ *  the messages counted and what was actually asked — because an automatic
+ *  judgement the teacher cannot inspect is worse than no judgement. */
+export function GoalProgressLine({ goal, detailed = false }: {
+  goal: StudentGoal
+  detailed?: boolean
 }) {
   const { t } = useI18n()
-  const key = result.already_approved ? 'tch.goals.outcome.already'
-    : result.already_earned ? 'tch.goals.outcome.alreadyEarned'
-    : result.capped ? 'tch.goals.outcome.capped'
-    : 'tch.goals.outcome.granted'
+  const [showBasis, setShowBasis] = useState(false)
+  const progress = goal.progress
+  if (!progress) return null
+  const quality = progress.quality ?? null
+  const labelRows = quality
+    ? Object.entries(quality.labels).sort((a, b) => b[1] - a[1])
+    : []
   return (
-    <div className="tch-goals__outcome" role="status">
-      <p dir="auto">{t(key, { sparks: result.granted })}</p>
-      <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onDismiss}>
-        {t('tch.goals.outcome.dismiss')}
-      </button>
+    <div className="tch-goal__progressWrap">
+      <p className={`tch-goal__progress${progress.met ? ' tch-goal__progress--met' : ''}`}
+         dir="auto">
+        <Icon name={progress.met ? 'check' : 'target'} size={13} aria-hidden="true" />
+        {t(`tch.goals.action.${progress.kind}`)}
+        {' · '}
+        {t('tch.goals.action.count', { count: progress.count, target: progress.target })}
+        {progress.met ? ` · ${t('tch.goals.action.met')}` : ''}
+        {quality?.uncertain ? (
+          <span className="tch-goal__uncertain">{t('tch.goals.quality.uncertain')}</span>
+        ) : null}
+      </p>
+      {detailed && quality && quality.chatted > 0 ? (
+        <div className="tch-goal__quality">
+          <p dir="auto">
+            {t('tch.goals.quality.basis', {
+              chatted: quality.chatted, substantive: quality.substantive,
+            })}
+          </p>
+          {labelRows.length ? (
+            <>
+              <button type="button" className="tch-evidence__toggle"
+                      aria-expanded={showBasis}
+                      onClick={() => setShowBasis((value) => !value)}>
+                <Icon name={showBasis ? 'chevronUp' : 'chevronLeft'} size={12} aria-hidden />
+                {t('tch.goals.quality.breakdown')}
+              </button>
+              {showBasis ? (
+                <ul className="tch-goal__qualityLabels">
+                  {labelRows.map(([label, count]) => (
+                    <li key={label} className="tch-evidence__sentence" dir="auto">
+                      {t(`tch.goals.quality.label.${label}`)} × {count}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -238,11 +144,18 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
     setIsSuggesting(false)
   }
 
+  const formRef = useRef<HTMLDivElement>(null)
+
   const use = (draft: GoalDraft) => {
     setTitle(draft.title)
     setSteps(draft.next_steps)
     setDeadline(draft.deadline)
     setAction(draft.action ?? null)
+    /* The press fills the form below the fold; without the scroll nothing in
+       the viewport changes and the teacher can't tell it worked. */
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
   }
 
   /* A failed assign used to be indistinguishable from a successful one: the
@@ -313,7 +226,7 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
         <EmptyState title={t('tch.goals.noSuggestions')} body={t('tch.goals.noSuggestions.body')} />
       ) : null}
 
-      <div className="tch-composer__form">
+      <div className="tch-composer__form" ref={formRef}>
         {/* At the fields, not only in the section header: a teacher typing a
             title must know the child is the reader, or the goal comes out as
             an instruction to themselves (the #253 voice bug, by hand). */}

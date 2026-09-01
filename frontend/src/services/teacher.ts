@@ -143,8 +143,14 @@ export type PortraitBlock =
  *  Not generated for the teacher: `student_description` is maintained lazily
  *  off the learner's own coach bundle, so this is a read of existing state and
  *  costs no model call on this screen. `null` when nothing has been observed. */
+export interface PortraitLine {
+  text: string
+  /** Asserted by a teacher (#454) — attributed apart, never merged in. */
+  by_teacher: boolean
+}
+
 export interface StudentPortrait {
-  blocks: { key: PortraitBlock; lines: string[] }[]
+  blocks: { key: PortraitBlock; lines: PortraitLine[] }[]
   /** Distinct evidence keys behind the sentences — provenance, not a score. */
   evidence_count: number
   updated_at: string | null
@@ -506,6 +512,17 @@ export interface TopicDigestItem {
 
 export interface TopicDigest {
   topics: TopicDigestItem[]
+  /** The panel's whole content now: practical "do this with the student"
+   *  points, each grounded in listed topic keys (server-validated, never
+   *  invented) and carrying the expandable depth behind it. Subject derived
+   *  from those topics; null when a point crosses subjects. */
+  focus_points?: {
+    point: string
+    /** What the platform identified and what to focus on — the click-open. */
+    explanation?: string
+    subject: string | null
+    keys: string[]
+  }[]
   cached: boolean
   generated_at: string | null
   /** True when the child's progress moved since this was written. */
@@ -567,6 +584,13 @@ export interface ObjectiveBreakdownRow {
   minutes: number
   help_used: number
   last_at: string | null
+  /** The lomdot inside this objective, in path order, each wearing the same
+   *  projected state the child's own track shows. */
+  components?: {
+    id: string | null
+    title: string | null
+    state: 'completed' | 'current' | 'available' | 'locked'
+  }[]
 }
 
 export function getStudentObjectives(learnerId: string, subject: string, language: string) {
@@ -682,6 +706,62 @@ export function createTeacherInsight(
 
 export function deleteTeacherInsight(learnerId: string, insightId: string) {
   return apiDelete(`/api/teacher/students/${learnerId}/insights/${insightId}`)
+}
+
+/* ── a teacher insight entering the student model itself (#454) ───────────── */
+
+/** One sentence Yuvi currently believes, summarized for the warning dialog. */
+export interface ModelBeliefSummary {
+  text: string
+  evidence_count: number
+  by_teacher: boolean
+}
+
+/** The deterministic diff behind the drastic-change warning: what Yuvi
+ *  currently believes, the evidence behind it, and what would change. */
+export interface ModelInsightDiff {
+  drastic: boolean
+  reasons: ('how_to_reach' | 'contradicts' | 'displaces' | 'strong_evidence')[]
+  block: PortraitBlock
+  current: ModelBeliefSummary[]
+  contradicted: ModelBeliefSummary | null
+  displaced: ModelBeliefSummary | null
+}
+
+export type ModelInsightResult =
+  | { saved: true; block: PortraitBlock; text: string; warned: boolean }
+  | { needs_confirmation: true; diff: ModelInsightDiff }
+
+/** `apiPost` discards error bodies, and the 409 body here IS the payload —
+ *  the warning the teacher must read before confirming — so this lane speaks
+ *  fetch directly, like `directMessages.send` does for its 422. */
+export async function addModelInsight(
+  learnerId: string,
+  body: { block: PortraitBlock; text: string; confirmed?: boolean }
+): Promise<ModelInsightResult> {
+  const response = await fetch(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/model-insight`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  if (response.ok || response.status === 409) return response.json()
+  const failure = new Error(`model-insight failed with ${response.status}`) as
+    Error & { status: number }
+  failure.status = response.status
+  throw failure
+}
+
+/** The regret path: withdraw a teacher-asserted sentence and restore what the
+ *  model believed beforehand. */
+export function withdrawModelInsight(
+  learnerId: string,
+  body: { block: PortraitBlock; text: string }
+) {
+  return apiPost<{ withdrawn: boolean; restored: number }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/model-insight/withdraw`, body)
 }
 
 export function getGroupInsights(groupId: string, language: string) {
@@ -800,10 +880,24 @@ export interface GoalAction {
   target: number
 }
 
-/** What actually happened: the count the backend measured for a GoalAction. */
+/** The judgement behind an ask_yuvi count (#462): how many messages were
+ *  substantive, out of how many were sent, by stored per-message labels. */
+export interface GoalQuality {
+  substantive: number
+  chatted: number
+  labels: Record<string, number>
+  /** The child visibly chatted enough but no labels exist — needs the
+   *  teacher's eye rather than a silent verdict either way. */
+  uncertain: boolean
+}
+
+/** What actually happened: the count the backend measured for a GoalAction.
+ *  For ask_yuvi, `count` is the SUBSTANTIVE message count — judged from the
+ *  stored quality labels, never by the teacher — and `quality` is the basis. */
 export interface GoalProgress extends GoalAction {
   count: number
   met: boolean
+  quality?: GoalQuality | null
 }
 
 export interface GoalDraft {
@@ -1133,6 +1227,22 @@ export interface LearningsView {
     group_size: number
   }
   recommendations: GroupRecommendation[]
+  /** The KPI strip's news: a trailing week against the week before it. */
+  pulse?: {
+    window_days: number
+    current: LearningsPulseWindow
+    previous: LearningsPulseWindow
+  }
+}
+
+export interface LearningsPulseWindow {
+  learnings_active: number
+  attempts: number
+  correct: number
+  success_rate: number | null
+  total_minutes: number | null
+  timing_available: boolean
+  active_learners: number
 }
 
 export interface LearningDetail {
@@ -1834,9 +1944,11 @@ export function updateTeacherState(patch: Partial<Pick<TeacherState, 'mentoring_
 
 /* ── the nav badge ────────────────────────────────────────────────────────── */
 
-/** How many finished goals are waiting for this teacher's sign-off, across
- *  every class they teach. Its own endpoint because the app bar asks for it on
- *  every screen — see the route's docstring. */
-export function getPendingGoalCount() {
-  return apiGet<{ count: number }>('/api/teacher/goals/pending-count')
+/** How many finished goals are waiting for this teacher's sign-off in the
+ *  selected class — the badge must agree with the class picker beside it.
+ *  Without a group it spans every class they teach. Its own endpoint because
+ *  the app bar asks for it on every screen — see the route's docstring. */
+export function getPendingGoalCount(groupId?: string | null) {
+  const query = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
+  return apiGet<{ count: number }>(`/api/teacher/goals/pending-count${query}`)
 }

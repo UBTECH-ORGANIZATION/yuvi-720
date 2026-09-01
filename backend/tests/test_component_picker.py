@@ -136,6 +136,12 @@ class ComponentPickerTests(unittest.TestCase):
             {"verb": "completed", "launch": "a", "result": {"success": True}},
             {"verb": "completed", "launch": "b", "result": {"success": False}},  # failed → not done
             {"verb": "answered", "launch": "c"},
+            # A per-SCREEN completed (object = sub-item) is item progress, not
+            # "the lesson is done" — counting it sent the hero past the launch
+            # gate's lock (the WRITE-00002 409).
+            {"verb": "completed", "launch": "d",
+             "object_id": "https://learning.cet.ac.il/metadata/x/screen-3",
+             "sub_item_id": "d-001"},
         ])
         self.assertEqual(done, {"a"})
 

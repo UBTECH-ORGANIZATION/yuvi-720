@@ -26,6 +26,22 @@ interface Props {
   onQa: (value: { q: string; a: string }[]) => void
 }
 
+/* Matches the server's clamp in mentoring.py (#503) — the two must agree or
+   the field silently loses the tail on save. */
+const NOTES_MAX = 4000
+
+/** The counter appears only when it starts to matter. A standing "12/4000"
+ *  under an empty field is chrome; near the ceiling it is the one fact the
+ *  teacher needs before the field stops taking letters. */
+function NotesCounter({ value }: { value: string }) {
+  if (value.length < NOTES_MAX * 0.85) return null
+  return (
+    <span className="tch-step__counter" dir="ltr" aria-live="polite">
+      {value.length}/{NOTES_MAX}
+    </span>
+  )
+}
+
 export function DiscussedStep({
   learnerId, notes, teacherOnlyNote, qa, onNotes, onTeacherOnlyNote, onQa,
 }: Props) {
@@ -82,9 +98,11 @@ export function DiscussedStep({
           rows={6}
           dir="auto"
           value={notes}
+          maxLength={NOTES_MAX}
           placeholder={t('tch.mentoring.notes.placeholder')}
           onChange={(event) => onNotes(event.target.value)}
         />
+        <NotesCounter value={notes} />
       </label>
 
       {!helperOpen ? (
@@ -158,8 +176,10 @@ export function DiscussedStep({
         <textarea
           className="sp-input" rows={3} dir="auto"
           value={teacherOnlyNote}
+          maxLength={NOTES_MAX}
           onChange={(event) => onTeacherOnlyNote(event.target.value)}
         />
+        <NotesCounter value={teacherOnlyNote} />
       </details>
     </div>
   )

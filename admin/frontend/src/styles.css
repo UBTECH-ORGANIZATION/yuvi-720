@@ -74,6 +74,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-identity span { color: var(--faint); font-size: 0.7rem; }
 .admin-identity strong { max-inline-size: 18rem; overflow: hidden; text-overflow: ellipsis; font-size: 0.82rem; white-space: nowrap; }
 .public-access-badge, .live-pill { display: inline-flex; align-items: center; gap: 0.45rem; min-block-size: 2.25rem; padding-inline: 0.8rem; border: 1px solid rgba(167, 139, 250, 0.24); border-radius: 999px; background: rgba(124, 92, 252, 0.11); color: #c4b5fd; font-size: 0.73rem; font-weight: 700; }
+.topbar-lead { display: flex; align-items: center; gap: 0.75rem; }
+.environment-pill { display: inline-flex; align-items: center; gap: 0.45rem; min-block-size: 2.25rem; padding-inline: 0.8rem; border: 1px solid var(--border-light); border-radius: 999px; background: var(--surface-soft); color: var(--ink-soft); font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+.environment-pill strong { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; }
+/* Production is the one value that must be impossible to skim past. */
+.environment-pill--production { border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.12); color: #fca5a5; }
 .live-pill i { inline-size: 0.45rem; block-size: 0.45rem; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 12px rgba(52, 211, 153, 0.8); }
 .language-control select { min-block-size: 2.35rem; padding-inline: 0.75rem 2rem; border: 1px solid var(--border-light); border-radius: 999px; background: var(--surface-soft); color: var(--ink-soft); }
 

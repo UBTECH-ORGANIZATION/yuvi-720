@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { navigate, useRoute } from '../app/router'
 import { useDismiss } from '../features/teacher-app/shared/useDismiss'
+import { useTeacherScope } from '../providers/TeacherScopeProvider'
 import { useI18n } from '../i18n/I18nProvider'
 import { getPendingGoalCount } from '../services/teacher'
 import { getTeacherUnread } from '../services/directMessages'
@@ -60,7 +61,7 @@ const FOLDED: { id: TeacherSection; path: string; icon: string; labelKey: string
   { id: 'messages', path: '/teacher/messages', icon: 'message', labelKey: 'tch.nav.messages' },
 ]
 
-/** Goals waiting for sign-off, on every screen.
+/** Goals waiting for sign-off in the selected class, on every screen.
  *
  * The number lives here rather than on the mentoring page because a teacher
  * should not have to visit a screen to discover it had something for them.
@@ -68,17 +69,23 @@ const FOLDED: { id: TeacherSection; path: string; icon: string; labelKey: string
  * survives navigation and this fetch happens once per session rather than once
  * per page — the interval is what keeps it honest after that, and it re-reads
  * on arriving at the mentoring screen, which is where the count changes.
+ *
+ * Scoped to the class picker beside it: a badge that says 8 over an inbox that
+ * shows 5 reads as a bug, and the missing 3 belonged to another class.
  */
 const PENDING_REFRESH_MS = 120_000
 
-function usePendingGoals(pathname: string) {
+function usePendingGoals(pathname: string, groupId: string | null) {
   const [count, setCount] = useState(0)
   const onMentoring = pathname.startsWith('/teacher/goals')
 
   useEffect(() => {
+    // No class selected yet means no scope to count in — showing the
+    // all-classes number for a beat and then shrinking it reads as a glitch.
+    if (!groupId) { setCount(0); return }
     let active = true
     const read = () => {
-      getPendingGoalCount()
+      getPendingGoalCount(groupId)
         .then((result) => { if (active) setCount(result.count ?? 0) })
         // A badge that cannot be counted shows nothing. Guessing a number here
         // would be worse than the teacher not knowing.
@@ -89,7 +96,7 @@ function usePendingGoals(pathname: string) {
     return () => { active = false; window.clearInterval(timer) }
     // Re-read on entering or leaving the screen that changes it: approving a
     // goal there must clear the badge without waiting two minutes.
-  }, [onMentoring])
+  }, [onMentoring, groupId])
 
   return count
 }
@@ -129,7 +136,8 @@ export function TeacherAppBar() {
   const pathname = useRoute()
   const { t } = useI18n()
   const active = sectionForRoute(pathname)
-  const pending = usePendingGoals(pathname)
+  const { groupId } = useTeacherScope()
+  const pending = usePendingGoals(pathname, groupId)
   const unreadMessages = useUnreadMessages(pathname)
 
   const [moreOpen, setMoreOpen] = useState(false)

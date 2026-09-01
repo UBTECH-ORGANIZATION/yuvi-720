@@ -17,7 +17,8 @@
 .sp-tour__overlay {
   position: fixed;
   inset: 0;
-  z-index: 900;   /* above the assistant dock, below nothing else */
+  z-index: 900;
+  /* above the assistant dock, below nothing else */
   opacity: 0.72;
 }
 
@@ -31,7 +32,7 @@
    continuous movement rather than a series of unrelated modals. */
 .sp-tour__hole {
   transition: x var(--sp-dur) var(--sp-ease), y var(--sp-dur) var(--sp-ease),
-              width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
+    width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
 }
 
 .sp-tour__halo {
@@ -40,14 +41,21 @@
   box-shadow: 0 0 0 2px var(--sp-primary-500);
   animation: sp-tour-pulse 2.4s var(--sp-ease) infinite;
   transition: top var(--sp-dur) var(--sp-ease), left var(--sp-dur) var(--sp-ease),
-              width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
+    width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
 }
 
 /* Spread only, one colour: `--sp-primary-400` does not exist in tokens.css and
    would have failed silently to no ring at all. */
 @keyframes sp-tour-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--sp-primary-500); }
-  50%      { box-shadow: 0 0 0 5px var(--sp-primary-500); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--sp-primary-500);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px var(--sp-primary-500);
+  }
 }
 
 /* Reduced motion: the spotlight still moves (it has to — it is the whole
@@ -59,6 +67,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .sp-tour__hole,
   .sp-tour__halo {
     transition: none;
@@ -70,7 +79,8 @@
 
 .sp-tour__card {
   position: fixed;
-  z-index: 901;
+  z-index: 902;
+  /* above the flying guide */
   width: 320px;
   max-width: calc(100vw - var(--sp-6));
   padding: var(--sp-4);
@@ -83,11 +93,14 @@
 
 .sp-tour__card:focus-visible,
 .sp-tour__card:focus {
-  outline: none;   /* the halo already says where we are */
+  outline: none;
+  /* the halo already says where we are */
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sp-tour__card { transition: none; }
+  .sp-tour__card {
+    transition: none;
+  }
 }
 
 .sp-tour__cardHead {
@@ -106,7 +119,9 @@
   line-height: var(--sp-lh-tight);
 }
 
-.sp-tour__yuvi { flex: 0 0 auto; }
+.sp-tour__yuvi {
+  flex: 0 0 auto;
+}
 
 .sp-tour__close {
   flex: 0 0 auto;
@@ -119,7 +134,10 @@
   cursor: pointer;
 }
 
-.sp-tour__close:hover { color: var(--sp-ink-700); background: var(--sp-bg-subtle); }
+.sp-tour__close:hover {
+  color: var(--sp-ink-700);
+  background: var(--sp-bg-subtle);
+}
 
 .sp-tour__body {
   margin: 0 0 var(--sp-4);
@@ -160,7 +178,123 @@
 }
 
 .sp-tour__skip:hover,
-.sp-tour__back:hover { color: var(--sp-ink-900); background: var(--sp-bg-subtle); }
+.sp-tour__back:hover {
+  color: var(--sp-ink-900);
+  background: var(--sp-bg-subtle);
+}
+
+/* ── the flying guide ──────────────────────────────────────────────────────*/
+
+/* Three nested elements, one transform each. Splitting X from Y is what bows
+   the flight into an arc: the axes run on different durations and curves, so a
+   diagonal move leaves the straight line between the two points. Stacking them
+   on one element would mean the bob, the bank and the travel fighting over a
+   single `transform`, and the last one written wins. */
+.sp-tour__guide,
+.sp-tour__guide-lift {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* physical: the coordinates are viewport-absolute, already mirrored */
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.sp-tour__guide {
+  z-index: 901;
+  /* above the scrim, below the card */
+  opacity: 0;
+  transition: transform 380ms var(--sp-ease), opacity 260ms var(--sp-ease);
+}
+
+.sp-tour__guide.is-in {
+  opacity: 1;
+}
+
+.sp-tour__guide-lift {
+  position: absolute;
+  /* Slower and eased at both ends, so Y lags X out of the turn and leads it
+     back in — the whole arc is this one mismatch. */
+  transition: transform 460ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.sp-tour__guide-bob {
+  position: absolute;
+  top: calc(var(--sp-tour-guide-h) / -2);
+  left: calc(var(--sp-tour-guide-w) / -2);
+  width: var(--sp-tour-guide-w);
+  height: var(--sp-tour-guide-h);
+  animation: sp-tour-hover 3.2s ease-in-out infinite;
+}
+
+.sp-tour__guide-robot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Banks into the turn; the sign comes from measured geometry, so RTL mirrors
+     without a second rule. */
+  transform: rotate(var(--sp-tour-bank, 0deg));
+  transition: transform 420ms var(--sp-ease);
+}
+
+.sp-tour__guide-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 118%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--sp-primary-500) 0%, transparent 66%);
+  opacity: 0.34;
+}
+
+@keyframes sp-tour-hover {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* Reduced motion: Yuvi still leads the tour, he just arrives instead of
+   travelling. Gentler, not gone — the cross-fade keeps the "he moved" beat. */
+.sp-tour__guide.is-still,
+.sp-tour__guide.is-still .sp-tour__guide-lift,
+.sp-tour__guide.is-still .sp-tour__guide-robot {
+  transition: opacity 200ms linear;
+}
+
+.sp-tour__guide.is-still .sp-tour__guide-bob {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .sp-tour__guide,
+  .sp-tour__guide-lift,
+  .sp-tour__guide-robot {
+    transition: opacity 200ms linear;
+  }
+
+  .sp-tour__guide-bob {
+    animation: none;
+  }
+}
+
+/* A phone docks the card to the bottom of the screen, where a full-size Yuvi
+   would sit on top of it. */
+@media (max-width: 640px) {
+  .sp-tour__guide {
+    --sp-tour-guide-w: 84px;
+    --sp-tour-guide-h: 102px;
+  }
+}
 
 /* ── the app-bar button ────────────────────────────────────────────────────*/
 
@@ -182,7 +316,10 @@
   border-color: var(--sp-primary-500);
 }
 
-.sp-tour__button:disabled { opacity: 0.5; cursor: default; }
+.sp-tour__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 @media (max-width: 640px) {
   .sp-tour__card {

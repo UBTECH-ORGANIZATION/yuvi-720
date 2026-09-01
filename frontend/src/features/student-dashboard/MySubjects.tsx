@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useMediaQuery } from '../../hooks/useResponsive'
@@ -75,13 +75,17 @@ function objectiveState(
 export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps) {
   const { t } = useI18n()
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const [filter, setFilter] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
 
-  const shown = useMemo(
-    () => (filter ? subjects.filter((s) => s.key === filter) : subjects),
-    [subjects, filter],
-  )
+  // Open the first subject as soon as one arrives, so the panel shows progress
+  // instead of an invitation to click. Once only: after that the learner owns
+  // the selection, and re-opening it would make "back" do nothing.
+  const primed = useRef(false)
+  useEffect(() => {
+    if (primed.current || !subjects.length) return
+    primed.current = true
+    setSelected(subjects[0].key)
+  }, [subjects])
 
   const active = useMemo(
     () => subjects.find((s) => s.key === selected) ?? null,
@@ -102,7 +106,7 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
   }, [active, units])
 
   return (
-    <section className="sd-section sd-subjects" aria-labelledby="sd-subjects-title">
+    <section className="sd-section sd-subjects" aria-labelledby="sd-subjects-title" data-tour="learner.subjects">
       <div className="sd-section__heading">
         <div>
           <span className="sd-section__kicker">{t('sdash.subjects.kicker')}</span>
@@ -115,37 +119,11 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
         </button>
       </div>
 
-      {subjects.length > 1 && (
-        <div className="sd-subjects__filters" role="tablist" aria-label={t('sdash.subjects.filter')}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === null}
-            className={`sd-subjects__filter${filter === null ? ' is-active' : ''}`}
-            onClick={() => setFilter(null)}
-          >
-            {t('sdash.subjects.filter.all')}
-          </button>
-          {subjects.map((subject) => (
-            <button
-              key={subject.key}
-              type="button"
-              role="tab"
-              aria-selected={filter === subject.key}
-              className={`sd-subjects__filter${filter === subject.key ? ' is-active' : ''}`}
-              onClick={() => setFilter(filter === subject.key ? null : subject.key)}
-            >
-              {subject.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Two columns on a wide card; below 860px the same two panes take turns
           in one column, so drilling in never makes the section taller. */}
       <div className={`sd-subjects__cols${active ? ' is-drilled' : ''}`}>
         <ul className="sd-subjects__list">
-          {shown.map((subject) => (
+          {subjects.map((subject) => (
             <li key={subject.key}>
               <button
                 type="button"

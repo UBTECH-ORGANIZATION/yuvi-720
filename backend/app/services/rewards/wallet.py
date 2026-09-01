@@ -22,9 +22,11 @@ from typing import Any, Optional
 from app.brain.repository import _get_collection_named
 from app.services.rewards.catalog import price_of
 from app.services.rewards.pricing import (
+    GOAL_VALUE_DEFAULT,
     GOAL_VALUE_MAX,
     GOAL_VALUE_MIN,
     STAGE_SHARE,
+    clamp_goal_value,
     stage_amount,
 )
 from learner_state import (  # type: ignore
@@ -34,6 +36,7 @@ from learner_state import (  # type: ignore
 )
 
 _FALLBACK = Path(__file__).resolve().parents[3] / ".runtime" / "rewards.json"
+_indexes_ready = False
 
 # Asking for help is a self-regulation win, not a failure — it is rewarded once,
 # at a flat rate, because its worth does not depend on the goal.
@@ -187,6 +190,25 @@ async def _ledger_release(key: str) -> None:
 
 # ── public API ────────────────────────────────────────────────────────────────
 
+async def ensure_indexes() -> None:
+    """The Sparks ledger is append-only, and read newest-first per learner.
+
+    The wallet itself is keyed by `_id`, which is already unique — only the
+    ledger's `{learner_id} sort at desc` needs an index of its own.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = _get_collection_named("reward_ledger")
+    if collection is None:
+        return
+    try:
+        await collection.create_index([("learner_id", 1), ("at", -1)], name="learner_at")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ reward_ledger index setup skipped: {type(exc).__name__}")
+
+
 async def get_wallet(learner_id: Optional[str]) -> dict[str, Any]:
     lid = normalize_learner_id(learner_id)
     return _public(await _load_wallet(lid))
@@ -306,6 +328,32 @@ async def _grant(
     return {"granted": payable, "reason": reason, "wallet": _public(wallet)}
 
 
+async def _goal_stages_paid(lid: str, goal_id: str) -> int:
+    """Sparks already paid for reaching stages on this goal.
+
+    Help requests are excluded: they are a flat, separate reward for asking, not
+    an instalment of the goal's price.
+    """
+    def _stage_rows(rows: Any) -> int:
+        total = 0
+        for row in rows:
+            if (row.get("ref") or {}).get("stage") in STAGE_SHARE:
+                total += int(row.get("amount") or 0)
+        return total
+
+    collection = _get_collection_named("reward_ledger")
+    if collection is not None:
+        try:
+            cursor = collection.find({"learner_id": lid, "ref.goal_id": goal_id})
+            return _stage_rows([row async for row in cursor])
+        except Exception as exc:
+            print(f"⚠️ goal payout read failed, using fallback: {exc}")
+    return _stage_rows([
+        row for row in (_read_fallback().get("ledger") or {}).values()
+        if row.get("learner_id") == lid and (row.get("ref") or {}).get("goal_id") == goal_id
+    ])
+
+
 async def grant_goal_stage(
     learner_id: str, goal_id: str, stage: str, goal_value: Optional[int] = None
 ) -> dict[str, Any]:
@@ -313,13 +361,23 @@ async def grant_goal_stage(
 
     ``goal_value`` is the price Yuvi put on that specific goal; the share paid
     for this stage is computed server-side, never sent by the client.
+
+    Finishing settles the balance rather than paying a fixed share. The learner
+    is shown one figure — what the goal is worth — so that figure has to be what
+    they end up with, and the route they took through the stages must not change
+    it. `progressed` is currently unreachable from the goal card, so a flat 50%
+    on `summarized` would quietly pay a quarter less than the goal advertised.
     """
-    amount = stage_amount(goal_value, stage)
+    lid = normalize_learner_id(learner_id)
+    if stage == "summarized":
+        value = clamp_goal_value(goal_value if goal_value else GOAL_VALUE_DEFAULT)
+        amount = max(0, value - await _goal_stages_paid(lid, goal_id))
+    else:
+        amount = stage_amount(goal_value, stage)
     if not amount:
         # `chosen` is the creation state and pays nothing, so opening goals
         # cannot be farmed.
         return {"granted": 0, "wallet": await get_wallet(learner_id)}
-    lid = normalize_learner_id(learner_id)
     return await _grant(
         lid,
         f"earn:{lid}:goal:{goal_id}:{stage}",

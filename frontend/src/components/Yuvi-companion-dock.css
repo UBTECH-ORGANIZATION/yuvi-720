@@ -2,7 +2,8 @@
 .Yuvi-companion-dock {
   position: fixed;
   inset-block-end: max(16px, env(safe-area-inset-bottom));
-  right: 16px; /* Intentional physical placement requested for every language. */
+  right: 16px;
+  /* Intentional physical placement requested for every language. */
   left: auto;
   z-index: 1410;
   inline-size: 150px;
@@ -12,16 +13,9 @@
 }
 
 .Yuvi-companion-dock.is-open:not(.is-opening):not(.is-closing),
-.Yuvi-companion-dock.is-studio-open {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(14px) scale(.92);
-  pointer-events: none;
-}
-
-/* Inside the activeness world Yuvi is the character standing on the stage.
-   Two of him on one screen would break that, so the dock steps aside. */
-body[data-aworld-open='true'] .Yuvi-companion-dock {
+.Yuvi-companion-dock.is-studio-open,
+/* Yuvi is elsewhere: in the studio, or out flying the tour. */
+.Yuvi-companion-dock.is-away {
   opacity: 0;
   visibility: hidden;
   transform: translateY(14px) scale(.92);
@@ -243,9 +237,15 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
   animation: Yuvi-orbit-return 1450ms ease both;
 }
 
-.Yuvi-companion-dock__robot [role="button"] { border-radius: 50%; }
+.Yuvi-companion-dock__robot [role="button"] {
+  border-radius: 50%;
+}
+
 .Yuvi-companion-dock__robot [role="button"],
-.Yuvi-companion-dock__robot canvas { cursor: pointer !important; }
+.Yuvi-companion-dock__robot canvas {
+  cursor: pointer !important;
+}
+
 .Yuvi-companion-dock__robot [role="button"]:focus-visible {
   outline: 3px solid rgba(111, 91, 255, 0.55);
   outline-offset: -7px;
@@ -295,7 +295,10 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
   background: var(--sp-primary-050);
 }
 
-.Yuvi-companion-dock__preview-head svg { inline-size: 29px; block-size: 29px; }
+.Yuvi-companion-dock__preview-head svg {
+  inline-size: 29px;
+  block-size: 29px;
+}
 
 .Yuvi-companion-dock__unread {
   position: absolute;
@@ -320,75 +323,325 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
   animation: Yuvi-portal-thinking 1.6s ease-in-out infinite;
 }
 
-@keyframes Yuvi-chat-loader-spin { to { transform: rotate(360deg); } }
+@keyframes Yuvi-chat-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes Yuvi-idle-hint {
-  0%, 88%, 100% { transform: scale(1); }
-  92% { transform: scale(1.045); }
-  96% { transform: scale(1.02); }
+
+  0%,
+  88%,
+  100% {
+    transform: scale(1);
+  }
+
+  92% {
+    transform: scale(1.045);
+  }
+
+  96% {
+    transform: scale(1.02);
+  }
 }
-@keyframes Yuvi-portal-spin { to { transform: rotate(360deg); } }
-@keyframes Yuvi-portal-glow { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
-@keyframes Yuvi-portal-thinking { 0%, 100% { box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2); } 50% { box-shadow: 0 18px 52px rgba(76, 201, 240, 0.42); } }
-@keyframes Yuvi-preview-enter { from { opacity: 0; transform: translateX(12px) scale(.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
+
+@keyframes Yuvi-portal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes Yuvi-portal-glow {
+
+  0%,
+  100% {
+    opacity: .55;
+    transform: scale(.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes Yuvi-portal-thinking {
+
+  0%,
+  100% {
+    box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 18px 52px rgba(76, 201, 240, 0.42);
+  }
+}
+
+@keyframes Yuvi-preview-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 @keyframes Yuvi-leave-orbit-and-drag {
-  0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0) scale(1); }
-  12% { opacity: 1; transform: translate3d(-68px, -18vh, 0) rotate(-7deg) scale(1.06); }
-  26% { opacity: 1; transform: translate3d(-28px, -40vh, 0) rotate(7deg) scale(1.02); }
-  36% { opacity: 1; transform: translate3d(31px, -48vh, 0) rotate(5deg) scale(1); }
-  43% { opacity: 1; transform: translate3d(24px, -48vh, 0) rotate(-2deg) scale(1); }
-  72% { opacity: 1; transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 20px)), -48vh, 0) rotate(-8deg) scale(.99); }
-  77% { opacity: 1; transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 8px)), -49vh, 0) rotate(4deg) scale(.99); }
-  82% { opacity: 1; transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 16px)), -48vh, 0) rotate(0) scale(.98); }
-  100% { opacity: 1; transform: translate3d(0, calc(-100vh + 190px), 0) rotate(0) scale(.9); }
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate3d(-68px, -18vh, 0) rotate(-7deg) scale(1.06);
+  }
+
+  26% {
+    opacity: 1;
+    transform: translate3d(-28px, -40vh, 0) rotate(7deg) scale(1.02);
+  }
+
+  36% {
+    opacity: 1;
+    transform: translate3d(31px, -48vh, 0) rotate(5deg) scale(1);
+  }
+
+  43% {
+    opacity: 1;
+    transform: translate3d(24px, -48vh, 0) rotate(-2deg) scale(1);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 20px)), -48vh, 0) rotate(-8deg) scale(.99);
+  }
+
+  77% {
+    opacity: 1;
+    transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 8px)), -49vh, 0) rotate(4deg) scale(.99);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 16px)), -48vh, 0) rotate(0) scale(.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, calc(-100vh + 190px), 0) rotate(0) scale(.9);
+  }
 }
+
 @keyframes Yuvi-return-to-orbit {
-  0% { opacity: 1; transform: translate3d(0, calc(-100vh + 190px), 0) scale(.92); }
-  12% { opacity: 1; transform: translate3d(calc(-1 * var(--sp-companion-width, 430px) - 20px), -50vh, 0) scale(1.04); }
-  20% { opacity: 1; transform: translate3d(calc(-.98 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.06); }
-  34% { opacity: 1; transform: translate3d(calc(-.94 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.05); }
-  40% { opacity: 1; transform: translate3d(calc(-.95 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.05); }
-  54% { opacity: 1; transform: translate3d(calc(-.80 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.04); }
-  60% { opacity: 1; transform: translate3d(calc(-.83 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.04); }
-  74% { opacity: 1; transform: translate3d(calc(-.45 * var(--sp-companion-width, 430px) - 20px), -48vh, 0) scale(1.03); }
-  86% { opacity: 1; transform: translate3d(calc(-.10 * var(--sp-companion-width, 430px) - 14px), -40vh, 0) scale(1.01); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  0% {
+    opacity: 1;
+    transform: translate3d(0, calc(-100vh + 190px), 0) scale(.92);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate3d(calc(-1 * var(--sp-companion-width, 430px) - 20px), -50vh, 0) scale(1.04);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate3d(calc(-.98 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.06);
+  }
+
+  34% {
+    opacity: 1;
+    transform: translate3d(calc(-.94 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.05);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translate3d(calc(-.95 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.05);
+  }
+
+  54% {
+    opacity: 1;
+    transform: translate3d(calc(-.80 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.04);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate3d(calc(-.83 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.04);
+  }
+
+  74% {
+    opacity: 1;
+    transform: translate3d(calc(-.45 * var(--sp-companion-width, 430px) - 20px), -48vh, 0) scale(1.03);
+  }
+
+  86% {
+    opacity: 1;
+    transform: translate3d(calc(-.10 * var(--sp-companion-width, 430px) - 14px), -40vh, 0) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
+
 @keyframes Yuvi-portal-return {
-  0%, 78% { opacity: 0; visibility: hidden; transform: scale(.68); }
-  91% { opacity: .72; visibility: visible; transform: scale(1.08); }
-  100% { opacity: 1; visibility: visible; transform: scale(1); }
+
+  0%,
+  78% {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(.68);
+  }
+
+  91% {
+    opacity: .72;
+    visibility: visible;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+  }
 }
+
 @keyframes Yuvi-orbit-return {
-  0%, 80% { opacity: 0; visibility: hidden; transform: rotate(-70deg) scale(.72); }
-  94% { opacity: .8; visibility: visible; transform: rotate(12deg) scale(1.08); }
-  100% { opacity: 1; visibility: visible; transform: rotate(0) scale(1); }
+
+  0%,
+  80% {
+    opacity: 0;
+    visibility: hidden;
+    transform: rotate(-70deg) scale(.72);
+  }
+
+  94% {
+    opacity: .8;
+    visibility: visible;
+    transform: rotate(12deg) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    visibility: visible;
+    transform: rotate(0) scale(1);
+  }
 }
+
 @keyframes Yuvi-hand-grip {
-  0%, 34% { opacity: 0; transform: translateX(8px) scaleY(.35); }
-  39% { opacity: 1; transform: translateX(0) scaleY(1.08); }
-  43%, 76% { opacity: 1; transform: translateX(0) scaleY(1); }
-  82%, 100% { opacity: 0; transform: translateX(-8px) scaleY(.45); }
+
+  0%,
+  34% {
+    opacity: 0;
+    transform: translateX(8px) scaleY(.35);
+  }
+
+  39% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1.08);
+  }
+
+  43%,
+  76% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1);
+  }
+
+  82%,
+  100% {
+    opacity: 0;
+    transform: translateX(-8px) scaleY(.45);
+  }
 }
+
 @keyframes Yuvi-thruster-flame {
-  from { transform: scaleX(.82) scaleY(.82); filter: brightness(.94); }
-  to { transform: translateY(4px) scaleX(1.08) scaleY(1.18); filter: brightness(1.2); }
+  from {
+    transform: scaleX(.82) scaleY(.82);
+    filter: brightness(.94);
+  }
+
+  to {
+    transform: translateY(4px) scaleX(1.08) scaleY(1.18);
+    filter: brightness(1.2);
+  }
 }
+
 @keyframes Yuvi-thrusters-flight {
-  0% { opacity: 0; transform: translateX(-50%) scaleY(.3); }
-  4%, 35% { opacity: 1; transform: translateX(-50%) scaleY(1); }
-  43% { opacity: .35; transform: translateX(-50%) scaleY(.55); }
-  46%, 73% { opacity: .78; transform: translateX(-50%) scaleY(.72); }
-  78% { opacity: 0; transform: translateX(-50%) scaleY(.25); }
-  83% { opacity: 0; transform: translateX(-50%) scaleY(.25); }
-  87%, 95% { opacity: .9; transform: translateX(-50%) scaleY(.78); }
-  100% { opacity: 0; transform: translateX(-50%) scaleY(.2); }
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(.3);
+  }
+
+  4%,
+  35% {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
+
+  43% {
+    opacity: .35;
+    transform: translateX(-50%) scaleY(.55);
+  }
+
+  46%,
+  73% {
+    opacity: .78;
+    transform: translateX(-50%) scaleY(.72);
+  }
+
+  78% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(.25);
+  }
+
+  83% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(.25);
+  }
+
+  87%,
+  95% {
+    opacity: .9;
+    transform: translateX(-50%) scaleY(.78);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(.2);
+  }
 }
+
 @keyframes Yuvi-thrusters-return {
-  0% { opacity: .9; transform: translateX(-50%) scaleY(.72); }
-  8%, 70% { opacity: 1; transform: translateX(-50%) scaleY(1); }
-  82% { opacity: .72; transform: translateX(-50%) scaleY(.68); }
-  94% { opacity: .25; transform: translateX(-50%) scaleY(.35); }
-  100% { opacity: 0; transform: translateX(-50%) scaleY(.2); }
+  0% {
+    opacity: .9;
+    transform: translateX(-50%) scaleY(.72);
+  }
+
+  8%,
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
+
+  82% {
+    opacity: .72;
+    transform: translateX(-50%) scaleY(.68);
+  }
+
+  94% {
+    opacity: .25;
+    transform: translateX(-50%) scaleY(.35);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(.2);
+  }
 }
 
 @media (max-width: 599px) {
@@ -397,7 +650,11 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
     right: 10px;
   }
 
-  .Yuvi-companion-dock__preview { right: 116px; inline-size: min(220px, calc(100vw - 130px)); inset-block-end: 30px; }
+  .Yuvi-companion-dock__preview {
+    right: 116px;
+    inline-size: min(220px, calc(100vw - 130px));
+    inset-block-end: 30px;
+  }
 
   .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot {
     animation-name: Yuvi-leave-orbit-and-drag-mobile;
@@ -409,28 +666,102 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
 }
 
 @keyframes Yuvi-leave-orbit-and-drag-mobile {
-  0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0) scale(1); }
-  12% { opacity: 1; transform: translate3d(-54px, -18vh, 0) rotate(-7deg) scale(1.04); }
-  26% { opacity: 1; transform: translate3d(-22px, -40vh, 0) rotate(7deg) scale(1); }
-  36% { opacity: 1; transform: translate3d(24px, -48vh, 0) rotate(5deg) scale(.98); }
-  43% { opacity: 1; transform: translate3d(18px, -48vh, 0) rotate(-2deg) scale(.98); }
-  72% { opacity: 1; transform: translate3d(calc(-100vw + 70px), -48vh, 0) rotate(-8deg) scale(.95); }
-  77% { opacity: 1; transform: translate3d(calc(-100vw + 58px), -49vh, 0) rotate(4deg) scale(.95); }
-  82% { opacity: 1; transform: translate3d(calc(-100vw + 66px), -48vh, 0) rotate(0) scale(.94); }
-  100% { opacity: 1; transform: translate3d(5px, calc(-100vh + 160px), 0) rotate(0) scale(.9); }
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate3d(-54px, -18vh, 0) rotate(-7deg) scale(1.04);
+  }
+
+  26% {
+    opacity: 1;
+    transform: translate3d(-22px, -40vh, 0) rotate(7deg) scale(1);
+  }
+
+  36% {
+    opacity: 1;
+    transform: translate3d(24px, -48vh, 0) rotate(5deg) scale(.98);
+  }
+
+  43% {
+    opacity: 1;
+    transform: translate3d(18px, -48vh, 0) rotate(-2deg) scale(.98);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate3d(calc(-100vw + 70px), -48vh, 0) rotate(-8deg) scale(.95);
+  }
+
+  77% {
+    opacity: 1;
+    transform: translate3d(calc(-100vw + 58px), -49vh, 0) rotate(4deg) scale(.95);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translate3d(calc(-100vw + 66px), -48vh, 0) rotate(0) scale(.94);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(5px, calc(-100vh + 160px), 0) rotate(0) scale(.9);
+  }
 }
 
 @keyframes Yuvi-return-to-orbit-mobile {
-  0% { opacity: 1; transform: translate3d(5px, calc(-100vh + 160px), 0) scale(.92); }
-  12% { opacity: 1; transform: translate3d(calc(-1 * 100vw + 44px), -50vh, 0) scale(1.02); }
-  20% { opacity: 1; transform: translate3d(calc(-.98 * 100vw + 44px), -49vh, 0) scale(1.04); }
-  34% { opacity: 1; transform: translate3d(calc(-.94 * 100vw + 44px), -49vh, 0) scale(1.03); }
-  40% { opacity: 1; transform: translate3d(calc(-.95 * 100vw + 44px), -49vh, 0) scale(1.03); }
-  54% { opacity: 1; transform: translate3d(calc(-.80 * 100vw + 44px), -49vh, 0) scale(1.02); }
-  60% { opacity: 1; transform: translate3d(calc(-.83 * 100vw + 44px), -49vh, 0) scale(1.02); }
-  74% { opacity: 1; transform: translate3d(calc(-.45 * 100vw + 44px), -48vh, 0) scale(1.01); }
-  86% { opacity: 1; transform: translate3d(calc(-.10 * 100vw + 30px), -40vh, 0) scale(1); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  0% {
+    opacity: 1;
+    transform: translate3d(5px, calc(-100vh + 160px), 0) scale(.92);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate3d(calc(-1 * 100vw + 44px), -50vh, 0) scale(1.02);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate3d(calc(-.98 * 100vw + 44px), -49vh, 0) scale(1.04);
+  }
+
+  34% {
+    opacity: 1;
+    transform: translate3d(calc(-.94 * 100vw + 44px), -49vh, 0) scale(1.03);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translate3d(calc(-.95 * 100vw + 44px), -49vh, 0) scale(1.03);
+  }
+
+  54% {
+    opacity: 1;
+    transform: translate3d(calc(-.80 * 100vw + 44px), -49vh, 0) scale(1.02);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate3d(calc(-.83 * 100vw + 44px), -49vh, 0) scale(1.02);
+  }
+
+  74% {
+    opacity: 1;
+    transform: translate3d(calc(-.45 * 100vw + 44px), -48vh, 0) scale(1.01);
+  }
+
+  86% {
+    opacity: 1;
+    transform: translate3d(calc(-.10 * 100vw + 30px), -40vh, 0) scale(1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -438,10 +769,12 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
     opacity: 0;
     visibility: hidden;
   }
+
   .Yuvi-companion-dock.is-closing {
     opacity: 0;
     visibility: hidden;
   }
+
   .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal,
   .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal::before,
   .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__ring,
@@ -453,10 +786,18 @@ body[data-aworld-open='true'] .Yuvi-companion-dock {
   .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__ring,
   .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__robot,
   .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__thrusters,
-  .Yuvi-companion-dock__thrusters i { animation: none; }
+  .Yuvi-companion-dock__thrusters i {
+    animation: none;
+  }
+
   .Yuvi-companion-dock__ring,
   .Yuvi-companion-dock__robot,
   .Yuvi-companion-dock__portal::after,
-  .Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal { animation: none; }
-  .Yuvi-companion-dock__loader { animation-duration: 1.4s; }
+  .Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal {
+    animation: none;
+  }
+
+  .Yuvi-companion-dock__loader {
+    animation-duration: 1.4s;
+  }
 }

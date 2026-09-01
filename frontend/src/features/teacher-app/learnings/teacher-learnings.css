@@ -6,27 +6,63 @@
 
 .tch-learnings > .tch-stats { margin-block-end: var(--sp-5); }
 
-/* ── the analysis panel ────────────────────────────────────────────────────*/
+/* ── inside one objective: the way back + a hero naming it ─────────────────*/
 
-.tch-learnings__analysis {
+.tch-learnings__drillHead {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  margin-block-end: var(--sp-5);
+}
+
+.tch-learnings__drillCard {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
   padding: var(--sp-4) var(--sp-5);
-  margin-block-end: var(--sp-6);
   border-inline-start: 3px solid var(--sp-primary-600);
 }
 
-.tch-learnings__recs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
-.tch-learnings__recs li { display: grid; gap: var(--sp-1); }
-
-.tch-learnings__recRow {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  color: var(--sp-ink-700);
+.tch-learnings__drillTitles { display: grid; gap: var(--sp-1); justify-items: start; }
+.tch-learnings__drillTitles h2 {
+  margin: 0;
+  font-size: var(--sp-fs-xl);
+  color: var(--sp-ink-900);
+}
+/* The title doubles as the objective's meaning-door; at heading size the
+   base ref's small-print styling must not shrink or grey it. */
+.tch-learnings__drillRef {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+.tch-learnings__drillMeta {
+  margin: 0;
   font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
 }
 
-.tch-learnings__recIcon { color: var(--sp-primary-600); flex: none; align-self: center; }
-.tch-learnings__recSep { unicode-bidi: isolate; white-space: pre; }
+/* The fold of the whole objective, opposite the name — the same tone scale
+   the lomda cards use, so one glance says how this objective is going. */
+.tch-learnings__drillRate {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: end;
+}
+.tch-learnings__drillRate strong {
+  font-size: var(--sp-fs-2xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tch-learnings__drillRate span { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-learnings__drillRate.is-success strong { color: var(--sp-success-600); }
+.tch-learnings__drillRate.is-warn strong { color: var(--sp-warn-600); }
+.tch-learnings__drillRate.is-danger strong { color: var(--sp-danger-600); }
+.tch-learnings__drillRate.is-none strong { color: var(--sp-ink-400); }
 
 /* ── find it: search + subject tabs ────────────────────────────────────────*/
 
@@ -113,6 +149,155 @@
   color: var(--sp-ink-400);
 }
 
+/* ── the objectives map: student-track goal-card grammar ───────────────────
+   State badge, name, meter, one meta line — the same object a child sees on
+   their own track, wearing the class's numbers. */
+
+/* Padding lives on the button, not the Panel: with it outside, the card's
+   outer ring was a dead zone that swallowed clicks (#509). */
+.tch-objective { padding: 0; }
+
+.tch-objective__open {
+  display: grid;
+  gap: var(--sp-2);
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+  padding: var(--sp-3) var(--sp-4);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  border-radius: inherit;
+}
+.tch-objective__open:hover .tch-objective__title { color: var(--sp-primary-700); }
+.tch-objective__open:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring);
+  border-radius: var(--sp-radius-sm);
+}
+
+.tch-objective__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+/* The state badge — pulse while the class is in it, alert when it went badly,
+   a target while it waits. The one glyph that says "this is a learning goal". */
+.tch-objective__state {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 50%;
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-600);
+}
+.tch-objective.is-hot .tch-objective__state {
+  background: var(--sp-danger-100);
+  color: var(--sp-danger-600);
+}
+.tch-objective.is-idle .tch-objective__state {
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-400);
+}
+
+/* Untouched material is present but quiet — findable, never shouting. */
+.tch-objective.is-idle { opacity: .8; }
+.tch-objective.is-idle:hover { opacity: 1; }
+
+.tch-objective__title {
+  flex: 1;
+  min-inline-size: 0;
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tch-objective__rateWrap {
+  flex: none;
+  display: grid;
+  gap: 0;
+  justify-items: center;
+}
+.tch-objective__rate {
+  font-size: var(--sp-fs-lg);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.tch-objective__rateWord {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-objective__rate.is-success { color: var(--sp-success-600); }
+.tch-objective__rate.is-warn { color: var(--sp-warn-600); }
+.tch-objective__rate.is-danger { color: var(--sp-danger-600); }
+.tch-objective__rate.is-none { color: var(--sp-ink-400); }
+
+.tch-objective__meter {
+  display: block;
+  block-size: 6px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  overflow: hidden;
+}
+.tch-objective__meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--sp-primary-500);
+}
+.tch-objective__meter.is-success > span { background: var(--sp-success-600); }
+.tch-objective__meter.is-warn > span { background: var(--sp-warn-600); }
+.tch-objective__meter.is-danger > span { background: var(--sp-danger-600); }
+
+.tch-objective__meta {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-objective__flag {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-danger-600);
+}
+
+/* The fold the rest of the catalogue waits behind. */
+.tch-learnings__catalogToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  inline-size: 100%;
+  margin-block-end: var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--sp-border-strong);
+  border-radius: var(--sp-radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+.tch-learnings__catalogToggle:hover {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+}
+.tch-learnings__catalogToggle > .sp-icon:last-child { margin-inline-start: auto; }
+
 /* ── learning cards ────────────────────────────────────────────────────────*/
 
 .tch-learnings__grid {
@@ -133,9 +318,21 @@
   inset-inline-end: var(--sp-2);
   padding: var(--sp-1);
   color: var(--sp-ink-400);
+  z-index: 1;
 }
 .tch-learning__preview:hover { color: var(--sp-primary-700); }
-.tch-learning__head { padding-inline-end: var(--sp-6); }
+.tch-learning__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding-inline-end: var(--sp-6);
+}
+.tch-learning__titles { flex: 1; min-inline-size: 0; }
+/* A category label, not an action (#512): no pointer, and lifted above the
+   card's stretched click overlay so its tooltip can be reached. */
+.tch-learning__assessment { position: relative; z-index: 1; cursor: default; }
+/* The objective link stays pressable above the overlay. */
+.tch-learning .tch-alert__objective { position: relative; z-index: 1; }
 
 /* Untouched material is present but quiet — findable, never shouting. */
 .tch-learning--idle { opacity: .82; }
@@ -153,8 +350,17 @@
   color: inherit;
 }
 
+/* The whole card opens the detail: the button's ::after stretches over the
+   Panel (#509). Siblings that stay pressable carry z-index: 1 above it. */
+.tch-learning__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tch-card-radius, 18px);
+}
 .tch-learning__open:hover strong { color: var(--sp-primary-700); }
-.tch-learning__open:focus-visible { outline: none; box-shadow: var(--sp-ring); border-radius: var(--sp-radius-sm); }
+.tch-learning__open:focus-visible { outline: none; }
+.tch-learning__open:focus-visible::after { box-shadow: var(--sp-ring); }
 
 .tch-learning__idle {
   display: flex;

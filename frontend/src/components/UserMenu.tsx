@@ -5,6 +5,8 @@ import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
 import { ProfileAvatar } from '../features/badges/ProfileAvatar'
 import { openReportIssue } from '../features/support/ReportIssueDialog'
+import { useTour } from './tour/TourProvider'
+import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -31,6 +33,7 @@ export function UserMenu() {
   const { t, language, setLanguage } = useI18n()
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { startTour } = useTour()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   /* Badge avatars are a learner thing. In the teacher/admin app the same menu
@@ -68,6 +71,12 @@ export function UserMenu() {
     navigate('/badges')
   }
 
+  const replayTour = () => {
+    setOpen(false)
+    // The tour's first step carries its own route, so this works from any screen.
+    startTour(LEARNER_TOUR_ID)
+  }
+
   return (
     <div className="user-menu" ref={rootRef}>
       <button
@@ -76,6 +85,7 @@ export function UserMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('auth.menu.open')}
+        data-tour="learner.profileMenu"
         onClick={() => setOpen((value) => !value)}
       >
         <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
@@ -159,6 +169,24 @@ export function UserMenu() {
               onClick={goBadges}
             >
               <span>{t('badges.menuTitle')}</span>
+              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : null}
+
+          {/* The way back into the tour. Behind the avatar rather than on the
+              dashboard because a child who feels lost is rarely on the screen
+              the tour starts from — and it is a setting about them, which is
+              what this menu already is. */}
+          {!inTeacherApp && canTakeLearnerTour(user.roles) ? (
+            <button
+              className="user-menu__row user-menu__row--link"
+              type="button"
+              role="menuitem"
+              onClick={replayTour}
+            >
+              <span>{t('tour.learner.replay')}</span>
               <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

@@ -1,36 +1,29 @@
-/* The conversations held with each student, one card each.
+/* The conversations held with each student — compact rows, not a card wall.
  *
- * This replaces the class goals board, and the swap is the point of the whole
- * refactor. The board answered "what goals does each child have", which the
- * student profile already answers better and with more room. The question this
- * screen is actually for is "when did I last sit down with this child, and what
- * came out of it" — and nothing anywhere answered that, even though every goal
- * has been stored inside a conversation from the beginning.
+ * The card grid drew one card per student INCLUDING the thirty nobody had
+ * talked to yet: a screen of zeros and "עוד לא תועדה שיחה" where the real
+ * record was four cards (#497). Now only students WITH talks get a row —
+ * newest talk first, because "who did I sit with recently" is the question —
+ * and the students without one collapse into a single expandable line, so the
+ * genuinely useful fact ("we have never had this conversation") survives
+ * without costing a card each.
  *
- * ## Cards that say something, and a dialog for the detail
- *
- * The first version was full-width rows that expanded in place. Two problems,
- * both visible the moment a real class loaded: a row 1400px wide holding a name
- * and a date is mostly empty, and expanding one pushed every card below it down
- * the page, so reading Dana's talks moved Ella's card out from under the
- * cursor. Now each card carries its own numbers — how many talks, how many
- * goals still open — and the talks themselves open in a dialog over the grid,
- * which leaves the grid where it was.
+ * The talks themselves open in a dialog over the list (`ConversationLog`, the
+ * same record the student profile renders), which leaves the list where it
+ * was. Everything deeper about one child — approving, the full log, a new
+ * write-up — lives on their profile now; every row links there.
  */
 
 import { useMemo, useState } from 'react'
 import { navigate } from '../../../app/router'
-import { EmptyState, Icon, Panel, StatusPill } from '../../../components/primitives'
+import { EmptyState, Hint, Icon } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { formatDay } from '../../../i18n/dates'
-import {
-  deleteMentoringConversation, type GoalConversation, type StudentGoal,
-} from '../../../services/teacher'
-import { ConfirmDialog } from '../shared/ConfirmDialog'
+import { type GoalConversation } from '../../../services/teacher'
 import { StudentAvatar } from '../shared/StudentAvatar'
-import { GoalProgressLine } from '../student/TeacherGoals'
-import { goalTitle, stateOf, STATE_TONE } from './goalState'
+import { ConversationLog } from './ConversationLog'
+import { stateOf } from './goalState'
 
 interface Props {
   learners: { learner_id: string; conversations: GoalConversation[] }[]
@@ -47,7 +40,6 @@ interface Props {
 interface Row {
   learnerId: string
   conversations: GoalConversation[]
-  goals: StudentGoal[]
   openGoals: number
 }
 
@@ -56,17 +48,6 @@ export function ConversationHistory({
 }: Props) {
   const { t } = useI18n()
   const [open, setOpen] = useState<string | null>(null)
-  /* Which record is being removed, held until the confirm comes back. A talk
-     is a record about a child, so this asks first — and the ask names the
-     date, because "delete this conversation" is not enough to tell two of them
-     apart. */
-  const [removing, setRemoving] = useState<GoalConversation | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  /** Yours to remove: you wrote it, or nobody recorded who did. */
-  const mine = (conversation: GoalConversation) =>
-    conversation.author === 'teacher'
-    && (!conversation.teacher_id || conversation.teacher_id === teacherId)
 
   const rows = useMemo<Row[]>(() => learners
     .map((learner) => {
@@ -79,41 +60,25 @@ export function ConversationHistory({
       return {
         learnerId: learner.learner_id,
         conversations,
-        goals,
         // Still being worked on: neither signed off nor abandoned. The one
-        // number on this card that is about the future rather than the past.
+        // number on this row that is about the future rather than the past.
         openGoals: goals.filter((goal) => stateOf(goal) === 'active'
                                        || stateOf(goal) === 'help').length,
       }
-    })
-    // A student nobody has spoken to yet keeps their card: "we have never had
-    // this conversation" is the single most useful thing this screen can say.
-    // Under a search they drop out, because they match nothing.
-    .filter((row) => row.conversations.length > 0 || !searching)
-    .sort((a, b) => nameOf(a.learnerId).localeCompare(nameOf(b.learnerId))),
-  [learners, matches, nameOf, searching])
+    }), [learners, matches])
 
-  const opened = rows.find((row) => row.learnerId === open) ?? null
+  /* Rows with a record, most recent talk first — the list answers "who did I
+     sit with, and when". Alphabetical put the child you spoke to this morning
+     under S while three untouched terms of A-children led the page. */
+  const talked = useMemo(() => rows
+    .filter((row) => row.conversations.length > 0)
+    .sort((a, b) =>
+      (b.conversations[0]?.date || '').localeCompare(a.conversations[0]?.date || '')
+      || nameOf(a.learnerId).localeCompare(nameOf(b.learnerId))), [rows, nameOf])
 
-  const remove = async () => {
-    if (!removing || !open) return
-    setBusy(true)
-    try {
-      await deleteMentoringConversation(open, removing.id)
-      setRemoving(null)
-      // Nothing left behind it, so the dialog would be an empty box over the
-      // grid the teacher is about to go back to anyway.
-      if (opened?.conversations.length === 1) setOpen(null)
-      onChanged()
-    } catch {
-      /* Left on screen with the confirm still up: a delete that silently did
-         nothing is worse than one that visibly did not happen. */
-    } finally {
-      setBusy(false)
-    }
-  }
+  const opened = talked.find((row) => row.learnerId === open) ?? null
 
-  if (!rows.length) {
+  if (!talked.length) {
     return (
       <EmptyState
         title={searching ? t('tch.goalsPage.noMatches') : t('tch.mentoring.history.empty')}
@@ -125,66 +90,72 @@ export function ConversationHistory({
   return (
     <>
       <ul className="tch-goalsPage__history">
-        {rows.map((row) => {
+        {talked.map((row) => {
           const last = row.conversations[0]
           return (
             /* The class stays `__student` — it still means "one student's
                card", and the roster harness counts them by it. */
-            <li key={row.learnerId}>
-              <Panel className="tch-goalsPage__student">
-                <div className="tch-talkCard__who">
+            <li key={row.learnerId} className="tch-goalsPage__student tch-talkCard">
+              {/* The CARD is the door to the talks — a card whose whole
+                  purpose is being opened should not hide that behind a small
+                  icon. The profile is the one secondary action, at the
+                  corner, outside the button (a button inside a button is not
+                  a thing a browser honours). */}
+              <button
+                type="button"
+                className="tch-talkCard__pick"
+                onClick={() => setOpen(row.learnerId)}
+              >
+                {/* One line: avatar, name beside it, the date pushed to the far
+                    end by the chevron. No dir="auto" on the name — a Latin name
+                    would flip its own alignment and drift away from the avatar;
+                    the bdi already isolates it. */}
+                <span className="tch-talkCard__head">
                   <StudentAvatar learnerId={row.learnerId}
-                                 name={nameOf(row.learnerId)} size={38} />
-                  <span>
-                    <strong><bdi>{nameOf(row.learnerId)}</bdi></strong>
-                    <small>
-                      {last ? t('tch.mentoring.history.lastOn',
-                                { date: formatDay(last.date) })
-                            : t('tch.mentoring.history.never')}
-                    </small>
+                                 name={nameOf(row.learnerId)} size={30} />
+                  <strong className="tch-talkCard__name"><bdi>{nameOf(row.learnerId)}</bdi></strong>
+                  {last ? (
+                    <span className="tch-talkCard__meta">{formatDay(last.date)}</span>
+                  ) : null}
+                  <Icon name="chevronLeft" size={15} aria-hidden
+                        className="tch-talkCard__go" />
+                </span>
+                {/* Two quiet chips instead of a dotted sentence — the number
+                    leads, its word follows. */}
+                <span className="tch-talkCard__stats">
+                  <span className="tch-talkCard__stat">
+                    <strong>{row.conversations.length}</strong>
+                    {t('tch.mentoring.history.stat.talks')}
                   </span>
-                </div>
-
-                {/* Two numbers, both about this child rather than about the
-                    class. A card that only repeats the name is a link with
-                    extra padding. */}
-                <dl className="tch-talkCard__stats">
-                  <div>
-                    <dt>{t('tch.mentoring.history.stat.talks')}</dt>
-                    <dd>{row.conversations.length}</dd>
-                  </div>
-                  <div>
-                    <dt>{t('tch.mentoring.history.stat.openGoals')}</dt>
-                    <dd>{row.openGoals}</dd>
-                  </div>
-                </dl>
-
-                <div className="tch-talkCard__actions">
-                  <button
-                    type="button"
-                    className="sp-btn sp-btn--sm tch-goalsPage__talkToggle"
-                    disabled={!row.conversations.length}
-                    onClick={() => setOpen(row.learnerId)}
-                  >
-                    <Icon name="note" size={14} aria-hidden />
-                    {t('tch.mentoring.history.openTalks')}
-                  </button>
-                  <button
-                    type="button"
-                    className="tch-goalsPage__more"
-                    onClick={() => navigate(`/teacher/student/${row.learnerId}`)}
-                  >
-                    {t('tch.mentoring.history.profile')}
-                  </button>
-                </div>
-              </Panel>
+                  {row.openGoals > 0 ? (
+                    <span className="tch-talkCard__stat">
+                      <strong>{row.openGoals}</strong>
+                      {t('tch.mentoring.history.stat.openGoals')}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+              {/* The corner position lives on the Hint WRAPPER — the tooltip
+                  anchors to the wrapper, so an absolutely-positioned button
+                  inside a flow wrapper would open its bubble somewhere else. */}
+              <Hint text={t('tch.mentoring.history.profile')}
+                    className="tch-talkCard__corner">
+                <button
+                  type="button"
+                  className="tch-talkCard__profile"
+                  aria-label={t('tch.mentoring.history.profile')}
+                  onClick={() => navigate(`/teacher/student/${row.learnerId}`)}
+                >
+                  <Icon name="users" size={14} aria-hidden />
+                </button>
+              </Hint>
             </li>
           )
         })}
       </ul>
 
-      {/* Over the grid, not inside it: reading one child's talks must not move
-          the next child's card out from under the cursor. */}
+      {/* Over the list, not inside it: reading one child's talks must not move
+          the next child's row out from under the cursor. */}
       <Modal open={Boolean(opened)} onClose={() => setOpen(null)}
              titleId="tch-talks-title" className="tch-talksDialog">
         {opened ? (
@@ -198,81 +169,20 @@ export function ConversationHistory({
                       { count: opened.conversations.length })}</p>
               </div>
             </header>
-            <ol className="tch-goalsPage__talks">
-              {opened.conversations.map((conversation) => (
-                <li key={conversation.id} className="tch-goalsPage__talk">
-                  <p className="tch-goalsPage__talkMeta">
-                    <span>{formatDay(conversation.date)}</span>
-                    <span>{authorOf(conversation, t)}</span>
-                    {/* Named, not hidden: a teacher rereading a record should
-                        know it carries something the child cannot see, even
-                        where the text itself is not shown. */}
-                    {conversation.teacher_only_note ? (
-                      <span className="tch-goalsPage__private">
-                        <Icon name="lock" size={12} aria-hidden />
-                        {t('tch.mentoring.history.hasPrivate')}
-                      </span>
-                    ) : null}
-                    {/* Only on your own write-ups. A colleague's record of a
-                        talk they were in, and a child's own reflection, are
-                        both refused by the server — so neither offers the
-                        button that would be refused. */}
-                    {mine(conversation) ? (
-                      <button type="button" className="tch-goalsPage__remove"
-                              onClick={() => setRemoving(conversation)}>
-                        <Icon name="trash" size={12} aria-hidden />
-                        {t('tch.mentoring.history.remove')}
-                      </button>
-                    ) : null}
-                  </p>
-                  {conversation.notes ? (
-                    <p className="tch-goalsPage__talkNotes" dir="auto">{conversation.notes}</p>
-                  ) : null}
-                  {conversation.goals.length ? (
-                    <ul className="tch-goalsPage__goals">
-                      {conversation.goals.map((goal: StudentGoal) => (
-                        <li key={goal.id} className="tch-goalsPage__talkGoal" dir="auto">
-                          <span>{goalTitle(goal, t)}</span>
-                          <GoalProgressLine goal={goal} />
-                          <StatusPill tone={STATE_TONE[stateOf(goal)]}>
-                            {t(`tch.goalsPage.state.${stateOf(goal)}`)}
-                          </StatusPill>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="tch-goalsPage__none">
-                      {t('tch.mentoring.history.talkOnly')}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ol>
+            <ConversationLog
+              learnerId={opened.learnerId}
+              conversations={opened.conversations}
+              teacherId={teacherId}
+              onChanged={() => {
+                // Nothing left behind it, so the dialog would be an empty box
+                // over the list the teacher is about to go back to anyway.
+                if (opened.conversations.length === 1) setOpen(null)
+                onChanged()
+              }}
+            />
           </>
         ) : null}
       </Modal>
-
-      {/* The date is in the question. Two talks with the same child in one
-          week are the normal case, and "delete this conversation" cannot tell
-          them apart. */}
-      <ConfirmDialog
-        open={Boolean(removing)}
-        title={t('tch.mentoring.history.remove.title')}
-        body={t('tch.mentoring.history.remove.body',
-                { date: formatDay(removing?.date) })}
-        confirmLabel={t('tch.mentoring.history.remove.confirm')}
-        destructive
-        busy={busy}
-        onClose={() => setRemoving(null)}
-        onConfirm={remove}
-      />
     </>
   )
-}
-
-/** Who documented it. Legacy records carry neither a name nor an id — they
- *  predate storing the teacher — so the last resort is the honest generic. */
-function authorOf(conversation: GoalConversation, t: (key: string) => string): string {
-  if (conversation.author === 'learner') return t('tch.mentoring.history.byStudent')
-  return conversation.teacher_name?.trim() || t('tch.mentoring.history.byTeacher')
 }

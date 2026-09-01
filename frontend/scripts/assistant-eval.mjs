@@ -109,9 +109,35 @@ const numbersIn = (text) => [...(text ?? '').matchAll(/\d+(?:\.\d+)?/g)].map((m)
   const answer = await ask('מה שלום יוסי כהן מכיתה ח׳2? באילו נושאים הוא מתקשה?')
   const text = answer.text ?? ''
   const refused = answer.text_key !== null
-    || /אין|לא נמצא|לא קיים|לא מזוה|אין לי|לא מופיע/.test(text)
+    || /אין|לא נמצא|לא קיים|לא מזוה|אין לי|לא מופיע|לא מצאתי/.test(text)
   check('unknown student: refused, not invented', refused, text.slice(0, 140))
   check('unknown student: no fabricated percentage', !/\d+\s*%/.test(text), text.slice(0, 140))
+  check('unknown student: never asks the teacher for an id',
+        !/מזהה|learner.?id/i.test(text), text.slice(0, 140))
+}
+
+// ── 5b · a student asked about BY NAME resolves through find_student ────────
+{
+  const roster = await (await api.get('/api/teacher/roster')).json()
+  const named = (roster.students ?? []).find((row) => row.display_name)
+  if (named) {
+    const answer = await ask(`מה שלום ${named.display_name}?`)
+    check('by-name: resolved through find_student', usedAny(answer, ['find_student']),
+          JSON.stringify(toolNames(answer)))
+    check('by-name: grounded', answer.grounded === true)
+    check('by-name: never asks the teacher for an id',
+          !/מזהה|learner.?id/i.test(answer.text ?? ''), (answer.text ?? '').slice(0, 140))
+  } else {
+    check('by-name: a named student exists to ask about', false, 'roster has no display names')
+  }
+}
+
+// ── 5c · off-domain question is answered, not refused ───────────────────────
+{
+  const answer = await ask('יש לך רעיון למתכון פשוט לעוגת שוקולד?')
+  check('off-domain: answered rather than refused',
+        Boolean(answer.text) && answer.text_key === null,
+        (answer.text ?? answer.text_key ?? '').slice(0, 140))
 }
 
 // ── 6 · needing-attention count consistency ─────────────────────────────────

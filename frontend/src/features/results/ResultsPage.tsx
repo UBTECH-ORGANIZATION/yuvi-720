@@ -5,7 +5,7 @@ import { Toast } from '../../components/Toast'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPatch, apiPost, getLearnerState } from '../../services/api'
 import { useBrain } from '../../providers/BrainProvider'
-import { YuviRobot3D } from '../learner-mapping/YuviRobot3D'
+import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
 import { ProfileGlyph } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
 

@@ -142,7 +142,7 @@ export function MyGoals({ goals, onSeeAll, onAddGoal, onUpdateStatus }: MyGoalsP
   )
 
   return (
-    <section className="sd-section" aria-labelledby="sd-goals-title">
+    <section className="sd-section" aria-labelledby="sd-goals-title" data-tour="learner.goals">
       <div className="sd-goals">
         {header}
 

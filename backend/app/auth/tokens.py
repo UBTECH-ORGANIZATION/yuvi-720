@@ -12,27 +12,21 @@ tokens in `app.services.events`. Rotating it invalidates both.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import jwt
+
+from app.core.env import signing_secret
 
 _ALGORITHM = "HS256"
 _ISSUER = "yuvilab-spark"
 _AUDIENCE = "yuvilab-spark-ui"
 TOKEN_LIFETIME = timedelta(hours=12)
 
-_DEV_SECRET = "yuvi720-dev-secret"
-
 
 def _secret() -> str:
-    secret = os.environ.get("SECRET_KEY")
-    if secret:
-        return secret
-    if (os.environ.get("ENVIRONMENT") or "").lower() in {"production", "prod"}:
-        raise RuntimeError("SECRET_KEY must be set in production")
-    return _DEV_SECRET
+    return signing_secret()
 
 
 def create_session_token(

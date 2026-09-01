@@ -38,6 +38,9 @@ COLLECTION = "notifications"
 
 KIND_GOAL_ASSIGNED = "goal_assigned"
 KIND_GOAL_APPROVED = "goal_approved"
+# A learner finished a goal (summarized it) — the teacher's bell now carries
+# the approval that used to wait silently on the mentoring page (#497).
+KIND_GOAL_COMPLETED = "goal_completed"
 KIND_TEACHER_NOTE = "teacher_note"
 KIND_KUDOS = "kudos"
 KIND_ALERT = "alert"
@@ -53,11 +56,16 @@ KIND_TEACHER_MESSAGE = "teacher_message"
 KIND_STUDENT_MESSAGE = "student_message"
 # The teacher pinned a specific learning as this learner's next step (#249/#244).
 KIND_PINNED_NEXT = "pinned_next"
+# Evidence overrode a teacher-asserted insight in the student model (#454) —
+# the symmetric half of the drastic-change warning: silent reversal in either
+# direction is the failure mode.
+KIND_MODEL_OVERRIDE = "model_override"
 
 KINDS = (
-    KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
+    KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_GOAL_COMPLETED,
+    KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
     KIND_TASK_ASSIGNED, KIND_DEADLINE_REMINDER, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
-    KIND_PINNED_NEXT,
+    KIND_PINNED_NEXT, KIND_MODEL_OVERRIDE,
 )
 
 # One person can be both. `gal` is a learner AND a teacher, and a bell that

@@ -17,7 +17,9 @@ from fastapi.responses import JSONResponse
 from app.auth.dependencies import require_teacher_session
 from app.brain import org
 from app.core.localization import normalize_language
-from app.services import group_analytics, insights, kata_client, teacher_insights_store
+from app.services import (
+    group_analytics, insights, kata_client, student_model_insight, teacher_insights_store,
+)
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
@@ -269,9 +271,14 @@ async def group_learnings(
         return _denied()
     from app.services import learning_analytics
     lang = normalize_language(language)
-    view = await learning_analytics.group_learnings(
-        group_id, subject=subject, language=lang
+    import asyncio as _asyncio
+    view, pulse = await _asyncio.gather(
+        learning_analytics.group_learnings(group_id, subject=subject, language=lang),
+        learning_analytics.learnings_pulse(group_id, subject=subject),
     )
+    # The KPI strip's week-over-week figures; the all-time totals stay for the
+    # catalogue coverage number.
+    view["pulse"] = pulse
     gaps = await group_analytics.learning_gaps(group_id, subject=subject)
     view["recommendations"] = group_analytics.group_recommendations(gaps, lang)
     await _report(session, "learning-group")
@@ -505,9 +512,43 @@ async def student_objectives(
         activity_rows = await learner_activity.question_summary(safe_id, subject=subject)
     except Exception:
         activity_rows = []
-    return _ok({"subject": subject, "objectives": insights.objective_breakdown(
-        brain, subject=subject, language=normalize_language(language),
-        activity_rows=activity_rows)})
+    lang = normalize_language(language)
+    rows = insights.objective_breakdown(
+        brain, subject=subject, language=lang, activity_rows=activity_rows)
+
+    # The hierarchy under each objective: its lomdot, wearing the SAME
+    # projected states the child's own track shows (completed / current /
+    # available / locked) — the ONE path engine, never a re-derivation.
+    # Best-effort: a projection that fails leaves that objective flat.
+    import asyncio as _asyncio
+
+    from app.services.learning_progress import project_unit_roadmap
+
+    unit_jobs: list[tuple[str, dict]] = []
+    for objective in kata_catalog.objectives_for(subject):
+        objective_id = str(objective.get("id") or "")
+        for unit_id in objective.get("unit_ids") or []:
+            unit = kata_catalog.get_unit(str(unit_id))
+            if unit:
+                unit_jobs.append((objective_id, unit))
+    projections = await _asyncio.gather(
+        *(project_unit_roadmap(unit, safe_id, locale=lang) for _, unit in unit_jobs),
+        return_exceptions=True,
+    )
+    components_of: dict[str, list[dict]] = {}
+    for (objective_id, _), projected in zip(unit_jobs, projections):
+        if isinstance(projected, BaseException) or not isinstance(projected, dict):
+            continue
+        for node in projected.get("components") or []:
+            components_of.setdefault(objective_id, []).append({
+                "id": node.get("id"),
+                "title": node.get("title"),
+                "state": node.get("progress_state") or "available",
+            })
+    for row in rows:
+        row["components"] = components_of.get(row["objective_id"], [])
+
+    return _ok({"subject": subject, "objectives": rows})
 
 
 @router.get("/students/{learner_id}/topics/digest")
@@ -596,6 +637,61 @@ async def create_insight(
     except ValueError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=400, headers=_NO_STORE)
     return _ok(insight)
+
+
+@router.post("/students/{learner_id}/model-insight")
+async def add_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """A teacher insight entering the student model itself (#454).
+
+    Unlike `/insights` above (notes beside the model), this writes into what
+    Yuvi believes and acts on. A drastic change — touching `how_to_reach`,
+    disagreeing with an active belief, or displacing a strongly-evidenced
+    sentence — returns 409 with the diff until the client re-posts
+    `confirmed: true`, so the warning cannot be skipped.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.add_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+            confirmed=bool(data.get("confirmed")),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    except student_model_insight.DrasticChange as exc:
+        return JSONResponse(
+            content={"needs_confirmation": True, "diff": exc.diff},
+            status_code=409,
+            headers=_NO_STORE,
+        )
+    return _ok(result)
+
+
+@router.post("/students/{learner_id}/model-insight/withdraw")
+async def withdraw_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """The regret path: withdraw a teacher-asserted sentence and restore what
+    the model believed beforehand — bi-temporally, nothing erased."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.withdraw_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    return _ok(result)
 
 
 @router.delete("/students/{learner_id}/insights/{insight_id}")
@@ -1091,8 +1187,10 @@ async def mentoring_goal_ideas(
 
 
 @router.get("/goals/pending-count")
-async def pending_goal_count(session=Depends(require_teacher_session)):
-    """How many finished goals across this teacher's classes await sign-off.
+async def pending_goal_count(
+    group_id: str | None = None, session=Depends(require_teacher_session)
+):
+    """How many finished goals in the selected class await sign-off.
 
     Its own endpoint, and deliberately the cheapest one in this file: the app
     bar shows this number on every screen, so a teacher learns there is
@@ -1100,13 +1198,17 @@ async def pending_goal_count(session=Depends(require_teacher_session)):
     `GET /groups/{id}/goals` would answer the same question by shipping every
     conversation of every learner on every page load.
 
-    Scope comes from the session's own groups — there is no id to guard here,
-    because the caller cannot name anyone.
+    `group_id` narrows to one class so the badge agrees with the class picker
+    and with the inbox under it. It is honored only when it names one of the
+    session's own groups — a foreign id counts nothing rather than leaking a
+    number. Without it, the count spans every class the teacher has.
     """
     from app.brain import org
     from app.services import mentoring
 
     groups = await org.groups_for_teacher(session["sub"])
+    if group_id:
+        groups = [g for g in groups if str(g.get("_id") or "") == group_id]
     learner_ids: list[str] = []
     seen: set[str] = set()
     for group in groups:

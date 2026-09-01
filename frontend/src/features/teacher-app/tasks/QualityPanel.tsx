@@ -30,6 +30,14 @@ const CHECK_ORDER = [
   'questions_follow_deck', 'no_duplicate_questions', 'math_segments_clean',
 ]
 
+/* `report.concerns` mixes two vocabularies: check names and judge dimensions
+ * (a dimension scoring below the backend's concern line lands there too).
+ * Each has its own locale namespace. */
+const DIMENSIONS = new Set(['follows_brief', 'matches_lesson', 'sound'])
+
+const concernLabel = (name: string) =>
+  DIMENSIONS.has(name) ? `tch.quality.dim.${name}` : `tch.quality.name.${name}`
+
 function toneFor(score: number | null): StatusTone {
   if (score === null) return 'neutral'
   if (score >= 8) return 'strong'
@@ -83,7 +91,7 @@ export function QualityPanel({ report, busy, onRecheck }: {
           ? t('tch.quality.clean')
           : t('tch.quality.look', {
               list: report.concerns.slice(0, 3)
-                .map((name) => t(`tch.quality.name.${name}`)).join(' · '),
+                .map((name) => t(concernLabel(name))).join(' · '),
             })}
       </p>
 

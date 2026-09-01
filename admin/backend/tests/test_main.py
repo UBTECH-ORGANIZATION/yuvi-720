@@ -222,6 +222,46 @@ class AdminRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["detail"], "admin_authentication_required")
 
+    def test_environment_badge_names_the_database_without_the_password(self) -> None:
+        settings = Settings(
+            **{
+                **TEST_SETTINGS.__dict__,
+                "mongodb_connection_string": (
+                    "mongodb+srv://dbadmin:s3cr3t@yuvi720-dev.mongocluster.cosmos.azure.com/?tls=true"
+                ),
+            }
+        )
+        app = create_app(settings, public_access=True)
+        client = TestClient(app)
+
+        response = client.get("/api/environment")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "environment": "test",
+            "host": "yuvi720-dev.mongocluster.cosmos.azure.com",
+            "database": "yuvi720",
+            "is_production": False,
+        })
+        self.assertNotIn("s3cr3t", response.text)
+
+    def test_environment_badge_flags_the_production_cluster(self) -> None:
+        settings = Settings(
+            **{
+                **TEST_SETTINGS.__dict__,
+                "mongodb_connection_string": (
+                    "mongodb+srv://dbadmin:s3cr3t@yuvi720.mongocluster.cosmos.azure.com/?tls=true"
+                ),
+            }
+        )
+        app = create_app(settings, public_access=True)
+        client = TestClient(app)
+
+        response = client.get("/api/environment")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["is_production"])
+
     def test_authenticated_lead_board_groups_statuses(self) -> None:
         self.app.state.lead_repository = FakeLeadRepository()
         self._sign_in()

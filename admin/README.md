@@ -72,6 +72,12 @@ Configure these App Service settings:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 
+`MONGODB_CONNECTION_STRING` is the only place the production cluster
+(`yuvi720`) belongs; locally, `admin/.env` points at the dev cluster
+(`yuvi720-dev`). The console prints `🗄️ admin environment=… host=… database=…`
+at startup and shows the same pair in the top bar, so which data is on screen is
+never a guess. See [databases: dev and production](../docs/architecture/databases-dev-and-production.md).
+
 The deployed App Service health-check path is `/health/ready`; `/health/live` is the process liveness endpoint. Register `https://admin.spark.yuvilab.ai/auth/callback` as a Google OAuth redirect URI. For local development, also register `http://localhost:9998/auth/callback`.
 
 Readiness succeeds only when the built frontend exists and MongoDB responds. Liveness checks only the admin process.

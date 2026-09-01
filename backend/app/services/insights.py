@@ -15,6 +15,7 @@ from typing import Any
 from app.brain.org import get_group, learners_in_group
 from app.brain.repository import get_brain
 from app.services.events import get_recent_events
+from app.services.learner_activity import HIDDEN_SUBJECTS
 from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
 from app.services.planner import next_focus, plan_next
 
@@ -491,7 +492,15 @@ def _portrait(brain: dict[str, Any]) -> dict[str, Any] | None:
             # not, and they would leak objective ids onto the screen.
             evidence_keys.update(
                 str(item) for item in (entry.get("evidence") or []) if item)
-            lines.append(text)
+            # Teacher-asserted and system-inferred sentences stay separately
+            # attributed (#454) — never merged into one anonymous paragraph.
+            lines.append({
+                "text": text,
+                "by_teacher": any(
+                    str(item).startswith("stated_by_teacher")
+                    for item in entry.get("evidence") or []
+                ),
+            })
         if lines:
             blocks.append({"key": key, "lines": lines})
 
@@ -547,6 +556,8 @@ async def student_insights(
         if not item_subject and objective_id:
             from app.services import kata_catalog
             item_subject = (kata_catalog.get_objective(objective_id) or {}).get("subject")
+        if item_subject in HIDDEN_SUBJECTS:
+            continue
         if subject and item_subject != subject:
             continue
         struggle_items.append({
@@ -872,7 +883,14 @@ async def student_insights(
         "today_feeling": today_feeling,
         "checkin_history": checkin_history,
         "checkin_skip_streak": checkin_skip_streak,
-        "progress": brain.get("progress") or {},
+        # Hidden subjects (english this year) are dropped HERE, not just at the
+        # screens: brain.progress keys come from the vendor's own tags and are
+        # the one place a hidden subject survives the catalog's math/science/
+        # other collapse — every consumer (the AI read included) inherits this.
+        "progress": {
+            key: value for key, value in (brain.get("progress") or {}).items()
+            if key not in HIDDEN_SUBJECTS
+        },
         "activity": activity,
         "status": status,
         # Progress measured against the objectives the subject actually has,

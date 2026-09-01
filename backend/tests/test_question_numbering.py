@@ -40,6 +40,19 @@ ONE_SCREEN_FOUR_PARTS = _component({
     "c-001": [{"questionId": f"q{n}"} for n in range(1, 5)],
 })
 
+# The real shape of `COMPL-00001`: items 1/2 are look-alike VARIANTS — same
+# question texts over mirrored data — and the player deals the learner ONE of
+# them. Item 3 is a distinct exercise.
+_ASK = "האם הנקודות האלה נמצאות על ישר המקביל לאחד הצירים?"
+_CONCLUDE = "הסיקו שתי מסקנות:"
+VARIANT_FIRST_SCREEN = _component({
+    "c-001": [{"questionId": "qa1", "questionText": _ASK},
+              {"questionId": "qa2", "questionText": _CONCLUDE}],
+    "c-002": [{"questionId": "qb1", "questionText": _ASK},
+              {"questionId": "qb2", "questionText": _CONCLUDE}],
+    "c-003": [{"questionId": "qc1", "questionText": "השלימו:"}],
+})
+
 
 class QuestionNumberingTests(unittest.TestCase):
     def _ordinals(self, component):
@@ -89,6 +102,34 @@ class QuestionNumberingTests(unittest.TestCase):
         ordinals = self._ordinals(component)
         self.assertNotIn("c-001", ordinals)
         self.assertEqual(ordinals["c-002|q1"], 1)
+
+    def test_variant_screens_share_one_number(self):
+        # Whichever variant the player deals, the learner's first exercise is
+        # שאלה 1 — numbering the sibling "שאלה 2" captioned a learner's very
+        # first screen with a number they had not reached.
+        ordinals = self._ordinals(VARIANT_FIRST_SCREEN)
+        self.assertEqual(ordinals["c-001"], 1)
+        self.assertEqual(ordinals["c-002"], 1, "the variant IS question 1")
+        self.assertEqual(ordinals["c-002|qb1"], 1)
+        self.assertEqual(ordinals["c-003"], 2, "the next real exercise follows")
+
+    def test_distinct_texts_never_collapse(self):
+        # Same shape (two questions each) but different wording — separate
+        # numbers, exactly as before.
+        component = _component({
+            "c-001": [{"questionId": "q1", "questionText": "כמה זה 2+2?"}],
+            "c-002": [{"questionId": "q1", "questionText": "כמה זה 3+3?"}],
+        })
+        ordinals = self._ordinals(component)
+        self.assertEqual(ordinals["c-001"], 1)
+        self.assertEqual(ordinals["c-002"], 2)
+
+    def test_textless_snapshots_keep_consecutive_numbering(self):
+        # An older snapshot without questionText must not collapse everything
+        # into one "variant" — an empty signature matches nothing.
+        ordinals = self._ordinals(TWO_PART_FIRST_SCREEN)
+        self.assertEqual(
+            [ordinals["c-001"], ordinals["c-002"], ordinals["c-003"]], [1, 2, 3])
 
     def test_no_snapshot_numbers_nothing(self):
         with patch.object(kata_catalog, "get_component", return_value=None):

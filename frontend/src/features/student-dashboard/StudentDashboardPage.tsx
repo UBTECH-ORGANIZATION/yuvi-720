@@ -16,7 +16,6 @@ import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { ActivenessWeb } from './ActivenessWeb'
 import { MyGoals } from './MyGoals'
 import { MySubjects } from './MySubjects'
-import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
 import { StudentCalendarPage } from './StudentCalendarPage'
 import { UpcomingStrip } from './UpcomingStrip'
@@ -149,7 +148,7 @@ export function StudentDashboardPage() {
     // components and would answer with a lesson, not the paper the teacher
     // pinned. Straight to the opening the child's own task route accepts.
     if (dashboard.hero.mode === 'pinned'
-        && dashboard.hero.pinnedKind === 'task' && dashboard.hero.launchId) {
+      && dashboard.hero.pinnedKind === 'task' && dashboard.hero.launchId) {
       navigate(`/tasks/${encodeURIComponent(dashboard.hero.launchId)}`)
       return
     }
@@ -248,10 +247,6 @@ export function StudentDashboardPage() {
               <Icon name="check" size={14} />
               {t('sdash.live')}
             </p>
-            <ActivenessMapSection
-              competencies={dashboard.competencies}
-              studentName={studentName}
-            />
           </>
         )}
       </main>
