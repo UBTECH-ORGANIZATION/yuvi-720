@@ -5,16 +5,17 @@ import { Icon } from '../../../components/primitives'
  * option — is this card. One shape, one selected state, one badge slot.
  */
 export function ItemCard({
-  label, thumb, dot, none, selected, previewing, locked, isNew, price, tip, disabled, onClick,
+  label, thumb, dot, none, selected, previewing, highlighted, locked, isNew, price, tip, disabled, onClick,
 }: {
   label: string
-  /** Rendered image for avatar gear. */
+  /** Rendered image for avatar gear or room props. */
   thumb?: string
-  /** Flat colour for room props, which have no thumbnail. */
+  /** Flat-colour fallback when a rendered thumbnail is unavailable. */
   dot?: string
   none?: boolean
   selected?: boolean
   previewing?: boolean
+  highlighted?: boolean
   locked?: boolean
   isNew?: boolean
   price?: number | null
@@ -25,9 +26,10 @@ export function ItemCard({
   const buyable = Boolean(locked) && typeof price === 'number'
   const classes = [
     'ys-card',
-    dot ? 'ys-card--dot' : '',
+    dot && !thumb ? 'ys-card--dot' : '',
     selected ? 'is-selected' : '',
     previewing ? 'is-previewing' : '',
+    highlighted ? 'is-highlighted' : '',
     locked ? 'is-locked' : '',
     buyable ? 'is-buyable' : '',
   ].filter(Boolean).join(' ')
@@ -43,9 +45,9 @@ export function ItemCard({
       <span className="ys-card__media">
         {none || (!thumb && !dot)
           ? <span className="ys-card__none" />
-          : dot
-            ? <span className="ys-card__dot" style={{ background: dot }} />
-            : <img src={thumb} alt="" />}
+          : thumb
+            ? <img src={thumb} alt="" />
+            : <span className="ys-card__dot" style={{ background: dot }} />}
       </span>
       <span className="ys-card__label">{label}</span>
       {selected && (

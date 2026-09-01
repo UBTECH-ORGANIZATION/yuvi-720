@@ -1264,12 +1264,156 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
 
 export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', 'nature', 'light', 'tech', 'wall']
 
-const BY_ID = new Map(ROOM_ITEMS.map((spec) => [spec.id, spec]))
-if (import.meta.env?.DEV && BY_ID.size !== ROOM_ITEMS.length) {
+/** Surprise props are resolvable by the renderer but never sold in the room menu. */
+export const WEEKLY_SURPRISE_COVERED = 'weekly_surprise_covered'
+export const WEEKLY_SURPRISE_READY = 'weekly_surprise_ready'
+const surpriseBall = (kit: RoomKit, color: THREE.ColorRepresentation, stripe = false) => {
+  const ball = kit.sph(0.27, kit.mat('gloss', color))
+  if (stripe) {
+    const ring = kit.tor(0.273, 0.018, kit.mat('dark', 0x26334d))
+    ring.rotation.y = Math.PI / 2
+    ball.add(ring)
+  }
+  return ball
+}
+const surprisePoster = (kit: RoomKit, tint: THREE.Color) => {
+  const group = new THREE.Group()
+  const frame = kit.mat('wood', DARKWOOD)
+  group.add(at(kit.rbox(0.94, 0.9, 0.08, 0.04, frame), 0, 0.83, 0))
+  group.add(at(kit.plane(0.76, 0.72, kit.mat('gloss', tint)), 0, 0.83, 0.045))
+  for (const [x, y, scale] of [[-0.22, 0.68, 0.18], [0.05, 0.64, 0.24], [0.28, 0.7, 0.16]]) {
+    const hill = at(kit.sph(scale, kit.mat('matte', new THREE.Color(tint).lerp(new THREE.Color(0x14214a), 0.45))), x, y, 0.06)
+    hill.scale.set(1.3, 0.45, 0.12); group.add(hill)
+  }
+  for (const sx of [-0.3, 0.3]) {
+    const leg = at(kit.cyl(0.025, 0.025, 0.43, frame, 8), sx, 0.22, 0)
+    leg.rotation.z = sx * -0.18; group.add(leg)
+  }
+  return group
+}
+const surpriseBox = (kit: RoomKit, ready = false) => {
+  const group = new THREE.Group()
+  const box = kit.mat('gloss', 0x426fc7)
+  const ribbon = kit.mat('gloss', 0xffd166)
+  if (ready) group.add(at(kit.halo(2.05, 0x67efe1, 0.52), 0, 0.86, 0.12))
+  group.add(at(kit.rbox(0.82, 0.62, 0.72, 0.07, box), 0, 0.31, 0))
+  group.add(at(kit.rbox(0.9, 0.12, 0.8, 0.05, box), 0, 0.67, 0))
+  group.add(at(kit.rbox(0.1, 0.75, 0.74, 0.025, ribbon), 0, 0.37, 0))
+  group.add(at(kit.rbox(0.84, 0.035, 0.1, 0.02, ribbon), 0, 0.735, 0))
+  for (const sx of [-0.13, 0.13]) {
+    const bow = at(kit.sph(0.16, ribbon), sx, 0.8, 0)
+    bow.scale.set(1.35, 0.45, 0.7)
+    group.add(bow)
+  }
+  return group
+}
+export const WEEKLY_SURPRISE_ITEMS: RoomItemSpec[] = [
+  { id: WEEKLY_SURPRISE_COVERED, category: 'play', placement: 'floor', radius: 0.46, height: 0.78, build: (kit) => surpriseBox(kit) },
+  { id: WEEKLY_SURPRISE_READY, category: 'play', placement: 'floor', radius: 0.46, height: 0.78, build: (kit) => surpriseBox(kit, true) },
+  {
+    id: 'surprise_arcade', category: 'play', placement: 'floor', radius: 0.65, height: 1.5, tintable: true, tint: '#4eeef0',
+    build: (kit, tint) => {
+      const group = new THREE.Group(); const shell = kit.mat('gloss', tint)
+      group.add(at(kit.rbox(0.86, 1.28, 0.48, 0.08, shell), 0, 0.7, 0))
+      group.add(at(kit.plane(0.58, 0.62, kit.mat('emissive', 0x1d3557)), 0, 0.93, 0.247))
+      group.add(at(kit.cyl(0.22, 0.22, 0.08, kit.mat('metal', 0xffd166), 14), 0, 0.43, 0.3))
+      return group
+    },
+  },
+  {
+    id: 'surprise_garden', category: 'play', placement: 'floor', radius: 0.62, height: 1.08, tintable: true, tint: '#5ce67e',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const metal = kit.mat('metal', 0x8596bc)
+      const rack = kit.mat('gloss', tint)
+      group.add(at(kit.rbox(0.78, 0.08, 0.48, 0.03, rack), 0, 0.04, 0))
+      for (const sx of [-0.34, 0.34]) group.add(at(kit.cyl(0.035, 0.035, 0.78, metal, 10), sx, 0.43, 0))
+      group.add(at(kit.rbox(0.76, 0.06, 0.13, 0.025, rack), 0, 0.72, 0.06))
+      const balls = [
+        { x: -0.23, color: 0xff8a36 }, { x: 0, color: 0xf2f5ff }, { x: 0.23, color: 0x51b8f5 },
+      ]
+      for (const ballInfo of balls) {
+        group.add(at(kit.sph(0.15, kit.mat('gloss', ballInfo.color)), ballInfo.x, 0.9, 0))
+      }
+      const basketballStripe = at(kit.tor(0.153, 0.012, kit.mat('dark', 0x44352e)), -0.23, 0.9, 0)
+      basketballStripe.rotation.y = Math.PI / 2
+      group.add(basketballStripe)
+      return group
+    },
+  },
+  {
+    id: 'surprise_basketball', category: 'play', placement: 'floor', radius: 0.3, height: 0.54,
+    build: (kit) => at(surpriseBall(kit, 0xf07a35, true), 0, 0.27, 0),
+  },
+  {
+    id: 'surprise_football', category: 'play', placement: 'floor', radius: 0.3, height: 0.54,
+    build: (kit) => at(surpriseBall(kit, 0xf3f4ef, true), 0, 0.27, 0),
+  },
+  {
+    id: 'surprise_volleyball', category: 'play', placement: 'floor', radius: 0.3, height: 0.54,
+    build: (kit) => at(surpriseBall(kit, 0x5db8f2, true), 0, 0.27, 0),
+  },
+  {
+    id: 'surprise_racket', category: 'play', placement: 'floor', radius: 0.38, height: 1.1, tintable: true, tint: '#ff5d73',
+    build: (kit, tint) => {
+      const group = new THREE.Group(); const rim = kit.tor(0.28, 0.035, kit.mat('gloss', tint)); rim.rotation.x = Math.PI / 2
+      group.add(at(rim, 0, 0.84, 0)); group.add(at(kit.cyl(0.035, 0.05, 0.57, kit.mat('metal', 0x354064), 10), 0, 0.29, 0))
+      return group
+    },
+  },
+  {
+    id: 'surprise_goalie_gloves', category: 'play', placement: 'floor', radius: 0.42, height: 0.35, tintable: true, tint: '#ffd166',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      for (const sx of [-0.22, 0.22]) {
+        const glove = at(kit.sph(0.17, kit.mat('gloss', tint)), sx, 0.18, 0); glove.scale.set(0.8, 1, 1.25); group.add(glove)
+        group.add(at(kit.box(0.12, 0.22, 0.07, kit.mat('gloss', tint)), sx, 0.2, -0.13))
+      }
+      return group
+    },
+  },
+  {
+    id: 'surprise_sneakers', category: 'play', placement: 'floor', radius: 0.45, height: 0.28, tintable: true, tint: '#4eeef0',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      for (const sx of [-0.22, 0.22]) group.add(at(kit.rbox(0.2, 0.14, 0.44, 0.06, kit.mat('gloss', tint)), sx, 0.1, 0))
+      return group
+    },
+  },
+  {
+    id: 'surprise_gaming_chair', category: 'seating', placement: 'floor', radius: 0.5, height: 1.15, tintable: true, tint: '#ff5d73',
+    build: (kit, tint) => {
+      const group = new THREE.Group(); const shell = kit.mat('gloss', tint); const dark = kit.mat('dark', CHARCOAL)
+      group.add(at(kit.cyl(0.04, 0.04, 0.52, kit.mat('metal', STEEL), 10), 0, .27, 0)); group.add(at(kit.rbox(.58, .1, .55, .05, shell), 0, .57, 0)); group.add(at(kit.rbox(.54, .66, .12, .06, shell), 0, .94, -.22))
+      for (const sx of [-.32, .32]) group.add(at(kit.box(.48, .035, .06, dark), sx * .28, .04, 0))
+      return group
+    },
+  },
+  {
+    id: 'surprise_console', category: 'tech', placement: 'floor', radius: 0.6, height: 0.72, tintable: true, tint: '#4eeef0',
+    build: (kit, tint) => {
+      const group = new THREE.Group(); const dark = kit.mat('dark', CHARCOAL)
+      group.add(at(kit.rbox(1.05, .08, .48, .04, kit.mat('wood', DARKWOOD)), 0, .6, 0)); group.add(at(kit.rbox(.46, .3, .32, .05, dark), 0, .34, 0))
+      group.add(at(kit.rbox(.25, .17, .05, .025, kit.mat('emissive', tint)), .3, .75, 0)); return group
+    },
+  },
+  {
+    id: 'surprise_observatory', category: 'wall', placement: 'floor', radius: 0.54, height: 1.3, tintable: true, tint: '#a896ff',
+    build: (kit, tint) => surprisePoster(kit, tint),
+  },
+  {
+    id: 'surprise_music_poster', category: 'wall', placement: 'floor', radius: 0.54, height: 1.3, tintable: true, tint: '#ff5d73',
+    build: (kit, tint) => surprisePoster(kit, tint),
+  },
+]
+
+const ALL_ROOM_ITEMS = [...ROOM_ITEMS, ...WEEKLY_SURPRISE_ITEMS]
+const BY_ID = new Map(ALL_ROOM_ITEMS.map((spec) => [spec.id, spec]))
+if (import.meta.env?.DEV && BY_ID.size !== ALL_ROOM_ITEMS.length) {
   // A reused id silently shadows the original prop and, once ids are gated,
   // can lock furniture a learner has already placed.
   const seen = new Set<string>()
-  const dupes = ROOM_ITEMS.map((s) => s.id).filter((id) => (seen.has(id) ? true : (seen.add(id), false)))
+  const dupes = ALL_ROOM_ITEMS.map((s) => s.id).filter((id) => (seen.has(id) ? true : (seen.add(id), false)))
   console.error(`RoomCatalog: duplicate item ids — ${[...new Set(dupes)].join(', ')}`)
 }
 
@@ -1279,5 +1423,61 @@ export function roomItemSpec(id: string): RoomItemSpec | undefined {
 
 export function itemsInCategory(category: RoomItemCategory): RoomItemSpec[] {
   return ROOM_ITEMS.filter((spec) => spec.category === category)
+}
+
+/** Collected surprises are private inventory, separate from the regular shop. */
+export function claimedSurpriseItems(rewardKinds: string[]): RoomItemSpec[] {
+  const owned = new Set(rewardKinds)
+  return WEEKLY_SURPRISE_ITEMS.filter((spec) => spec.id !== WEEKLY_SURPRISE_COVERED && owned.has(spec.id))
+}
+
+// Incremental 3D thumbnail cache. Rendering the whole catalog on opening the
+// studio exhausts GPU resources on lower-powered school devices.
+const thumbnailCache: Record<string, string> = {}
+
+export function getRoomThumbnails(items: RoomItemSpec[]): Record<string, string> {
+  const missing = items.filter((spec) => !thumbnailCache[spec.id])
+  if (!missing.length) return thumbnailCache
+  try {
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+    renderer.setPixelRatio(2)
+    renderer.setSize(140, 140)
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.05
+
+    const scene = new THREE.Scene()
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd9ddff, 1.5))
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.1)
+    keyLight.position.set(4, 6, 5)
+    scene.add(keyLight)
+    const fillLight = new THREE.DirectionalLight(0xaebfff, 0.8)
+    fillLight.position.set(-4, 3, 2)
+    scene.add(fillLight)
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
+    const { kit, dispose } = createRoomKit(true)
+
+    for (const spec of missing) {
+      const object = spec.build(kit, new THREE.Color(spec.tint ?? '#7c6bff'))
+      const bounds = new THREE.Box3().setFromObject(object)
+      const center = bounds.getCenter(new THREE.Vector3())
+      const size = bounds.getSize(new THREE.Vector3())
+      object.position.sub(center)
+      const dimension = Math.max(size.x, size.y, size.z) || 1
+      const distance = dimension * 2.4
+      camera.position.set(distance * 0.55, distance * 0.4, distance)
+      camera.lookAt(0, 0, 0)
+      scene.add(object)
+      renderer.render(scene, camera)
+      thumbnailCache[spec.id] = renderer.domElement.toDataURL('image/png')
+      scene.remove(object)
+    }
+
+    dispose()
+    renderer.dispose()
+  } catch {
+    // WebGL unavailable — ItemCard falls back to the item's colour swatch.
+  }
+  return thumbnailCache
 }
 

@@ -65,10 +65,10 @@ async def _avatars_for(learner_ids: list[str]) -> tuple[dict[str, Any], set[str]
 
     Two return values because they answer different questions. The first is what
     to draw. The second is who has *decided* — including the learners who chose
-    `{"kind": "initial"}`, their own letter, and the ones on the Yuvi studio
-    avatar, which this roster cannot draw. Deriving a coin for either of those
-    would overrule a choice, so the caller needs to know a choice exists even
-    when it produces nothing to render here.
+    `{"kind": "initial"}`, their own letter, which this roster draws as a letter
+    rather than a coin. Deriving a coin for that would overrule a choice, so the
+    caller needs to know a choice exists even when it produces nothing to render
+    here.
 
     `ProfileAvatar` resolves this per learner, which is right for one profile and
     absurd for a thirty-row roster — thirty round trips to render thirty coins.
@@ -164,11 +164,10 @@ async def _earned_avatars_for(learner_ids: list[str]) -> dict[str, Any]:
 def _badge_choice(avatar: Any) -> Optional[dict[str, Any]]:
     """Just the badge coin, or nothing.
 
-    `learner_state.avatar` holds whichever shape the learner last saved, and one
-    of them is the full Yuvi studio design — a nested document of colours and
-    equipped slots. Shipping that for thirty learners to draw thirty 26px
-    circles would put kilobytes of robot on the wire that the roster cannot
-    render anyway. Only the three fields `<Badge mini>` needs cross over.
+    Only the three fields `<Badge mini>` needs cross over, and a learner on
+    their own letter produces nothing at all. Legacy documents may still hold a
+    whole Yuvi studio design here, from before the two were separate fields;
+    those have no `kind` and fall out on the first test.
     """
     if not isinstance(avatar, dict) or avatar.get("kind") != "badge":
         return None

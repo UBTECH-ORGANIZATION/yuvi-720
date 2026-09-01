@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
-  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, sameRoom,
+  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom,
   type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
@@ -15,7 +15,7 @@ import { roomItemSpec } from './RoomCatalog'
  * the same boolean `save()` — so the studio's one exit guard can watch both the
  * avatar and the room without special cases.
  */
-export function useRoomDesign(autoLoad = true) {
+export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const [loaded, setLoaded] = useState(false)
   const [room, setRoom] = useState<RoomDesign>(() => cloneRoom(DEFAULT_ROOM))
   const [baseline, setBaseline] = useState<RoomDesign>(() => cloneRoom(DEFAULT_ROOM))
@@ -28,6 +28,7 @@ export function useRoomDesign(autoLoad = true) {
   useEffect(() => { roomRef.current = room }, [room])
 
   const load = useCallback(async () => {
+    setLoaded(false)
     try {
       const state = await getLearnerState()
       const stored = normalizeRoom(state.room)
@@ -35,7 +36,7 @@ export function useRoomDesign(autoLoad = true) {
       setBaseline(cloneRoom(stored))
     } catch { /* an empty room is a perfectly good starting point */ }
     setLoaded(true)
-  }, [])
+  }, [reloadKey])
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
 
@@ -78,6 +79,17 @@ export function useRoomDesign(autoLoad = true) {
     setSelectedUid(null)
   }
 
+  /** A teacher-approved Studio reward becomes ordinary furniture exactly once. */
+  const materializeWeeklyReward = async (uid: string, kind: string, x: number, z: number, rot = 0) => {
+    if (roomRef.current.items.some((item) => item.uid === uid) || !roomItemSpec(kind)) return true
+    const spec = roomItemSpec(kind)!
+    const next = cloneRoom(roomRef.current)
+    next.items.push({ uid, kind, x, z, rot, tint: spec.tintable ? spec.tint : undefined })
+    roomRef.current = next
+    setRoom(next)
+    return save(next)
+  }
+
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
@@ -87,7 +99,7 @@ export function useRoomDesign(autoLoad = true) {
       ...prev,
       stations: {
         ...prev.stations,
-        [id]: { x, z, rot: rot ?? prev.stations[id].rot },
+        [id]: { x, z, rot: rot ?? prev.stations[id].rot, placed: true },
       },
     }))
   }
@@ -102,7 +114,7 @@ export function useRoomDesign(autoLoad = true) {
   }
 
   const reset = () => {
-    setRoom(cloneRoom(DEFAULT_ROOM))
+    setRoom(resetRoom)
     setSelectedUid(null)
   }
 
@@ -135,6 +147,13 @@ export function useRoomDesign(autoLoad = true) {
     return save(next)
   }
 
+  /** The welcome sequence is remembered separately from the room tutorial. */
+  const completeIntro = async () => {
+    const next = { ...cloneRoom(roomRef.current), introDone: true }
+    setRoom(next)
+    return save(next)
+  }
+
   /** True while the room on screen is not the room on the server. */
   const dirty = loaded && !sameRoom(room, baseline)
   const selected = room.items.find((item) => item.uid === selectedUid) ?? null
@@ -142,8 +161,8 @@ export function useRoomDesign(autoLoad = true) {
   return {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
-    place, move, rotate, tint, remove, clear,
-    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, reset, save, load,
+    place, move, rotate, tint, remove, clear, materializeWeeklyReward,
+    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

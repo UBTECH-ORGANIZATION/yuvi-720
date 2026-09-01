@@ -97,6 +97,10 @@ async def approve_goal(
         learner_id, conversation_id, goal_id, "summarized"
     )
     reward = (result or {}).get("reward") or {}
+    # A Studio surprise was reserved while this goal was still open. Approval is
+    # its reveal gate; this is separate from and never alters the spark ledger.
+    from app.services import studio_surprises
+    await studio_surprises.reveal_approved_goal(learner_id, conversation_id, goal_id)
     granted = int(reward.get("granted") or 0)
     # The daily cap pays nothing on the fifth goal of a day. That is not the same
     # as "this goal was worth nothing", and the teacher should not have to guess

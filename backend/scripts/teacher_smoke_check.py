@@ -72,6 +72,8 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "timetable_slots": [("group_id", "active")],
     "timetable_exceptions": [("occurrence_id",)],
     "school_calendar_days": [("school_id", "date")],
+    # Weekly studio surprise state, one row per (learner, week).
+    "weekly_studio_surprises": [("learner_id", "week")],
 }
 
 # Brain paths the teacher assistant must never be able to read.
