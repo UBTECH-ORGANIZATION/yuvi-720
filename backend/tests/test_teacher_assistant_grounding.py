@@ -98,6 +98,24 @@ class GroundingTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("40%", result["text"])
         self.assertEqual(result["tools"][0]["name"], "get_student_overview")
 
+    async def test_an_off_domain_answer_with_digits_survives_the_rescue(self):
+        """A recipe carries digits, so the gate forces a round — but the prompt
+        tells the model to call `list_available_data` and answer anyway, and
+        that path must SHIP the answer, not discard it. A gate refactor that
+        turns the forced round into a discard breaks this test on purpose."""
+        rounds = [
+            text_message("מחממים תנור ל-180 מעלות ואופים 35 דקות."),   # digits → gate fires
+            tool_message("list_available_data", {}),                    # the harmless fetch
+            text_message("מתכון קצר: מחממים תנור ל-180 מעלות, מערבבים ואופים 35 דקות."),
+        ]
+        with patch.object(teacher_assistant, "call_llm", AsyncMock(side_effect=rounds)):
+            result = await teacher_assistant.run_assistant(
+                "teacher-a", "יש לך מתכון פשוט לעוגת שוקולד?", context=context())
+
+        self.assertIsNotNone(result["text"], "an off-domain answer was discarded")
+        self.assertIn("180", result["text"])
+        self.assertIsNone(result["text_key"])
+
     async def test_a_conversational_reply_is_not_forced_through_tools(self):
         """"תודה" must not burn a forced round."""
         with patch.object(teacher_assistant, "call_llm",
@@ -233,6 +251,25 @@ class SystemPromptTests(unittest.TestCase):
     def test_the_prompt_carries_the_screen_when_reported(self):
         prompt = teacher_assistant._system_prompt("he", {"route": "/teacher/student/kid-1"})
         self.assertIn("/teacher/student/kid-1", prompt)
+
+    def test_the_prompt_routes_names_through_find_student(self):
+        """A typed name is resolved by the tool — never by asking for an id."""
+        lowered = teacher_assistant._system_prompt("he", {}).lower()
+        self.assertIn("find_student", lowered)
+        self.assertIn("never ask the teacher for a learner id", lowered)
+
+    def test_the_prompt_forbids_adopting_an_unmatched_group_name(self):
+        lowered = teacher_assistant._system_prompt("he", {}).lower()
+        self.assertIn("never adopt their name", lowered)
+
+    def test_who_needs_help_merges_the_live_view_with_the_standing_flags(self):
+        """The observed failure: 'מי זקוק לעזרה כרגע?' answered from raised
+        hands alone while three children stood flagged in the snapshot."""
+        lowered = teacher_assistant._system_prompt("he", {}).lower()
+        self.assertIn('never answer "nobody" from the live view alone', lowered)
+        self.assertIn("get_class_mood", lowered)
+        self.assertIn("get_gap_diagnosis", lowered)
+        self.assertIn("today_feeling", lowered)
 
 
 if __name__ == "__main__":
