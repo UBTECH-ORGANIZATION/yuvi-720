@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRoute } from '../../app/router'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import {
@@ -6,13 +6,16 @@ import {
 } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useRewards } from '../../providers/RewardsProvider'
-import { stageAmount } from '../../services/rewards'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   createMentoring, deleteGoal, deleteConversation, listMentoring, updateGoalProgress, assistMentoring,
   recommendGoal, setRecommendationStatus, requestGoalHelp,
   type MentoringConversation, type MentoringGoal, type GoalProgressStage, type YuviQA, type GoalRecommendation,
 } from '../../services/mentoring'
+import {
+  buildDayGroups, goalStatus, isOverdue, STATUS_TO_STAGE,
+  type DayGroup, type GoalStatus,
+} from './goalTimeline'
 import './mentoring-view.css'
 
 const PROGRESS_STAGES: GoalProgressStage[] = ['chosen', 'started', 'progressed', 'summarized']
@@ -46,15 +49,13 @@ function formatDate(value: string | undefined, language: string) {
     : new Intl.DateTimeFormat(language, { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
-/** Day + short month for the small stepping stones on the trail. */
-function shortDate(value: string | undefined, language: string) {
-  if (!value) return { day: '', month: '' }
+/** Day + short month, for the quiet "which talk did this come from" line. */
+function shortDayMonth(value: string | undefined, language: string) {
+  if (!value) return ''
   const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return { day: value, month: '' }
-  return {
-    day: new Intl.DateTimeFormat(language, { day: 'numeric' }).format(date),
-    month: new Intl.DateTimeFormat(language, { month: 'short' }).format(date),
-  }
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat(language, { day: 'numeric', month: 'short' }).format(date)
 }
 
 // A goal always has a target date; a new manual goal defaults to a week out.
@@ -68,22 +69,14 @@ function goalStage(goal: MentoringGoal): GoalProgressStage {
   return goal.progress_stage && PROGRESS_STAGES.includes(goal.progress_stage) ? goal.progress_stage : 'chosen'
 }
 
-// Three learner-facing statuses (new / in progress / done), mapped onto the
-// stored progress stages. "Active" is not the first goal — it is derived from
-// the time window (deadline not passed and not done yet).
-type GoalStatus = 'new' | 'in_progress' | 'done'
-const STATUS_TO_STAGE: Record<GoalStatus, GoalProgressStage> = { new: 'chosen', in_progress: 'started', done: 'summarized' }
-
-function goalStatus(goal: MentoringGoal): GoalStatus {
-  const stage = goalStage(goal)
-  if (stage === 'summarized') return 'done'
-  if (stage === 'chosen') return 'new'
-  return 'in_progress'
-}
-
-function isOverdue(goal: MentoringGoal): boolean {
-  if (!goal.deadline || goalStatus(goal) === 'done') return false
-  return goal.deadline < new Date().toISOString().slice(0, 10)
+/** Near dates are named, not spelled out — a child reads "today" faster. */
+function dayLabel(t: (key: string) => string, language: string, date: string): string {
+  if (!date) return t('mentoring.student.day.noDate')
+  const now = new Date()
+  if (date === now.toISOString().slice(0, 10)) return t('mentoring.student.day.today')
+  now.setDate(now.getDate() + 1)
+  if (date === now.toISOString().slice(0, 10)) return t('mentoring.student.day.tomorrow')
+  return formatDate(date, language)
 }
 
 /** Students may remove only conversations they documented — teacher talks are protected. */
@@ -114,15 +107,14 @@ function StudentGoalsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState(false)
   const [draft, setDraft] = useState<ComposerDraft | null>(null)
-  // Exactly one conversation is in focus at a time; the trail moves between them.
-  const [focus, setFocus] = useState(0)
+  // Finished days are folded away so the page opens on what still needs doing.
+  const [showEarlier, setShowEarlier] = useState(false)
   const route = useRoute()
   const draftTimer = useRef<number | undefined>(undefined)
 
   const load = () => {
     setRows(null)
     setError(false)
-    setFocus(0)
     listMentoring()
       .then((response) => setRows(response.conversations))
       .catch(() => setError(true))
@@ -131,24 +123,26 @@ function StudentGoalsPage() {
   /* Deep link from a notification: `/mentoring?conversation=…&goal=…`.
      Without this the bell can only say "something happened" and leave the kid to
      go and find it, which is the difference between a notification and an
-     announcement. Runs after the rows land, focuses that conversation and
-     flashes the goal so the eye lands on the right row. */
+     announcement. Every goal is on the page now, so this only has to scroll to
+     the right one and flash it. */
   const [flashGoalId, setFlashGoalId] = useState<string | null>(null)
   useEffect(() => {
     if (!rows?.length) return
     const params = new URLSearchParams(route.split('?')[1] ?? '')
-    const conversationId = params.get('conversation')
     const goalId = params.get('goal')
-    if (!conversationId) return
-    const index = rows.findIndex((row) => row.id === conversationId)
-    if (index >= 0) setFocus(index)
     if (!goalId) return
     /* Deliberately NOT cleared on a timer. A timer-driven highlight is at the
        mercy of every other re-render on this page — the goal list refetches, the
        effect re-runs, and the marker blinks out early or twice. The CSS
        animation runs once and ends on its own, so the class can simply stay. */
     setFlashGoalId(goalId)
-    // Wait a frame for the focused conversation to render before scrolling.
+    // A finished goal lives in a folded day; scrolling to something still
+    // hidden would land the child on nothing at all.
+    if (buildDayGroups(rows).some((group) =>
+      group.settled && group.entries.some((entry) => entry.goal.id === goalId))) {
+      setShowEarlier(true)
+    }
+    // Wait a frame for that day to render before scrolling.
     const raf = window.requestAnimationFrame(() => {
       document.querySelector(`[data-goal-id="${goalId}"]`)
         ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -242,13 +236,41 @@ function StudentGoalsPage() {
     }
   }
 
-  // Keep the focused index valid after a delete or a reload.
-  const current = rows && rows.length > 0 ? Math.min(focus, rows.length - 1) : 0
+  const groups = useMemo(() => buildDayGroups(rows || []), [rows])
+  const settled = groups.filter((group) => group.settled)
+  const live = groups.filter((group) => !group.settled)
+  const settledCount = settled.reduce((total, group) => total + group.entries.length, 0)
+
+  const renderDay = (group: DayGroup) => (
+    <section className={`mt-day${group.late ? ' is-late' : ''}`} key={group.key}>
+      <h2 className="mt-day__head">
+        <Icon name="calendar" size={14} />
+        <span className="mt-day__label">{dayLabel(t, language, group.date)}</span>
+        {group.late && <span className="mt-day__late">{t('mentoring.student.status.overdue')}</span>}
+      </h2>
+      <ul className="mt-goals">
+        {group.entries.map(({ goal, conversation }) => (
+          <GoalCard
+            key={goal.id}
+            goal={goal}
+            conversation={conversation}
+            language={language}
+            updating={updatingId === goal.id}
+            helping={helpingId === goal.id}
+            flash={flashGoalId === goal.id}
+            onStatus={(status) => changeStatus(goal, conversation, status)}
+            onHelp={() => requestHelp(goal, conversation)}
+            onOpenTalk={() => setDetail(conversation)}
+          />
+        ))}
+      </ul>
+    </section>
+  )
 
   return (
     <>
       <LearnerAppBar />
-      <main className={`mt-wrap mt-student${rows && rows.length > 0 ? '' : ' mt-student--sparse'}`}>
+      <main className={`mt-wrap mt-student${groups.length > 0 ? '' : ' mt-student--sparse'}`}>
         <header className="mt-student__hero">
           <p className="mt-student__eyebrow">{t('mentoring.student.eyebrow')}</p>
           <h1>{t('mentoring.student.title')}</h1>
@@ -259,26 +281,38 @@ function StudentGoalsPage() {
           <ErrorState title={t('mentoring.error')} />
         ) : rows === null ? (
           <LoadingState title={t('mentoring.loading')} />
-        ) : rows.length === 0 ? (
+        ) : groups.length === 0 ? (
           <MentoringEmpty onCreate={() => setComposerOpen(true)} />
         ) : (
-          <section className="mt-focus-wrap" aria-label={t('mentoring.student.conversations.title')}>
-            {rows.length > 1 && (
-              <ConversationSwitch conversations={rows} index={current} language={language} onPick={setFocus} />
-            )}
-            <ConversationFocus
-              key={rows[current].id}
-              conversation={rows[current]}
-              language={language}
-              updating={updatingId}
-              helping={helpingId}
-              flashGoalId={flashGoalId}
-              onStatus={(goal, status) => changeStatus(goal, rows[current], status)}
-              onHelp={(goal) => requestHelp(goal, rows[current])}
-              onOpen={() => setDetail(rows[current])}
-              onCompose={() => setComposerOpen(true)}
-            />
-          </section>
+          <>
+            <section className="mt-duelist" aria-label={t('mentoring.student.goals.eyebrow')}>
+              {settled.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    className={`mt-duelist__earlier${showEarlier ? ' is-open' : ''}`}
+                    aria-expanded={showEarlier}
+                    onClick={() => setShowEarlier((value) => !value)}
+                  >
+                    <Icon name="chevronUp" size={15} className="mt-duelist__chev" />
+                    {t('mentoring.student.timeline.earlier', { count: settledCount })}
+                  </button>
+                  {showEarlier && settled.map(renderDay)}
+                </>
+              )}
+              {live.map(renderDay)}
+            </section>
+
+            {/* Yuvi sits with the action it belongs to, closing the page instead
+                of leaving a long empty tail below the goals. */}
+            <aside className="mt-focus__foot">
+              <span className="mt-focus__yuvi" aria-hidden="true"><Icon name="spark" size={22} /></span>
+              <p>{t('mentoring.student.footer.prompt')}</p>
+              <button className="mt-focus__cta" type="button" onClick={() => setComposerOpen(true)}>
+                <Icon name="plus" size={18} /><span>{t('mentoring.student.new')}</span>
+              </button>
+            </aside>
+          </>
         )}
       </main>
 
@@ -323,320 +357,61 @@ function YuviTag() {
   )
 }
 
-// Only a handful of talks are offered at once — a long row of near-identical
-// dates is noise for a child. The window slides around the talk in focus.
-const STRIP_WINDOW = 7
+// A timeline of the days goals are due, so the strip of talk dates is gone:
+// the child navigates by when work is owed, not by when it was agreed.
 
-// A timeline of the talks the child has had, not a date picker: a single line
-// runs through every talk, and the one in focus is marked by colour alone.
-function ConversationSwitch({ conversations, index, language, onPick }: {
-  conversations: MentoringConversation[]; index: number; language: string; onPick: (next: number) => void
-}) {
-  const { t } = useI18n()
-  const total = conversations.length
-  const stripRef = useRef<HTMLOListElement | null>(null)
-  const start = total <= STRIP_WINDOW
-    ? 0
-    : Math.min(Math.max(index - Math.floor(STRIP_WINDOW / 2), 0), total - STRIP_WINDOW)
-  const visible = conversations.slice(start, start + STRIP_WINDOW)
-
-  // Keep the talk in focus visible without the child having to drag the strip.
-  useEffect(() => {
-    const active = stripRef.current?.querySelector<HTMLElement>('.mt-tnode.is-on')
-    active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-  }, [index])
-
-  return (
-    <nav className="mt-strip-wrap" aria-label={t('mentoring.student.journey.trailAria')}>
-      <div className="mt-strip">
-        <button
-          type="button"
-          className="mt-strip__nav mt-strip__nav--newer"
-          disabled={index === 0}
-          onClick={() => onPick(index - 1)}
-          aria-label={t('mentoring.student.journey.newer')}
-          title={t('mentoring.student.journey.newer')}
-        >
-          <Icon name="chevronLeft" size={20} />
-        </button>
-        <ol
-          className="mt-strip__rail"
-          ref={stripRef}
-          onKeyDown={(event) => {
-            // In RTL the visual left arrow moves to the older talk, and back.
-            const rtl = document.documentElement.dir === 'rtl'
-            const step = event.key === 'ArrowLeft' ? (rtl ? 1 : -1) : event.key === 'ArrowRight' ? (rtl ? -1 : 1) : 0
-            if (!step) return
-            const next = index + step
-            if (next < 0 || next >= total) return
-            event.preventDefault()
-            onPick(next)
-          }}
-        >
-          {visible.map((conversation, offset) => (
-            <TalkCard
-              key={conversation.id}
-              conversation={conversation}
-              language={language}
-              active={start + offset === index}
-              opening={start + offset === total - 1}
-              position={start + offset}
-              total={total}
-              onPick={() => onPick(start + offset)}
-            />
-          ))}
-        </ol>
-        <button
-          type="button"
-          className="mt-strip__nav mt-strip__nav--older"
-          disabled={index >= total - 1}
-          onClick={() => onPick(index + 1)}
-          aria-label={t('mentoring.student.journey.older')}
-          title={t('mentoring.student.journey.older')}
-        >
-          <Icon name="chevronLeft" size={20} />
-        </button>
-      </div>
-    </nav>
-  )
-}
-
-/** One stop on the timeline: a dot on the line, the date, and one short line
- * saying what that talk was — so the row reads as a story, not as a calendar. */
-function TalkCard({ conversation, language, active, opening, position, total, onPick }: {
-  conversation: MentoringConversation; language: string; active: boolean; opening: boolean
-  position: number; total: number; onPick: () => void
-}) {
-  const { t } = useI18n()
-  const { day, month } = shortDate(conversation.date, language)
-  const goals = conversation.goals || []
-  const done = goals.filter((goal) => goalStatus(goal) === 'done').length
-  const allDone = goals.length > 0 && done === goals.length
-
-  const context = opening
-    ? t('mentoring.student.journey.kind.opening')
-    : goals.length === 1
-      ? t('mentoring.student.journey.goalsCount.one')
-      : goals.length > 1
-        ? t('mentoring.student.journey.goalsCount.many', { count: goals.length })
-        : t('mentoring.student.journey.kind.followUp')
-
-  const label = [
-    t('mentoring.student.journey.talkTag'),
-    formatDate(conversation.date, language),
-    context,
-    t('mentoring.student.journey.position', { index: position + 1, total }),
-    goals.length ? t('mentoring.student.journey.goalsProgress', { done, total: goals.length }) : '',
-  ].filter(Boolean).join(' — ')
-
-  return (
-    <li className={`mt-tnode${active ? ' is-on' : ''}${allDone ? ' is-complete' : ''}`}>
-      <span className="mt-tnode__dot" aria-hidden="true">
-        {allDone ? <Icon name="check" size={9} /> : null}
-      </span>
-      <button
-        type="button"
-        className="mt-tcard"
-        onClick={onPick}
-        aria-current={active ? 'true' : undefined}
-        aria-label={label}
-        title={label}
-      >
-        <span className="mt-tcard__date" aria-hidden="true">
-          <span className="mt-tcard__day">{day}</span>
-          <span className="mt-tcard__month">{month}</span>
-        </span>
-        <span className="mt-tcard__ctx" aria-hidden="true">{context}</span>
-      </button>
-    </li>
-  )
-}
-
-/** One screen, one story, top to bottom: what I said in the talk → how many
- * goals came out of it → the goals themselves, each with its own next step. */
-function ConversationFocus({ conversation, language, updating, helping, flashGoalId, onStatus, onHelp, onOpen, onCompose }: {
-  conversation: MentoringConversation; language: string; updating: string | null; helping: string | null
+/** One goal, as a child needs to read it: what to do, what it is worth, and
+ * one button. The due date is the heading it sits under, so it is not repeated
+ * here, and the talk it came from is a quiet line at the foot — present, but
+ * no longer the thing organising the screen. */
+function GoalCard({ goal, conversation, language, updating, helping, flash, onStatus, onHelp, onOpenTalk }: {
+  goal: MentoringGoal; conversation: MentoringConversation; language: string
+  updating: boolean; helping: boolean
   /** Goal the notification deep link pointed at; briefly highlighted. */
-  flashGoalId: string | null
-  onStatus: (goal: MentoringGoal, status: GoalStatus) => void; onHelp: (goal: MentoringGoal) => void
-  onOpen: () => void; onCompose: () => void
+  flash: boolean
+  onStatus: (status: GoalStatus) => void; onHelp: () => void; onOpenTalk: () => void
 }) {
   const { t } = useI18n()
-  const goals = conversation.goals || []
-  const notes = conversation.notes || ''
-  const [expanded, setExpanded] = useState(false)
-  // Long notes are hard for a child to scan, so they open on request only.
-  const long = notes.length > 170
-  // The goals are an accordion: everything stays scannable, and the goal that
-  // still needs work is the one already open when the talk is picked.
-  const firstActive = goals.find((goal) => goalStatus(goal) !== 'done')?.id ?? null
-  const [openGoal, setOpenGoal] = useState<string | null>(firstActive)
-  useEffect(() => { setOpenGoal(firstActive) }, [conversation.id, firstActive])
-
-  return (
-    <div className="mt-focus">
-      <article className="mt-focus__talk">
-        <div className="mt-focus__talk-top">
-          <div className="mt-focus__label">
-            <Icon name="message" size={15} />{t('mentoring.student.focus.saidTitle')}
-          </div>
-          <span className="mt-focus__meta">
-            {formatDate(conversation.date, language)}
-            {conversation.teacher_name && ` · ${conversation.teacher_name}`}
-          </span>
-        </div>
-        {notes && (
-          <p className={`mt-focus__notes${long && !expanded ? ' is-clamped' : ''}`} dir="auto">{notes}</p>
-        )}
-        <div className="mt-focus__talk-foot">
-          {conversation.meeting_stage && (
-            <span className="mt-focus__feeling">
-              <Icon name="reflect" size={13} />
-              {t('mentoring.student.focus.feeling')}: {feelingLabel(t, conversation.meeting_stage)}
-            </span>
-          )}
-          <div className="mt-focus__talk-actions">
-            {long && (
-              <button className="mt-text-button" type="button" onClick={() => setExpanded((value) => !value)}>
-                {t(expanded ? 'mentoring.student.focus.collapse' : 'mentoring.student.focus.expand')}
-              </button>
-            )}
-            <button className="mt-text-button" type="button" onClick={onOpen}>
-              {t('mentoring.student.focus.details')}<Icon name="arrow" size={15} />
-            </button>
-          </div>
-        </div>
-      </article>
-
-      {goals.length > 0 ? (
-        <>
-          {/* The visual bridge: this talk is what produced the goals below. */}
-          <div className="mt-flow-link">
-            <span className="mt-flow-link__line" aria-hidden="true" />
-            <p className="mt-flow-link__pill">
-              <Icon name="target" size={14} />
-              {goals.length === 1
-                ? t('mentoring.student.focus.chosen.one')
-                : t('mentoring.student.focus.chosen.many', { count: goals.length })}
-            </p>
-            <span className="mt-flow-link__line" aria-hidden="true" />
-          </div>
-          <section className="mt-focus__goals">
-            <ul className="mt-goals">
-              {goals.map((goal) => (
-                <FocusGoal
-                  key={goal.id}
-                  goal={goal}
-                  language={language}
-                  updating={updating === goal.id}
-                  helping={helping === goal.id}
-                  open={openGoal === goal.id}
-                  flash={flashGoalId === goal.id}
-                  onToggle={() => setOpenGoal((current) => (current === goal.id ? null : goal.id ?? null))}
-                  onStatus={(status) => onStatus(goal, status)}
-                  onHelp={() => onHelp(goal)}
-                />
-              ))}
-            </ul>
-          </section>
-        </>
-      ) : (
-        <p className="mt-journey__empty">{t('mentoring.student.summary.noGoals')}</p>
-      )}
-
-      {/* Yuvi sits with the action it belongs to, closing the page instead of
-          leaving a long empty tail below the goals. */}
-      <aside className="mt-focus__foot">
-        <span className="mt-focus__yuvi" aria-hidden="true"><Icon name="spark" size={22} /></span>
-        <p>{t('mentoring.student.footer.prompt')}</p>
-        <button className="mt-focus__cta" type="button" onClick={onCompose}>
-          <Icon name="plus" size={18} /><span>{t('mentoring.student.new')}</span>
-        </button>
-      </aside>
-    </div>
-  )
-}
-
-// One goal is one compact row a child can scan in a second: name, status, due
-// date, the next step in a single line, and one button. Everything else waits
-// inside the card until it is opened.
-function FocusGoal({ goal, language, updating, helping, open, flash, onToggle, onStatus, onHelp }: {
-  goal: MentoringGoal; language: string; updating: boolean; helping: boolean
-  open: boolean; flash: boolean; onToggle: () => void
-  onStatus: (status: GoalStatus) => void; onHelp: () => void
-}) {
-  const { t } = useI18n()
-  const { wallet } = useRewards()
   const status = goalStatus(goal)
   const isDone = status === 'done'
   const overdue = isOverdue(goal)
   // The title may already be the step itself, and then there is nothing to add.
   const step = goal.title && goal.next_steps ? goal.next_steps : ''
-  const hasDetail = Boolean(step) || goal.from_yuvi || goal.reward_why || !isDone
-  const panelId = `mt-goal-panel-${goal.id}`
-  // A single forward move, never a row of look-alike statuses to decode.
-  const advance: GoalStatus = status === 'new' ? 'in_progress' : status === 'in_progress' ? 'done' : 'in_progress'
+  // A single forward move, never a row of look-alike statuses to decode. The
+  // button is also the only place the status is stated: a separate chip said
+  // the same thing twice.
+  const advance: GoalStatus = status === 'in_progress' ? 'done' : 'in_progress'
   const advanceLabel = status === 'new'
     ? t('mentoring.student.status.start')
     : status === 'in_progress' ? t('mentoring.student.status.finish') : t('mentoring.student.status.reopen')
-  // What this goal is worth, and what the very next move pays — the pull
-  // towards finishing is always visible on the goal itself.
+  /* One spark figure, and it is the goal's worth. Finishing settles whatever is
+     left of that value server-side, so the number here is what the learner ends
+     up with — which is why the old "finishing pays N" line is gone rather than
+     corrected: two numbers for one goal read as a contradiction. */
   const worth = goal.reward_value || 0
-  const nextPayout = isDone ? 0 : stageAmount(goal.reward_value, advance === 'done' ? 'summarized' : 'started', wallet?.rules)
-
-  const summary = (
-    <>
-      <span className="mt-fgoal__top">
-        <span className="mt-fgoal__title" dir="auto">{goal.title || goal.next_steps}</span>
-        {worth > 0 && (
-          <span className="mt-fgoal__worth" title={t('rewards.goal.worthHint')}>
-            <Icon name="spark" size={12} />{t('rewards.goal.worth', { count: worth })}
-          </span>
-        )}
-        <span className={`mt-fgoal__status is-${status}`}>
-          {isDone && <Icon name="check" size={11} />}{t(`mentoring.student.status.${status}`)}
-        </span>
-        {goal.deadline && (
-          <span className={`mt-fgoal__when${overdue ? ' is-overdue' : ''}`}>
-            <Icon name="calendar" size={13} />
-            {t('mentoring.student.goal.due', { date: formatDate(goal.deadline, language) })}
-            {overdue && ` · ${t('mentoring.student.status.overdue')}`}
-          </span>
-        )}
-      </span>
-      {step && (
-        <span className="mt-fgoal__stepline" dir="auto">
-          <span className="mt-fgoal__steplabel">{t('mentoring.student.active.nextStep')}:</span> {step}
-        </span>
-      )}
-    </>
-  )
 
   return (
     <li
       /* Anchor for the notification deep link — the bell scrolls to this and
          flashes it, so a kid lands on the goal itself rather than on a list. */
       data-goal-id={goal.id}
-      className={`mt-fgoal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}${open ? ' is-open' : ''}${flash ? ' is-flash' : ''}`}
+      className={`mt-dgoal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}${flash ? ' is-flash' : ''}`}
     >
-      <div className="mt-fgoal__bar">
-        {hasDetail ? (
-          <button
-            type="button"
-            className="mt-fgoal__toggle"
-            aria-expanded={open}
-            aria-controls={panelId}
-            title={t(open ? 'mentoring.student.goal.less' : 'mentoring.student.goal.more')}
-            onClick={onToggle}
-          >
-            {summary}
-            <Icon name="chevronUp" size={16} className="mt-fgoal__chev" />
-          </button>
-        ) : (
-          <span className="mt-fgoal__toggle is-static">{summary}</span>
+      <div className="mt-dgoal__row">
+        <div className="mt-dgoal__main">
+          <p className="mt-dgoal__title" dir="auto">
+            {isDone && <Icon name="check" size={14} className="mt-dgoal__tick" />}
+            {goal.title || goal.next_steps}
+          </p>
+          {step && <p className="mt-dgoal__step" dir="auto">{step}</p>}
+        </div>
+        {worth > 0 && (
+          <span className="mt-dgoal__worth" title={t('rewards.goal.worthHint')}>
+            <Icon name="spark" size={12} />{t('rewards.goal.worth', { count: worth })}
+          </span>
         )}
         <button
-          className={`mt-fgoal__advance${isDone ? ' is-quiet' : ''}`}
+          className={`mt-dgoal__advance${isDone ? ' is-quiet' : ''}`}
           type="button"
           disabled={updating}
           onClick={() => onStatus(advance)}
@@ -644,34 +419,19 @@ function FocusGoal({ goal, language, updating, helping, open, flash, onToggle, o
           {advanceLabel}
         </button>
       </div>
-      {hasDetail && (
-        <div className="mt-fgoal__panel" id={panelId} hidden={!open}>
-          {step && (
-            <p className="mt-fgoal__step" dir="auto">
-              <Icon name="arrow" size={13} />{step}
-            </p>
-          )}
-          {goal.reward_why && (
-            <p className="mt-fgoal__why" dir="auto">
-              <Icon name="spark" size={13} />{goal.reward_why}
-            </p>
-          )}
-          {nextPayout > 0 && (
-            <p className="mt-fgoal__payout">
-              {t(advance === 'done' ? 'rewards.goal.finishPays' : 'rewards.goal.startPays', { count: nextPayout })}
-            </p>
-          )}
-          <div className="mt-fgoal__extra">
-            {goal.from_yuvi && <YuviTag />}
-            {!isDone && (goal.needs_help
-              ? <span className="mt-jgoal__helped"><Icon name="check" size={13} />{t('mentoring.student.status.helpSent')}</span>
-              : <button className="mt-text-button mt-jgoal__help" type="button" disabled={helping} onClick={onHelp}>
-                  <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
-                </button>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="mt-dgoal__foot">
+        {goal.from_yuvi && <YuviTag />}
+        {!isDone && (goal.needs_help
+          ? <span className="mt-dgoal__helped"><Icon name="check" size={13} />{t('mentoring.student.status.helpSent')}</span>
+          : <button className="mt-text-button mt-dgoal__help" type="button" disabled={helping} onClick={onHelp}>
+              <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
+            </button>
+        )}
+        <button className="mt-text-button mt-dgoal__talk" type="button" onClick={onOpenTalk}>
+          <Icon name="message" size={13} />
+          {t('mentoring.student.goal.fromTalk', { date: shortDayMonth(conversation.date, language) })}
+        </button>
+      </div>
     </li>
   )
 }

@@ -78,6 +78,7 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
             "identity.locale", "profile.interests",
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "profile.activeness",
+            "profile.activeness_drivers",
             "profile.mapping_clarifications", "strengths",
             "challenges", "strategies", "goals", "current_state",
             "teacher_directives", "memory", "mastery", "student_description", "reflections_recent",
@@ -249,6 +250,119 @@ def _activeness_hints(activeness: dict[str, Any], locale: str) -> list[str]:
         if len(hints) >= 2:
             break
     return hints[:2]
+
+
+# What actually moved each activeness domain this week, phrased as the observed
+# behaviour. The dashboard card asserts the same fact to the learner, so a coach
+# answering "why did this go down?" must cite it rather than offer hypotheses.
+_DRIVER_HINTS = {
+    ("inconsistent", "down"): {
+        "he": "היו ימים שבהם לא נכנס/ה ללמוד",
+        "ar": "كانت هناك أيام لم يدخل/تدخل فيها للتعلّم",
+        "en": "there were days with no learning at all",
+    },
+    ("inconsistent", "up"): {
+        "he": "נכנס/ה ללמוד כמעט כל יום",
+        "ar": "دخل/ت للتعلّم في معظم الأيام",
+        "en": "came in to learn on most days",
+    },
+    ("low_engagement", "down"): {
+        "he": "נשארו פעילויות שהתחיל/ה ולא סיים/ה",
+        "ar": "بقيت أنشطة بدأها/بدأتها ولم تُنهَ",
+        "en": "activities were started and left unfinished",
+    },
+    ("low_engagement", "up"): {
+        "he": "סיים/ה את הפעילויות שהתחיל/ה",
+        "ar": "أنهى/أنهت الأنشطة التي بدأها/بدأتها",
+        "en": "finished the activities that were started",
+    },
+    ("quits_on_fail", "down"): {
+        "he": "אחרי טעות היה קשה לחזור ולנסות שוב",
+        "ar": "بعد الخطأ كان من الصعب العودة والمحاولة",
+        "en": "after a mistake it was hard to come back and retry",
+    },
+    ("quits_on_fail", "up"): {
+        "he": "אחרי טעויות חזר/ה וניסה/תה שוב",
+        "ar": "بعد الأخطاء عاد/ت وحاول/ت مجددًا",
+        "en": "after mistakes came back and tried again",
+    },
+    ("hint_reliance", "down"): {
+        "he": "פתח/ה רמזים לפני ניסיון עצמאי",
+        "ar": "فتح/ت التلميحات قبل محاولة مستقلة",
+        "en": "opened hints before an independent attempt",
+    },
+    ("hint_reliance", "up"): {
+        "he": "ניסה/תה בעצמו/ה לפני שפתח/ה רמז",
+        "ar": "حاول/ت بنفسه/ا قبل فتح التلميح",
+        "en": "tried alone before opening a hint",
+    },
+    ("guessing", "down"): {
+        "he": "היו הרבה תשובות מהירות מדי",
+        "ar": "كانت هناك إجابات سريعة جدًا",
+        "en": "there were many very fast answers",
+    },
+    ("guessing", "up"): {
+        "he": "לקח/ה זמן לקרוא ולחשוב לפני שענה/תה",
+        "ar": "أخذ/ت وقتًا للقراءة والتفكير قبل الإجابة",
+        "en": "took time to read and think before answering",
+    },
+    ("low_reflection", "down"): {
+        "he": "כמעט לא עצר/ה לכתוב מה עזר לו/ה",
+        "ar": "نادرًا ما توقّف/ت لتدوين ما ساعده/ا",
+        "en": "rarely stopped to note what helped",
+    },
+    ("low_reflection", "up"): {
+        "he": "עצר/ה בסוף שיעורים וכתב/ה מה עזר לו/ה",
+        "ar": "توقّف/ت بعد الدروس ودوّن/ت ما ساعده/ا",
+        "en": "stopped after lessons and noted what helped",
+    },
+    ("isolation", "down"): {
+        "he": "נתקע/ה ולא ביקש/ה עזרה",
+        "ar": "تعثّر/ت دون طلب المساعدة",
+        "en": "got stuck without asking for help",
+    },
+    ("isolation", "up"): {
+        "he": "ביקש/ה עזרה כשנתקע/ה",
+        "ar": "طلب/ت المساعدة عند التعثّر",
+        "en": "asked for help when stuck",
+    },
+}
+
+
+def _movement_lines(drivers: Any, locale: str, lesson_title) -> list[str]:
+    """One line per domain that moved: the domain, what drove it, and where.
+
+    The raw counts ride along. Without them the coach can only repeat the same
+    sentence the card already showed, and a learner asking "but why?" gets the
+    answer they just read back at them.
+    """
+    lang = locale if locale in {"he", "ar", "en"} else "he"
+    from app.brain.activeness import COMPETENCY_NAMES
+
+    lines: list[str] = []
+    for row in drivers if isinstance(drivers, list) else []:
+        if not isinstance(row, dict):
+            continue
+        hint = _DRIVER_HINTS.get((str(row.get("tag")), str(row.get("dir"))))
+        name = COMPETENCY_NAMES.get(str(row.get("key")))
+        if not hint or not name:
+            continue
+        line = f"{name.get(lang, name['he'])}: {hint[lang]}"
+        facts = row.get("facts")
+        if isinstance(facts, dict):
+            parts = [
+                f"{field}: {facts[field]} (was {facts[f'{field}_prior']})"
+                if f"{field}_prior" in facts else f"{field}: {facts[field]}"
+                for field in facts
+                if not field.endswith("_prior")
+            ]
+            if parts:
+                line += f" [{', '.join(parts)}]"
+        lesson = lesson_title(row["objective_id"], lang) if row.get("objective_id") else ""
+        if lesson:
+            line += f" ({lesson})"
+        lines.append(line)
+    return lines[:6]
 
 
 # What the brain does NOT yet know that would make coaching more personal.
@@ -461,6 +575,11 @@ async def build_coach_bundle(
         for line in stance_for(mastery_map, objective_id, objective_title, locale)
     ]
     coaching_hints = _activeness_hints(get_path(brain, "profile.activeness") or {}, locale)
+    # Named without the metric it derives from: the prompt must never carry the
+    # internal score's identity, only the verbal reading of it.
+    weekly_movement = _movement_lines(
+        get_path(brain, "profile.activeness_drivers"), locale, localized_objective_title
+    )
     description_text = safe_text(
         get_path(brain, "student_description.text"), 600
     )
@@ -751,6 +870,7 @@ async def build_coach_bundle(
         "student_description": description_text,
         "mastery_stance": mastery_stance,
         "coaching_hints": coaching_hints,
+        "weekly_movement": weekly_movement,
         "personalization_gaps": personalization_gaps,
         "mapping_clarifications": clarifications,
         "reflection_summary": {

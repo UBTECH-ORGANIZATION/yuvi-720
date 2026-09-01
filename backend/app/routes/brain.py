@@ -6,6 +6,7 @@ UI surface, so `identity.display_name` is allowed here — it is *never* placed 
 an AI prompt; that boundary is the Context bundle, §4.4).
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -162,10 +163,43 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
             print(f"⚠️ dashboard onboarding seed failed: {exc}")
     events = await get_learner_events(safe_id)
     # Dynamic activeness: the questionnaire base nudged by recent activity.
-    from app.brain.activeness import effective_activeness
+    from app.brain.activeness import EVIDENCE_SPAN_DAYS, effective_activeness
     from app.agents.tutor_decision import recent_tutor_decisions
-    decisions = await recent_tutor_decisions(safe_id)
-    effective = effective_activeness(brain, events, decisions)
+    decisions = await recent_tutor_decisions(
+        safe_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+    )
+    # Its own fetch, spanning both comparison windows. The shared one above is
+    # capped by row count, which for an active learner stops short of last week.
+    activeness_events = await get_learner_events(
+        safe_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+    )
+    effective = effective_activeness(brain, activeness_events, decisions)
+    # Park the strongest driver per domain on the brain. The companion is a
+    # different request with no access to this computation, and without it a kid
+    # asking "why did this go down?" gets plausible guesses instead of their week.
+    # A list, not a dict: `flatten_updates` deep-merges dicts, which would leave
+    # a domain's stale driver behind after it stops driving anything.
+    #
+    # Only a driver pushing the same way as the arrow. Handing the coach the
+    # first one regardless let a domain the card drew in decline be explained in
+    # chat as an improvement — the learner was told both, in the same minute.
+    def _explaining(row: dict) -> dict | None:
+        moved = row["value"] - row["prior_value"]
+        if not moved:
+            return None
+        want = "up" if moved > 0 else "down"
+        return next((d for d in row.get("drivers") or [] if d.get("dir") == want), None)
+
+    movement = [
+        {"key": key, **driver}
+        for key, row in effective.items()
+        if (driver := _explaining(row))
+    ]
+    if movement != ((brain.get("profile") or {}).get("activeness_drivers") or []):
+        try:
+            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement})
+        except Exception as exc:
+            print(f"⚠️ activeness drivers not persisted: {exc}")
     from app.services.content_catalog import completed_component_ids
     dashboard = project_dashboard(
         brain,

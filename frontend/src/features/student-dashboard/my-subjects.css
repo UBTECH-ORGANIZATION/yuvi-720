@@ -17,22 +17,6 @@
 .sd-subjects .sd-section__heading { align-items: center; margin-block-end: 12px; }
 .sd-subjects .sd-section__heading .sd-text-action { align-self: center; }
 
-/* ── Subject filter row (the only filter — there is no second tier) ──────── */
-.sd-subjects__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 12px; }
-.sd-subjects__filter {
-  padding: 6px 13px;
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: transparent;
-  color: var(--sp-ink-400);
-  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
-  cursor: pointer;
-  transition: background .15s var(--sp-ease), color .15s var(--sp-ease), border-color .15s var(--sp-ease);
-}
-.sd-subjects__filter:hover { color: var(--sp-primary-600); border-color: rgba(111, 91, 255, .3); }
-.sd-subjects__filter.is-active { background: var(--sp-primary-600); border-color: var(--sp-primary-600); color: #fff; }
-.sd-subjects__filter:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
-
 /* ── The split ──────────────────────────────────────────────────────────── */
 .sd-subjects__cols {
   display: grid;
@@ -255,9 +239,7 @@
 
 /* ── Dark ───────────────────────────────────────────────────────────────── */
 [data-theme='dark'] .sd-subjects { --sd-subjects-rule: var(--sdd-card-border); }
-[data-theme='dark'] .sd-subjects__filter { border-color: rgba(159, 122, 254, .24); color: rgba(214, 216, 245, .72); }
-[data-theme='dark'] .sd-subjects__filter:hover { color: #d8d1ff; }
-[data-theme='dark'] .sd-subjects__filter.is-active { background: #6f5bff; border-color: #6f5bff; color: #fff; }
+
 [data-theme='dark'] .sd-subject-row,
 [data-theme='dark'] .sd-objective { border-color: var(--sdd-card-border); background: var(--sdd-card-bg, rgba(28, 27, 51, .6)); }
 [data-theme='dark'] .sd-subject-row__name,
