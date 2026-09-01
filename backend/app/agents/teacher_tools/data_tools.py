@@ -153,6 +153,121 @@ async def _list_students(context: TeacherToolContext, args: dict) -> dict:
     }
 
 
+# ── name → id ────────────────────────────────────────────────────────────────
+#
+# Teachers say names; every other tool speaks ids. `find_student` is the bridge:
+# the matching happens HERE, server-side, against `teacher_roster.names_for` —
+# the model consumes the teacher's typed name and receives ids only, so the
+# PII contract above holds. Scope is structural rather than declared: the
+# candidate pool IS `context.allowed_learner_ids`, so a name that exists only on
+# another teacher's roster matches nothing — indistinguishable from a name that
+# does not exist, exactly like the registry's `not_authorized` wording.
+# (`test_teacher_assistant_scope.py` needs no new view grant: names come from
+# `teacher_roster`, not `AGENT_VIEWS`, and never leave this handler.)
+
+# Hebrew niqqud and cantillation — stripped so "נֹעָה" matches "נועה".
+_NIQQUD = {chr(cp) for cp in range(0x0591, 0x05C8)}
+# Final letters folded, so a query ending mid-word still matches ("כה" ~ "כהן").
+_FINALS = str.maketrans("ךםןףץ", "כמנפצ")
+_QUOTES = "'\"`׳״’‘“”"
+
+
+def _normalize_name(value: str) -> str:
+    text = "".join(ch for ch in str(value or "") if ch not in _NIQQUD and ch not in _QUOTES)
+    return " ".join(text.translate(_FINALS).casefold().split())
+
+
+def _edit_distance_at_most_one(a: str, b: str) -> bool:
+    """Levenshtein ≤ 1, without the full matrix — enough for typo matching."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if a == b:
+        return True
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    short, long = (a, b) if len(a) < len(b) else (b, a)
+    for i in range(len(long)):
+        if short == long[:i] + long[i + 1:]:
+            return True
+    return False
+
+
+def _match_tier(query: str, name: str) -> Optional[str]:
+    """The strongest way this normalized query matches this normalized name."""
+    tokens = name.split()
+    if query == name or query in tokens:
+        return "exact"
+    if len(query) >= 2 and any(token.startswith(query) for token in tokens):
+        return "prefix"
+    if query in name:
+        return "contains"
+    if len(query) >= 3 and any(_edit_distance_at_most_one(query, token) for token in tokens):
+        return "typo"
+    return None
+
+
+_TIER_ORDER = ("exact", "prefix", "contains", "typo")
+
+
+async def _find_student(context: TeacherToolContext, args: dict) -> dict:
+    from app.brain import org
+    from app.services import teacher_roster
+
+    query = _normalize_name(args.get("name"))
+    if not query:
+        return empty("empty_name")
+
+    pool = sorted(context.allowed_learner_ids)
+    group_id = args.get("group_id")
+    if group_id:
+        members = set(await org.learners_in_group(str(group_id)))
+        pool = [learner_id for learner_id in pool if learner_id in members]
+    if not pool:
+        return empty("no_student_by_that_name", query=str(args.get("name")))
+
+    names = await teacher_roster.names_for(pool)
+    by_tier: dict[str, list[str]] = {tier: [] for tier in _TIER_ORDER}
+    for learner_id in pool:
+        name = names.get(learner_id)
+        if not name:
+            continue      # never finished mapping — no name to match against
+        tier = _match_tier(query, _normalize_name(name))
+        if tier:
+            by_tier[tier].append(learner_id)
+
+    matched, quality = next(
+        ((ids, tier) for tier in _TIER_ORDER if (ids := by_tier[tier])), ([], None)
+    )
+    if not matched:
+        # Echoing the teacher's own typed name back is fine — it is already in
+        # the transcript. A roster name never is.
+        return empty("no_student_by_that_name", query=str(args.get("name")))
+
+    multi = len(matched) > 1
+    groups_of: dict[str, list[str]] = {}
+    if multi:
+        # So the model can ask "which one?" BY GROUP — the only handle the
+        # teacher and the model share besides the name itself.
+        for gid in sorted(context.allowed_group_ids):
+            for learner_id in await org.learners_in_group(gid):
+                if learner_id in matched:
+                    groups_of.setdefault(learner_id, []).append(gid)
+
+    return scrub({
+        "data": {
+            "matches": [
+                {"learner_id": learner_id,
+                 **({"group_ids": groups_of.get(learner_id, [])} if multi else {})}
+                for learner_id in matched
+            ],
+            "count": len(matched),
+            "match_quality": quality,
+        },
+    }) | {"note": "ids only — write {{student:<id>}}. If several matched, ask "
+                  "WHICH ONE by describing their groups; NEVER ask the teacher "
+                  "for an id."}
+
+
 async def _get_group_snapshot(context: TeacherToolContext, args: dict) -> dict:
     from app.services import insights
 
@@ -185,9 +300,62 @@ async def _get_group_learning_gaps(context: TeacherToolContext, args: dict) -> d
     # every reason not to hold a roster slice, so they are dropped here rather
     # than scrubbed generically.
     dropped = {"learner_ids", "mastered_ids"}
-    return {"data": [
-        {k: v for k, v in scrub(gap).items() if k not in dropped} for gap in gaps
-    ]}
+    return {
+        "data": [
+            {k: v for k, v in scrub(gap).items() if k not in dropped} for gap in gaps
+        ],
+        # The same deterministic teaching moves the gaps card shows — one per
+        # gap, derived from the gap's own shape, no learner ids inside.
+        "recommendations": scrub(
+            group_analytics.group_recommendations(gaps, context.language)
+        ),
+    }
+
+
+#: The written notes behind the mood numbers are the heaviest part of the
+#: payload; the newest few carry the story, the rest is token weight.
+MAX_MOOD_NOTES_FOR_MODEL = 12
+
+
+async def _get_class_mood(context: TeacherToolContext, args: dict) -> dict:
+    """The check-in lane the teacher home's mood card reads (#452/#505).
+
+    Same service as `GET /groups/{id}/mood`: counts by valence over a window
+    and the one before it, who is behind each family (ids only), and the
+    children's own written notes. A mood leaves here as a conversation opener,
+    never as a ranking — the prompt carries that rule.
+    """
+    from app.services import group_analytics
+
+    try:
+        days = int(args.get("days") or 7)
+    except (TypeError, ValueError):
+        days = 7
+    days = max(1, min(120, days))
+
+    result = await group_analytics.class_mood(str(args["group_id"]), days=days)
+    if not result.get("answers"):
+        return empty("no_checkins_in_window", days=days)
+    result["notes"] = (result.get("notes") or [])[:MAX_MOOD_NOTES_FOR_MODEL]
+    return {"data": scrub(result)}
+
+
+async def _get_gap_diagnosis(context: TeacherToolContext, args: dict) -> dict:
+    """The "למה?" behind one class gap (#507) — where, which questions, how.
+
+    Folded from stored evidence only, the same read the gaps card's diagnosis
+    panel makes. Counts, never learner ids.
+    """
+    from app.services import learning_analytics
+
+    result = await learning_analytics.gap_diagnosis(
+        str(args["group_id"]), str(args["objective_id"]),
+        language=context.language,
+    )
+    if not (result.get("parts") or result.get("hard_questions")):
+        return empty("no_evidence_for_this_objective",
+                     objective_id=str(args["objective_id"]))
+    return {"data": scrub(result)}
 
 
 # ── learnings ────────────────────────────────────────────────────────────────
@@ -675,6 +843,26 @@ def register_all() -> None:
         handler=_list_students, group_args=("group_id",),
     ))
     register(TeacherTool(
+        name="find_student",
+        description=(
+            "Resolve a student NAME the teacher typed into learner ids. Call "
+            "this FIRST whenever the teacher writes a name. It searches every "
+            "group they teach; the matching happens on the server — you never "
+            "see names and must never ask the teacher for an id. count>1 comes "
+            "with group_ids so you can ask which one by group; count 0 means no "
+            "student by that name in their groups."
+        ),
+        parameters={"type": "object", "properties": {
+            "name": {"type": "string",
+                     "description": "The name exactly as the teacher wrote it."},
+            "group_id": {"type": "string",
+                         "description": "Optional — narrow to one group."},
+        }, "required": ["name"]},
+        # Scope on the NAME is structural: the handler searches only
+        # `context.allowed_learner_ids`. The optional group rides the gate.
+        handler=_find_student, group_args=("group_id",),
+    ))
+    register(TeacherTool(
         name="get_group_snapshot",
         description="Group overview: totals, active count, and who needs attention with evidence.",
         parameters={"type": "object", "properties": dict(_GROUP_ID), "required": ["group_id"]},
@@ -700,6 +888,39 @@ def register_all() -> None:
             "subject": {"type": "string", "description": "Optional subject filter."},
         }, "required": ["group_id"]},
         handler=_get_group_learning_gaps, group_args=("group_id",),
+    ))
+    register(TeacherTool(
+        name="get_class_mood",
+        description=(
+            "How the class has been FEELING: daily check-in counts by valence "
+            "(great/good/okay/uneasy/upset) over a window and the one before "
+            "it, who is behind each family (ids), and the children's own "
+            "written notes. THIS answers 'איך הכיתה מרגישה' — a mood is a "
+            "conversation opener, never a ranking or an alarm."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "days": {"type": "integer",
+                     "description": "Window in days (default 7, max 120)."},
+        }, "required": ["group_id"]},
+        handler=_get_class_mood, group_args=("group_id",),
+    ))
+    register(TeacherTool(
+        name="get_gap_diagnosis",
+        description=(
+            "WHY the class is stuck on one objective from get_group_learning_gaps: "
+            "where inside it (per learning), which questions go wrong, and how "
+            "(error types: guess/partial/misinterpret/careless). Counts only — "
+            "call it before proposing what to reteach."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "objective_id": {
+                "type": "string",
+                "description": "An objective id from get_group_learning_gaps.",
+            },
+        }, "required": ["group_id", "objective_id"]},
+        handler=_get_gap_diagnosis, group_args=("group_id",),
     ))
     register(TeacherTool(
         name="get_group_learnings",
