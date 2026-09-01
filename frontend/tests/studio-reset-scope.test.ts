@@ -30,8 +30,10 @@ test('no single action resets both the room and Yuvi', () => {
 })
 
 test('each station gets its own footer, and so its own reset', () => {
-  assert.match(studio, /footer=\{footerFor\('room'\)\}/)
-  assert.match(studio, /footer=\{footerFor\('avatar'\)\}/)
+  // The intro scenes may hide a footer, but whenever a station shows one it
+  // must be its OWN scope's (`footer={… footerFor('room')}`), never shared.
+  assert.match(studio, /footer=\{[^{}]*footerFor\('room'\)\}/)
+  assert.match(studio, /footer=\{[^{}]*footerFor\('avatar'\)\}/)
 })
 
 test('the confirmation names the station it is about', () => {
