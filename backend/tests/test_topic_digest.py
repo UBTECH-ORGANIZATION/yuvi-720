@@ -123,29 +123,45 @@ class WhatCountsAsNewEvidence(unittest.TestCase):
 
 
 class TheCleaning(unittest.TestCase):
-    KNOWN = {"obj:MATH-AXES"}
+    KNOWN = {"obj:MATH-AXES": {"key": "obj:MATH-AXES", "subject": "math"},
+             "obj:SCI-MASS": {"key": "obj:SCI-MASS", "subject": "science"}}
 
-    def test_an_invented_topic_never_reaches_a_teacher(self):
-        cleaned = topic_digest._clean({"topics": [
-            {"key": "obj:MATH-AXES", "sentences": ["משפט אמיתי."]},
-            {"key": "obj:INVENTED", "sentences": ["משפט בדוי."]},
-        ]}, self.KNOWN)
-        self.assertEqual([item["key"] for item in cleaned], ["obj:MATH-AXES"])
+    def _with_points(self, points):
+        return topic_digest._clean({"focus_points": points}, self.KNOWN)
+
+    def test_a_point_resting_on_nothing_is_an_invention(self):
+        cleaned = self._with_points([
+            {"point": "לתרגל קריאת נקודות על ציר", "keys": ["obj:MATH-AXES"]},
+            {"point": "נקודה בדויה", "keys": ["obj:INVENTED"]},
+            {"point": "נקודה בלי מקורות", "keys": []},
+        ])
+        self.assertEqual([p["point"] for p in cleaned["focus_points"]],
+                         ["לתרגל קריאת נקודות על ציר"])
 
     def test_nothing_usable_is_none_not_an_empty_answer(self):
-        self.assertIsNone(topic_digest._clean({"topics": []}, self.KNOWN))
-        self.assertIsNone(topic_digest._clean({"topics": [
-            {"key": "obj:INVENTED", "sentences": ["x"]}]}, self.KNOWN))
+        self.assertIsNone(self._with_points([]))
+        self.assertIsNone(self._with_points([
+            {"point": "בדוי", "keys": ["obj:INVENTED"]}]))
         self.assertIsNone(topic_digest._clean(["not a dict"], self.KNOWN))
 
-    def test_sentences_are_clamped_and_surface_is_an_enum(self):
-        cleaned = topic_digest._clean({"topics": [{
-            "key": "obj:MATH-AXES",
-            "sentences": ["א", "ב", "ג", "ד", "ה"],
-            "surface": ["rate", "vibes", "attempts"],
-        }]}, self.KNOWN)
-        self.assertEqual(len(cleaned[0]["sentences"]), topic_digest.MAX_SENTENCES)
-        self.assertEqual(cleaned[0]["surface"], ["rate", "attempts"])
+    def test_a_points_subject_comes_from_its_topics_never_the_model(self):
+        cleaned = self._with_points([
+            {"point": "נקודה", "keys": ["obj:MATH-AXES"], "subject": "science"},
+            {"point": "חוצת מקצועות", "keys": ["obj:MATH-AXES", "obj:SCI-MASS"]},
+        ])
+        self.assertEqual(cleaned["focus_points"][0]["subject"], "math")
+        self.assertIsNone(cleaned["focus_points"][1]["subject"])
+
+    def test_points_and_their_explanations_are_bounded(self):
+        cleaned = self._with_points([
+            {"point": f"נקודה {index}", "keys": ["obj:MATH-AXES"],
+             "explanation": "ה" * 2000}
+            for index in range(8)
+        ])
+        self.assertEqual(len(cleaned["focus_points"]),
+                         topic_digest.MAX_FOCUS_POINTS)
+        self.assertEqual(len(cleaned["focus_points"][0]["explanation"]),
+                         topic_digest.MAX_EXPLANATION_CHARS)
 
 
 class FakeCache:
@@ -163,9 +179,10 @@ class FakeCache:
                                    **(changes.get("$set") or {})}
 
 
-DIGEST = [{"key": "obj:MATH-AXES",
-           "sentences": ["השאלות עסקו בקריאת נקודות.", "1 מתוך 5 ניסיונות הצליח."],
-           "surface": ["rate"]}]
+DIGEST_POINTS = [{"point": "לתרגל קריאת נקודות על ציר",
+                  "explanation": "השאלות הקשות עסקו בקריאת נקודות; 1 מתוך 5 הצליח.",
+                  "keys": ["obj:MATH-AXES"], "subject": "math"}]
+DIGEST = {"focus_points": DIGEST_POINTS}
 
 
 class GeneratedOnceAndKept(unittest.IsolatedAsyncioTestCase):
@@ -194,7 +211,7 @@ class GeneratedOnceAndKept(unittest.IsolatedAsyncioTestCase):
     async def test_the_first_ask_generates_and_the_second_does_not(self):
         first = await topic_digest.topic_digest("kid-a", "teacher-a")
         self.assertFalse(first["cached"])
-        self.assertEqual(first["topics"], DIGEST)
+        self.assertEqual(first["focus_points"], DIGEST_POINTS)
         second = await topic_digest.topic_digest("kid-a", "teacher-a")
         self.assertTrue(second["cached"])
         self.assertFalse(second["stale"])
@@ -213,7 +230,7 @@ class GeneratedOnceAndKept(unittest.IsolatedAsyncioTestCase):
         stale = await topic_digest.topic_digest(
             "kid-a", "teacher-a", allow_generate=False)
         self.assertTrue(stale["stale"])           # old paragraphs, flagged
-        self.assertEqual(stale["topics"], DIGEST)
+        self.assertEqual(stale["focus_points"], DIGEST_POINTS)
         again = await topic_digest.topic_digest("kid-a", "teacher-a")
         self.assertFalse(again["stale"])
         self.assertEqual(self.generate.await_count, 2)
@@ -231,7 +248,7 @@ class GeneratedOnceAndKept(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.cache.writes, 0)
         self.generate.return_value = DIGEST
         recovered = await topic_digest.topic_digest("kid-a", "teacher-a")
-        self.assertEqual(recovered["topics"], DIGEST)
+        self.assertEqual(recovered["focus_points"], DIGEST_POINTS)
 
     async def test_a_different_language_is_a_different_row(self):
         await topic_digest.topic_digest("kid-a", "teacher-a", language="he")

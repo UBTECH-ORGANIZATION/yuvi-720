@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "subject": "other",
+  "objective_id": "MOE.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER",
+  "objective_title_he": "מכינת כשירות בינה מלאכותית",
+  "lomdot": [
+    {
+      "component_id": "CET.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER-00001",
+      "title": "מפצחים את הפרומט",
+      "cognitive_level": "['analyze']",
+      "provider": "מטח - תוכן",
+      "kata_updated_at": "2026-08-25T07:56:16.812243Z",
+      "component_fingerprint": "871f688d56c079c0",
+      "extraction": {
+        "verdict": "frame_blocked",
+        "probed_at": "2026-09-01T11:41:25Z",
+        "player_host": "lomdot.education.gov.il",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נכנסים לעולם של **פרומטים** ולומדים איך לחשוב עליהם בצורה חכמה. נחקור איך ניסוח טוב יכול להשפיע על התוצאה שנקבל.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "871f688d56c079c0",
+          "generated_at": "2026-08-31T11:27:12Z",
+          "model": "mini"
+        }
+      },
+      "slides": []
+    }
+  ]
+}

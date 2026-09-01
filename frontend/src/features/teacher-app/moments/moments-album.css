@@ -316,6 +316,19 @@
   pointer-events: none;
 }
 
+/* #499: the whole closed book answers a click (see MomentsAlbum). Sits over
+   the book, under the HUD buttons (which carry their own z-index). */
+.tch-bookStage__openTap {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.tch-bookStage__openTap:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
 .tch-gift {
   position: absolute;
   /* physical centring — direction must not shift the present */

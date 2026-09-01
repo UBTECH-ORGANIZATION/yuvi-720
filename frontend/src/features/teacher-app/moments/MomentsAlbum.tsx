@@ -406,6 +406,28 @@ export function MomentsAlbum({
           </button>
         ) : null}
 
+        {/* A half-scrolled book used to be a dead click (#499): the visual
+            invitation was there, but only a precise scroll opened it. This
+            transparent layer over the closed book makes the click do what the
+            eye expects — glide the scroll to the floor, where the same scroll
+            choreography opens the cover. Gone once the book is open, so page
+            clicks stay the pages'. */}
+        {gift === 'done' && !isOpen ? (
+          <button
+            type="button"
+            className="tch-bookStage__openTap"
+            aria-label={t('tch.album.tapOpen')}
+            onClick={() => {
+              const scroller = stageRef.current?.closest('.sp-teacher-shell__main')
+              scroller?.scrollTo({
+                top: scroller.scrollHeight,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                  ? 'auto' : 'smooth',
+              })
+            }}
+          />
+        ) : null}
+
         <div className={`tch-book3d${rtl ? ' is-rtl' : ' is-ltr'}${wasGift.current && (gift === 'emerging' || gift === 'done') ? ' is-born' : ''}`}>
           {/* The turners live ON the book, at its outer edges — a lightbox
               affordance, not a toolbar in a far corner. In a Hebrew book the

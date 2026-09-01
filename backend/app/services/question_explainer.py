@@ -228,9 +228,42 @@ async def _generate(
         "locale": lang,
         "slides": slides,
         "created_at": _now(),
+        # What this deck was written FROM. A vendor edit changes the print and
+        # the stale deck stops being served (get_or_start regenerates).
+        "fingerprint": _live_fingerprint(component_id, item_id, question_id),
     }
     await _store(_cache_id(question_key, lang), deck)
     return deck
+
+
+def _live_fingerprint(
+    component_id: Optional[str], item_id: Optional[str], question_id: Optional[str],
+) -> Optional[str]:
+    """The question's authored-content fingerprint, from the live catalog.
+
+    Shared with the nightly content pipeline (content_intelligence), so every
+    per-question cache in the system agrees on what "the content changed"
+    means. None when the catalog cannot resolve the question — an unverifiable
+    deck is served rather than dropped, matching this cache's old behavior.
+    """
+    from app.services import content_intelligence, kata_catalog
+
+    try:
+        questions = kata_catalog.questions_for_item(component_id, item_id)
+        texts = [str(q.get("questionText") or "").strip() for q in questions]
+        mine = next((i for i, q in enumerate(questions)
+                     if q.get("questionId") == question_id), None)
+        if mine is None:
+            return None
+        profile = kata_catalog.item_profile(component_id, item_id)
+        return content_intelligence.compute_fingerprint_question(
+            texts[mine],
+            str(profile.get("title") or ""),
+            [t for i, t in enumerate(texts) if i != mine and t],
+            kata_catalog.information_for_item(component_id, item_id) or "",
+        )
+    except Exception:  # pragma: no cover - freshness must never break serving
+        return None
 
 
 async def get_or_start(
@@ -250,7 +283,15 @@ async def get_or_start(
 
     cached = await _load(cache_id)
     if cached:
-        return {"status": "ready", "deck": cached}
+        # A deck outlives a vendor edit only if we let it: when the stored
+        # fingerprint no longer matches the live catalog, regenerate instead of
+        # serving slides about a question that no longer exists. Legacy docs
+        # (no fingerprint) and unresolvable questions (live print None) keep
+        # the old serve-what-we-have behavior.
+        stored_print = cached.get("fingerprint")
+        live_print = _live_fingerprint(component_id, item_id, question_id)
+        if not stored_print or live_print is None or stored_print == live_print:
+            return {"status": "ready", "deck": cached}
 
     task = _tasks.get(cache_id)
     if task and not task.done():

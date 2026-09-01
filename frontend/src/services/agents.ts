@@ -93,6 +93,27 @@ export interface CoachActionOffer {
   category: 'navigation'
 }
 
+/** One grid sample of capture geometry: the target's rect and the content
+ *  extent, in document pixels as measured at viewport size `w`×`h`. */
+export interface PointerBreakpoint {
+  w: number
+  h: number
+  content_w: number
+  content_h: number
+  rect: { x: number; y: number; w: number; h: number }
+}
+
+/** A server-resolved "look here" directive: geometry from the nightly capture,
+ *  never from the model. `region` null / empty `breakpoints` = attention on
+ *  the lesson as a whole (the frontend renders its whole-frame glow). The
+ *  runtime interpolates the breakpoints to its live box width; valid only for
+ *  `question_key`'s screen. */
+export interface CoachPointerFrame {
+  region: string | null
+  breakpoints: PointerBreakpoint[]
+  question_key: string
+}
+
 /** Content-free, development-only record of a registered Coach tool call. */
 export interface CoachToolTraceStep {
   name: string
@@ -295,6 +316,7 @@ export async function streamAgent(
             visual?: CoachVisual
             can_visualize?: boolean
             actions?: CoachActionOffer[]
+            pointer?: CoachPointerFrame
             tool_trace?: CoachToolTraceStep[]
             query_intent?: string
             phase?: 'thinking' | 'speaking'

@@ -1,0 +1,123 @@
+# Nightly content intelligence: keep content/context/ in step with the live
+# Kata catalog. Fetch → fingerprint diff → browse changed lomdot → regenerate
+# stale texts → commit. A quiet catalog commits nothing and deploys nothing;
+# a change-night commit dispatches the normal dev-slot deploy (GITHUB_TOKEN
+# pushes never fire push triggers on their own, and the coach reads the config
+# baked into the image, so an explicit dispatch is what ships it).
+#
+# Required repo secrets (App-Service settings today, mirrored here by an
+# admin): KATA_API_KEY, APIM_BASE_URL, APIM_SUBSCRIPTION_KEY.
+name: Content nightly
+
+on:
+  schedule:
+    - cron: "30 1 * * *"   # 04:30 Israel summer / 03:30 winter — after content editors, before school
+  workflow_dispatch:
+    inputs:
+      max_browse:
+        description: "Max lomdot to browse (catch-up runs can raise this)"
+        required: false
+        default: "10"
+      max_llm_calls:
+        description: "Max generation batches"
+        required: false
+        default: "40"
+      dry_run:
+        description: "Compute only — write and commit nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: content-nightly
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      # Manim (in backend/requirements.txt) builds against Cairo/Pango — the
+      # same block ci.yml installs.
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ffmpeg libcairo2-dev libpango1.0-dev pkg-config
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Install Playwright chromium
+        run: npx --prefix frontend playwright install --with-deps chromium
+
+      - name: Run the pipeline
+        env:
+          KATA_API_KEY: ${{ secrets.KATA_API_KEY }}
+          APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
+          # Mongo-free by design: catalog over HTTP, usage events to the local
+          # JSON fallback, and the database guard sees an explicit choice.
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
+        run: |
+          python backend/scripts/content_pipeline.py \
+            --max-browse "${{ inputs.max_browse || '10' }}" \
+            --max-llm-calls "${{ inputs.max_llm_calls || '40' }}" \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-pipeline-run
+          path: backend/artifacts/content-pipeline/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Commit the refreshed config
+        id: commit
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "content-pipeline[bot]"
+          git config user.email "content-pipeline@users.noreply.github.com"
+          git add content/context
+          if git diff --cached --quiet; then
+            echo "changed=0" >> "$GITHUB_OUTPUT"
+            echo "catalog unchanged — nothing to commit"
+          else
+            git commit -m "content: nightly context refresh $(date -u +%F)"
+            git push origin main
+            echo "changed=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The coach reads the config from inside the Docker image, so a real
+      # content change must go through the normal gated deploy (CI first,
+      # dev slot only; production waits for a manual promote).
+      - name: Ship the change to the dev slot
+        if: ${{ steps.commit.outputs.changed == '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-spark.yml --ref main -f promote=false

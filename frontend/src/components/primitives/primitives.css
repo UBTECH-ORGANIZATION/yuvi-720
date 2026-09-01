@@ -271,6 +271,27 @@ textarea[dir="auto"]:placeholder-shown { direction: inherit; }
   text-align: start;
   animation: spModalIn .22s ease both;
 }
+/* In the dialog's outer gutter: inset + size stay inside the modal's --sp-8
+   padding, so the X never overlaps the content cards below it. */
+.sp-modal__close {
+  position: absolute;
+  inset-block-start: var(--sp-1);
+  inset-inline-end: var(--sp-1);
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sp-danger-600);
+  cursor: pointer;
+}
+.sp-modal__close:hover {
+  background: var(--sp-danger-100);
+  color: var(--sp-danger-600);
+}
 .sp-modal:focus,
 .sp-modal:focus-visible {
   /* The dialog takes focus on open so screen readers announce it, but it is a

@@ -795,6 +795,8 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         response_parts = []
         action_offers: list[dict[str, object]] = []
         visual_requests: list[dict[str, str]] = []
+        pointer_requests: list[dict[str, object]] = []
+        pointer_sent = False
         debug_trace: list[dict[str, str]] = []
         query_intent: list[str] = []
         async for chunk in run_coach_stream(
@@ -809,9 +811,16 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             hint_level=routed_hint_level,
             action_offers=action_offers,
             visual_requests=visual_requests,
+            pointer_requests=pointer_requests,
             debug_trace=debug_trace,
             intent_out=query_intent,
         ):
+            # Tool planning finishes before the first text chunk, so the
+            # pointer lands as Yuvi starts talking — the highlight and the
+            # sentence about it arrive together.
+            if pointer_requests and not pointer_sent:
+                pointer_sent = True
+                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
             response_parts.append(chunk)
             # Forward every model chunk immediately. The frontend already
             # appends text events, so Yuvi visibly speaks while generating.
@@ -1303,6 +1312,8 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
 
         response_parts = []
         debug_trace: list[dict[str, str]] = []
+        pointer_requests: list[dict[str, object]] = []
+        pointer_sent = False
         async for chunk in run_coach_stream(
             learner_id,
             language=language,
@@ -1312,8 +1323,14 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             surface_context=request.surface.model_dump(),
             support_mode=request.support,
             hint_level=hint_level,
+            pointer_requests=pointer_requests,
             debug_trace=debug_trace,
         ):
+            # A hint that concerns one part of the screen highlights it while
+            # the hint streams (tool planning completes before the first chunk).
+            if pointer_requests and not pointer_sent:
+                pointer_sent = True
+                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
             response_parts.append(chunk)
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 
