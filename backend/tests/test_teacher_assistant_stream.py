@@ -164,6 +164,25 @@ class StreamGroundingTests(unittest.IsolatedAsyncioTestCase):
         # The discarded first draft must not be part of what was said.
         self.assertNotIn("73%", "".join(chunks))
 
+    async def test_an_off_domain_answer_with_digits_survives_the_rescue(self):
+        """Twin of the blocking-path test: the digit gate buffers a recipe, the
+        forced round calls a harmless tool, and the rewrite must reach the
+        screen — never an UNKNOWN_* refusal."""
+        rounds = [
+            text_round("מחממים תנור ל-180 מעלות ואופים 35 דקות."),     # buffered
+            tool_round("list_available_data", {}),                      # forced
+            text_round("מתכון קצר: מחממים תנור ל-180 מעלות ואופים 35 דקות.", chunks=4),
+        ]
+        with patch.object(teacher_assistant, "call_llm_stream_tools", stub_provider(rounds)):
+            chunks, _, done = await drain(teacher_assistant.run_assistant_stream(
+                "teacher-a", "יש לך מתכון פשוט לעוגת שוקולד?", context=context()))
+
+        self.assertIsNotNone(done["text"], "an off-domain answer was discarded")
+        self.assertIn("180", done["text"])
+        self.assertIsNone(done["text_key"])
+        # The buffered first draft never streamed; only the rewrite did.
+        self.assertEqual("".join(chunks), done["text"])
+
     async def test_no_provider_produces_an_honest_key_not_an_invented_answer(self):
         with patch.object(teacher_assistant, "call_llm_stream_tools", stub_provider([None])):
             chunks, _, done = await drain(teacher_assistant.run_assistant_stream(
@@ -215,12 +234,26 @@ class VoiceTests(unittest.TestCase):
         self.assertNotIn("using the reason", self.prompt.lower())
         self.assertIn("translate the reason", self.prompt.lower())
 
-    def test_the_prompt_bounds_the_length_and_the_shape(self):
+    def test_the_prompt_shapes_the_length_without_a_truncating_cap(self):
+        """Brevity comes from phrasing, never from a word budget — a cap made
+        the model stop mid-sentence, which reads worse than length ever did."""
         lowered = self.prompt.lower()
-        self.assertIn("120 words", lowered)
+        self.assertNotIn("120 words", lowered)
+        self.assertIn("two to four sentences", lowered)
+        self.assertIn("two or three figures", lowered)
+        self.assertIn("never narrate", lowered)
         self.assertIn("bullets only", lowered)
         self.assertIn("utc", lowered)          # …as a thing never to print
         self.assertIn("one concrete offer", lowered)
+
+    def test_the_prompt_knows_who_is_talking_and_what_is_off_domain(self):
+        lowered = self.prompt.lower()
+        self.assertIn("always a teacher", lowered)
+        self.assertIn("never tutor the teacher", lowered)
+        self.assertIn("a greeting gets a greeting back", lowered)
+        self.assertIn("two to five sentences", lowered)       # off-domain answers
+        self.assertIn("cannot check that from here", lowered)
+        self.assertIn("never an item in a list", lowered)     # distress shares
 
 
 if __name__ == "__main__":

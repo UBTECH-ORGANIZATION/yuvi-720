@@ -164,11 +164,25 @@ class GroupLearnings(unittest.IsolatedAsyncioTestCase):
         filter erased every other way back out of the filter.
         """
         rows = {"kid-a": [{**_row("gone-1", "q1", attempts=2, correct=0),
-                           "subject": "english"}]}
+                           "subject": "language_arts"}]}
         wide = await self._run(rows)
-        self.assertEqual(wide["subjects"], ["english", "math"])
+        self.assertEqual(wide["subjects"], ["language_arts", "math"])
         narrowed = await self._run(rows, subject="math")
-        self.assertEqual(narrowed["subjects"], ["english", "math"])
+        self.assertEqual(narrowed["subjects"], ["language_arts", "math"])
+
+    async def test_a_hidden_subject_never_reaches_the_screen(self):
+        """English is not running this year — its rows and its chip both go.
+
+        The rows are normally dropped at the `question_summary` seam; this
+        exercises the listing's own guard, because a row that slipped past
+        would grow its own subject section on the screen.
+        """
+        rows = {"kid-a": [{**_row("gone-eng", "q1", attempts=3, correct=1),
+                           "subject": "english"}]}
+        view = await self._run(rows)
+        self.assertEqual(view["subjects"], ["math"])
+        self.assertNotIn(
+            "english", {row.get("subject") for row in view["learnings"]})
 
 
 class ClassSubjects(unittest.IsolatedAsyncioTestCase):
@@ -199,20 +213,30 @@ class ClassSubjects(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self._subjects({"kid-a": []}), ["math"])
 
     async def test_a_subject_only_the_class_history_knows_is_offered(self):
-        """English reaches a teacher through here or not at all.
+        """A vendor-tagged subject reaches a teacher through here or not at all.
 
         `kata_client.subject_from_objective` collapses everything that is not
-        SCI or MATH into `other`, so the published catalogue cannot name
-        English. The only place the real subject survives is a row for a
-        component the catalogue no longer publishes — which is why this list is
-        folded from observed rows and not read off the spine.
+        SCI or MATH into `other`, so the published catalogue cannot name such a
+        subject. The only place the real tag survives is a row for a component
+        the catalogue no longer publishes — which is why this list is folded
+        from observed rows and not read off the spine.
         """
+        subjects = await self._subjects({
+            "kid-a": [{**_row("gone-la", "q1", attempts=3, correct=1),
+                       "subject": "language_arts"}],
+            "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2)],
+        })
+        self.assertEqual(subjects, ["language_arts", "math"])
+
+    async def test_a_hidden_subject_is_never_offered(self):
+        # English is hidden this year (`learner_activity.HIDDEN_SUBJECTS`):
+        # even history that carries its tag must not put a chip in the bar.
         subjects = await self._subjects({
             "kid-a": [{**_row("gone-eng", "q1", attempts=3, correct=1),
                        "subject": "english"}],
             "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2)],
         })
-        self.assertEqual(subjects, ["english", "math"])
+        self.assertEqual(subjects, ["math"])
 
     async def test_one_class_is_folded_once_per_window_not_once_per_page(self):
         """The scope bar asks on every teacher page load.

@@ -12,16 +12,17 @@ import type { LearningGap } from '../../../services/teacher'
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
 export function gapToDifficultyItem(
-  gap: LearningGap, t: Translate, note: string | null = null,
+  gap: LearningGap, t: Translate,
 ): DifficultyItem {
   return {
     id: gap.objective_id,
     title: gap.label,
-    subtitle: gap.with_evidence
-      ? `${t('tch.gaps.sentence.gap', {
-          count: gap.struggling_count, tried: gap.with_evidence,
-        })} ${t('tch.gaps.classSize', { size: gap.group_size })}`
-      : t('tch.gaps.noneTried'),
+    /* No standing sentence under the title: the facepile carries who and how
+       many are stuck, and the counts behind the claim live in "למה?" — the
+       disclosure MoE C4 actually requires. The one case that still needs a
+       line is a gap nobody has evidence on, where a bare title would read as
+       "the class is stuck" when the truth is "nobody has tried". */
+    subtitle: gap.with_evidence ? null : t('tch.gaps.noneTried'),
     /* NO tooltip of misconception tags.
      *
      * It printed `sample_misconceptions` verbatim — "off-by-one · place-value ·
@@ -52,13 +53,6 @@ export function gapToDifficultyItem(
       learnerIds: gap.learner_ids ?? [],
     },
     subgroupName: gap.label,
-    split: {
-      struggling: gap.struggling_count,
-      mastered: gap.mastered_count,
-      tried: gap.with_evidence,
-      groupSize: gap.group_size,
-    },
-    note,
   }
 }
 

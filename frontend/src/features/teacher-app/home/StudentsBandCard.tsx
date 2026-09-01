@@ -77,46 +77,54 @@ export const StudentsBandCard = forwardRef<HTMLElement, {
               </button>
             </Hint>
           </h2>
-          <p>
-            {subgroupName
-              ? t('tch.band.scopeNotice', { name: subgroupName })
-              : t('tch.band.subtitle')}
-          </p>
+          {/* The only standing line under the title is the scope notice — the
+              contract forbids narrowing silently. The old always-on subtitle
+              restated what the "?" dialog explains and the chips already show. */}
+          {subgroupName ? (
+            <p>{t('tch.band.scopeNotice', { name: subgroupName })}</p>
+          ) : null}
         </div>
         <div className="tch-bands__tools">
+          {/* Icon + count only. The face on each chip is the SAME mark every
+              student row below wears, so the chip needs no words to say what
+              it collects — the name rides on hover/focus and aria-label. Four
+              worded chips were the widest text on the card. */}
           <div className="tch-bands__filters" role="group" aria-label={t('tch.band.filterAria')}>
             {(['red', 'orange', 'green'] as Band[]).map((band) => (
+              <Hint key={band} text={t(`tch.band.${band}`)}>
+                <button
+                  type="button"
+                  className={`tch-bands__chip is-${band}${bandFilter === band ? ' is-active' : ''}`}
+                  aria-pressed={bandFilter === band}
+                  aria-label={t(`tch.band.${band}`)}
+                  onClick={() => onBandFilter(bandFilter === band ? null : band)}
+                >
+                  <BandFace band={band} size={20} />
+                  <span className="tch-bands__chipCount">{countOf(band)}</span>
+                  {bandFilter === band && (
+                    /* The ✕ on the chip itself says the same click releases the
+                       filter (#506); aria-pressed already carries the state. */
+                    <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
+                  )}
+                </button>
+              </Hint>
+            ))}
+            {/* the movers: who changed band in the last two days */}
+            <Hint text={t('tch.band.freshFilter')}>
               <button
-                key={band}
                 type="button"
-                className={`tch-bands__chip is-${band}${bandFilter === band ? ' is-active' : ''}`}
-                aria-pressed={bandFilter === band}
-                onClick={() => onBandFilter(bandFilter === band ? null : band)}
+                className={`tch-bands__chip is-fresh${freshOnly ? ' is-active' : ''}`}
+                aria-pressed={freshOnly}
+                aria-label={t('tch.band.freshFilter')}
+                onClick={() => setFreshOnly((value) => !value)}
               >
-                <BandFace band={band} size={20} />
-                {t(`tch.band.${band}`)}
-                <span className="tch-bands__chipCount">{countOf(band)}</span>
-                {bandFilter === band && (
-                  /* The ✕ on the chip itself says the same click releases the
-                     filter (#506); aria-pressed already carries the state. */
+                <Icon name="pulse" size={14} aria-hidden />
+                <span className="tch-bands__chipCount">{freshCount}</span>
+                {freshOnly && (
                   <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
                 )}
               </button>
-            ))}
-            {/* the movers: who changed band in the last two days */}
-            <button
-              type="button"
-              className={`tch-bands__chip is-fresh${freshOnly ? ' is-active' : ''}`}
-              aria-pressed={freshOnly}
-              onClick={() => setFreshOnly((value) => !value)}
-            >
-              <Icon name="pulse" size={14} aria-hidden />
-              {t('tch.band.freshFilter')}
-              <span className="tch-bands__chipCount">{freshCount}</span>
-              {freshOnly && (
-                <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
-              )}
-            </button>
+            </Hint>
           </div>
         </div>
       </div>

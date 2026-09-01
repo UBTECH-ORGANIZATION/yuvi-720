@@ -133,6 +133,31 @@ export interface ObjectiveGroup<T extends GroupableLearning> {
 }
 
 /**
+ * The best name a group has when its objective was never titled.
+ *
+ * "ללא יעד" ×3 under one subject tells the teacher nothing — the cards are
+ * only distinguishable by what is INSIDE them, so that is where the name
+ * comes from: a single lomda lends its own name, several lomdot sharing one
+ * unit lend the unit's. Only a mixed bag with no shared unit stays nameless.
+ */
+export function objectiveGroupName<
+  T extends GroupableLearning & NameableLearning & { unit_title?: string | null },
+>(group: ObjectiveGroup<T>): string | null {
+  if (group.title) return group.title
+  if (group.rows.length === 1) {
+    const name = learningName(group.rows[0])
+    if (name.named) return name.title
+    // An unnamed lomda still falls through to its unit below.
+  }
+  const units = new Set(group.rows.map((row) => row.unit_title ?? ''))
+  if (units.size === 1) {
+    const only = [...units][0]
+    return only || null
+  }
+  return null
+}
+
+/**
  * Bucket rows by objective. Objectives with trouble surface first, then the
  * most recently worked — the same "live material on top" rule the unit
  * sections use, with the same MoE C5 shape: these rank MATERIAL, and the rows

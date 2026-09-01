@@ -253,12 +253,16 @@ export function TeacherGoalsPage() {
 
       {/* ── waiting for the teacher — the only step nobody else can do ────── */}
       <Panel className="tch-goalsPage__inbox" data-tour="teacher.goalInbox">
+        {/* "0 completed goals" as a subtitle under an empty inbox restated
+            the empty state below it — nothing pending means no subtitle. One
+            student gets the singular wording: "· 1 תלמידים" is not Hebrew. */}
         <SectionHeader
           title={t('tch.goalsPage.pending')}
-          subtitle={busy ? '' : pendingGroups.length
-            ? t('tch.goalsPage.pendingSubGrouped',
-                { count: pendingTotal, students: pendingGroups.length })
-            : t('tch.goalsPage.pendingSub', { count: 0 })}
+          subtitle={busy || !pendingGroups.length ? ''
+            : pendingGroups.length === 1
+              ? t('tch.goalsPage.pendingSubOne', { count: pendingTotal })
+              : t('tch.goalsPage.pendingSubGrouped',
+                  { count: pendingTotal, students: pendingGroups.length })}
         />
         {outcome ? <p className="tch-goalsPage__outcome" dir="auto">{outcome}</p> : null}
         {busy ? (

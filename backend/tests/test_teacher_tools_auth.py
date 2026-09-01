@@ -42,6 +42,18 @@ MY_GROUP = "group-mine"
 THEIR_GROUP = "group-theirs"
 
 
+def _gap_row() -> dict:
+    """A gap the way `group_analytics.learning_gaps` shapes one — enough of it
+    for `group_recommendations` to derive a move."""
+    return {
+        "objective_id": "obj.frac", "subject": "math", "label": "שברים",
+        "kind": "gap", "struggling_count": 5, "mastered_count": 2,
+        "with_evidence": 10, "group_size": 12, "struggle_share": 0.5,
+        "mastery_share": 0.2, "learner_ids": [MINE, "kid-2", "kid-3"],
+        "mastered_ids": ["kid-4"], "evidence": {"sample_misconceptions": []},
+    }
+
+
 def context(**overrides) -> TeacherToolContext:
     base = dict(
         teacher_id="teacher-a", language="he",
@@ -239,10 +251,7 @@ class NoPiiInToolResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("רון", repr(result))
 
     async def test_gaps_do_not_hand_the_model_a_roster_slice(self):
-        payload = [{
-            "objective_id": "obj.frac", "struggling_count": 5, "with_evidence": 10,
-            "learner_ids": [MINE, "kid-2", "kid-3"],
-        }]
+        payload = [_gap_row()]
         with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
              patch("app.services.group_analytics.learning_gaps", AsyncMock(return_value=payload)):
             result = await registry.dispatch(
@@ -250,6 +259,39 @@ class NoPiiInToolResultsTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("learner_ids", result["data"][0])
         self.assertEqual(result["data"][0]["struggling_count"], 5)
+
+    async def test_gaps_carry_the_teaching_moves_without_ids(self):
+        """The card's recommendations ride along — same deterministic derivation."""
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
+             patch("app.services.group_analytics.learning_gaps",
+                   AsyncMock(return_value=[_gap_row()])):
+            result = await registry.dispatch(
+                "get_group_learning_gaps", {"group_id": MY_GROUP}, context())
+
+        moves = result["recommendations"]
+        self.assertTrue(moves)
+        self.assertIn(moves[0]["action"],
+                      {"revisit", "split_groups", "adapt_method", "change_pace", "extend"})
+        self.assertNotIn(MINE, repr(moves))
+
+    async def test_class_mood_strips_names_but_keeps_the_words(self):
+        """The child's own note is the point; the roster name never is."""
+        payload = {
+            "answers": 4, "answered_students": 3, "by_valence": {"upset": 1},
+            "students": {"upset": [{"learner_id": MINE, "display_name": "רון",
+                                    "date": "2026-08-30", "feeling": "sad"}]},
+            "notes": [{"learner_id": MINE, "display_name": "רון", "date": "2026-08-30",
+                       "valence": "upset", "feeling": "sad",
+                       "question": "מה הכי העסיק אותך היום?", "text": "היה לי יום קשה"}],
+        }
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
+             patch("app.services.group_analytics.class_mood", AsyncMock(return_value=payload)):
+            result = await registry.dispatch(
+                "get_class_mood", {"group_id": MY_GROUP}, context())
+
+        serialized = repr(result)
+        self.assertNotIn("רון", serialized)
+        self.assertIn("היה לי יום קשה", serialized)
 
 
 class ExplicitEmptinessTests(unittest.IsolatedAsyncioTestCase):
@@ -281,6 +323,33 @@ class ExplicitEmptinessTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result["data"])
         self.assertTrue(result["reason"])
+
+    async def test_a_class_with_no_checkins_is_a_reason_not_a_mood(self):
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
+             patch("app.services.group_analytics.class_mood",
+                   AsyncMock(return_value={"answers": 0, "by_valence": {}})):
+            result = await registry.dispatch(
+                "get_class_mood", {"group_id": MY_GROUP}, context())
+
+        self.assertIsNone(result["data"])
+        self.assertEqual(result["reason"], "no_checkins_in_window")
+
+    async def test_a_gap_with_no_evidence_diagnoses_nothing(self):
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
+             patch("app.services.learning_analytics.gap_diagnosis",
+                   AsyncMock(return_value={"parts": [], "hard_questions": []})):
+            result = await registry.dispatch(
+                "get_gap_diagnosis",
+                {"group_id": MY_GROUP, "objective_id": "obj.frac"}, context())
+
+        self.assertIsNone(result["data"])
+        self.assertEqual(result["reason"], "no_evidence_for_this_objective")
+
+    async def test_class_mood_is_scope_gated_like_every_group_read(self):
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)):
+            result = await registry.dispatch(
+                "get_class_mood", {"group_id": THEIR_GROUP}, context())
+        self.assertEqual(result.get("error"), "not_authorized")
 
 
 class MetricDefinitionsTests(unittest.TestCase):

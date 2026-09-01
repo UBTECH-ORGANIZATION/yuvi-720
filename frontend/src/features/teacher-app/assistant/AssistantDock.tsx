@@ -7,8 +7,9 @@
  *
  * Three product rules are visible in the markup:
  *
- *   Every answer carries its trace. `ToolTrace` renders under each reply, and
- *   an ungrounded answer is visibly marked rather than quietly plausible.
+ *   Every answer carries its trace. `ToolTrace` renders under each reply that
+ *   fetched data; the server blocks ungrounded factual claims before they ship,
+ *   so a traceless reply is chit-chat and renders with no caution attached.
  *
  *   The assistant never acts. Its tools cannot write; the strongest thing it can
  *   produce is a filled-in form and a button, and the teacher presses it. The
@@ -522,12 +523,8 @@ function MessageBubble({
     )
   }
 
-  const ungrounded = message.grounded === false && !message.textKey
   return (
-    <div
-      className={`tch-dock__bubble${ungrounded ? ' tch-dock__bubble--ungrounded' : ''}`}
-      dir="auto"
-    >
+    <div className="tch-dock__bubble" dir="auto">
       {/* A deterministic refusal renders from its key, so "I don't know" is as
           well-worded as an answer — and localized. */}
       {message.text
@@ -541,7 +538,7 @@ function MessageBubble({
           ? <p className="tch-dock__para">{t(message.textKey)}</p>
           : null}
       {message.tools && !message.streaming ? (
-        <ToolTrace tools={message.tools} grounded={message.grounded ?? false} />
+        <ToolTrace tools={message.tools} />
       ) : null}
     </div>
   )

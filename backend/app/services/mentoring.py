@@ -313,10 +313,12 @@ async def create_conversation(data: dict[str, Any]) -> dict[str, Any]:
         "teacher_name": data.get("teacher_name", ""),
         "learner_name": data.get("learner_name", ""),
         "meeting_stage": data.get("meeting_stage", ""),
-        "notes": data.get("notes", ""),
+        # Bounded to what the composer's own counter promises (#503) — a
+        # body this size is a pasted document, not a talk summary.
+        "notes": str(data.get("notes", ""))[:4000],
         "author": data.get("author", "teacher"),          # teacher | learner
         "visibility": _visibility(data),                    # shared | teacher_only
-        "teacher_only_note": data.get("teacher_only_note", ""),
+        "teacher_only_note": str(data.get("teacher_only_note", ""))[:4000],
         # Which teacher documented this. Was passed by `assign_goal` and
         # silently dropped here, so nothing recorded who set a child's goal and
         # the history rows had no one to attribute a talk to.

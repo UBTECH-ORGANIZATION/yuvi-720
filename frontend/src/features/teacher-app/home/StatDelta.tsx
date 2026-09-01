@@ -41,27 +41,28 @@ export function StatDelta({
   if (!delta) return null
 
   const magnitude = Math.abs(delta.value)
+  /* The full sentence — "מעורבות: ירידה של 5 נקודות אחוז לעומת השבוע שעבר" —
+     built once and carried twice: spoken to assistive tech and shown on hover.
+     It left the visible chip on purpose: three chips each repeating "לעומת
+     השבוע שעבר" was the row's loudest text saying the least, when the period
+     control above already names the window. The chip keeps only the news. */
+  const sentence = t(`tch.delta.${delta.direction}`, {
+    label,
+    when,
+    amount: delta.unit === 'points'
+      ? t('tch.delta.amount.points', { n: magnitude })
+      : t('tch.delta.amount.relative', { n: magnitude }),
+  })
   return (
     <span
       className={`tch-delta tch-delta--${delta.direction}`}
-      /* One reading for assistive tech instead of four fragments — and the one
-         place the two units are still told apart. On screen both print a %,
-         because a teacher reading "83%" wants the gap in the same terms;
-         spoken aloud, "59 percentage points" is the precise claim and costs
-         nothing to say in full. */
-      aria-label={t(`tch.delta.${delta.direction}`, {
-        label,
-        when,
-        amount: delta.unit === 'points'
-          ? t('tch.delta.amount.points', { n: magnitude })
-          : t('tch.delta.amount.relative', { n: magnitude }),
-      })}
+      aria-label={sentence}
+      title={sentence}
     >
       <span aria-hidden="true">{ARROW[delta.direction]}</span>
       <span aria-hidden="true">
         {delta.direction === 'flat' ? t('tch.delta.same') : `${magnitude}%`}
       </span>
-      <span className="tch-delta__when" aria-hidden="true">{when}</span>
     </span>
   )
 }

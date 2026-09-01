@@ -583,3 +583,10 @@
   border-block-start: 1px solid var(--tch-card-border);
   padding-block-start: var(--sp-3);
 }
+
+/* #503: appears only near the ceiling — see NotesCounter. */
+.tch-step__counter {
+  align-self: end;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}

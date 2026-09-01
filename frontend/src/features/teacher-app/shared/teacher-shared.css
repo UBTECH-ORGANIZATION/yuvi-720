@@ -248,13 +248,9 @@
   font-variant-numeric: tabular-nums;
   padding: 1px 6px;
   border-radius: var(--sp-radius-pill);
-  /* The chip carries a phrase now ("לעומת 3 הימים הקודמים"), not two glyphs.
-     It must never truncate — a period clipped to "לעומת 3 הימ…" is worse than
-     no period at all, since the whole reason it is here is to say which days
-     the change is measured against. So it wraps: `.tch-stat__line` drops it to
-     its own row first, and on a narrow card the pill itself breaks over two
-     lines rather than losing the end of the sentence. */
-  flex-wrap: wrap;
+  /* Arrow and number only — the window it is measured against rides on the
+     chip's title/aria, because the period control above already names it and
+     three chips repeating "לעומת השבוע שעבר" drowned the row. */
   max-inline-size: 100%;
   /* The arrow glyph is directional punctuation, not text: in an RTL paragraph
      the bidi algorithm would otherwise be free to reorder it away from its
@@ -264,24 +260,6 @@
 .tch-delta--up   { color: var(--sp-success-600); background: rgba(46, 174, 111, .12); }
 .tch-delta--down { color: var(--sp-danger-600);  background: rgba(226, 74, 94, .12); }
 .tch-delta--flat { color: var(--sp-ink-400);     background: var(--tch-chip-bg); }
-
-/* The stretch the change is measured against, inside the chip. A step quieter
-   and unweighted: the movement is the news and the period is the frame around
-   it. `currentColor` at reduced opacity rather than an ink token, because it
-   has to stay legible on all three of the chip's tinted backgrounds in both
-   themes. */
-.tch-delta__when {
-  font-weight: var(--sp-fw-regular);
-  opacity: .78;
-  padding-inline-start: 2px;
-}
-
-/* ── proportion bars ───────────────────────────────────────────────────────
-   Two of them, same mechanics: a row of flex segments whose grow factors are
-   the counts, so the bar is always full and reads as a COMPOSITION rather
-   than as progress toward a target. Both exist for the same reason (#500,
-   #501) — the screen was stating distributions as sentences a teacher had to
-   do arithmetic on, and a shape says it at a glance. */
 
 /* ── the per-day series under the engagement figure ────────────────────────
    An SVG shape with no `fill` declared paints BLACK — the browser's initial
@@ -312,22 +290,6 @@
   /* The strip is scaled non-uniformly (`preserveAspectRatio="none"`), which
      would otherwise stretch the stroke thicker horizontally than vertically. */
   vector-effect: non-scaling-stroke;
-}
-
-.tch-split {
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  margin-block-start: 6px;
-  block-size: 6px;
-  border-radius: var(--sp-radius-pill);
-  overflow: hidden;
-}
-
-.tch-split__seg {
-  flex-basis: 0;
-  min-inline-size: 3px;
-  border-radius: var(--sp-radius-pill);
 }
 
 /* ── the five check-in valence families ────────────────────────────────────
@@ -435,14 +397,6 @@
   align-items: center;
   margin-inline-start: auto;
 }
-
-/* The gap row's split. Here the status colours ARE the meaning, so they use
-   the shared danger/success language — but `untried` is deliberately neutral:
-   a child who has not attempted the topic is not failing at it. */
-.tch-split__seg--struggling { background: var(--sp-danger-600); }
-.tch-split__seg--neither    { background: var(--sp-warn-600); }
-.tch-split__seg--mastered   { background: var(--sp-success-600); }
-.tch-split__seg--untried    { background: var(--sp-border-strong); }
 
 /* The rule between what the class has not got and what it has. A hairline,
    not a gap: the two halves belong to one reading, and space alone would let
@@ -563,15 +517,6 @@
   flex-wrap: wrap;
 }
 .tch-difficulties .tch-strength__praise { margin-inline-start: auto; }
-
-/* A standing note on a difficulty row — "also last period". */
-.tch-difficulty__note {
-  display: block;
-  margin-block-start: 4px;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-500);
-}
 
 /* What became of the blocking topic. Its own line under the hint rather than a
    chip beside the value: the value is already a phrase that may wrap to two
@@ -1042,6 +987,23 @@
   align-items: center;
   gap: var(--sp-3);
   flex-wrap: wrap;
+}
+
+/* The row's two quick actions, icon-only: worded buttons repeated on every gap
+   made the actions the loudest text on the card. Square, and paired tighter
+   than the row gap so they read as one small toolbar; each names itself via
+   Hint + aria-label. Pushed to the inline END of the row (bottom-left in
+   Hebrew) — reading first, doing last, same corner as a strength's praise. */
+.tch-difficulty__quick {
+  display: inline-flex;
+  gap: var(--sp-1);
+  margin-inline-start: auto;
+}
+.tch-difficulty__iconBtn {
+  padding: var(--sp-1);
+  inline-size: 30px;
+  block-size: 30px;
+  justify-content: center;
 }
 
 .tch-difficulties__empty {

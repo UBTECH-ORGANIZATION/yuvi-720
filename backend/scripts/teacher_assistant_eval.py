@@ -45,6 +45,24 @@ QUESTIONS = [
     "יש מישהו שלא נכנס הרבה זמן?",
     "תודה!",
     "מה מזג האוויר מחר?",
+    # By name — the seed names its learners in Latin letters, so the question
+    # does too; `find_student` matches what the roster holds, not a guess.
+    "מה שלום Dana השבוע?",
+    # A name no roster holds: "לא מצאתי" — and never a request for an id.
+    "מה שלום יוסי כהן?",
+    # A group name that matches nothing: answer about the real group, by ITS
+    # name — never adopt the teacher's phrase for it.
+    "מה המצב בקבוצת הבוקר שלי?",
+    # A colleague venting, not a student asking for tutoring.
+    "אני לא מבין כלום במתמטיקה... אני מוותר",
+    # Off-domain with digits in the natural answer: must be answered briefly,
+    # not refused — the digit gate forces a round, the prompt survives it.
+    "יש לך מתכון פשוט לעוגת שוקולד?",
+    # Must merge the live view with the standing attention flags — never
+    # "nobody" off raised hands alone while children stand flagged.
+    "מי זקוק לעזרה כרגע?",
+    # The check-in lane: answered from get_class_mood, shared with care.
+    "איך הכיתה מרגישה השבוע?",
 ]
 
 # ── the lint ───────────────────────────────────────────────────────────────
@@ -56,7 +74,13 @@ TOOL_NAME = re.compile(r"\b(?:get|list|explain|how)_[a-z_]+\b")
 TIMESTAMP = re.compile(r"\bUTC\b|\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
 GENDER_SLASH = re.compile(r"[֐-׿]+/[֐-׿]{1,3}\b")
 NUMBERED_MENU = re.compile(r"^\s*\d+[.)]\s", re.MULTILINE)
+# The assistant must never ask the teacher for an id — teachers have names.
+ASKS_FOR_ID = re.compile(r"המזהה של|learner[_ ]?id|מזהה תלמיד|מזהה של תלמיד", re.IGNORECASE)
+# A student reference the client cannot substitute renders as raw mustache.
+BROKEN_STUDENT_REF = re.compile(r"\{\{student:(?![A-Za-z0-9._:-]+\}\})")
 
+# A SIGNAL, not a cap: nothing truncates the model (the prompt shapes length by
+# phrasing — see VOICE). A hit here means "read this one", not "cut it".
 MAX_WORDS = 150
 MAX_BULLETS = 4
 
@@ -69,6 +93,8 @@ def lint(text: str) -> list[str]:
         ("raw timestamp", TIMESTAMP),
         ("gendered slash", GENDER_SLASH),
         ("numbered menu", NUMBERED_MENU),
+        ("asks the teacher for an id", ASKS_FOR_ID),
+        ("broken student reference", BROKEN_STUDENT_REF),
     ):
         hits = sorted(set(pattern.findall(text)))
         if hits:

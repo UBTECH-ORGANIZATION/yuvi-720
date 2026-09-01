@@ -423,7 +423,12 @@ def _subjects_of(rows: Iterable[dict[str, Any]]) -> list[str]:
     bar that offers a subject this set does not contain narrows a screen to
     nothing and gives the teacher no way to see why.
     """
-    return sorted({row["subject"] for row in rows if row.get("subject")})
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+
+    return sorted({
+        row["subject"] for row in rows
+        if row.get("subject") and row["subject"] not in HIDDEN_SUBJECTS
+    })
 
 
 # The subject list is chrome: the scope bar reads it on every teacher page
@@ -524,6 +529,13 @@ async def group_learnings(
             "evidence": {},
         })
 
+    # A subject the school is not running never reaches the screen — the rows
+    # are already dropped at the `question_summary` seam, but an off-catalogue
+    # row that slipped past it would still grow its own subject section here.
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+
+    results = [row for row in results if row.get("subject") not in HIDDEN_SUBJECTS]
+
     # Read the offered subjects BEFORE narrowing to one of them. Computed after,
     # picking "math" left the list holding only "math" — the chips that had just
     # been used to filter erased every other way back out.
@@ -560,6 +572,100 @@ async def group_learnings(
             "group_size": group_size,
         },
     }
+
+
+# The KPI strip's window: trailing, so a Tuesday is never measured against a
+# finished week — the same rule as `group_analytics.engagement` and the home
+# dashboard's default period.
+PULSE_WINDOW_DAYS = 7
+
+
+async def learnings_pulse(
+    group_id: str, *, subject: Optional[str] = None, days: int = PULSE_WINDOW_DAYS,
+) -> dict[str, Any]:
+    """The learnings screen's news: this window against the one before it.
+
+    ``group_learnings`` totals are all-time — right for the catalogue, wrong
+    for a KPI that should carry a "vs last week" chip. This reads the raw
+    events (which carry timestamps; the per-question aggregates do not) and
+    folds each of the two trailing windows into the four figures the strip
+    shows: learnings worked, success rate, class minutes, active learners.
+
+    Counts only, never learner ids (MoE C5) — the sets fold into lengths
+    before anything leaves this function.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from app.brain import org
+    from app.services.events import get_learner_events
+    from app.services.learner_activity import HIDDEN_SUBJECTS
+    from app.services.learning_timing import capped_elapsed
+
+    learner_ids = await org.learners_in_group(group_id)
+    now = datetime.now(timezone.utc)
+    current_start = now - timedelta(days=days)
+    previous_start = now - timedelta(days=2 * days)
+
+    def _blank() -> dict[str, Any]:
+        return {"attempts": 0, "correct": 0, "seconds": 0.0, "timed": False,
+                "components": set(), "learners": set()}
+
+    current, previous = _blank(), _blank()
+
+    def _parse(stamp: Any):
+        try:
+            return datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+
+    semaphore = asyncio.Semaphore(_FANOUT)
+
+    async def _events(learner_id: str) -> tuple[str, list[dict[str, Any]]]:
+        async with semaphore:
+            try:
+                # Both windows from ONE read per learner — the previous window
+                # is a second filter, not a second round trip.
+                return learner_id, await get_learner_events(learner_id, limit=2000)
+            except Exception:
+                return learner_id, []
+
+    for learner_id, events in await asyncio.gather(
+        *(_events(learner_id) for learner_id in learner_ids)
+    ):
+        for event in events:
+            parsed = _parse(event.get("stored_at"))
+            if parsed is None or parsed < previous_start or parsed >= now:
+                continue
+            event_subject = event.get("subject")
+            if event_subject in HIDDEN_SUBJECTS:
+                continue
+            if subject and event_subject != subject:
+                continue
+            bucket = current if parsed >= current_start else previous
+            bucket["learners"].add(learner_id)
+            if event.get("launch"):
+                bucket["components"].add(event["launch"])
+            seconds = capped_elapsed(event.get("timing"))
+            if seconds is not None:
+                bucket["seconds"] += seconds
+                bucket["timed"] = True
+            if event.get("verb") in ("answered", "attempted"):
+                bucket["attempts"] += 1
+                if (event.get("result") or {}).get("success") is True:
+                    bucket["correct"] += 1
+
+    def _view(bucket: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "learnings_active": len(bucket["components"]),
+            "attempts": bucket["attempts"],
+            "correct": bucket["correct"],
+            "success_rate": _rate(bucket["correct"], bucket["attempts"]),
+            "total_minutes": round(bucket["seconds"] / 60) if bucket["timed"] else None,
+            "timing_available": bucket["timed"],
+            "active_learners": len(bucket["learners"]),
+        }
+
+    return {"window_days": days, "current": _view(current), "previous": _view(previous)}
 
 
 def question_texts(component_id: str) -> dict[str, Optional[str]]:

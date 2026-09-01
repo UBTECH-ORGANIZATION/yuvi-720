@@ -124,14 +124,21 @@ export function GoalsStep({
 
   /* `action` and `because` travel with the goal. A teacher rewording a title
      must not silently turn a tracked goal into an untracked one. */
-  const useDraft = (draft: GoalDraft, origin: 'conversation' | 'evidence') => add({
-    title: draft.title,
-    next_steps: draft.next_steps,
-    deadline: draft.deadline || weekFromToday(),
-    action: draft.action ?? null,
-    because: draft.because,
-    origin,
-  })
+  const useDraft = (draft: GoalDraft, origin: 'conversation' | 'evidence') => {
+    add({
+      title: draft.title,
+      next_steps: draft.next_steps,
+      deadline: draft.deadline || weekFromToday(),
+      action: draft.action ?? null,
+      because: draft.because,
+      origin,
+    })
+    /* Same treatment as addOwn below: the chosen goal appears below the fold,
+       and without the scroll the teacher can't tell the press did anything. */
+    window.requestAnimationFrame(() => {
+      chosenRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  }
 
   const patch = (index: number, changes: Partial<MentoringGoalDraft>) =>
     onGoals(goals.map((goal, at) => (at === index ? { ...goal, ...changes } : goal)))

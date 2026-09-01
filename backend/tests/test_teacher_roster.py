@@ -44,7 +44,7 @@ def _patches():
               AsyncMock(side_effect=lambda teacher_id: GROUPS.get(teacher_id, []))),
         patch("app.brain.org.learners_in_group",
               AsyncMock(side_effect=lambda group_id: MEMBERS.get(group_id, []))),
-        patch.object(teacher_roster, "_names_for",
+        patch.object(teacher_roster, "names_for",
                      AsyncMock(side_effect=lambda ids: {i: NAMES.get(i) for i in ids})),
     )
 

@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
-import { EmptyState, Hint, Icon, StatusPill } from '../../../components/primitives'
+import { EmptyState, Hint, Icon, Skeleton } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import {
@@ -28,7 +28,6 @@ import { MessageRefused, sendMessage } from '../../../services/directMessages'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { NoFeelingFace, ValenceFace } from '../../checkin/ValenceFaces'
 import { VALENCES, type Valence } from '../../checkin/feelings'
-import { RawEvidence } from '../shared/EvidenceDisclosure'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { useDismiss } from '../shared/useDismiss'
 import { agoLabel } from './LiveNow'
@@ -63,17 +62,6 @@ const BLANK_PRESENCE: Presence = {
   help_requested_at: null, surface: null, surface_screen: null, surface_title: null, surface_subject: null, surface_at: null, chat_at: null,
 }
 
-/** "כבר 12 דק׳" — how long they have been where they are. Minute-coarse on
- *  purpose: presence is best-effort and seconds would imply otherwise. */
-function forLabel(iso: string | null | undefined, now: number, t: Translate): string {
-  if (!iso) return ''
-  const minutes = Math.floor(Math.max(0, now - Date.parse(iso)) / 60_000)
-  if (Number.isNaN(minutes)) return ''
-  if (minutes < 1) return t('tch.liveView.forNow')
-  if (minutes < 60) return t('tch.liveView.forMinutes', { count: minutes })
-  return t('tch.liveView.forHours', { count: Math.floor(minutes / 60) })
-}
-
 /** The place, as precisely as we honestly can: on a lesson page, the actual
  *  learning's name (catalog-resolved server-side); otherwise the exact
  *  reported screen when the server recognised one, the coarse bucket when
@@ -99,14 +87,6 @@ function subjectDisplay(key: string | null | undefined, t: Translate): string | 
   const localeKey = `tch.subject.${key}`
   const localized = t(localeKey)
   return localized !== localeKey ? localized : key
-}
-
-/** The stamp `forLabel` should count from, per location. */
-function sinceOf(presence: Presence, where: Where): string | null {
-  if (where === 'lesson') return presence.lesson_entered_at
-  if (where === 'chat') return presence.chat_at
-  if (where === 'studio' || where === 'browsing') return presence.surface_at
-  return null
 }
 
 /* ── column identity: subject and objective as their own cells ────────────── */
@@ -186,28 +166,99 @@ function KpiSegment({ bucket, counts, active, hot, onPick, t }: {
  * subject. A half-circle arc, filled to the share. */
 const GAUGE_ARC = 81.7   // semicircle length for r=26 in the 60×34 viewBox
 
-function SubjectGauge({ label, count, total }: {
+function SubjectGauge({ label, count, total, hue }: {
   label: string
   count: number
   total: number
+  /** The subject's seat in the shared four-tint palette — the same color its
+   *  chips wear in the table, so gauge and column agree on who is who. */
+  hue: number
 }) {
   const share = total > 0 ? count / total : 0
   return (
-    <div className="tch-gauge" title={`${label} · ${count}/${total}`}>
+    <div className={`tch-gauge is-hue-${hue}`} title={`${label} · ${count}/${total}`}>
       <svg viewBox="0 0 60 34" aria-hidden="true">
         <path
           d="M4 30 A26 26 0 0 1 56 30"
           fill="none" stroke="var(--sp-bg-subtle)" strokeWidth="6" strokeLinecap="round"
         />
         <path
+          className="tch-gauge__fill"
           d="M4 30 A26 26 0 0 1 56 30"
-          fill="none" stroke="var(--sp-primary-600)" strokeWidth="6" strokeLinecap="round"
+          fill="none" strokeWidth="6" strokeLinecap="round"
           strokeDasharray={`${Math.max(0.001, share) * GAUGE_ARC} ${GAUGE_ARC}`}
         />
       </svg>
       <strong className="tch-gauge__pct">{Math.round(share * 100)}%</strong>
       <span className="tch-gauge__label" dir="auto">{label}</span>
     </div>
+  )
+}
+
+/* The loading frame paints everything that is FIXED — the four filter chips
+ * with their icons and names, the table and its column headers — and greys
+ * only the measurements: counts, names, cells. Eight anonymous grey cards
+ * here made the whole screen read as "nothing yet" when most of it was
+ * already known (the same rule as the home page's skeleton). */
+export function LiveClassSkeleton() {
+  const { t } = useI18n()
+  return (
+    <section className="tch-liveClass" aria-hidden="true">
+      <div className="tch-livePulse">
+        <div className="tch-livePulse__segs">
+          {(['hand', 'lesson', 'elsewhere', 'offline'] as const).map((key) => (
+            /* Inert spans, not disabled buttons — nothing looks pressable
+               before it is. Only each chip's count is still a question. */
+            <span key={key} className={`tch-liveKpi tch-liveKpi--${key}`}>
+              <Icon name={KPI_ICON[key]} size={15} aria-hidden />
+              <Skeleton w={18} h={16} r={4} />
+              <span className="tch-liveKpi__label">{t(`tch.liveView.kpi.${key}`)}</span>
+            </span>
+          ))}
+        </div>
+        {/* Two gauge stand-ins at the row's end, in the real gauges' shapes —
+            the arc and its label — so the strip neither grows nor reflows
+            when the class's subject split lands. */}
+        <div className="tch-livePulse__gauges">
+          {[0, 1].map((index) => (
+            <span key={index} className="tch-gauge">
+              <Skeleton w={60} h={30} r={8} />
+              <Skeleton w={44} h={9} />
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="tch-liveTable">
+        <div className="tch-liveHead">
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.student')}</span>
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.feeling')}</span>
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.where')}</span>
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.subject')}</span>
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.objective')}</span>
+          <span className="tch-liveHead__cell tch-liveHead__cell--actions" />
+        </div>
+        <ul className="tch-liveRows">
+          {Array.from({ length: 8 }, (_, index) => (
+            <li key={index} className="tch-liveRow">
+              <div className="tch-liveRow__main">
+                <span className="tch-liveRow__who">
+                  <Skeleton w={34} h={34} r={999} />
+                  <Skeleton w={index % 3 === 1 ? 96 : 72} h={12} />
+                </span>
+                <span className="tch-liveRow__feeling"><Skeleton w={22} h={22} r={999} /></span>
+                <span><Skeleton w={90} h={12} /></span>
+                <span><Skeleton w={64} h={16} r={999} /></span>
+                <span><Skeleton w="70%" h={12} /></span>
+                <span className="tch-liveRow__do">
+                  <Skeleton w={30} h={30} r={8} />
+                  <Skeleton w={30} h={30} r={8} />
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )
 }
 
@@ -233,6 +284,9 @@ export function LiveClassView({
      lives — on the table headers, like any grown-up grid. */
   const [whereFilter, setWhereFilter] = useState<Where | null>(null)
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null)
+  /* The in-list name search (#504): the top-bar search is for reaching any
+     child anywhere; this one narrows the rows in front of the teacher's eyes. */
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState<{ kind: 'message' | 'focus'; learnerId: string } | null>(null)
 
   /* The raised hand's clear path, brought to the row: the provider holds the
@@ -262,13 +316,17 @@ export function LiveClassView({
      over the rows in scope so a sub-group narrows this along with everything
      else on the screen. */
   const subjectShares = useMemo(() => {
-    const bySubject = new Map<string, { label: string; count: number }>()
+    const bySubject = new Map<string, { key: string; label: string; count: number }>()
     for (const row of rows) {
       const focus = focusOf[row.learner_id]
       if (!focus?.subject) continue
       const held = bySubject.get(focus.subject)
       if (held) held.count += 1
-      else bySubject.set(focus.subject, { label: focus.subject_name || focus.subject, count: 1 })
+      else {
+        bySubject.set(focus.subject, {
+          key: focus.subject, label: focus.subject_name || focus.subject, count: 1,
+        })
+      }
     }
     return [...bySubject.values()].sort((a, b) => b.count - a.count)
   }, [rows, focusOf])
@@ -307,7 +365,9 @@ export function LiveClassView({
   }, [rows, presence, focusOf, now, t])
 
   const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
     const filtered = rows.filter((row) => {
+      if (needle && !row.name.toLowerCase().includes(needle)) return false
       const frame = presenceOf(row.learner_id)
       const where = whereOf(frame, now)
       if (bucket && !inBucket(frame, bucket, now)) return false
@@ -321,23 +381,28 @@ export function LiveClassView({
     })
     return triageOrder(filtered, presenceOf, now)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, presence, focusOf, bucket, objective, whereFilter, subjectFilter, now, t])
+  }, [rows, presence, focusOf, bucket, objective, whereFilter, subjectFilter, query, now, t])
 
-  const anyFilter = Boolean(bucket || objective || whereFilter || subjectFilter)
+  const anyFilter = Boolean(bucket || objective || whereFilter || subjectFilter
+    || query.trim())
   const clearFilters = () => {
     setBucket(null); setObjective(null); setWhereFilter(null); setSubjectFilter(null)
+    setQuery('')
   }
 
   return (
     <section className="tch-liveClass" aria-label={t('tch.liveView.title')}>
-      {/* The connection chip is the view's own honesty label: rows a teacher
-          is acting on must say whether they are still being fed. */}
-      <div className="tch-liveBar">
-        <span className={`tch-liveBar__conn${isConnected ? ' is-live' : ''}`} role="status">
-          <span className="tch-liveBar__connDot" aria-hidden="true" />
-          {t(isConnected ? 'tch.live.connected' : 'tch.live.reconnecting')}
-        </span>
-      </div>
+      {/* The honesty label only when it has news: live is this screen's normal
+          state, and a standing "עדכון חי" chip was one more thing to read on
+          every visit. Losing the feed is the exception worth a line. */}
+      {!isConnected && (
+        <div className="tch-liveBar">
+          <span className="tch-liveBar__conn" role="status">
+            <span className="tch-liveBar__connDot" aria-hidden="true" />
+            {t('tch.live.reconnecting')}
+          </span>
+        </div>
+      )}
 
       {/* ONE card, three questions: who needs me, where is everyone, and what
           is the class focused on. Every count is a momentary filter; the
@@ -348,38 +413,24 @@ export function LiveClassView({
         aria-label={t('tch.liveView.kpiLabel')}
         data-tour="teacher.liveNow"
       >
-        <div className="tch-livePulse__cluster tch-livePulse__cluster--need">
-          <span className="tch-livePulse__clusterLabel">{t('tch.liveView.needYou')}</span>
-          <div className="tch-livePulse__segs">
-            {(['hand', 'struggling'] as const).map((key) => (
-              <KpiSegment key={key} bucket={key} counts={counts} active={bucket}
-                          hot={counts[key] > 0} onPick={setBucket} t={t} />
-            ))}
-          </div>
-        </div>
-        <span className="tch-livePulse__divider" aria-hidden="true" />
-        <div className="tch-livePulse__cluster">
-          <span className="tch-livePulse__clusterLabel">{t('tch.liveView.whereAll')}</span>
-          <div className="tch-livePulse__segs">
-            {(['lesson', 'elsewhere', 'offline'] as const).map((key) => (
-              <KpiSegment key={key} bucket={key} counts={counts} active={bucket}
-                          hot={false} onPick={setBucket} t={t} />
-            ))}
-          </div>
+        {/* One flat row of four chips, no headings, no clusters: hand first
+            (the urgent one — it alone may go hot), then the three places a
+            child can be. The struggling count left the strip with the row
+            signal it duplicated; strugglers still wear their amber row edge. */}
+        <div className="tch-livePulse__segs">
+          {(['hand', 'lesson', 'elsewhere', 'offline'] as const).map((key) => (
+            <KpiSegment key={key} bucket={key} counts={counts} active={bucket}
+                        hot={key === 'hand' && counts.hand > 0} onPick={setBucket} t={t} />
+          ))}
         </div>
         {subjectShares.length > 0 && (
-          <>
-            <span className="tch-livePulse__divider" aria-hidden="true" />
-            <div className="tch-livePulse__cluster tch-livePulse__cluster--focus">
-              <span className="tch-livePulse__clusterLabel">{t('tch.liveView.classFocus')}</span>
-              <div className="tch-livePulse__gauges">
-                {subjectShares.map((share) => (
-                  <SubjectGauge key={share.label} label={share.label}
-                                count={share.count} total={rows.length} />
-                ))}
-              </div>
-            </div>
-          </>
+          <div className="tch-livePulse__gauges"
+               role="group" aria-label={t('tch.liveView.classFocus')}>
+            {subjectShares.map((share) => (
+              <SubjectGauge key={share.key} label={share.label} hue={hueOf(share.key)}
+                            count={share.count} total={rows.length} />
+            ))}
+          </div>
         )}
       </div>
 
@@ -421,7 +472,16 @@ export function LiveClassView({
           stays up when a filter empties the list — it holds the way back. */}
       <div className="tch-liveTable">
         <div className="tch-liveHead">
-          <span className="tch-liveHead__cell">{t('tch.liveView.col.student')}</span>
+          <label className="tch-liveHead__cell tch-liveHead__search">
+            <Icon name="search" size={13} aria-hidden />
+            <span className="sp-sr-only">{t('tch.students.searchLabel')}</span>
+            <input
+              type="search"
+              value={query}
+              placeholder={t('tch.liveView.col.student')}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
           <span className="tch-liveHead__cell">{t('tch.liveView.col.feeling')}</span>
           <HeadFilter label={t('tch.liveView.col.where')} options={whereOptions}
                       value={whereFilter}
@@ -546,7 +606,6 @@ function LiveRow({
   const { t } = useI18n()
   const where = whereOf(frame, now)
   const signal = signalOf(frame, now)
-  const since = sinceOf(frame, where)
   /* A lesson-page chip wears the lesson green: it counts under the lesson KPI
      (see `countsAsLesson`), and a chip colored "elsewhere" beside a KPI that
      counts it as lesson would read as the screen disagreeing with itself. */
@@ -604,17 +663,26 @@ function LiveRow({
             <span className={`tch-dot tch-dot--${frame.status}`} aria-hidden="true">
               <span className="tch-dot__mark" />
             </span>
-            <span className={`tch-liveChip is-hue-${whereHue ?? 'none'}`} dir="auto"
-                  title={whereLabel(frame, where, t)}>
-              {whereLabel(frame, where, t)}
-            </span>
-            {/* ONE time per row. "Since when they are here" when we know it;
-                otherwise "last seen" — which is also what keeps a dot from
-                ever standing bare. Both at once read as two clocks
-                disagreeing. */}
-            <span className="tch-liveRow__seen">
-              {since ? forLabel(since, now, t) : agoLabel(frame.last_seen_at, t)}
-            </span>
+            {/* No chip for the offline majority: a grey dot, a dimmed row and
+                "לפני 7 ימים" already say it, and forty "לא מחובר/ת" chips were
+                the loudest thing on the table. A child who IS somewhere gets
+                the place named; `unknown` keeps its label too — the honesty
+                rule that an unplaceable child is said, not blanked. */}
+            {where !== 'offline' && (
+              <span className={`tch-liveChip is-hue-${whereHue ?? 'none'}`} dir="auto"
+                    title={whereLabel(frame, where, t)}>
+                {whereLabel(frame, where, t)}
+              </span>
+            )}
+            {/* A time only where the dot would otherwise stand bare: last seen,
+                on the rows that are not live anywhere. A placed child's chip is
+                the whole answer — the "כבר X דק׳" duration beside it read as a
+                second clock and is gone. */}
+            {(where === 'offline' || where === 'unknown') && (
+              <span className="tch-liveRow__seen">
+                {agoLabel(frame.last_seen_at, t)}
+              </span>
+            )}
           </span>
           {/* The signal rides with the place — it stopped being a column of
               its own because it is empty for most rows most of the time. */}
@@ -643,25 +711,34 @@ function LiveRow({
           )}
         </span>
 
+        {/* Icon-only, like the gaps card's row actions: two worded buttons on
+            every one of forty rows were half the table's text. The names live
+            on hover/focus and aria-label. */}
         <span className="tch-liveRow__do">
-          <button
-            type="button"
-            className={`sp-btn sp-btn--ghost sp-btn--sm${open === 'message' ? ' is-active' : ''}`}
-            aria-expanded={open === 'message'}
-            onClick={() => onOpen('message')}
-          >
-            <Icon name="message" size={14} aria-hidden />
-            <span className="tch-liveRow__actLabel">{t('tch.liveView.act.message')}</span>
-          </button>
-          <button
-            type="button"
-            className={`sp-btn sp-btn--ghost sp-btn--sm${open === 'focus' ? ' is-active' : ''}`}
-            aria-expanded={open === 'focus'}
-            onClick={() => onOpen('focus')}
-          >
-            <Icon name="target" size={14} aria-hidden />
-            <span className="tch-liveRow__actLabel">{t('tch.liveView.act.focus')}</span>
-          </button>
+          <Hint text={t('tch.liveView.act.message')}>
+            <button
+              type="button"
+              className={`sp-btn sp-btn--ghost sp-btn--sm tch-liveRow__iconBtn${
+                open === 'message' ? ' is-active' : ''}`}
+              aria-expanded={open === 'message'}
+              aria-label={t('tch.liveView.act.message')}
+              onClick={() => onOpen('message')}
+            >
+              <Icon name="message" size={15} aria-hidden />
+            </button>
+          </Hint>
+          <Hint text={t('tch.liveView.act.focus')}>
+            <button
+              type="button"
+              className={`sp-btn sp-btn--ghost sp-btn--sm tch-liveRow__iconBtn${
+                open === 'focus' ? ' is-active' : ''}`}
+              aria-expanded={open === 'focus'}
+              aria-label={t('tch.liveView.act.focus')}
+              onClick={() => onOpen('focus')}
+            >
+              <Icon name="target" size={15} aria-hidden />
+            </button>
+          </Hint>
         </span>
       </div>
 
@@ -687,7 +764,6 @@ function SignalCell({ signal, onResolveHand, t }: {
   onResolveHand: (() => void) | null
   t: Translate
 }) {
-  const [showWhy, setShowWhy] = useState(false)
   if (!signal) return null
   if (signal.kind === 'hand') {
     /* One chip carries the whole state: the hand, its age, and its clear
@@ -716,28 +792,11 @@ function SignalCell({ signal, onResolveHand, t }: {
       </span>
     )
   }
-  /* Struggling — never a bare badge: the detector's own evidence rides along,
-     expandable in place, same explainability rule as every other flag. */
-  return (
-    <span className="tch-liveRow__struggle">
-      <StatusPill tone="steady">
-        {t(`tch.alert.kind.${signal.struggle.kind}`) !== `tch.alert.kind.${signal.struggle.kind}`
-          ? t(`tch.alert.kind.${signal.struggle.kind}`)
-          : t('tch.liveView.signal.struggling')}
-        {' · '}{agoLabel(signal.struggle.since, t)}
-      </StatusPill>
-      <button
-        type="button"
-        className="tch-evidence__toggle"
-        aria-expanded={showWhy}
-        onClick={() => setShowWhy((value) => !value)}
-      >
-        <Icon name={showWhy ? 'chevronUp' : 'chevronLeft'} size={13} aria-hidden="true" />
-        {t('tch.evidence.why')}
-      </button>
-      {showWhy && <RawEvidence raw={signal.struggle.evidence} />}
-    </span>
-  )
+  /* Struggling draws NO text here any more — the pill, its clock and the
+     "למה?" disclosure were the busiest thing on the table. The row's amber
+     start edge (`has-struggling`) still marks the child, and the full story
+     lives on their profile. */
+  return null
 }
 
 /* ── row actions ──────────────────────────────────────────────────────────── */

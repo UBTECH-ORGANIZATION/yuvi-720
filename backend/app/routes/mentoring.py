@@ -127,6 +127,33 @@ async def update_mentoring_goal_progress(
             goal_id,
             "academic",
         )
+    # A finished goal waits for the one step only a teacher can take (#497),
+    # so their bell says so — deep-linking to this child's profile, where the
+    # approval now lives. Deterministic id per goal+teacher, so re-summarizing
+    # cannot ring twice; already-approved goals stay silent. Best-effort: the
+    # learner's save must never fail on the teacher's bell.
+    if data.get("progress_stage", "") == "summarized":
+        goal = next(
+            (g for g in record.get("goals", []) if g.get("id") == goal_id), None)
+        if goal is not None and not goal.get("approved_by"):
+            try:
+                from app.brain import org
+                from app.services import notifications
+                for teacher_id in await org.teachers_for_learner(session["sub"]):
+                    await notifications.notify(
+                        teacher_id,
+                        notifications.KIND_GOAL_COMPLETED,
+                        notification_id=f"goal_completed:{goal_id}:{teacher_id}",
+                        title_key="notif.goal.completed",
+                        actions=[{
+                            "label_key": "notif.action.openGoal",
+                            "route": f"/teacher/student/{session['sub']}",
+                        }],
+                        actor_id=session["sub"],
+                        recipient_role="teacher",
+                    )
+            except Exception as exc:  # pragma: no cover
+                print(f"⚠️ goal-completed notify failed: {type(exc).__name__}: {exc}")
     return JSONResponse(content=record)
 
 

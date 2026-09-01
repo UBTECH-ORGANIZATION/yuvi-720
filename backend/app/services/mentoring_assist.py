@@ -114,7 +114,7 @@ def _fallback_guide(language: str, qa: list[dict[str, str]], more: bool = False)
     """
     guide = _GUIDE.get(language, _GUIDE["he"])
     answers = [p["a"] for p in qa if p.get("a")]
-    draft = "\n".join(a for a in answers if a)[:800]
+    draft = "\n".join(a for a in answers if a)[:2500]
     idx = len(answers)
     if idx < len(guide):
         item = guide[idx]
@@ -181,7 +181,7 @@ async def guide_documentation(
                 operation="mentoring.documentation_chat",
                 source="mentoring_yuvi",
             ),
-            max_tokens=480,
+            max_tokens=1400,
             json_mode=True,
             model_tier="mini",
         )
@@ -1329,7 +1329,7 @@ def _fallback_teacher_guide(
     """
     guide = _TEACHER_GUIDE.get(language, _TEACHER_GUIDE["he"])
     answers = [pair["a"] for pair in qa if pair.get("a")]
-    draft = "\n".join(answers)[:800]
+    draft = "\n".join(answers)[:2500]
     index = len(answers)
     if index < len(guide):
         item = guide[index]
@@ -1398,7 +1398,7 @@ async def guide_teacher_documentation(
                 operation="teacher.mentoring_documentation",
                 source="mentoring_assist",
             ),
-            max_tokens=480,
+            max_tokens=1400,
             json_mode=True,
             model_tier="mini",
         )

@@ -30,7 +30,7 @@ import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
-import { LiveClassView } from '../live/LiveClassView'
+import { LiveClassSkeleton, LiveClassView } from '../live/LiveClassView'
 import {
   createSubgroup, deleteSubgroup, getGroupFocus, getGroupSnapshot, updateSubgroup,
   type GroupInsight, type LearnerFocus, type Subgroup,
@@ -342,7 +342,20 @@ export function TeacherStudentsPage() {
           painted immediately and only the rows below them are a skeleton — the
           page stops jumping a row down when the data lands. */}
       <header className="tch-roster__head">
-        <h1>{t('tch.students.title')}</h1>
+        <h1 className="tch-roster__title">
+          {t('tch.students.title')}
+          {/* The live status, as a mark instead of the retired "עדכון חי"
+              chip: a breathing green dot says the page is being fed. When the
+              feed drops, LiveClassView prints its own reconnecting line. */}
+          {live.isConnected && (
+            <span
+              className="tch-roster__liveDot"
+              role="status"
+              aria-label={t('tch.students.live')}
+              title={t('tch.students.live')}
+            />
+          )}
+        </h1>
         {/* The subtitle was a caption; it is the scope control now. Everything
             below — the KPIs, the chips, the table — describes whatever is
             selected here, so it leads rather than annotates. */}
@@ -386,9 +399,10 @@ export function TeacherStudentsPage() {
 
       {mode === 'live' ? (
         busy ? (
-          <div className="tch-roster__grid">
-            {Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} rows={2} />)}
-          </div>
+          /* The real frame with the numbers greyed — not eight anonymous
+             cards. The chips' names and the table's headers never depended on
+             the fetch, so they print immediately. */
+          <LiveClassSkeleton />
         ) : (
           <LiveClassView
             rows={inScope}

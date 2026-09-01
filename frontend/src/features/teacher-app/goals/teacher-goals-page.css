@@ -151,68 +151,129 @@
 
 /* ── conversation history ──────────────────────────────────────────────────*/
 
-/* A grid of cards. As full-width rows each card was a name and a date in
-   1400px of empty space, and opening one pushed every card below it down the
-   page — so reading one child's talks moved the next child's card out from
-   under the cursor. */
+/* Compact cards in a wrapping grid, only for students WITH a record (#497).
+   Full-width rows put a name and three numbers in 1200px of empty track; a
+   card the size of its content reads as "an object you open". The
+   never-talked collapse into one expandable line below. */
 .tch-goalsPage__history {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--sp-3);
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-2);
+  /* Wide enough that "26 שיחות · 17 יעדים פתוחים" fits without truncating. */
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   align-items: start;
 }
 
-.tch-talkCard__who {
+/* The whole card is the door to the talks; the corner icon is the one
+   secondary action (profile). A faint primary wash over the surface and a
+   soft lift on hover — polished, not busy: the glow is the only decoration. */
+.tch-talkCard {
+  position: relative;
+  border: 1px solid var(--tch-card-border);
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sp-primary-400) 5%, var(--sp-surface)),
+    var(--sp-surface) 55%);
+  transition: border-color var(--sp-dur-fast) var(--sp-ease),
+              box-shadow var(--sp-dur-fast) var(--sp-ease),
+              transform var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-talkCard:hover {
+  border-color: color-mix(in srgb, var(--sp-primary-500) 55%, var(--tch-card-border));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--sp-primary-600) 12%, transparent);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tch-talkCard { transition-duration: 1ms; }
+  .tch-talkCard:hover { transform: none; }
+}
+
+.tch-talkCard__pick {
+  inline-size: 100%;
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  font: inherit;
+  color: var(--sp-ink-900);
+  cursor: pointer;
+  text-align: start;
+  min-inline-size: 0;
+}
+
+/* One line: avatar, name right beside it, date pushed to the far end. */
+.tch-talkCard__head {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   min-inline-size: 0;
 }
-.tch-talkCard__who > span { min-inline-size: 0; display: grid; gap: 1px; }
-.tch-talkCard__who strong {
-  display: block;
+
+.tch-talkCard__name {
+  flex: 1;
+  min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tch-talkCard__who small { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
+.tch-talkCard__meta {
+  flex: none;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
 
-/* The two numbers that make this a card rather than a padded link. */
+/* The "this opens" mark, calm until the card is under the pointer. */
+.tch-talkCard__go { color: var(--sp-ink-300); flex: none; }
+.tch-talkCard:hover .tch-talkCard__go { color: var(--sp-primary-600); }
+
+/* The two numbers, each a quiet pill: figure first, word after. The end of
+   this row is reserved for the corner action, so pills never slide under it. */
 .tch-talkCard__stats {
-  margin: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding-inline-end: 26px;
 }
-.tch-talkCard__stats > div {
-  border: 1px solid var(--tch-card-border);
-  border-radius: var(--tch-card-radius);
-  padding: var(--sp-2);
-  text-align: center;
-}
-.tch-talkCard__stats dt {
+.tch-talkCard__stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
   font-size: var(--sp-fs-xs);
   color: var(--sp-ink-500);
-  order: 2;
 }
-.tch-talkCard__stats dd {
-  margin: 0;
-  font-size: var(--sp-fs-lg);
-  font-weight: var(--sp-fw-semibold);
-  line-height: 1.2;
+.tch-talkCard__stat strong {
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
 }
 
-.tch-talkCard__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
+/* The absolute position sits on the Hint WRAPPER, not the button — the
+   tooltip anchors to the wrapper, and a wrapper left in normal flow would
+   open the bubble away from the icon. Bottom corner, level with the stats. */
+.tch-talkCard__corner {
+  position: absolute;
+  inset-block-end: var(--sp-2);
+  inset-inline-end: var(--sp-2);
 }
-.tch-goalsPage__talkToggle { justify-content: center; }
-.tch-goalsPage__talkToggle:disabled { cursor: default; }
+.tch-talkCard__profile {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--sp-ink-300);
+  cursor: pointer;
+}
+.tch-talkCard__profile:hover { background: var(--sp-bg-subtle); color: var(--sp-primary-600); }
 
 /* ── the talks themselves, in their dialog ─────────────────────────────────*/
 
@@ -315,6 +376,41 @@
   white-space: pre-wrap;
 }
 
+/* The profile's clamped write-up: two lines, the rest one tap away. A button
+   dressed as the paragraph it holds, so unfolding costs no extra chrome. */
+.tch-goalsPage__talkNotes--clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.tch-goalsPage__talkNotes--clamped:hover { color: var(--sp-ink-900); }
+
+/* Compact goals: one wrapped row of state-toned chips. */
+.tch-goalsPage__goalChips {
+  list-style: none;
+  margin: 0;
+  padding-block-start: var(--sp-1);
+  padding-inline-start: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.tch-goalsPage__goalChips .sp-pill > span:last-child {
+  max-inline-size: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Goals are a labelled block inside the talk, not more lines after the notes.
    Without the rule the goal titles read as a continuation of the write-up. */
 .tch-goalsPage__goals { padding-block-start: var(--sp-1); }
@@ -346,18 +442,6 @@
   align-items: start;
 }
 
-/* `minmax(0, 1fr)`, not the implicit `auto`: a grid item's default
-   `min-width: auto` lets a row whose min-content is wide — a long goal title
-   beside a nowrap status pill — stretch the column past the card and spill out
-   of its inline-end edge. Every child is clamped to the card instead. */
-.tch-goalsPage__student {
-  padding: var(--sp-3) var(--sp-4);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-2);
-}
-
-
 /* Same clamp one level down: the list is a grid too, and its rows would
    otherwise widen it from the inside. */
 .tch-goalsPage__goals {
@@ -371,19 +455,6 @@
 
 
 
-
-.tch-goalsPage__more {
-  justify-self: start;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-primary-700);
-  cursor: pointer;
-}
-.tch-goalsPage__more:hover { text-decoration: underline; }
 
 /* A learner nobody has set a goal for. Shown, not hidden: the compose picker
    lists them, so a board that silently dropped them made a child the teacher
