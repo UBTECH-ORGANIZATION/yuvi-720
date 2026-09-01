@@ -203,6 +203,14 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
         void askCompanion(text).catch(() => undefined)
     }
 
+    // Same companion hand-off for a domain with nothing to explain yet — the
+    // question asks forward ("how do I raise this") instead of back ("why did
+    // this move"), since there is no movement here to account for.
+    const askYuviImprove = (a: Axis) => {
+        openCompanion()
+        void askCompanion(t('actmap.ask.improveQuestion', { topic: a.label })).catch(() => undefined)
+    }
+
     // Why the domain moved, named as something the learner actually did. Only a
     // driver pushing the same way as the movement can explain it — anything else
     // would pair "you finished what you started" with a dip.
@@ -216,6 +224,14 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
             ? t(`actmap.why.${driver.tag}.${driver.dir}.${variant}`)
             : t(`actmap.why.${driver.tag}.${driver.dir}`)
     }
+
+    // What a learner can actually DO to lift this domain. One sentence per
+    // domain, each naming its own actions — "take ownership of a task" and "break
+    // it into smaller parts" are different skills, and a shared tip teaches
+    // neither. Keyed off the domain rather than the week's signals, so a domain
+    // with no activity behind it still has an answer.
+    const improveFor = (a: Axis) =>
+        DOMAIN_VISUAL[a.key] ? t(`actmap.improve.${a.key}`) : t('actmap.improve.fallback')
 
     // The single domain worth focusing on now — the lowest level (unless a domain
     // is already declining, which takes priority). Exactly one domain is promoted
@@ -417,13 +433,15 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
                         </span>
                     ))}
 
-                    {/* Why a domain moved, on hover or focus. It hangs off the emblem
-                        — the dot is small and lives in an aria-hidden SVG, so the
-                        affordance is a real button over the icon out here. */}
-                    {changedAxes.map((a) => {
-                        const moved = t(`actmap.change.moved.${a.dir}.${a.size}`)
-                        const why = whyFor(a)
-                        const lesson = driverFor(a)?.lesson
+                    {/* Why a domain moved, or — when it hasn't — what would move it next.
+                        Hangs off the emblem on every domain: the dot is small and lives
+                        in an aria-hidden SVG, so the affordance is a real button over the
+                        icon out here. */}
+                    {axes.map((a) => {
+                        const moved = a.changed ? t(`actmap.change.moved.${a.dir}.${a.size}`) : null
+                        const why = a.changed ? whyFor(a) : null
+                        const lesson = a.changed ? driverFor(a)?.lesson : null
+                        const tip = a.changed ? null : improveFor(a)
                         return (
                             <div
                                 key={a.key}
@@ -440,31 +458,40 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
                                 <button
                                     type="button"
                                     className="aweb__probe-hit"
-                                    aria-label={`${a.label} — ${moved}. ${why}${lesson ? ` ${t('actmap.why.inLesson', { lesson })}` : ''}`}
+                                    aria-label={a.changed
+                                        ? `${a.label} — ${moved}. ${why}${lesson ? ` ${t('actmap.why.inLesson', { lesson })}` : ''}`
+                                        : `${a.label} — ${tip}`}
                                 />
                                 <span className="aweb__tip">
                                     <span className="aweb__tip-text" aria-hidden="true">
                                         <span className="aweb__tip-title" dir="auto">{a.label}</span>
-                                        <span className="aweb__tip-move" dir="auto">{moved}</span>
-                                        <span className="aweb__tip-why" dir="auto">{why}</span>
-                                        {/* The lesson it came from, when the signal is lesson-shaped
-                                            — "showing up regularly" belongs to no single lesson. */}
-                                        {lesson && (
-                                            <span className="aweb__tip-lesson" dir="auto">
-                                                {t('actmap.why.inLesson', { lesson })}
-                                            </span>
+                                        {a.changed ? (
+                                            <>
+                                                <span className="aweb__tip-move" dir="auto">{moved}</span>
+                                                <span className="aweb__tip-why" dir="auto">{why}</span>
+                                                {/* The lesson it came from, when the signal is lesson-shaped
+                                                    — "showing up regularly" belongs to no single lesson. */}
+                                                {lesson && (
+                                                    <span className="aweb__tip-lesson" dir="auto">
+                                                        {t('actmap.why.inLesson', { lesson })}
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <span className="aweb__tip-why" dir="auto">{tip}</span>
                                         )}
                                     </span>
-                                    {/* Only on the way down: a dip is the moment a kid deserves
-                                        more than one line, and Yuvi can walk through it. */}
-                                    {a.dir === 'down' && (
+                                    {/* On the way down, or on a domain sitting still: both are
+                                        moments worth more than one line, and Yuvi can walk
+                                        through either. A domain already going up needs no nudge. */}
+                                    {(a.changed ? a.dir === 'down' : true) && (
                                         <button
                                             type="button"
                                             className="aweb__tip-ask"
-                                            onClick={() => askYuvi(a)}
+                                            onClick={() => (a.changed ? askYuvi(a) : askYuviImprove(a))}
                                         >
                                             <Icon name="message" size={13} />
-                                            <span>{t('actmap.ask.cta')}</span>
+                                            <span>{t(a.changed ? 'actmap.ask.cta' : 'actmap.ask.improveCta')}</span>
                                         </button>
                                     )}
                                 </span>
