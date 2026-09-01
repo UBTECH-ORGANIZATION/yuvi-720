@@ -282,6 +282,33 @@ class ScreensMapOntoSlides(unittest.TestCase):
         self.assertEqual(mapped["c-001"]["title"], "פתיחה")
         self.assertEqual(mapped["c-003"]["title"], "סיכום")
 
+    def test_question_text_detects_a_cover_when_titles_carry_no_signal(self):
+        # The mass-measure-01-02 shape: the player opens with a cover the
+        # catalog does not list, and no screen title matches any slide title.
+        # The old more-screens-aligned bias then chose offset 0, landing every
+        # enrichment one slide late. The slide's own question text appearing
+        # in a screen's visible text is the decisive signal.
+        slides = [
+            {"item_id": "c-001", "title": "בסיסי 1",
+             "questions": [{"question_text":
+                            "עדן, פלג ושחר ביצעו סדרת מדידות של מסת מוצק"}]},
+            {"item_id": "c-002", "title": "בסיסי 2",
+             "questions": [{"question_text":
+                            "ד\"ר בוחבוט מדדה מסת חומר 4 פעמים"}]},
+        ]
+        screens = [
+            {"title": "", "visible_text": "אין כמו תרגול לחיזוק הלמידה 3 שאלות"},
+            # The RENDERED wording drifts from the catalog metadata (extra
+            # "בשיעור מדעים") — token overlap must still recognize it.
+            {"title": "שאלה 1", "visible_text":
+             "עדן, פלג ושחר ביצעו בשיעור מדעים סדרת מדידות של מסת מוצק. "
+             "סעיף א: האם ישנה תוצאה חריגה בעיניכם?"},
+        ]
+        mapped = pipeline.map_screens_to_slides(screens, slides)
+        self.assertEqual(mapped["c-001"]["title"], "שאלה 1",
+                         "the question screen belongs to the question slide")
+        self.assertNotIn("c-002", mapped)
+
 
 if __name__ == "__main__":
     unittest.main()

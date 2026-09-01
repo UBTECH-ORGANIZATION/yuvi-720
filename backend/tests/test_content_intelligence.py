@@ -226,27 +226,48 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
         shard = _shard()
         shard["lomdot"][0]["slides"][0]["enrichment"].update({
             "capture_version": ci.CAPTURE_VERSION,
-            "capture_viewport": {"w": 1280, "h": 860},
+            "capture_viewport": {"w": 1280, "h": 860,
+                                 "scroll_w": 1280, "scroll_h": 860},
             "no_internal_scroll": True,
-            "anchors": [
-                {"region": "question", "rect": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.1}},
-                {"region": "image", "rect": {"x": 0.0, "y": 0.4, "w": 0.3, "h": 0.3}},
+            "anchor_breakpoints": [
+                {"w": 1024, "h": 860, "content_w": 1024, "content_h": 700,
+                 "anchors": [
+                     {"region": "question",
+                      "rect": {"x": 100, "y": 120, "w": 400, "h": 90}},
+                 ]},
+                {"w": 1280, "h": 640, "content_w": 1280, "content_h": 640,
+                 "anchors": [
+                     {"region": "question",
+                      "rect": {"x": 150, "y": 110, "w": 500, "h": 84}},
+                 ]},
+                {"w": 1280, "h": 860, "content_w": 1280, "content_h": 860,
+                 "anchors": [
+                     {"region": "question",
+                      "rect": {"x": 150, "y": 150, "w": 500, "h": 112}},
+                     {"region": "image",
+                      "rect": {"x": 40, "y": 300, "w": 300, "h": 240}},
+                 ]},
             ],
             **enrichment_overrides,
         })
         return shard
 
-    def test_fresh_current_capture_serves_clamped_regions(self):
+    def test_fresh_current_capture_serves_per_size_pixels(self):
         self.write_shard(self._anchored_shard())
         anchors = ci.screen_anchors(COMPONENT, ITEM)
         self.assertEqual(set(anchors["regions"]), {"question", "image"})
-        self.assertTrue(anchors["no_internal_scroll"])
-        self.assertEqual(
-            anchors["capture_viewport"],
-            {"w": 1280, "h": 860, "scroll_w": 0, "scroll_h": 0})
+        question = anchors["regions"]["question"]
+        self.assertEqual([(e["w"], e["h"]) for e in question],
+                         [(1024, 860), (1280, 640), (1280, 860)])
+        self.assertEqual(question[0]["rect"],
+                         {"x": 100.0, "y": 120.0, "w": 400.0, "h": 90.0})
+        self.assertEqual(question[2]["content_h"], 860)
+        # A region sampled at one grid point serves that point alone.
+        self.assertEqual([(e["w"], e["h"]) for e in anchors["regions"]["image"]],
+                         [(1280, 860)])
 
     def test_an_old_capture_format_is_refused(self):
-        self.write_shard(self._anchored_shard(capture_version=1))
+        self.write_shard(self._anchored_shard(capture_version=4))
         self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
 
     def test_stale_content_is_refused(self):
@@ -254,20 +275,31 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
         self.catalog.update(_catalog_component("שאלה חדשה לגמרי"))
         self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
 
-    def test_junk_anchors_are_filtered_and_fractions_clamped(self):
-        self.write_shard(self._anchored_shard(anchors=[
-            {"region": "sidebar", "rect": {"x": 0, "y": 0, "w": 1, "h": 1}},
-            {"region": "options", "rect": {"x": -0.2, "y": 0.5, "w": 1.7, "h": 0.2}},
-            {"region": "table", "rect": {"x": 0.1, "y": 0.1, "w": 0, "h": 0.2}},
-            {"region": "video", "rect": "not-a-rect"},
+    def test_junk_geometry_is_filtered(self):
+        self.write_shard(self._anchored_shard(anchor_breakpoints=[
+            {"w": 1280, "h": 860, "content_w": 1280, "content_h": 860,
+             "anchors": [
+                 {"region": "sidebar", "rect": {"x": 0, "y": 0, "w": 10, "h": 10}},
+                 {"region": "options", "rect": {"x": -5, "y": 200, "w": 9999, "h": 80}},
+                 {"region": "table", "rect": {"x": 10, "y": 10, "w": 0, "h": 20}},
+                 {"region": "video", "rect": "not-a-rect"},
+             ]},
+            {"w": 0, "h": 860, "content_w": 1280, "content_h": 860, "anchors": [
+                {"region": "question", "rect": {"x": 1, "y": 1, "w": 5, "h": 5}},
+            ]},
+            {"w": 1024, "content_w": 1024, "content_h": 860, "anchors": [
+                {"region": "question", "rect": {"x": 1, "y": 1, "w": 5, "h": 5}},
+            ]},  # a heightless (pre-v6) row is refused, not guessed at
+            "not-a-breakpoint",
         ]))
         anchors = ci.screen_anchors(COMPONENT, ITEM)
         self.assertEqual(set(anchors["regions"]), {"options"})
-        self.assertEqual(anchors["regions"]["options"],
-                         {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.2})
+        rect = anchors["regions"]["options"][0]["rect"]
+        self.assertEqual(rect["x"], 0.0)
+        self.assertEqual(rect["w"], 8000.0)
 
     def test_no_usable_regions_means_none(self):
-        self.write_shard(self._anchored_shard(anchors=[]))
+        self.write_shard(self._anchored_shard(anchor_breakpoints=[]))
         self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
 
     def test_solo_question_id_reads_the_slide(self):
@@ -277,6 +309,33 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
     def test_solo_question_id_is_none_off_config(self):
         self.write_shard(_shard())
         self.assertIsNone(ci.single_question_id(COMPONENT, "other-item"))
+
+    def test_arrival_question_is_the_slides_first(self):
+        # An arriving learner lands at the TOP of the slide — its first
+        # question grounds the intro even on a multi-part screen.
+        shard = _shard()
+        shard["lomdot"][0]["slides"][0]["questions"].append(
+            {"question_id": "q2", "question_text": "הסיקו מסקנה:",
+             "fingerprint": "beef" * 4, "texts": {}})
+        self.write_shard(shard)
+        self.assertEqual(ci.arrival_question_id(COMPONENT, ITEM), "q1")
+        self.assertEqual(ci.arrival_question_id(COMPONENT, ITEM, "q9"), "q1",
+                         "a stale pointer from another screen doesn't block")
+
+    def test_arrival_defers_to_a_pointer_on_this_slide(self):
+        # The pointer names a question that IS here (either part): the learner
+        # is mid-screen, not arriving — never re-open part 1 on them.
+        shard = _shard()
+        shard["lomdot"][0]["slides"][0]["questions"].append(
+            {"question_id": "q2", "question_text": "הסיקו מסקנה:",
+             "fingerprint": "beef" * 4, "texts": {}})
+        self.write_shard(shard)
+        self.assertIsNone(ci.arrival_question_id(COMPONENT, ITEM, "q1"))
+        self.assertIsNone(ci.arrival_question_id(COMPONENT, ITEM, "q2"))
+
+    def test_arrival_question_is_none_off_config(self):
+        self.write_shard(_shard())
+        self.assertIsNone(ci.arrival_question_id(COMPONENT, "other-item"))
 
 
 class TheHitIsMeasured(ContentIntelWorld):

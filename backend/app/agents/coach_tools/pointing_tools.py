@@ -45,28 +45,32 @@ async def _point_at_screen(
     anchors = content_intelligence.screen_anchors(component_id, item_id)
     question_key = "|".join(
         (component_id, item_id, str(current.get("question_id") or "")))
-    spec = (anchors or {}).get("regions", {}).get(region)
-    if spec:
-        rect = {k: spec[k] for k in ("x", "y", "w", "h")}
+    entries = (anchors or {}).get("regions", {}).get(region) or []
+    if entries:
         # An ordinal narrows the highlight to one element of the region — the
-        # second option, the first image — when the capture kept parts.
-        parts = spec.get("parts") or []
+        # second option, the first image — when the capture kept parts. The
+        # narrowing applies per breakpoint (each width has its own parts).
         part = args.get("part")
-        if isinstance(part, int) and 1 <= part <= len(parts):
-            rect = parts[part - 1]
+        breakpoints = []
+        for entry in entries:
+            rect = entry["rect"]
+            parts = entry.get("parts") or []
+            if isinstance(part, int) and 1 <= part <= len(parts):
+                rect = parts[part - 1]
+            breakpoints.append({
+                "w": entry["w"], "h": entry["h"],
+                "content_w": entry["content_w"],
+                "content_h": entry["content_h"], "rect": rect,
+            })
         context.pointer_requests.append({
             "region": region,
-            "rect": rect,
-            "no_scroll": bool(anchors["no_internal_scroll"]),
-            "capture_viewport": anchors["capture_viewport"],
+            "breakpoints": breakpoints,
             "question_key": question_key,
         })
         return {"status": "accepted", "data": {"region": region}}
     context.pointer_requests.append({
         "region": None,
-        "rect": None,
-        "no_scroll": False,
-        "capture_viewport": {},
+        "breakpoints": [],
         "question_key": question_key,
     })
     return {"status": "accepted", "data": {"region": "whole_screen"}}
@@ -77,7 +81,8 @@ register(CoachTool(
     description=(
         "הדגשה ויזואלית של אזור במסך הלמידה, מסונכרנת עם התשובה שלך. השתמש/י "
         "כשהלומד/ת שואל/ת על משהו שנראה על המסך, או כשרמז מתייחס לחלק מסוים "
-        "(השאלה, האפשרויות, תמונה, סרטון, תרשים/יישומון, טבלה, הוראות). "
+        "(השאלה, האפשרויות, שדות מילוי/בחירה, תמונה, סרטון, תרשים/יישומון, "
+        "טבלה, הוראות). "
         "ההודעה שלך צריכה להתייחס למה שמודגש, בלי לתאר את פעולת ההדגשה עצמה."
     ),
     parameters={
@@ -87,8 +92,8 @@ register(CoachTool(
                 "type": "string",
                 # Static on purpose (schemas bake at import): the vocabulary is
                 # the region taxonomy, and the handler decides availability.
-                "enum": ["question", "options", "image", "video", "diagram",
-                         "table", "instruction"],
+                "enum": ["question", "options", "input", "image", "video",
+                         "diagram", "table", "instruction"],
             },
             "part": {
                 "type": "integer",

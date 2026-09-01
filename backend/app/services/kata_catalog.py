@@ -404,6 +404,13 @@ def question_item_ordinals(component_id: Optional[str]) -> dict[str, int]:
     So an item is one question number, and the parts inside it are סעיפים
     (see :func:`question_part_indexes`). Keyed by ``item|question`` as well as by
     bare ``item``, because a message can be stored before the question resolves.
+
+    VARIANT screens share one number. Some components carry several catalog
+    items with the SAME question texts (`COMPL-00001` items 1/2 both ask "האם
+    הנקודות נמצאות על ישר המקביל לציר?" over mirrored data) and the player shows
+    the learner ONE of them — its screens_seen is smaller than the catalog's
+    item count. Numbering variants consecutively captioned a learner's very
+    first screen "שאלה 2" whenever the player dealt them the second variant.
     """
     component = get_component(component_id) if component_id else None
     if not component:
@@ -411,16 +418,35 @@ def question_item_ordinals(component_id: Optional[str]) -> dict[str, int]:
     by_item = component.get("questions_by_item") or {}
     ordinals: dict[str, int] = {}
     position = 0
+    seen_signatures: dict[tuple, int] = {}
     for item_id, questions in by_item.items():
         if not questions:
             continue
-        position += 1
-        ordinals[item_id] = position
+        signature = _variant_signature(questions)
+        if signature and signature in seen_signatures:
+            ordinal = seen_signatures[signature]
+        else:
+            position += 1
+            ordinal = position
+            if signature:
+                seen_signatures[signature] = ordinal
+        ordinals[item_id] = ordinal
         for question in questions:
             question_id = question.get("questionId")
             if question_id:
-                ordinals[f"{item_id}|{question_id}"] = position
+                ordinals[f"{item_id}|{question_id}"] = ordinal
     return ordinals
+
+
+def _variant_signature(questions: list[dict]) -> tuple:
+    """What makes two catalog items the SAME learner-visible exercise: the
+    ordered question texts. Variants differ in data/answers but ask with the
+    same words; empty texts yield an empty signature, which never matches."""
+    texts = tuple(
+        " ".join(str(q.get("questionText") or "").split())
+        for q in questions
+    )
+    return texts if any(texts) else ()
 
 
 def question_part_indexes(component_id: Optional[str]) -> dict[str, int]:

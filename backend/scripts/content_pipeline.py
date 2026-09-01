@@ -59,7 +59,7 @@ DEFAULT_DUMP_DIR = REPO_ROOT / "backend" / "artifacts" / "content-pipeline"
 DRIVER = REPO_ROOT / "frontend" / "scripts" / "content-extract.mjs"
 
 BATCH = 12                      # translate_catalog's batch discipline
-DRIVER_TIMEOUT_SECONDS = 180
+DRIVER_TIMEOUT_SECONDS = 420  # the anchor sweep re-measures 12 sizes/screen
 _HEBREW = re.compile("[\u0590-\u05FF]")
 
 _KIND_TO_ROLE = {"watch": "video", "read": "teaching", "step": "teaching",
@@ -260,15 +260,40 @@ def map_screens_to_slides(
     screens: list[dict[str, Any]], slides: list[dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
     """item_id → captured screen, aligned by order with the player's
-    leading-cover offset (≤2, same tolerance as resolve_catalog_item_id)."""
-    best: tuple[int, int] = (-1, 0)   # (score, offset)
+    leading-cover offset (≤2, same tolerance as resolve_catalog_item_id).
+
+    The decisive signal is the slide's OWN question text appearing in the
+    aligned screen's visible text — measured 2026-09-01 on
+    `mass-measure-01-02`: the player opens with a cover the catalog does not
+    list, the titles carried no signal, and the old more-screens-aligned bias
+    then locked in offset 0 — every enrichment (anchors, vision descriptions,
+    pregen keying) landed one slide LATE, so the coach read the cover video
+    where the learner saw the photo question."""
+    def _question_tokens(slide: dict[str, Any]) -> list[str]:
+        questions = slide.get("questions") or []
+        text = str((questions[0] or {}).get("question_text") or "") if questions else ""
+        return [t for t in text.split() if len(t) >= 3][:10]
+
+    best: tuple[float, int] = (-1.0, 0)   # (score, offset)
     for offset in range(0, 3):
-        score = sum(
-            _title_score(str(screens[i + offset].get("title") or ""), s["title"])
-            for i, s in enumerate(slides) if i + offset < len(screens))
-        aligned = sum(1 for i in range(len(slides)) if i + offset < len(screens))
-        if score + aligned > best[0]:
-            best = (score + aligned, offset)
+        score = 0.0
+        for i, slide in enumerate(slides):
+            if i + offset >= len(screens):
+                continue
+            screen = screens[i + offset]
+            score += _title_score(str(screen.get("title") or ""), slide["title"])
+            score += 0.5  # slight preference for covering more slides
+            # Token overlap, not exact substring — the RENDERED wording drifts
+            # from the catalog's question metadata ("ביצעו בשיעור מדעים סדרת"
+            # vs "ביצעו סדרת"), and an exact probe silently never fires.
+            tokens = _question_tokens(slide)
+            visible = " ".join(str(screen.get("visible_text") or "").split())
+            if len(tokens) >= 4 and visible:
+                hits = sum(1 for token in tokens if token in visible)
+                if hits / len(tokens) >= 0.6:
+                    score += 5
+        if score > best[0]:
+            best = (score, offset)
     offset = best[1]
     return {
         slide["item_id"]: screens[i + offset]
@@ -288,8 +313,14 @@ def _dedupe_visible_text(visible: str, information: str) -> str:
 
 async def browse_component(
     component_id: str, model: dict[str, Any], dump_dir: Path,
+    committed_component: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Attach enrichment to the model's slides; return the extraction record."""
+    """Attach enrichment to the model's slides; return the extraction record.
+
+    ``committed_component`` is the previously written shard row (if any) — a
+    recapture reuses its vision descriptions for graphics whose bytes did not
+    change (matched by src digest) instead of re-describing them.
+    """
     from app.services.kata_client import KataError
 
     probed_at = _now_iso()
@@ -314,10 +345,25 @@ async def browse_component(
 
     screens = dump["screens"]
     mapped = map_screens_to_slides(screens, model["slides"])
+    # A format-bump recapture replaces the enrichment wholesale, but the
+    # vision descriptions in the committed shard are still true for any
+    # graphic whose bytes (src digest) did not change — carry them over
+    # instead of burning vision calls to re-learn what a picture the pipeline
+    # already described shows. A changed digest means changed content:
+    # re-vision.
+    committed_media = {
+        old.get("item_id"): (old.get("enrichment") or {}).get("media") or []
+        for old in (committed_component or {}).get("slides") or []
+    }
     for slide in model["slides"]:
         screen = mapped.get(slide["item_id"])
         if not screen:
             continue
+        prior_descriptions = {
+            m.get("src_digest"): m.get("description")
+            for m in committed_media.get(slide["item_id"]) or []
+            if isinstance(m, dict) and m.get("src_digest") and m.get("description")
+        }
         slide["enrichment"] = {
             "visible_text": _dedupe_visible_text(
                 screen.get("visible_text") or "", slide["information_to_bot"]),
@@ -327,11 +373,30 @@ async def browse_component(
             "anchors": [a for a in (screen.get("anchors") or [])
                         if isinstance(a, dict)
                         and a.get("region") in ci.ANCHOR_REGIONS],
+            # Geometry per capture SIZE (v6: a width × height grid): the
+            # runtime bilinear-interpolates its live box between the four
+            # surrounding samples — the only mapping that survives a
+            # transform-scaling player, a reflowing one, AND a viewport-
+            # fitting one, with no vendor detection.
+            "anchor_breakpoints": [
+                {"w": bp.get("w"), "h": bp.get("h"),
+                 "content_w": bp.get("content_w"),
+                 "content_h": bp.get("content_h"),
+                 "anchors": [a for a in (bp.get("anchors") or [])
+                             if isinstance(a, dict)
+                             and a.get("region") in ci.ANCHOR_REGIONS]}
+                for bp in (screen.get("anchor_breakpoints") or [])
+                if isinstance(bp, dict)
+            ],
             "capture_viewport": screen.get("capture_viewport") or {},
             "no_internal_scroll": bool(screen.get("no_internal_scroll")),
             "capture_version": ci.CAPTURE_VERSION,
             "captured_at": probed_at,
         }
+        for m in slide["enrichment"]["media"]:
+            carried = prior_descriptions.get(m.get("src_digest"))
+            if carried and not m.get("description"):
+                m["description"] = carried
     return {
         "verdict": "extracted" if len(mapped) == len(model["slides"]) else "partial",
         "probed_at": probed_at,
@@ -797,7 +862,8 @@ async def run(args: argparse.Namespace) -> int:
         + [c for c in backlog if c not in scope]   # out-of-scope stays queued
     for cid in to_browse:
         print(f"→ browsing {cid}…")
-        extraction = await browse_component(cid, model[cid], dump_dir)
+        extraction = await browse_component(
+            cid, model[cid], dump_dir, committed.get(cid))
         print(f"  verdict: {extraction['verdict']} "
               f"({extraction['screens_mapped']}/{len(model[cid]['slides'])} mapped)")
         extractions[cid] = extraction

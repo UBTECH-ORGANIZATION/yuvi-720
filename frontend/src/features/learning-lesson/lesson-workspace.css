@@ -623,21 +623,22 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   overflow: hidden;
 }
 /* The one interactive element on the layer: the pointer holds until the
-   learner closes it (or the screen moves under it). */
+   learner closes it (or the screen moves under it). Positioned inline by the
+   layer — next to the highlight it belongs to, not in a frame corner — and
+   sized for a child's finger. */
 .lesson-point-dismiss {
   position: absolute;
-  inset-block-end: 10px;
-  inset-inline-end: 12px;
   pointer-events: auto;
-  border: 1px solid rgba(255, 187, 26, 0.7);
+  border: 2px solid rgba(255, 187, 26, 0.85);
   border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 8px 20px;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--sp-ink-700, #3b3b4f);
   background: var(--sp-surface, #fff);
-  box-shadow: var(--sp-shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.12));
+  box-shadow: 0 4px 14px rgba(255, 160, 10, 0.35);
   cursor: pointer;
+  white-space: nowrap;
 }
 .lesson-point-dismiss:hover {
   background: rgba(255, 214, 64, 0.25);

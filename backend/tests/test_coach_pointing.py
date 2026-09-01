@@ -24,10 +24,19 @@ from app.agents.coach_tools import pointing_tools, registry  # noqa: E402
 from app.services import content_intelligence  # noqa: E402
 
 
+def _entry(w, rect, parts=None, content_h=860, h=860):
+    entry = {"w": w, "h": h, "content_w": w, "content_h": content_h,
+             "rect": rect}
+    if parts:
+        entry["parts"] = parts
+    return entry
+
+
 ANCHORS = {
-    "regions": {"question": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.1}},
-    "no_internal_scroll": True,
-    "capture_viewport": {"w": 1280, "h": 860},
+    "regions": {"question": [
+        _entry(1024, {"x": 100.0, "y": 120.0, "w": 400.0, "h": 90.0}),
+        _entry(1280, {"x": 150.0, "y": 150.0, "w": 500.0, "h": 112.0}),
+    ]},
 }
 
 BUNDLE = {"current": {"component_id": "comp-1", "item_id": "comp-1-001",
@@ -66,7 +75,7 @@ class PointAtScreen(unittest.TestCase):
         result = _dispatch(_context(mode=CoachMode.GENERAL))
         self.assertEqual(result["error"], "tool_not_allowed_for_mode")
 
-    def test_a_known_region_resolves_its_rect(self):
+    def test_a_known_region_resolves_its_breakpoints(self):
         context = _context()
         with mock.patch.object(content_intelligence, "screen_anchors",
                                return_value=ANCHORS):
@@ -75,34 +84,48 @@ class PointAtScreen(unittest.TestCase):
         self.assertEqual(len(context.pointer_requests), 1)
         pointer = context.pointer_requests[0]
         self.assertEqual(pointer["region"], "question")
-        self.assertEqual(pointer["rect"], ANCHORS["regions"]["question"])
-        self.assertTrue(pointer["no_scroll"])
+        self.assertEqual([bp["w"] for bp in pointer["breakpoints"]],
+                         [1024, 1280])
+        self.assertEqual(pointer["breakpoints"][1]["rect"],
+                         {"x": 150.0, "y": 150.0, "w": 500.0, "h": 112.0})
+        self.assertEqual(pointer["breakpoints"][0]["content_h"], 860)
+        self.assertEqual(pointer["breakpoints"][0]["h"], 860)
         self.assertEqual(pointer["question_key"], "comp-1|comp-1-001|q1")
 
-    def test_a_part_ordinal_narrows_the_rect(self):
-        parts = [{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05},
-                 {"x": 0.1, "y": 0.3, "w": 0.2, "h": 0.05}]
-        anchors = {**ANCHORS, "regions": {"options": {
-            "x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15, "parts": parts}}}
+    def test_a_part_ordinal_narrows_every_breakpoint(self):
+        parts_small = [{"x": 100.0, "y": 120.0, "w": 200.0, "h": 40.0},
+                       {"x": 100.0, "y": 170.0, "w": 200.0, "h": 40.0}]
+        parts_big = [{"x": 150.0, "y": 150.0, "w": 250.0, "h": 50.0},
+                     {"x": 150.0, "y": 212.0, "w": 250.0, "h": 50.0}]
+        anchors = {"regions": {"options": [
+            _entry(1024, {"x": 100.0, "y": 120.0, "w": 200.0, "h": 90.0},
+                   parts=parts_small),
+            _entry(1280, {"x": 150.0, "y": 150.0, "w": 250.0, "h": 112.0},
+                   parts=parts_big),
+        ]}}
         context = _context()
         with mock.patch.object(content_intelligence, "screen_anchors",
                                return_value=anchors):
             result = asyncio.run(registry.dispatch(
                 "point_at_screen", {"region": "options", "part": 2}, context))
         self.assertEqual(result["status"], "accepted")
-        self.assertEqual(context.pointer_requests[0]["rect"], parts[1])
+        breakpoints = context.pointer_requests[0]["breakpoints"]
+        self.assertEqual(breakpoints[0]["rect"], parts_small[1])
+        self.assertEqual(breakpoints[1]["rect"], parts_big[1])
 
     def test_an_out_of_range_part_falls_back_to_the_region(self):
-        anchors = {**ANCHORS, "regions": {"options": {
-            "x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15,
-            "parts": [{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05}]}}}
+        region_rect = {"x": 100.0, "y": 120.0, "w": 200.0, "h": 90.0}
+        anchors = {"regions": {"options": [
+            _entry(1280, region_rect,
+                   parts=[{"x": 100.0, "y": 120.0, "w": 200.0, "h": 40.0}]),
+        ]}}
         context = _context()
         with mock.patch.object(content_intelligence, "screen_anchors",
                                return_value=anchors):
             asyncio.run(registry.dispatch(
                 "point_at_screen", {"region": "options", "part": 9}, context))
-        self.assertEqual(context.pointer_requests[0]["rect"],
-                         {"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15})
+        self.assertEqual(
+            context.pointer_requests[0]["breakpoints"][0]["rect"], region_rect)
 
     def test_a_missing_region_becomes_a_whole_frame_glow(self):
         context = _context()
@@ -111,7 +134,7 @@ class PointAtScreen(unittest.TestCase):
             result = _dispatch(context, region="table")
         self.assertEqual(result["data"]["region"], "whole_screen")
         self.assertIsNone(context.pointer_requests[0]["region"])
-        self.assertIsNone(context.pointer_requests[0]["rect"])
+        self.assertEqual(context.pointer_requests[0]["breakpoints"], [])
 
     def test_no_geometry_at_all_still_glows(self):
         context = _context()

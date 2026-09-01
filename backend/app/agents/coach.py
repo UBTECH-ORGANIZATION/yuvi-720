@@ -788,12 +788,24 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         # screen — pointing at anything else degrades to a whole-frame glow.
         f"{scope}_screen_pointable_regions: "
         f"{joined(current.get('screen_anchor_regions'))}",
-        # `assumed_first_screen`: the player has not reported a position yet
-        # (some providers only report on answers), so the grounding above is
-        # the lesson's FIRST screen. Use it, but never assert where the
-        # learner is — ask or hedge if position matters to the answer.
+        # `assumed_screen`: the player has not reported a position yet (some
+        # providers only report on answers), so the grounding above is a
+        # position GUESS — the learner's last recorded screen here, or the
+        # lesson's first screen on a fresh start. Use it, but never assert
+        # where the learner is — ask or hedge if position matters.
         f"{scope}_screen_position: "
-        f"{'assumed_first_screen' if current.get('position_assumed') else 'reported'}",
+        f"{'assumed_screen' if current.get('position_assumed') else 'reported'}",
+    ]
+    if current.get("screen_has_variants"):
+        lines.append(
+            f"{scope}_screen_variants: this screen exists in several look-alike "
+            "versions with the same wording but DIFFERENT data (points, numbers, "
+            "directions), and the learner may be seeing a different version than "
+            "the one described above. Use the structure and the idea freely, but "
+            "do NOT quote specific values (coordinates, numbers, labels) as what "
+            "is on their screen — ask what they see, or speak generally."
+        )
+    lines += [
         f"query_intent: {bundle.get('query_intent') or 'learning_help'}",
         f"portrait_interests: {joined(portrait.get('interests'))}",
         f"portrait_preferences: {joined(portrait.get('preferences'))}",
@@ -1170,20 +1182,22 @@ async def run_coach_stream(
             elif _cur.get("item_id"):
                 # The arrival push carries `component|item`, so the question
                 # pointer can be empty or still name the previous screen. Try
-                # the pointed question first; a miss on a single-question slide
-                # falls back to its only question — the same grounding the live
-                # path would choose.
+                # the pointed question first; a miss falls back to the question
+                # an ARRIVING learner faces — the slide's first (its only one
+                # on single-question slides) — the same grounding the live path
+                # would choose. A pointer naming a question ON this slide means
+                # mid-screen, and arrival_question_id then declines to guess.
                 _item = str(_cur["item_id"])
-                if _cur.get("question_id"):
+                _pointed = str(_cur.get("question_id") or "")
+                if _pointed:
                     entry = content_intelligence.pregen_text(
-                        pregen_kind, pregen_component, _item,
-                        str(_cur["question_id"]))
+                        pregen_kind, pregen_component, _item, _pointed)
                 if entry is None:
-                    _solo = content_intelligence.single_question_id(
-                        pregen_component, _item)
-                    if _solo and _solo != str(_cur.get("question_id") or ""):
+                    _arrival = content_intelligence.arrival_question_id(
+                        pregen_component, _item, _pointed)
+                    if _arrival and _arrival != _pointed:
                         entry = content_intelligence.pregen_text(
-                            pregen_kind, pregen_component, _item, _solo)
+                            pregen_kind, pregen_component, _item, _arrival)
         if entry:
             from app.agents import tutor_decision
             body = safety.screen_output(entry["text"], lang).text.strip()

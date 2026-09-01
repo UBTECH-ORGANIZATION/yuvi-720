@@ -1,12 +1,14 @@
 /** The overlay through which Yuvi points at the lomda. Sits above the
  *  cross-origin iframe inside `.learning-player-frame-wrap` (already
  *  position:relative) and draws only what the pointer model deems
- *  trustworthy: a region highlight when the capture geometry transfers, a
- *  bottom-edge "look lower" chevron when the target is below the fold of a
- *  screen that scrolls inside the iframe, a whole-frame glow otherwise.
- *  Rects are fractions, so percentage positioning tracks every resize for
- *  free. The layer itself never intercepts input — only the dismiss chip
- *  does: a pointer stays until the learner closes it or the screen moves.
+ *  trustworthy: a pixel-perfect region highlight interpolated from the
+ *  nightly multi-width capture, a bottom-edge "look lower" chevron when the
+ *  target is below the fold of a screen that scrolls inside the iframe, a
+ *  whole-frame glow otherwise. The layer itself never intercepts input —
+ *  only the dismiss chip does: a pointer stays until the learner closes it
+ *  or the screen moves. The chip rides WITH the highlight (a control that
+ *  belongs to the mark, not to the frame corner), falling back above it at
+ *  the bottom of the box.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -31,6 +33,9 @@ const SCROLL_HINT: Record<string, string> = {
   en: 'Scroll down',
 }
 
+const CHIP_HALF_WIDTH = 64
+const CHIP_HEIGHT = 44
+
 export function LessonPointLayer({ pointer, playback, language, onDismiss }: LessonPointLayerProps) {
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -49,10 +54,12 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
   if (presentation.mode === 'none') {
     return <div ref={layerRef} className="lesson-point-layer" aria-hidden="true" />
   }
-  const dismiss = (
+
+  const dismissChip = (style: React.CSSProperties) => (
     <button
       type="button"
       className="lesson-point-dismiss"
+      style={style}
       onClick={onDismiss}
       aria-label={DISMISS_LABEL[language] || DISMISS_LABEL.he}
     >
@@ -60,20 +67,39 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
     </button>
   )
 
-  return (
-    <div ref={layerRef} className="lesson-point-layer">
-      {presentation.mode === 'glow' && <div className="lesson-point-glow" />}
-      {presentation.mode === 'rect' && (
+  if (presentation.mode === 'rect') {
+    const { rect } = presentation
+    // The chip hugs the highlight: centered under its bottom edge, jumping
+    // above it when the mark reaches the bottom of the frame, always clamped
+    // inside the box.
+    const chipLeft = Math.max(
+      CHIP_HALF_WIDTH + 6,
+      Math.min(box.w - CHIP_HALF_WIDTH - 6, rect.x + rect.w / 2),
+    )
+    const below = rect.y + rect.h + 10
+    const chipTop = below + CHIP_HEIGHT <= box.h - 6
+      ? below
+      : Math.max(6, rect.y - CHIP_HEIGHT - 10)
+    return (
+      <div ref={layerRef} className="lesson-point-layer">
         <div
           className="lesson-point-highlight"
           style={{
-            left: `${presentation.rect.x * 100}%`,
-            top: `${presentation.rect.y * 100}%`,
-            width: `${presentation.rect.w * 100}%`,
-            height: `${presentation.rect.h * 100}%`,
+            left: `${rect.x}px`, top: `${rect.y}px`,
+            width: `${rect.w}px`, height: `${rect.h}px`,
           }}
         />
-      )}
+        {dismissChip({
+          left: `${chipLeft}px`, top: `${chipTop}px`,
+          transform: 'translateX(-50%)',
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div ref={layerRef} className="lesson-point-layer">
+      {presentation.mode === 'glow' && <div className="lesson-point-glow" />}
       {presentation.mode === 'edge' && (
         <div
           className="lesson-point-edge"
@@ -85,7 +111,11 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
           <span className="lesson-point-edge__chevron" aria-hidden="true">⌄</span>
         </div>
       )}
-      {dismiss}
+      {dismissChip(
+        presentation.mode === 'edge'
+          ? { insetBlockEnd: '14px', insetInlineEnd: '16px' }
+          : { insetBlockEnd: '14px', insetInlineStart: '50%', transform: 'translateX(-50%)' },
+      )}
     </div>
   )
 }

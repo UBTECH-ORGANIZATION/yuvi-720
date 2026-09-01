@@ -57,15 +57,17 @@ PREGEN = {
 def _drive(
     *, trigger=None, support_mode=None, user_message=None, language="he",
     pregen=None, hint_level=None, model_output=("תשובה חיה מהמודל.",),
-    bundle_overrides=None, solo_question=None, pregen_question_gate=None,
+    bundle_overrides=None, arrival_question=None, pregen_question_gate=None,
 ):
     """(streamed, persisted, model_calls) from one run_coach_stream pass.
 
     ``bundle_overrides`` merges into ``current`` (e.g. a stale question
-    pointer); ``solo_question`` stubs ``single_question_id``;
-    ``pregen_question_gate`` makes question-scope lookups hit only for that
-    question id — the shape of a config that stores q1 while the brain still
-    points at the previous screen's question.
+    pointer); ``arrival_question`` stubs ``arrival_question_id`` (the slide's
+    first question for an arriving learner, None when the pointer already
+    names a question on the slide); ``pregen_question_gate`` makes
+    question-scope lookups hit only for that question id — the shape of a
+    config that stores q1 while the brain still points at the previous
+    screen's question.
     """
     persisted: dict = {}
     counters = {"model": 0}
@@ -145,8 +147,8 @@ def _drive(
          mock.patch.object(coach.safety, "screen_output", passthrough), \
          mock.patch.object(coach, "_plan_coach_tools", no_tool_plan), \
          mock.patch.object(content_intelligence, "pregen_text", fake_pregen), \
-         mock.patch.object(content_intelligence, "single_question_id",
-                           lambda *a: solo_question), \
+         mock.patch.object(content_intelligence, "arrival_question_id",
+                           lambda *a: arrival_question), \
          mock.patch.object(content_intelligence, "record_pregen_hit", async_none), \
          mock.patch.object(content_intelligence, "enrichment", lambda *a: None), \
          mock.patch.object(coach.sessions, "conversation_needs_title", async_false), \
@@ -190,50 +192,67 @@ class FreshPregenServesWithoutTheModel(unittest.TestCase):
 
 
 class EveryMissFallsThroughToLive(unittest.TestCase):
-    def test_arrival_with_empty_question_pointer_serves_the_solo_intro(self):
+    def test_arrival_with_empty_question_pointer_serves_the_first_intro(self):
         # The screen_change push is `component|item` — on arrival the question
-        # pointer is empty. A single-question slide still serves its intro.
+        # pointer is empty. The slide's first question serves its intro,
+        # whether it is the only one or the top of a multi-part screen.
         streamed, persisted, model_calls = _drive(
             trigger="question_intro", pregen=PREGEN,
             bundle_overrides={"question_id": ""},
-            solo_question="q1", pregen_question_gate="q1")
+            arrival_question="q1", pregen_question_gate="q1")
         self.assertEqual(streamed, PREGEN["question_intro"])
         self.assertEqual(model_calls, 0)
         self.assertIn(("question_intro", "comp-1", "comp-1-001", "q1"),
                       persisted["pregen_lookups"])
 
-    def test_a_stale_pointer_from_the_previous_screen_falls_back_to_solo(self):
-        # The brain still names the PREVIOUS screen's question (q3); the new
-        # slide holds only q1 — the miss retries with the slide's one question.
+    def test_a_stale_pointer_from_the_previous_screen_falls_back(self):
+        # The brain still names the PREVIOUS screen's question (q3, not on this
+        # slide); the miss retries with the slide's arrival question.
         streamed, _, model_calls = _drive(
             trigger="question_intro", pregen=PREGEN,
             bundle_overrides={"question_id": "q3"},
-            solo_question="q1", pregen_question_gate="q1")
+            arrival_question="q1", pregen_question_gate="q1")
         self.assertEqual(streamed, PREGEN["question_intro"])
         self.assertEqual(model_calls, 0)
 
-    def test_a_multi_part_screen_with_unknown_position_stays_live(self):
-        # No question pointer and several questions on the slide: the position
-        # is unknown, and an intro must not guess which סעיף — live it is.
+    def test_a_pointer_on_this_slide_never_gets_the_first_part_intro(self):
+        # The pointer names a question that IS on the slide (the learner is
+        # mid-screen) but its text is absent — arrival_question_id returns
+        # None in that shape, and the intro must not re-open part 1 on someone
+        # standing at part 3: live generation it is.
         _, persisted, model_calls = _drive(
             trigger="question_intro", pregen=PREGEN,
-            bundle_overrides={"question_id": ""},
-            solo_question=None, pregen_question_gate="q1")
+            bundle_overrides={"question_id": "q3"},
+            arrival_question=None, pregen_question_gate="q1")
         self.assertEqual(model_calls, 1)
         self.assertIn("pregen_miss:question_intro",
                       [t["name"] for t in persisted["debug_trace"]])
 
     def test_an_assumed_position_is_declared_to_the_model(self):
-        # Entry without a reported screen grounds on the first slide, and the
-        # context says so — the coach may use the content, never the position.
+        # Entry without a reported screen grounds on a position GUESS (last
+        # recorded screen, or the first on a fresh start), and the context
+        # says so — the coach may use the content, never the position.
         _, persisted, _ = _drive(
             user_message="מה אני רואה?", pregen={},
             bundle_overrides={"position_assumed": True})
         context = "".join(str(m) for m in persisted["model_messages"])
-        self.assertIn("assumed_first_screen", context)
+        self.assertIn("_screen_position: assumed_screen", context)
         _, persisted, _ = _drive(user_message="מה אני רואה?", pregen={})
         context = "".join(str(m) for m in persisted["model_messages"])
         self.assertIn("_screen_position: reported", context)
+
+    def test_a_variant_screen_demands_hedged_specifics(self):
+        # The assumed screen has look-alike catalog siblings (same wording,
+        # different data) — the context carries the do-not-quote-values rule.
+        _, persisted, _ = _drive(
+            user_message="מה אני רואה?", pregen={},
+            bundle_overrides={"position_assumed": True,
+                              "screen_has_variants": True})
+        context = "".join(str(m) for m in persisted["model_messages"])
+        self.assertIn("_screen_variants:", context)
+        _, persisted, _ = _drive(user_message="מה אני רואה?", pregen={})
+        context = "".join(str(m) for m in persisted["model_messages"])
+        self.assertNotIn("_screen_variants:", context)
 
     def test_an_absent_text_generates_live(self):
         streamed, persisted, model_calls = _drive(

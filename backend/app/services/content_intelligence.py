@@ -83,13 +83,24 @@ FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 #: v3: decorative-image area floor + the `diagram` region (applets/canvas/svg).
 #: v4: per-element anchor `parts`, scroll dims in capture_viewport, and vision
 #: descriptions on graphic media (the bytes themselves are stripped pre-write).
-CAPTURE_VERSION = 4
+#: v5: `anchor_breakpoints` — document-PIXEL geometry measured at several
+#: viewport widths (the CET player transform-scales and centers, so one
+#: width's fractions land wrong at any other), content extent measured from
+#: painted rects (transforms/inner scrollers never grow scrollHeight), the
+#: `input` region, and CET's CSS-modules selector grammar.
+#: v6: the grid gains a HEIGHT axis (each breakpoint carries `h`) — methodica
+#: FITS the viewport (scale = min(width-fit, height-fit)), so a 700px-tall
+#: lesson box renders smaller geometry than any fixed-height capture; the
+#: runtime bilinear-interpolates. Height-independent players (CET) yield
+#: identical rows per height, making the height axis a natural no-op.
+CAPTURE_VERSION = 6
 
 #: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
 #: import time, and geometry resolution happens server-side per slide. Rects
 #: only, never element text (FORBIDDEN_KEYS/PII safe by construction).
 ANCHOR_REGIONS = frozenset(
-    {"question", "options", "image", "video", "diagram", "table", "instruction"})
+    {"question", "options", "input", "image", "video", "diagram", "table",
+     "instruction"})
 
 #: Caps applied to enrichment on the way OUT (lookup time), not in the file —
 #: the file keeps the full capture so caps can be tuned without a re-browse.
@@ -478,21 +489,42 @@ def pregen_text(
 
 
 def single_question_id(component_id: str, item_id: str) -> Optional[str]:
-    """The slide's only question id, or None when it has zero or several.
-
-    Arrival intros often carry a partial key (the screen_change push is
-    ``component|item``), and the brain's question pointer can still name the
-    PREVIOUS screen — so a caller that missed on the pointed question may
-    retry with this, exactly as the live path grounds on the slide's first
-    question. Multi-part screens return None: the position is unknown and an
-    intro must not guess which סעיף the learner faces.
-    """
+    """The slide's only question id, or None when it has zero or several."""
     if not enabled():
         return None
     _ensure_loaded()
     record = _STATE["records"].get(record_key(component_id, item_id))
     ids = (record or {}).get("question_ids") or []
     return str(ids[0]) if len(ids) == 1 else None
+
+
+def arrival_question_id(
+    component_id: str, item_id: str, pointed_question_id: str = ""
+) -> Optional[str]:
+    """The question an ARRIVING learner faces on this slide, or None.
+
+    The screen_change push is ``component|item``, so on arrival the brain's
+    question pointer is empty or still names the PREVIOUS screen — and a slide
+    that holds several questions (סעיף א/ב) used to defeat the pregen intro
+    entirely. But arrival has a known position: the learner lands at the TOP,
+    which is the slide's first question in catalog order — the same grounding
+    the live path chooses when it cannot locate them.
+
+    When the pointer names a question that IS on this slide, the learner is
+    mid-screen, not arriving — return None and let the pointed question's own
+    text (or its live fallback) speak; guessing "part 1" at someone on part 3
+    would re-open the whole screen on them.
+    """
+    if not enabled():
+        return None
+    _ensure_loaded()
+    record = _STATE["records"].get(record_key(component_id, item_id))
+    ids = [str(q) for q in (record or {}).get("question_ids") or []]
+    if not ids:
+        return None
+    if pointed_question_id and pointed_question_id in ids:
+        return None
+    return ids[0]
 
 
 def enrichment(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
@@ -532,15 +564,24 @@ def enrichment(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     }
 
 
+#: Sanity ceiling for capture pixel values — a coordinate beyond this is a
+#: corrupt capture, not a big screen.
+_ANCHOR_PIXEL_MAX = 8000
+
+
 def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     """The slide's pointing geometry, or None → whole-frame degradation.
 
     Serves only what the overlay can trust: a fresh capture (same fingerprint
-    gate as ``enrichment``) in the CURRENT capture format, with every fraction
-    clamped to [0, 1] and every region from ``ANCHOR_REGIONS``. The returned
-    shape is what the coach route puts on the wire:
-    ``{"regions": {region: {x,y,w,h}}, "no_internal_scroll": bool,
-       "capture_viewport": {"w": int, "h": int}}``.
+    gate as ``enrichment``) in the CURRENT capture format, every value a sane
+    document PIXEL, every region from ``ANCHOR_REGIONS``. Geometry comes per
+    capture WIDTH (the extractor measures the same screen at several viewport
+    sizes); the runtime bilinear-interpolates its live box between the
+    surrounding samples. The returned shape is what the coach route puts on
+    the wire::
+
+        {"regions": {region: [{"w", "h", "content_w", "content_h",
+                               "rect": {x,y,w,h}, "parts"?: [rect, …]}, …]}}
     """
     if not enabled():
         return None
@@ -554,40 +595,62 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
         return None
     if not is_fresh(key, record):
         return None  # stale geometry points at the wrong thing — worse than none
-    def _clamped(rect: Any) -> Optional[dict[str, float]]:
+
+    def _pixel_rect(rect: Any) -> Optional[dict[str, float]]:
         if not isinstance(rect, dict):
             return None
         try:
-            out = {axis: min(1.0, max(0.0, float(rect[axis])))
+            out = {axis: min(float(_ANCHOR_PIXEL_MAX),
+                             max(0.0, float(rect[axis])))
                    for axis in ("x", "y", "w", "h")}
         except (KeyError, TypeError, ValueError):
             return None
         return out if out["w"] > 0 and out["h"] > 0 else None
 
-    regions: dict[str, dict[str, Any]] = {}
-    for anchor in raw.get("anchors") or []:
-        if not isinstance(anchor, dict):
+    regions: dict[str, list[dict[str, Any]]] = {}
+    for bp in raw.get("anchor_breakpoints") or []:
+        if not isinstance(bp, dict):
             continue
-        region = str(anchor.get("region") or "")
-        clamped = _clamped(anchor.get("rect"))
-        if region not in ANCHOR_REGIONS or clamped is None:
+        try:
+            width = int(bp.get("w") or 0)
+            height = int(bp.get("h") or 0)
+            content_w = int(bp.get("content_w") or 0)
+            content_h = int(bp.get("content_h") or 0)
+        except (TypeError, ValueError):
             continue
-        parts = [p for p in (_clamped(part) for part in anchor.get("parts") or [])
-                 if p is not None][:8]
-        if parts:
-            clamped["parts"] = parts
-        regions.setdefault(region, clamped)
+        if not (0 < width <= _ANCHOR_PIXEL_MAX
+                and 0 < height <= _ANCHOR_PIXEL_MAX
+                and content_w > 0 and content_h > 0):
+            continue
+        for anchor in bp.get("anchors") or []:
+            if not isinstance(anchor, dict):
+                continue
+            region = str(anchor.get("region") or "")
+            rect = _pixel_rect(anchor.get("rect"))
+            if region not in ANCHOR_REGIONS or rect is None:
+                continue
+            entry: dict[str, Any] = {
+                "w": width, "h": height,
+                "content_w": content_w, "content_h": content_h,
+                "rect": rect,
+            }
+            parts = [p for p in (_pixel_rect(part)
+                                 for part in anchor.get("parts") or [])
+                     if p is not None][:8]
+            if parts:
+                entry["parts"] = parts
+            regions.setdefault(region, []).append(entry)
+    # One entry per grid point per region, sorted — interpolation needs order.
+    for region, entries in regions.items():
+        seen: dict[tuple[int, int], dict[str, Any]] = {}
+        for entry in entries:
+            seen.setdefault((entry["w"], entry["h"]), entry)
+        regions[region] = sorted(seen.values(),
+                                 key=lambda e: (e["w"], e["h"]))
+    regions = {region: entries for region, entries in regions.items() if entries}
     if not regions:
         return None
-    viewport = raw.get("capture_viewport") or {}
-    return {
-        "regions": regions,
-        "no_internal_scroll": bool(raw.get("no_internal_scroll")),
-        "capture_viewport": {
-            "w": int(viewport.get("w") or 0), "h": int(viewport.get("h") or 0),
-            "scroll_w": int(viewport.get("scroll_w") or 0),
-            "scroll_h": int(viewport.get("scroll_h") or 0)},
-    }
+    return {"regions": regions}
 
 
 async def record_pregen_hit(usage_context: Any, kind: str, text: str) -> None:

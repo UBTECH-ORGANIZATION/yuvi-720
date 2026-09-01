@@ -1,15 +1,20 @@
 // E2E: Yuvi points at the lesson. Logs in, opens the anchored lomda, asks
-// about the picture in the companion, and asserts the overlay renders — then
-// screenshots it. Run from frontend/: node scripts/pointer-e2e.mjs
+// about the picture in the companion, and asserts the overlay renders AND
+// actually covers the photo (Playwright composes cross-frame geometry into
+// page coordinates, so misplacement is measurable) — then screenshots it.
+// Run from frontend/: node scripts/pointer-e2e.mjs
+// VIEWPORT=1920x1080 exercises a different window size (the interpolation).
 import { chromium } from 'playwright'
 
 const BASE = process.env.BASE_URL || 'http://localhost:5173'
 const OUT = process.env.OUT_DIR || '../backend/artifacts/pointer-e2e'
 const COMPONENT = 'methodica-science-mass-measure-01-02'
+const [VIEW_W, VIEW_H] = (process.env.VIEWPORT || '1440x900')
+  .split('x').map((v) => Number(v) || 0)
 
 const browser = await chromium.launch()
 const context = await browser.newContext({
-  colorScheme: 'light', viewport: { width: 1440, height: 900 },
+  colorScheme: 'light', viewport: { width: VIEW_W || 1440, height: VIEW_H || 900 },
 })
 const page = await context.newPage()
 
@@ -55,14 +60,18 @@ const playerFrame = async () => {
   return best
 }
 const ADVANCE = ['אפשר להתחיל', 'המשך', 'הבא', 'התחל']
-for (let step = 0; step < 3; step += 1) {
+// The question screen is recognizable by its ANSWER controls — a big image
+// alone is not proof (the video cover carries a poster image too).
+const questionOnScreen = (frame) => frame.evaluate(() =>
+  [...document.querySelectorAll('input[type="radio"], input[type="checkbox"], .h5p-answer')]
+    .some((el) => {
+      const rect = el.getBoundingClientRect()
+      return rect.width > 0 && rect.height > 0
+    }))
+for (let step = 0; step < 6; step += 1) {
   const frame = await playerFrame()
   if (!frame) break
-  const hasPhoto = await frame.evaluate(() => [...document.querySelectorAll('img')].some((img) => {
-    const rect = img.getBoundingClientRect()
-    return rect.width >= 120 && rect.height >= 120
-  })).catch(() => false)
-  if (hasPhoto) break
+  if (await questionOnScreen(frame).catch(() => false)) break
   let clicked = false
   for (const label of ADVANCE) {
     const buttons = frame.locator(`button:has-text("${label}"), [role="button"]:has-text("${label}")`)
@@ -94,13 +103,70 @@ await page.waitForFunction(
 ).catch(() => fail('send button never enabled'))
 await send.click()
 
+// Capture the actual pointer frame for diagnosis.
+await page.evaluate(() => {
+  window.addEventListener('yuvilab:coach-point', (e) => {
+    window.__lastPointer = e.detail
+  })
+})
+
 // The pointer frame should land before/with the first sentence.
 const highlight = page.locator('.lesson-point-highlight, .lesson-point-glow')
 await highlight.first().waitFor({ state: 'visible', timeout: 45000 })
   .catch(() => fail('no pointer overlay rendered'))
 const kind = await page.locator('.lesson-point-highlight').count() ? 'highlight'
   : await page.locator('.lesson-point-edge').count() ? 'edge' : 'glow'
-await page.screenshot({ path: `${OUT}/pointer-${kind}.png` })
+await page.screenshot({ path: `${OUT}/pointer-${kind}-${VIEW_W}.png` })
+const detail = await page.evaluate(() => window.__lastPointer || null)
+const wrapBox = await page.locator('.learning-player-frame-wrap').boundingBox().catch(() => null)
+console.log('pointer frame:', JSON.stringify({
+  region: detail?.region, question_key: detail?.question_key,
+  breakpoints: detail?.breakpoints?.length,
+}), '| wrap box:', JSON.stringify(wrapBox))
+
+// A precise highlight must sit ON the thing it points at. The target lives
+// in the cross-origin frame, but Playwright composes its box into page
+// coordinates — so the overlay's rect and the pointed region's real elements
+// are comparable, and a misplacement (capture geometry mapped onto the wrong
+// window size) fails loudly instead of photographing nicely. Probed by the
+// REGION the coach actually chose, not by assumption.
+const REGION_PROBES = {
+  image: 'img',
+  video: 'video',
+  diagram: 'canvas, svg[width], embed, object',
+  options: 'input[type="radio"], input[type="checkbox"], .h5p-answer, [class*="answer" i][class*="style" i]',
+  input: 'select, [role="combobox"], [class*="combobox" i], [class*="cloze" i]',
+}
+if (kind === 'highlight' && detail?.region && REGION_PROBES[detail.region]) {
+  const frame = await playerFrame()
+  const handles = frame
+    ? await frame.locator(REGION_PROBES[detail.region]).elementHandles().catch(() => [])
+    : []
+  let union = null
+  for (const handle of handles) {
+    const box = await handle.boundingBox().catch(() => null)
+    if (!box || box.width < 30 || box.height < 20) continue
+    union = union ? {
+      x: Math.min(union.x, box.x), y: Math.min(union.y, box.y),
+      x2: Math.max(union.x2, box.x + box.width), y2: Math.max(union.y2, box.y + box.height),
+    } : { x: box.x, y: box.y, x2: box.x + box.width, y2: box.y + box.height }
+  }
+  const markBox = await page.locator('.lesson-point-highlight').boundingBox()
+  if (union && markBox) {
+    const ix = Math.min(markBox.x + markBox.width, union.x2) - Math.max(markBox.x, union.x)
+    const iy = Math.min(markBox.y + markBox.height, union.y2) - Math.max(markBox.y, union.y)
+    const overlap = Math.max(0, ix) * Math.max(0, iy)
+    const smaller = Math.min(
+      markBox.width * markBox.height,
+      (union.x2 - union.x) * (union.y2 - union.y))
+    if (overlap / smaller < 0.4) {
+      await fail(`highlight misses its ${detail.region}: mark ${JSON.stringify(markBox)} `
+        + `vs region union ${JSON.stringify(union)}`)
+    }
+    console.log(`✓ highlight covers the real ${detail.region} `
+      + `(overlap ${Math.round((overlap / smaller) * 100)}%)`)
+  }
+}
 
 // It holds until dismissed — no clock. The chip closes it.
 await page.waitForTimeout(8000)

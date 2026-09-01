@@ -131,40 +131,98 @@ const captureScreen = (frame) => frame.evaluate(() => {
         : anyVisible('input[type="text"], input[type="number"], textarea') ? 'input'
           : 'none'
 
-  // Pointing anchors: one merged document-space rect per REGION, as fractions
-  // of the scroll box. Frame-local coordinates on purpose — the runtime scales
-  // them to its own iframe box. Rects only, never element text or attributes
-  // (a world-readable repo must not carry vendor markup, and H5P attributes
-  // can name answers). Region names are the coach tool's static enum.
-  const scrollBox = document.scrollingElement || document.documentElement
-  const scrollW = Math.max(scrollBox?.scrollWidth || 0, window.innerWidth)
-  const scrollH = Math.max(scrollBox?.scrollHeight || 0, window.innerHeight)
-  const unionRect = (elements) => {
+  return {
+    title: (heading?.innerText || document.title || '').trim().slice(0, 200),
+    visible_text: (document.body?.innerText || '').trim().slice(0, 6000),
+    media: media.slice(0, 12),
+    question_rendering: rendering,
+  }
+})
+
+/* Pointing anchors, measured in DOCUMENT PIXELS at the current viewport width.
+ *
+ * Pixels, not fractions of the scroll box, because vendors lay content out in
+ * incompatible ways: methodica flows (positions follow text wrap), while the
+ * CET player transform-SCALES a fixed design and centers it — and a transform
+ * moves getBoundingClientRect without ever growing scrollHeight, so both the
+ * old fractions and the old `no_internal_scroll` lied the moment the runtime
+ * box differed from the capture. The capture instead measures the same screen
+ * at several viewport WIDTHS (probed 2026-09-01: rects are width-determined
+ * and height-independent for both vendors), and the runtime interpolates
+ * between the two nearest breakpoints for its own live width. Content extent
+ * comes from the union of visible element rects — the only measurement that
+ * sees through a transform or an inner overflow scroller.
+ *
+ * Rects only, never element text or attributes (a world-readable repo must
+ * not carry vendor markup, and player attributes can name answers). Region
+ * names are the coach tool's static enum. `markShots` tags graphic surfaces
+ * for element screenshots — only the primary-width pass does that.
+ */
+const measureAnchors = (frame, markShots) => frame.evaluate((withShotMarks) => {
+  const visible = (el) => {
+    const rect = el.getBoundingClientRect()
+    if (rect.width < 2 || rect.height < 2) return false
+    const style = getComputedStyle(el)
+    return style.visibility !== 'hidden' && style.display !== 'none'
+  }
+  const docRect = (el) => {
+    const r = el.getBoundingClientRect()
+    return {
+      left: r.left + window.scrollX, top: r.top + window.scrollY,
+      right: r.right + window.scrollX, bottom: r.bottom + window.scrollY,
+    }
+  }
+  const round = (v) => Math.round(v * 10) / 10
+  const toRect = (box) => ({
+    x: round(box.left), y: round(box.top),
+    w: round(box.right - box.left), h: round(box.bottom - box.top),
+  })
+  const unionBox = (elements) => {
     let box = null
     for (const el of elements) {
       if (!visible(el)) continue
       if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue
-      const r = el.getBoundingClientRect()
-      const abs = {
-        left: r.left + window.scrollX, top: r.top + window.scrollY,
-        right: r.right + window.scrollX, bottom: r.bottom + window.scrollY,
-      }
+      const abs = docRect(el)
       box = box ? {
         left: Math.min(box.left, abs.left), top: Math.min(box.top, abs.top),
         right: Math.max(box.right, abs.right), bottom: Math.max(box.bottom, abs.bottom),
       } : abs
     }
-    if (!box || !scrollW || !scrollH) return null
-    const rect = {
-      x: box.left / scrollW, y: box.top / scrollH,
-      w: (box.right - box.left) / scrollW, h: (box.bottom - box.top) / scrollH,
-    }
-    const clamp = (v) => Math.min(1, Math.max(0, Math.round(v * 1000) / 1000))
-    return { x: clamp(rect.x), y: clamp(rect.y), w: clamp(rect.w), h: clamp(rect.h) }
+    return box
   }
+  // Matched elements nest (an option row contains its label, its input, its
+  // text wrapper) — the learner-visible "parts" are the OUTERMOST rects.
+  // Area-descending greedy keep: a rect mostly inside an already-kept one is
+  // the same thing again, not another part.
+  const outermost = (boxes) => {
+    const kept = []
+    for (const box of [...boxes].sort((a, b) =>
+      ((b.right - b.left) * (b.bottom - b.top)) - ((a.right - a.left) * (a.bottom - a.top)))) {
+      const area = Math.max(1, (box.right - box.left) * (box.bottom - box.top))
+      const overlaps = kept.some((k) => {
+        const w = Math.min(box.right, k.right) - Math.max(box.left, k.left)
+        const h = Math.min(box.bottom, k.bottom) - Math.max(box.top, k.top)
+        return w > 0 && h > 0 && (w * h) / area > 0.55
+      })
+      if (!overlaps) kept.push(box)
+    }
+    return kept.sort((a, b) => (a.top - b.top) || (a.left - b.left))
+  }
+  // Selector families are structural where the web gives us structure (inputs,
+  // roles, tags) and class-substring where vendors only expose hashed CSS
+  // modules (CET: `Question-module_label…`, `Answer-module_style…`,
+  // `CustomSelect-module_comboboxTarget…`). Substrings, never exact hashes.
   const REGION_SELECTORS = {
-    question: '.h5p-question-introduction, .h5p-question-content, [class*="question-text" i]',
-    options: '.h5p-answer, .h5p-alternative, [role="option"], [role="radio"], label:has(input[type="radio"]), select, [role="listbox"]',
+    question: '.h5p-question-introduction, .h5p-question-content, '
+      + '[class*="question-text" i], [class*="question" i][class*="label" i]',
+    options: '.h5p-answer, .h5p-alternative, [role="option"], [role="radio"], '
+      + 'label:has(input[type="radio"]), label:has(input[type="checkbox"]), '
+      + 'input[type="radio"], input[type="checkbox"], '
+      + '[class*="answer" i][class*="style" i]',
+    // Fill-in controls: dropdowns, cloze blanks, free-text fields.
+    input: 'select, [role="combobox"], [role="listbox"], textarea, '
+      + 'input[type="text"], input[type="number"], '
+      + '[class*="combobox" i], [class*="cloze" i]',
     image: 'img',
     video: 'video',
     // Interactive/graphic surfaces that are NOT <img>: a GeoGebra-style
@@ -188,53 +246,59 @@ const captureScreen = (frame) => frame.evaluate(() => {
   let shotMark = 0
   for (const [region, selector] of Object.entries(REGION_SELECTORS)) {
     let elements = [...document.querySelectorAll(selector)]
+      .filter((el) => visible(el)
+        && (typeof el.checkVisibility !== 'function' || el.checkVisibility()))
     const minArea = REGION_MIN_AREA[region]
     if (minArea) elements = elements.filter((el) => areaFraction(el) >= minArea)
-    const rect = unionRect(elements)
-    if (!rect) continue
-    // Per-element rects so the coach can point at "אפשרות 2" or the second
-    // image, not only the merged block. Document order, bounded.
-    const parts = elements.length > 1
-      ? elements.map((el) => unionRect([el])).filter(Boolean).slice(0, 8)
-      : []
-    anchors.push(parts.length > 1 ? { region, rect, parts } : { region, rect })
+    if (!elements.length) continue
+    const box = unionBox(elements)
+    if (!box) continue
+    // Per-part rects so the coach can point at "אפשרות 2" or the second
+    // image, not only the merged block. Reading order, bounded.
+    const partBoxes = outermost(elements.map(docRect)).slice(0, 8)
+    const rect = toRect(box)
+    anchors.push(partBoxes.length > 1
+      ? { region, rect, parts: partBoxes.map(toRect) }
+      : { region, rect })
     // Mark the graphic surfaces for a Node-side element screenshot — the
     // vision pass turns those crops into Hebrew descriptions. Marks are
     // throwaway attributes on a throwaway browse session.
-    if (region === 'image' || region === 'diagram') {
+    if (withShotMarks && (region === 'image' || region === 'diagram')) {
       for (const el of elements.slice(0, 4)) {
         shotMark += 1
         el.setAttribute('data-yx-shot', String(shotMark))
       }
     }
   }
-  // Diagram surfaces are not <img> and never made it into `media` — add them
-  // so the vision description has a row to live on.
-  for (const el of document.querySelectorAll('[data-yx-shot]')) {
-    if (el.tagName !== 'IMG') {
-      media.push({ kind: 'diagram', title: '', src: '' })
-    }
+  // The real content extent: transforms and inner overflow scrollers move
+  // rects without growing scrollHeight, so extent is the union of what is
+  // actually painted, floored by the scroll box.
+  const scrollBox = document.scrollingElement || document.documentElement
+  let contentRight = 0
+  let contentBottom = 0
+  for (const el of document.querySelectorAll('body *')) {
+    if (!visible(el)) continue
+    const abs = docRect(el)
+    contentRight = Math.max(contentRight, abs.right)
+    contentBottom = Math.max(contentBottom, abs.bottom)
   }
-  const shotMarks = [...document.querySelectorAll('[data-yx-shot]')].map((el) => ({
-    mark: el.getAttribute('data-yx-shot'),
-    kind: el.tagName === 'IMG' ? 'image' : 'diagram',
-    src: el.tagName === 'IMG' ? (el.currentSrc || el.src || '') : '',
-  }))
-
+  const contentW = Math.max(scrollBox?.scrollWidth || 0, Math.round(contentRight))
+  const contentH = Math.max(scrollBox?.scrollHeight || 0, Math.round(contentBottom))
+  const shotMarks = !withShotMarks ? [] :
+    [...document.querySelectorAll('[data-yx-shot]')].map((el) => ({
+      mark: el.getAttribute('data-yx-shot'),
+      kind: el.tagName === 'IMG' ? 'image' : 'diagram',
+      src: el.tagName === 'IMG' ? (el.currentSrc || el.src || '') : '',
+    }))
   return {
-    title: (heading?.innerText || document.title || '').trim().slice(0, 200),
-    visible_text: (document.body?.innerText || '').trim().slice(0, 6000),
-    media: media.slice(0, 12),
-    question_rendering: rendering,
+    w: window.innerWidth,
+    h: window.innerHeight,
+    content_w: contentW,
+    content_h: contentH,
     anchors,
     shot_marks: shotMarks,
-    capture_viewport: {
-      w: window.innerWidth, h: window.innerHeight,
-      scroll_w: scrollW, scroll_h: scrollH,
-    },
-    no_internal_scroll: scrollH <= window.innerHeight * 1.05,
   }
-})
+}, markShots)
 
 // Element screenshots for the marked graphic surfaces — small jpeg crops the
 // nightly vision pass turns into Hebrew descriptions. Keyed back onto media
@@ -336,6 +400,20 @@ if (first.textLength < 40) {
   await finish({ frame_blocked: true, screens: [] })
 }
 
+// Anchor geometry is measured on a grid of viewport sizes: widths × heights.
+// Width matters everywhere; height matters too — probed 2026-09-01: the CET
+// player is height-independent (its two height samples come out identical, so
+// runtime height-interpolation is a no-op), while methodica FITS the viewport
+// (scale = min(width-fit, height-fit), content always exactly viewport-tall),
+// so a 700px-tall lesson box renders smaller geometry than any fixed-height
+// capture could describe. The runtime bilinear-interpolates its live box
+// between the four surrounding samples — no vendor detection anywhere.
+// 1280×860 is the primary capture size (screenshots, text, media read there).
+const ANCHOR_WIDTHS = [820, 1024, 1280, 1440, 1680, 1920]
+const ANCHOR_HEIGHTS = [640, 860]
+const PRIMARY_WIDTH = 1280
+const PRIMARY_HEIGHT = 860
+
 for (let index = 0; index < maxScreens; index += 1) {
   const { frame } = await readingFrame()
   const captured = await captureScreen(frame).catch(() => null)
@@ -343,7 +421,49 @@ for (let index = 0; index < maxScreens; index += 1) {
   const hash = digest(captured.visible_text)
   if (seenHashes.has(hash)) break // a click that changed nothing means the end
   seenHashes.add(hash)
+  // Geometry pass: primary width first (it also marks the graphic surfaces
+  // for element screenshots), then the other widths, then restore — the
+  // advance clicks below must land on the primary layout.
+  const primary = await measureAnchors(frame, true).catch(() => null)
+  captured.shot_marks = primary?.shot_marks || []
+  // Diagram surfaces are not <img> and never made it into `media` — add them
+  // so the vision description has a row to live on.
+  for (const mark of captured.shot_marks) {
+    if (mark.kind === 'diagram') captured.media.push({ kind: 'diagram', title: '', src: '' })
+  }
+  captured.media = captured.media.slice(0, 12)
   const shots = await captureShots(frame, captured)
+  const breakpoints = []
+  if (primary) {
+    breakpoints.push({
+      w: primary.w, h: primary.h, content_w: primary.content_w,
+      content_h: primary.content_h, anchors: primary.anchors,
+    })
+    for (const width of ANCHOR_WIDTHS) {
+      for (const height of ANCHOR_HEIGHTS) {
+        if (width === PRIMARY_WIDTH && height === PRIMARY_HEIGHT) continue
+        await page.setViewportSize({ width, height })
+        await page.waitForTimeout(450)
+        const measured = await measureAnchors(frame, false).catch(() => null)
+        if (measured?.anchors?.length) {
+          breakpoints.push({
+            w: measured.w, h: measured.h, content_w: measured.content_w,
+            content_h: measured.content_h, anchors: measured.anchors,
+          })
+        }
+      }
+    }
+    await page.setViewportSize({ width: PRIMARY_WIDTH, height: PRIMARY_HEIGHT })
+    await page.waitForTimeout(450)
+  }
+  breakpoints.sort((a, b) => (a.w - b.w) || (a.h - b.h))
+  captured.anchors = primary?.anchors || []
+  captured.anchor_breakpoints = breakpoints
+  captured.capture_viewport = {
+    w: PRIMARY_WIDTH, h: 860,
+    scroll_w: primary?.content_w || 0, scroll_h: primary?.content_h || 0,
+  }
+  captured.no_internal_scroll = (primary?.content_h || 0) <= 860 * 1.05
   captured.media = captured.media.map(({ src, ...rest }) => ({
     ...rest, src_digest: src ? digest(src) : null,
   }))

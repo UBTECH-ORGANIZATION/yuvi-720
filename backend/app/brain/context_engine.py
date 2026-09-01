@@ -499,20 +499,62 @@ async def build_coach_bundle(
     # providers (CET) send xAPI only on answers, so on arrival the pointer is
     # empty and EVERYTHING keyed by (component, item) — the catalog question,
     # the nightly enrichment/anchors, the pregen texts — goes dark, exactly
-    # when the learner asks "מה אני רואה?". A fresh entry starts at the first
-    # screen, so ground there — flagged as ASSUMED: the coach may use the
-    # content but must never assert the position as fact.
+    # when the learner asks "מה אני רואה?". Ground on the best guess, flagged
+    # as ASSUMED: the coach may use the content but must never assert the
+    # position as fact.
+    #
+    # The guess itself is progress-aware. Resumable players (CET saves per
+    # student+component) put a returning learner back MID-lomda, so "screen
+    # one" is provably wrong the moment any event exists for this component —
+    # the learner's own last screen there is where the player reopened.
+    # Only a truly fresh component falls back to its first screen.
     position_assumed = False
     if component_id and not item_id:
-        first_rows = (
-            (provider_component or {}).get("items")
-            or kata_catalog.item_profiles(component_id)
-            or []
-        )
-        first_id = str((first_rows[0] or {}).get("id") or "") if first_rows else ""
-        if first_id:
-            item_id = first_id
+        try:
+            history = await get_recent_events(
+                learner_id or "", component_id=component_id, limit=5
+            )
+        except Exception:
+            history = []
+        last_screen = next(
+            (e for e in history if e.get("sub_item_id")), None)
+        if last_screen is not None:
+            raw_item = str(last_screen.get("sub_item_id"))
+            item_id = kata_catalog.resolve_catalog_item_id(
+                component_id,
+                raw_item,
+                question_id=last_screen.get("question_id"),
+                seen_item_ids=[
+                    e.get("runtime_item_id") for e in history
+                    if e.get("runtime_item_id")
+                ],
+            ) or raw_item
             position_assumed = True
+        else:
+            first_rows = (
+                (provider_component or {}).get("items")
+                or kata_catalog.item_profiles(component_id)
+                or []
+            )
+            first_id = str((first_rows[0] or {}).get("id") or "") if first_rows else ""
+            if first_id:
+                item_id = first_id
+                position_assumed = True
+
+    # Look-alike variants: the catalog can hold several items with identical
+    # question texts of which the player deals the learner ONE (COMPL-00001
+    # items 1/2 mirror each other's data). An assumed position may then name
+    # the WRONG sibling — same words, different numbers — and a coach that
+    # quotes its coordinates confidently misleads. Detected via the shared
+    # learner-visible ordinal, and surfaced so the prompt can demand hedging.
+    screen_has_variants = False
+    if position_assumed and item_id:
+        ordinals = kata_catalog.question_item_ordinals(component_id)
+        own = ordinals.get(item_id)
+        screen_has_variants = own is not None and any(
+            key != item_id and "|" not in key and value == own
+            for key, value in ordinals.items()
+        )
 
     recent_view = [
         {
@@ -779,11 +821,15 @@ async def build_coach_bundle(
             # counts only — the tool handler resolves the rects; the model
             # never sees them.
             "screen_anchor_regions": sorted(
-                f"{region}(x{len(spec['parts'])})" if spec.get("parts") else region
-                for region, spec in (
-                    (content_intelligence.screen_anchors(component_id, item_id)
-                     or {}).get("regions") or {}
-                ).items()
+                f"{region}(x{parts})" if parts > 1 else region
+                for region, parts in (
+                    (region, max((len(e.get("parts") or [])
+                                  for e in entries), default=0))
+                    for region, entries in (
+                        (content_intelligence.screen_anchors(
+                            component_id, item_id) or {}).get("regions") or {}
+                    ).items()
+                )
             ) if component_id and item_id else [],
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
@@ -795,6 +841,10 @@ async def build_coach_bundle(
             # True when item_id is the entry-fallback guess, not learner
             # evidence — the coach grounds on it but never asserts position.
             "position_assumed": position_assumed,
+            # True when the assumed screen has look-alike catalog siblings
+            # (same question texts, different data) — the grounding may be
+            # the WRONG variant, so specifics need verifying with the learner.
+            "screen_has_variants": screen_has_variants,
         },
         "query_intent": intent,
         "portrait": (

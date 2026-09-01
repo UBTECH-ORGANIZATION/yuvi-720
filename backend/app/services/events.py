@@ -601,12 +601,19 @@ async def record_path_choice(
 
 
 async def get_recent_events(
-    learner_id: str, objective_id: Optional[str] = None, limit: int = 5
+    learner_id: str, objective_id: Optional[str] = None, limit: int = 5,
+    component_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Recent normalized events (newest first) — for the Coach bundle + triggers."""
+    """Recent normalized events (newest first) — for the Coach bundle + triggers.
+
+    ``component_id`` narrows to one lomda's events (the ``launch`` field) — the
+    resume-position probe needs the learner's last screen in THIS component,
+    which an objective-wide window can bury under a neighbour's activity."""
     query: dict[str, Any] = {"learner_id": normalize_learner_id(learner_id)}
     if objective_id:
         query["objective_id"] = objective_id
+    if component_id:
+        query["launch"] = component_id
     collection = await _events_collection()
     if collection is not None:
         try:
@@ -617,7 +624,8 @@ async def get_recent_events(
     # Fallback: filter the JSON store.
     events = list(_fallback_read().values())
     events = [e for e in events if e.get("learner_id") == query["learner_id"]
-              and (objective_id is None or e.get("objective_id") == objective_id)]
+              and (objective_id is None or e.get("objective_id") == objective_id)
+              and (component_id is None or e.get("launch") == component_id)]
     events.sort(key=lambda e: e.get("stored_at", ""), reverse=True)
     return events[:limit]
 
