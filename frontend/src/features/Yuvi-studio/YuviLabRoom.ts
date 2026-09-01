@@ -1777,15 +1777,47 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   ]
 
   // ── Placement ghost ──────────────────────────────────────────────────────
-  // The preview keeps the real object's colours at half opacity, so the learner
-  // can see what is being positioned as well as where it may be dropped.
+  // The preview is a HOLOGRAM, not a faded copy. A half-opacity clone kept the
+  // object's own colours and vanished against the busy lab — learners placing
+  // the intro's bench and platform could not tell anything was on the cursor.
+  // Now every mesh of the carried object is re-skinned in the lab's additive
+  // glow (the same light its projectors speak), with a wireframe pass on top
+  // so the shape reads at a glance: cyan where the drop is legal, red where
+  // it is not.
+  // The body blends NORMALLY, not additively. Additive fragments stack: every
+  // internal face, back face and anything glowing behind the wall piles more
+  // light on the same pixels, so the hologram "swells" into a washed-out mass
+  // wherever geometry overlaps or it stands against a lit wall. Plain alpha
+  // keeps it a crisp translucent shape; the glow lives in the thin wireframe
+  // and the floor ring, where nothing can stack. All six materials opt OUT of
+  // the scene's FogExp2 — fogged at the far wall, the ghost faded to nothing.
+  // Deep saturated blue, not the light cyan: cyan's dominant channel is green,
+  // so over the bright green floor (and the pale window) a translucent cyan
+  // body dissolved into its background whatever the opacity. Deep blue shares
+  // a channel with nothing in the room.
   const ghostOkMat = track(new THREE.MeshBasicMaterial({
-    color: CYAN, transparent: true, opacity: 0.42, depthWrite: false,
-    blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide,
+    color: 0x1f8dff, transparent: true, opacity: 0.72, depthWrite: false,
+    fog: false, toneMapped: false,
   }))
   const ghostBadMat = track(new THREE.MeshBasicMaterial({
+    color: 0xff3355, transparent: true, opacity: 0.62, depthWrite: false,
+    fog: false, toneMapped: false,
+  }))
+  const ghostRingOkMat = track(new THREE.MeshBasicMaterial({
+    color: CYAN, transparent: true, opacity: 0.42, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false, toneMapped: false, side: THREE.DoubleSide,
+  }))
+  const ghostRingBadMat = track(new THREE.MeshBasicMaterial({
     color: 0xff5d73, transparent: true, opacity: 0.32, depthWrite: false,
-    blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending, fog: false, toneMapped: false, side: THREE.DoubleSide,
+  }))
+  const ghostWireOkMat = track(new THREE.MeshBasicMaterial({
+    color: CYAN, wireframe: true, transparent: true, opacity: 0.5, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false, toneMapped: false,
+  }))
+  const ghostWireBadMat = track(new THREE.MeshBasicMaterial({
+    color: 0xff5d73, wireframe: true, transparent: true, opacity: 0.42, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false, toneMapped: false,
   }))
   const ghostGroup = new THREE.Group()
   ghostGroup.visible = false
@@ -1795,26 +1827,42 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   ghostGroup.add(ghostBodyHolder)
   const ghostStationHolder = new THREE.Group()
   ghostGroup.add(ghostStationHolder)
-  const ghostRing = new THREE.Mesh(zoneRingGeo, ghostOkMat)
+  const ghostRing = new THREE.Mesh(zoneRingGeo, ghostRingOkMat)
+  ghostRing.renderOrder = 20
   ghostRing.rotation.x = -Math.PI / 2
   ghostRing.position.y = 0.02
   ghostGroup.add(ghostRing)
   let ghostKind: string | null = null
   let ghostBody: THREE.Object3D | null = null
   let ghostStation: THREE.Object3D | null = null
-  const makeTransparent = (object: THREE.Object3D) => {
-    object.traverse((obj: any) => {
-      if (!obj.isMesh) return
-      const source = obj.material
-      const copy = (material: THREE.Material) => {
-        const transparent = track(material.clone())
-        transparent.transparent = true
-        transparent.opacity = Math.min(material.opacity ?? 1, 0.48)
-        transparent.depthWrite = false
-        return transparent
-      }
-      obj.material = Array.isArray(source) ? source.map(copy) : copy(source)
-    })
+  // Every solid and wireframe mesh of the current ghost, so validity can
+  // recolour the whole hologram, not only the ring.
+  const ghostSolids: THREE.Mesh[] = []
+  const ghostWires: THREE.Mesh[] = []
+  const makeHologram = (object: THREE.Object3D) => {
+    // The intro carries stations that were never placed, and an unplaced
+    // station's real mesh is hidden (`bench.visible = stations.room.placed`)
+    // — a clone inherits that, which is why first-time learners saw only the
+    // ring with nothing in it. The hologram is always of a visible thing.
+    object.visible = true
+    const meshes: any[] = []
+    object.traverse((obj: any) => { if (obj.isMesh) meshes.push(obj) })
+    for (const obj of meshes) {
+      obj.material = ghostOkMat
+      // Above every other transparent in the scene. Transparents sort by
+      // distance-to-center, so a room-sized overlay whose center is nearer
+      // the camera than the far floor painted OVER the ghost there — the
+      // "hologram vanishes at the far end" zone. renderOrder beats sorting;
+      // depthTest still lets opaque walls occlude honestly.
+      obj.renderOrder = 21
+      ghostSolids.push(obj)
+      // Same geometry, second pass: the wire rides the mesh so it inherits
+      // its transform, and shared geometry means no extra memory to track.
+      const wire = new THREE.Mesh(obj.geometry, ghostWireOkMat)
+      wire.renderOrder = 22
+      obj.add(wire)
+      ghostWires.push(wire)
+    }
     return object
   }
 
@@ -1827,14 +1875,16 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     if (key !== ghostKind) {
       if (ghostBody) ghostBodyHolder.remove(ghostBody)
       if (ghostStation) ghostStationHolder.remove(ghostStation)
+      ghostSolids.length = 0
+      ghostWires.length = 0
       const station = kind.startsWith('station:') ? (kind.slice(8) as StationId) : null
       const spec = station ? null : roomItemSpec(kind)
-      ghostBody = spec ? makeTransparent(spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff'))) : null
+      ghostBody = spec ? makeHologram(spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff'))) : null
       // Both movable stations are shown at their actual size while being
       // carried. Other stations are not learner-movable from this flow.
       ghostStation = station === 'avatar'
-        ? makeTransparent(platform.clone(true))
-        : station === 'room' ? makeTransparent(bench.clone(true)) : null
+        ? makeHologram(platform.clone(true))
+        : station === 'room' ? makeHologram(bench.clone(true)) : null
       if (ghostStation) {
         ghostStation.position.set(0, 0, 0)
         ghostStation.rotation.set(0, 0, 0)
@@ -1847,7 +1897,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       )
     }
     const mat = valid ? ghostOkMat : ghostBadMat
-    ghostRing.material = mat
+    const wireMat = valid ? ghostWireOkMat : ghostWireBadMat
+    ghostRing.material = valid ? ghostRingOkMat : ghostRingBadMat
+    for (const mesh of ghostSolids) mesh.material = mat
+    for (const wire of ghostWires) wire.material = wireMat
     ghostGroup.position.set(x, FLOOR_Y, z)
     ghostGroup.rotation.y = rot
     ghostGroup.visible = true

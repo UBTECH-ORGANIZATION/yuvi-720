@@ -47,13 +47,12 @@ import { partsToText, toRenderParts, type MathSegment } from '../../tasks/mathSe
 import { TaskPlayer } from '../../tasks/TaskPlayer'
 import {
   aiEditTaskContent, getTeacherTask, launchTask, listTaskLaunches,
-  recheckQuality, regenerateTaskContent, startGeneration,
+  regenerateTaskContent, startGeneration,
   type TaskComponent, type TaskLaunch, type TeacherQuestion, type TeacherTask,
   type TeacherTaskContent,
 } from '../../../services/tasks'
 import { LaunchDialog, type LaunchChoice } from './LaunchDialog'
 import { clearAudience, readAudience } from './taskSeed'
-import { QualityPanel } from './QualityPanel'
 import './teacher-tasks.css'
 
 /** Three parts, matching the player exactly — see the note on its own `ORDER`.
@@ -117,10 +116,12 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
     return ORDER.filter((component) => hasContent(content, component))
   }, [data])
 
-  const failures = useMemo(
-    () => (data?.task.generation ?? []).filter((entry) => !entry.ok),
-    [data],
-  )
+  /* Per component, only the LATEST pass counts — the log keeps every attempt,
+     and a component that failed once but generated on retry is not missing. */
+  const failures = useMemo(() => {
+    const latest = new Map((data?.task.generation ?? []).map((entry) => [entry.component, entry]))
+    return [...latest.values()].filter((entry) => !entry.ok)
+  }, [data])
 
   const act = async (key: string, run: () => Promise<unknown>) => {
     setBusy(key)
@@ -261,16 +262,6 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
 
           {failed ? (
             <p className="tch-builder__failed" dir="auto">{t('tch.tasks.reviewFailed')}</p>
-          ) : null}
-
-          {/* Above the content, because its job is to say where to look in it.
-              Advisory throughout — it never disables the send button. */}
-          {data.task.quality ? (
-            <QualityPanel
-              report={data.task.quality}
-              busy={busy === 'quality'}
-              onRecheck={() => void act('quality', () => recheckQuality(taskId))}
-            />
           ) : null}
 
           {/* One toolbar, directly above the thing it controls: how to view it,
