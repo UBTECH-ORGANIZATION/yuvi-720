@@ -10,6 +10,8 @@
  *   2. **The page moves under it.** Scrolling into view, a resize, an SSE patch
  *      that grows a panel — all change the rect while the spotlight is open, so
  *      we re-measure on scroll, on resize, and via a ResizeObserver on the node.
+ *      The FIRST measurement is deliberately withheld until the scroll settles:
+ *      the spotlight should appear on the section, not chase it there.
  *   3. **Rects are viewport-relative**, which is exactly what the overlay wants
  *      since it is `position: fixed`. No scroll offset maths anywhere.
  */
@@ -30,6 +32,11 @@ export interface TargetRect {
    card shows (centred, un-spotlit) for the whole of this window, so waiting
    costs a moment of "reading the card", not a blank screen. */
 const LOOKUP_TIMEOUT_MS = 8000
+
+/* How long the page must hold still before the spotlight is allowed to appear,
+   and the longest we will wait for that. */
+const SCROLL_QUIET_MS = 140
+const SCROLL_SETTLE_CAP_MS = 1400
 
 export function findTarget(selector: string | null): HTMLElement | null {
   if (!selector) return null
@@ -82,17 +89,33 @@ export function useTargetRect(selector: string | null, reducedMotion = false): T
       // is JavaScript and would otherwise keep animating right past it — which
       // is the largest movement the tour makes, not the smallest.
       node.scrollIntoView({ block: 'center', behavior: reducedMotion ? 'auto' : 'smooth' })
-      measure(node)
-      const onChange = () => measure(node)
+
+      /* Nothing is published until the page stops moving. Measuring immediately
+         put the spotlight on the panel's PRE-scroll position and then dragged
+         the cutout across the screen to catch up — the focus arrived before the
+         section did. Holding it back means the card shows centred and un-spotlit
+         for the length of the scroll, and the spotlight simply appears on the
+         section once we are there. */
+      let settled = false
+      const publish = () => { settled = true; measure(node) }
+      /* Self-adjusting: a smooth scroll fires events continuously, so the timer
+         is pushed out until it stops. If no scroll was needed, no events fire
+         and this lands after one quiet interval. */
+      let quiet = window.setTimeout(publish, SCROLL_QUIET_MS)
+      // A page that never stops moving must not hold the tour hostage.
+      const giveUp = window.setTimeout(publish, SCROLL_SETTLE_CAP_MS)
+
+      const onChange = () => {
+        if (settled) { measure(node); return }
+        window.clearTimeout(quiet)
+        quiet = window.setTimeout(publish, SCROLL_QUIET_MS)
+      }
       window.addEventListener('scroll', onChange, true)
       window.addEventListener('resize', onChange)
       if (typeof ResizeObserver !== 'undefined') {
         observer = new ResizeObserver(onChange)
         observer.observe(node)
       }
-      // The smooth scroll above finishes after this frame; re-measure once it
-      // has settled, otherwise the spotlight sits where the panel *was*.
-      const settle = window.setTimeout(onChange, 420)
       /* The node can leave the DOM entirely — a language change remounts the
          whole keyed route subtree — and a ResizeObserver on a detached node
          never fires again, so the spotlight would freeze on where the panel
@@ -107,7 +130,8 @@ export function useTargetRect(selector: string | null, reducedMotion = false): T
       }, 400)
       return () => {
         window.clearInterval(alive)
-        window.clearTimeout(settle)
+        window.clearTimeout(quiet)
+        window.clearTimeout(giveUp)
         window.removeEventListener('scroll', onChange, true)
         window.removeEventListener('resize', onChange)
         observer?.disconnect()

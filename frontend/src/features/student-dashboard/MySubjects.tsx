@@ -106,7 +106,7 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
   }, [active, units])
 
   return (
-    <section className="sd-section sd-subjects" aria-labelledby="sd-subjects-title">
+    <section className="sd-section sd-subjects" aria-labelledby="sd-subjects-title" data-tour="learner.subjects">
       <div className="sd-section__heading">
         <div>
           <span className="sd-section__kicker">{t('sdash.subjects.kicker')}</span>

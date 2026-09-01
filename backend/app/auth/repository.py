@@ -77,7 +77,10 @@ ALLOWED_PREFERENCES = set(DEFAULT_PREFERENCES)
 # The only tours that may be recorded. An unknown slug is rejected rather than
 # stored, so a client bug (or a crafted PATCH) cannot grow this list without
 # bound in a document we read on every single request.
-TOUR_SLUGS = frozenset({"teacher"})
+# The learner slug is versioned: completion is permanent and there is no
+# un-complete API, so re-offering a redesigned tour means adding `learner.v2`
+# here rather than clearing anybody's history.
+TOUR_SLUGS = frozenset({"teacher", "learner.v1"})
 
 
 def _now() -> str:

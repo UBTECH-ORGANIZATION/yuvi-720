@@ -15,6 +15,7 @@
  */
 import { chromium } from 'playwright'
 import { dismissCheckin } from './lib/checkin.mjs'
+import { dismissTourIfOpen } from './lib/tour.mjs'
 import { mkdirSync } from 'node:fs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199'
@@ -48,6 +49,7 @@ try {
   const studentPage = await student.newPage()
   await studentPage.goto(`${BASE}/student-dashboard`, { waitUntil: 'domcontentloaded' })
   await studentPage.waitForTimeout(2000)
+  await dismissTourIfOpen(studentPage)
   await dismissCheckin(studentPage)
   await studentPage.waitForSelector('.sd-page, .sp-learner-shell', { timeout: 45000 })
   await studentPage.waitForTimeout(2000)

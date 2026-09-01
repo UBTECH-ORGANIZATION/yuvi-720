@@ -348,7 +348,7 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
     if (!axes.length) return null
 
     return (
-        <figure className="aweb">
+        <figure className="aweb" data-tour="learner.activeness">
             <figcaption className="aweb__head">
                 <h2 className="aweb__title">{t('actmap.title')}</h2>
                 <p className="aweb__subtitle" dir="auto">{t('actmap.subtitle')}</p>

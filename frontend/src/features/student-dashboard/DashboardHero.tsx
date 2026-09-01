@@ -31,7 +31,7 @@ export function DashboardHero({
   }).split(NAME_MARK)
 
   return (
-    <section className="sd-journey-hero" aria-labelledby="sd-journey-title">
+    <section className="sd-journey-hero" aria-labelledby="sd-journey-title" data-tour="learner.hero">
       <div className="sd-journey-hero__content">
         <div className="sd-journey-hero__head">
           <p className="sd-journey-hero__welcome" dir="auto">

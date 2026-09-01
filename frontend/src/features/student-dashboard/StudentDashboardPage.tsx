@@ -148,7 +148,7 @@ export function StudentDashboardPage() {
     // components and would answer with a lesson, not the paper the teacher
     // pinned. Straight to the opening the child's own task route accepts.
     if (dashboard.hero.mode === 'pinned'
-        && dashboard.hero.pinnedKind === 'task' && dashboard.hero.launchId) {
+      && dashboard.hero.pinnedKind === 'task' && dashboard.hero.launchId) {
       navigate(`/tasks/${encodeURIComponent(dashboard.hero.launchId)}`)
       return
     }

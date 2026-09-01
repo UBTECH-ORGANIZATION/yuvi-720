@@ -18,10 +18,21 @@ import {
   canTakeTeacherTour,
   physicalSide,
   routeForStep,
+  teacherTour,
   teacherTourSteps,
-  tourLocaleKeys,
   type TourStep,
 } from '../src/components/tour/steps/teacherTour.ts'
+import {
+  LEARNER_TOUR_ID, canTakeLearnerTour, learnerTour, learnerTourSteps,
+} from '../src/components/tour/steps/learnerTour.ts'
+import { needsStudentParam, tourLocaleKeys } from '../src/components/tour/steps/types.ts'
+
+/* Both step lists go through the same contract. Adding a tour here is what
+   makes it impossible to ship one that only its author ever ran. */
+const TOURS = [
+  { name: 'teacher', steps: teacherTourSteps },
+  { name: 'learner', steps: learnerTourSteps },
+]
 
 const ROOT = new URL('../../', import.meta.url).pathname
 const LANGUAGES = ['he', 'en', 'ar'] as const
@@ -51,12 +62,25 @@ function collectTourTargets(): Set<string> {
 }
 
 test('every step key exists in all three locales', () => {
-  for (const key of tourLocaleKeys()) {
-    for (const language of LANGUAGES) {
-      const value = messages[language][key]
-      assert.ok(value, `${key} missing from ${language}.json`)
-      assert.ok(value.trim().length > 0, `${key} is empty in ${language}.json`)
+  for (const tour of TOURS) {
+    for (const key of tourLocaleKeys(tour.steps)) {
+      for (const language of LANGUAGES) {
+        const value = messages[language][key]
+        assert.ok(value, `${key} missing from ${language}.json`)
+        assert.ok(value.trim().length > 0, `${key} is empty in ${language}.json`)
+      }
     }
+  }
+})
+
+test('the welcome greeting keeps its name slot in every language', () => {
+  // A locale that drops `{name}` greets a child as nobody; one that renames it
+  // prints the braces at them.
+  for (const language of LANGUAGES) {
+    assert.match(
+      messages[language]['tour.learner.welcome.title'], /\{name\}/,
+      `${language} lost {name} from the learner welcome`
+    )
   }
 })
 
@@ -70,16 +94,19 @@ test('the progress label interpolates the same params in every language', () => 
 
 test('every targeted element actually exists in the source', () => {
   const targets = collectTourTargets()
-  for (const step of teacherTourSteps) {
-    if (!step.target) continue
-    assert.ok(
-      targets.has(step.target),
-      `step "${step.id}" points at data-tour="${step.target}", which no component renders`
-    )
+  for (const tour of TOURS) {
+    for (const step of tour.steps) {
+      if (!step.target) continue
+      assert.ok(
+        targets.has(step.target),
+        `${tour.name} step "${step.id}" points at data-tour="${step.target}", `
+          + 'which no component renders'
+      )
+    }
   }
 })
 
-/** Which source directory owns each teacher route's screen. */
+/** Which source directory owns each route's screen. */
 const ROUTE_OWNERS: Record<string, string> = {
   '/teacher': 'features/teacher-app/home/',
   '/teacher/students': 'features/teacher-app/students/',
@@ -87,9 +114,11 @@ const ROUTE_OWNERS: Record<string, string> = {
   '/teacher/goals': 'features/teacher-app/goals/',
   '/teacher/messages': 'features/teacher-app/messages/',
   [`/teacher/student/${STUDENT_TOKEN}`]: 'features/teacher-app/student/',
+  '/student-dashboard': 'features/student-dashboard/',
+  '/badges': 'features/badges/',
 }
 
-/** Mounted by the teacher shell, so present on every teacher route. */
+/** Mounted by a shell, so present on every route inside it. */
 const ALWAYS_MOUNTED = ['components/', 'features/teacher-app/assistant/']
 
 /** target → the source files that render it. */
@@ -112,9 +141,9 @@ function targetSources(): Map<string, string[]> {
 
 // The step's own `route` is optional — a step without one stays wherever the
 // previous step left the tour.
-function effectiveRoute(index: number): string | null {
+function effectiveRoute(steps: TourStep[], index: number): string | null {
   for (let at = index; at >= 0; at -= 1) {
-    const route = (teacherTourSteps[at] as TourStep).route
+    const route = steps[at].route
     if (route) return route
   }
   return null
@@ -126,35 +155,42 @@ test('every target is rendered by the screen its step navigates to', () => {
   // pointing at /teacher while the strip it targets lived on the roster. A tour
   // step whose target never mounts is skipped in silence: no error, no warning.
   const sources = targetSources()
-  for (const [index, step] of teacherTourSteps.entries()) {
-    if (!step.target) continue
-    const route = effectiveRoute(index)
-    // Owners are keyed by pathname; a step's route may carry a query (e.g.
-    // `?view=table` opens the roster in manage mode) that the same screen owns.
-    const owner = route ? ROUTE_OWNERS[route.split('?')[0]] : null
-    assert.ok(owner, `step "${step.id}" declares route ${route}, which owns no screen`)
+  for (const tour of TOURS) {
+    for (const [index, step] of tour.steps.entries()) {
+      if (!step.target) continue
+      const route = effectiveRoute(tour.steps, index)
+      // Owners are keyed by pathname; a step's route may carry a query (e.g.
+      // `?view=table` opens the roster in manage mode) that the same screen owns.
+      const owner = route ? ROUTE_OWNERS[route.split('?')[0]] : null
+      assert.ok(owner,
+        `${tour.name} step "${step.id}" declares route ${route}, which owns no screen`)
 
-    const files = sources.get(step.target) ?? []
-    const reachable = files.filter(
-      (file) => file.startsWith(owner as string)
-        || ALWAYS_MOUNTED.some((shared) => file.startsWith(shared))
-    )
-    assert.ok(
-      reachable.length,
-      `step "${step.id}" targets data-tour="${step.target}" on ${route}, but only `
-        + `${JSON.stringify(files)} renders it — the step will be skipped silently`
-    )
+      const files = sources.get(step.target) ?? []
+      const reachable = files.filter(
+        (file) => file.startsWith(owner as string)
+          || ALWAYS_MOUNTED.some((shared) => file.startsWith(shared))
+      )
+      assert.ok(
+        reachable.length,
+        `${tour.name} step "${step.id}" targets data-tour="${step.target}" on ${route}, `
+          + `but only ${JSON.stringify(files)} renders it — it will be skipped silently`
+      )
+    }
   }
 })
 
 test('step ids are unique — the provider indexes by position, not id', () => {
-  const ids = teacherTourSteps.map((step) => step.id)
-  assert.equal(new Set(ids).size, ids.length)
+  for (const tour of TOURS) {
+    const ids = tour.steps.map((step) => step.id)
+    assert.equal(new Set(ids).size, ids.length, `${tour.name} has a duplicate step id`)
+  }
 })
 
-test('the tour opens on a centred card, so it never depends on a fetch', () => {
-  assert.equal(teacherTourSteps[0].target, null)
-  assert.equal(teacherTourSteps[0].placement, 'center')
+test('every tour opens on a centred card, so it never depends on a fetch', () => {
+  for (const tour of TOURS) {
+    assert.equal(tour.steps[0].target, null, `${tour.name} opens on a target`)
+    assert.equal(tour.steps[0].placement, 'center', `${tour.name} does not open centred`)
+  }
 })
 
 test('only an account that can open /teacher is offered the teacher tour', () => {
@@ -212,5 +248,75 @@ test('every route the tour navigates to is a real teacher route', () => {
       resolved, /^\/teacher(\/students|\/student\/[^/]+)?$/,
       `step "${step.id}" navigates to ${resolved}, which App.tsx does not route`
     )
+  }
+})
+
+/* ── the learner tour ──────────────────────────────────────────────────────*/
+
+test('only a learner is offered the learner tour', () => {
+  assert.equal(canTakeLearnerTour(['learner']), true)
+  assert.equal(canTakeLearnerTour(['teacher', 'learner']), true)
+  // App.tsx bounces a non-learner off /student-dashboard, so a tour there would
+  // narrate screens they are being redirected away from.
+  assert.equal(canTakeLearnerTour(['teacher']), false)
+  assert.equal(canTakeLearnerTour(['admin']), false)
+  assert.equal(canTakeLearnerTour([]), false)
+  assert.equal(canTakeLearnerTour(undefined), false)
+})
+
+test('the learner tour needs no student lookup', () => {
+  /* The provider resolves that param off the TEACHER roster. If a learner step
+     ever asked for it, a child's browser would call two endpoints their account
+     is forbidden from, and the tour would stall waiting on the 403. */
+  assert.equal(needsStudentParam(learnerTourSteps), false)
+})
+
+test('the learner tour never navigates into the studio', () => {
+  // It is a lazy Three.js route behind a transition overlay that takes over the
+  // URL — the tour would hand its own navigation to something else mid-flight.
+  for (const step of learnerTourSteps) {
+    assert.ok(
+      !step.route?.startsWith('/yuvi-studio'),
+      `step "${step.id}" walks into the studio; it may only spotlight the button`
+    )
+  }
+  assert.ok(learnerTourSteps.some((step) => step.target === 'learner.studio'),
+    'the studio is meant to be spotlit, and no step points at its button')
+})
+
+test('every route the learner tour navigates to is a real learner route', () => {
+  for (const step of learnerTourSteps) {
+    if (!step.route) continue
+    assert.match(
+      step.route.split('?')[0], /^\/(student-dashboard|badges)$/,
+      `step "${step.id}" navigates to ${step.route}, which App.tsx does not route`
+    )
+  }
+})
+
+test('the learner tour flies, and its slug is versioned', () => {
+  assert.equal(learnerTour.guide, 'flying')
+  // Completion is permanent with no un-complete API, so re-offering a
+  // redesigned tour means a new name, not a data migration.
+  assert.match(LEARNER_TOUR_ID, /\.v\d+$/)
+})
+
+test('a child cannot walk out of their first run, but a teacher can', () => {
+  assert.equal(learnerTour.dismissible, false)
+  assert.equal(teacherTour.dismissible, true)
+})
+
+test('a step that hands over the click waits for a route the app really has', () => {
+  /* `awaitRoute` suspends the step's own route enforcement. Pointed at a route
+     nothing renders, the tour would sit on that step forever with no skip
+     button to escape it. */
+  for (const step of learnerTourSteps) {
+    if (!step.awaitRoute) continue
+    assert.match(step.awaitRoute, /^\/(student-dashboard|badges)$/,
+      `step "${step.id}" waits for ${step.awaitRoute}, which App.tsx does not route`)
+    assert.ok(step.interactive,
+      `step "${step.id}" waits for a click it does not let through`)
+    assert.notEqual(step.awaitRoute, step.route,
+      `step "${step.id}" waits for the route it is already on`)
   }
 })

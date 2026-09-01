@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion } from '../providers/CompanionProvider'
+import { useTour } from './tour/TourProvider'
 import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3DLazy'
 import type { YuviAvatarHandle } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
@@ -22,8 +23,13 @@ export function YuviCompanionDock() {
   const { isOpen, isOpening, isClosing, panelWidth, open, isStreaming, unreadCount, preview } = useCompanion()
   const transition = useStudioTransition()
   const { design, loaded } = useYuviDesign()
+  /* The tour borrows Yuvi. He flies the page himself during it, so the dock
+     unmounts its own avatar rather than hiding it — two of him is confusing,
+     and two WebGL contexts on a school laptop is worse. */
+  const { isGuideFlying } = useTour()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const studioOpen = transition?.isOpen ?? false
+  const away = studioOpen || isGuideFlying
   const [isScrolling, setIsScrolling] = useState(false)
 
   useEffect(() => {
@@ -58,9 +64,10 @@ export function YuviCompanionDock() {
 
   return (
     <aside
-      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}${isScrolling && !isOpen && !isOpening && !isClosing ? ' is-scrolling' : ''}`}
+      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}${away ? ' is-away' : ''}${isScrolling && !isOpen && !isOpening && !isClosing ? ' is-scrolling' : ''}`}
       aria-label={t('companion.title')}
-      aria-hidden={studioOpen || undefined}
+      aria-hidden={away || undefined}
+      data-tour="learner.companion"
       data-opening={isOpening ? 'true' : 'false'}
       data-closing={isClosing ? 'true' : 'false'}
       style={{ '--sp-companion-width': `${panelWidth}px` } as React.CSSProperties}
@@ -86,7 +93,7 @@ export function YuviCompanionDock() {
           {t('companion.tooltip')}
         </span>
         <div className="Yuvi-companion-dock__robot">
-          {loaded && !studioOpen && (
+          {loaded && !away && (
             <YuviAvatar3D
               ref={avatarRef}
               initialDesign={design}
@@ -100,7 +107,7 @@ export function YuviCompanionDock() {
               onAvatarClick={openImmediately}
             />
           )}
-          {!loaded && !studioOpen && (
+          {!loaded && !away && (
             <span className="Yuvi-companion-dock__loader" role="presentation" />
           )}
           <span className="Yuvi-companion-dock__thrusters" aria-hidden="true">
