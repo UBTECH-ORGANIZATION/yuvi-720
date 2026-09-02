@@ -800,7 +800,6 @@ async def generate_task(task_id: str) -> dict[str, Any]:
 
     outline: list[str] = []
     produced = 0
-    produced_components: list[str] = []
     for component in _ORDER:
         if component not in (task_spec.get("components") or []):
             continue
@@ -812,7 +811,6 @@ async def generate_task(task_id: str) -> dict[str, Any]:
             if component == "presentation":
                 outline = outline_of(content)
             produced += 1
-            produced_components.append(component)
             await store.record_generation(task_id, component=component, ok=True)
         except Exception as exc:
             print(f"⚠️ task {task_id} component {component} failed: {type(exc).__name__}: {exc}")
@@ -821,114 +819,22 @@ async def generate_task(task_id: str) -> dict[str, Any]:
                 detail=f"{type(exc).__name__}: {exc}",
             )
 
+    status = "ready" if produced else "draft"
+    updated = await store.update_task(task_id, status=status)
+
     # Measured before a human looks at it, and never gating the result.
     # Everything above this line asks whether the content is renderable; this
-    # asks whether it is the task the teacher described. The judge's findings
-    # used to be handed to the teacher as a list to work through by hand
-    # (#488, #492: "the AI found the problems — why is fixing them my job?").
-    # Now the run acts on them itself, ONCE, before the task is called ready:
-    # every component the judge named gets one keep-what-works revision with
-    # those findings as the instruction, and the task is measured again. One
-    # pass, not a loop — a judge that is asked repeatedly will always find
-    # something, and a run that never ends is worse than a task with a note.
+    # asks whether it is the task the teacher described, which is the question
+    # the review screen exists to answer and had nothing to answer it with.
     if produced:
         from app.services.tasks import quality
         try:
-            report = await quality.review(task_id)
-            if _needs_revision(report):
-                await _revise_from_findings(task_id, report, produced_components)
+            await quality.review(task_id)
+            updated = await store.get_task(task_id) or updated
         except Exception as exc:  # a check must never cost the content
             print(f"⚠️ quality review failed for {task_id}: {type(exc).__name__}: {exc}")
 
-    # `ready` is set LAST, after the revision pass: the review page shows the
-    # task the moment it stops generating, and content that keeps changing
-    # under a teacher who has started reading is worse than a longer wait.
-    status = "ready" if produced else "draft"
-    updated = await store.update_task(task_id, status=status)
     return updated or {}
-
-
-#: How many components one revision pass may rewrite. The judge reports on
-#: the whole task; a pass that touched every component would be a second
-#: generation at strong-tier cost, and the findings almost always sit in one.
-MAX_REVISED_COMPONENTS = 2
-
-
-def _needs_revision(report: Optional[dict[str, Any]]) -> bool:
-    """Judged, scored under the concern line, and with something concrete to
-    fix. Deterministic-check failures alone (a count off by one) are left to
-    the teacher: they are cheap to see and a rewrite for them is not."""
-    if not report or not report.get("judged"):
-        return False
-    from app.services.tasks.quality import CONCERN_BELOW
-
-    overall = report.get("overall")
-    if not isinstance(overall, (int, float)) or overall >= CONCERN_BELOW:
-        return False
-    return any(_component_of(row) for row in (report.get("findings") or []))
-
-
-def _component_of(finding: Any) -> Optional[str]:
-    if not isinstance(finding, dict):
-        return None
-    component = str(finding.get("component") or "").strip().lower()
-    return component if component in store.COMPONENTS else None
-
-
-def findings_instruction(report: dict[str, Any], component: str) -> str:
-    """The judge's findings for ONE component, as the instruction for its
-    revision — the same text a teacher was pasting into "edit with Yuvi" by
-    hand (#492's screenshot), so the edit path stays the only edit path."""
-    lines = []
-    for row in (report.get("findings") or []):
-        if _component_of(row) != component:
-            continue
-        item = row.get("item")
-        where = f"item {int(item)}: " if isinstance(item, int) and item > 0 else ""
-        lines.append(f"- {where}{str(row.get('problem') or '').strip()}")
-    if not lines:
-        return ""
-    return ("A review of this task found these problems in this part. Fix each "
-            "one and change nothing else:\n" + "\n".join(lines))
-
-
-async def _revise_from_findings(
-    task_id: str, report: dict[str, Any], components: Optional[list[str]] = None,
-) -> None:
-    """One revision per named component, then one more measurement.
-
-    `components` is what this run actually produced: a finding that names a
-    part the task does not have (the judge is a model) is not a revision."""
-    from app.services.tasks import quality, revise
-
-    named: list[str] = []
-    for row in (report.get("findings") or []):
-        component = _component_of(row)
-        if component and component not in named:
-            if components is not None and component not in components:
-                continue
-            named.append(component)
-    revised = 0
-    for component in named[:MAX_REVISED_COMPONENTS]:
-        instruction = findings_instruction(report, component)
-        if not instruction:
-            continue
-        try:
-            await revise.regenerate(
-                task_id, component, instructions=instruction, keep_existing=True)
-            revised += 1
-        except Exception as exc:  # one part's rewrite failing keeps the original
-            print(f"⚠️ auto-revision of {component} failed for {task_id}: "
-                  f"{type(exc).__name__}: {exc}")
-    if not revised:
-        return
-    before = report.get("overall")
-    after = await quality.review(task_id)
-    # The report says it acted, and what it started from, so the teacher's
-    # view of "what was checked" is honest about the task having been rewritten.
-    await store.update_task(task_id, quality={
-        **after, "auto_revised": True, "overall_before_revision": before,
-    })
 
 
 def is_running(task_id: str) -> bool:

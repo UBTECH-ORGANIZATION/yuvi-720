@@ -295,10 +295,43 @@ def _surface_component_iri(surface: "CoachSurfaceContext") -> str | None:
 # MoE conversationTrigger enum ← our internal trigger names. Spec v1.1 closed
 # the list to student-request | success-effort | student-error | idle-time |
 # other (`misconception` retired in favour of `student-error`).
+#: What the learner reads when a reply fails before its first word. It used to
+#: be nothing: the stream broke, the client painted the typing dots, and the
+#: child waited ("אתה פה?", "למה אתה לא עונה?" — observed 31/8–1/9, #522/#524/#527).
+REPLY_FAILED = {
+    "he": "משהו השתבש אצלי רגע ולא הצלחתי לענות. אפשר לכתוב לי שוב?",
+    "ar": "حدث خلل عندي للحظة ولم أستطع الرد. هل يمكنك الكتابة لي مرة أخرى؟",
+    "en": "Something went wrong on my side and I couldn't answer. Could you write to me again?",
+}
+
+
+async def _guarded_reply(chunks, *, language: str, exchange_id: str, debug_trace: list):
+    """Yield the reply's chunks; if it dies before speaking, say so instead.
+
+    An exception inside the reply generator used to escape into the SSE
+    response mid-stream. The client saw a dropped connection, retried once
+    (re-running the whole turn), and then painted '…'. The failure is logged
+    with the exchange id and recorded on the trace; the learner gets a sentence
+    they can act on. A reply that already spoke is left as it is — a fallback
+    glued onto a half-answer reads worse than the half-answer.
+    """
+    spoke = False
+    try:
+        async for chunk in chunks:
+            spoke = True
+            yield chunk
+    except Exception as exc:
+        print(f"⚠️ coach reply failed ({exchange_id}): {type(exc).__name__}: {exc}")
+        coach_debug_trace.append(debug_trace, "reply_failed", type(exc).__name__)
+        if not spoke:
+            yield REPLY_FAILED.get(language, REPLY_FAILED["he"])
+
+
 _MOE_TRIGGER = {
     "idle": "idle-time",
     "misconception": "student-error",
     "mistake": "student-error",
+    "partial": "student-error",
     "slow_progress": "idle-time",
     "success": "success-effort",
     "rapid_guessing": "student-error",
@@ -799,7 +832,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         pointer_sent = False
         debug_trace: list[dict[str, str]] = []
         query_intent: list[str] = []
-        async for chunk in run_coach_stream(
+        async for chunk in _guarded_reply(run_coach_stream(
             learner_id,
             user_message=message,
             language=language,
@@ -814,7 +847,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             pointer_requests=pointer_requests,
             debug_trace=debug_trace,
             intent_out=query_intent,
-        ):
+        ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
             # Tool planning finishes before the first text chunk, so the
             # pointer lands as Yuvi starts talking — the highlight and the
             # sentence about it arrive together.
@@ -1314,7 +1347,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         debug_trace: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
         pointer_sent = False
-        async for chunk in run_coach_stream(
+        async for chunk in _guarded_reply(run_coach_stream(
             learner_id,
             language=language,
             session_id=conversation_id,
@@ -1325,7 +1358,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             hint_level=hint_level,
             pointer_requests=pointer_requests,
             debug_trace=debug_trace,
-        ):
+        ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
             # A hint that concerns one part of the screen highlights it while
             # the hint streams (tool planning completes before the first chunk).
             if pointer_requests and not pointer_sent:

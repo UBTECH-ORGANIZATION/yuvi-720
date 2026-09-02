@@ -350,7 +350,7 @@ function introDisposition(
 }
 
 export function CompanionProvider({ children }: { children: ReactNode }) {
-  const { language } = useI18n()
+  const { language, t } = useI18n()
   const { user } = useAuth()
   const { refresh: refreshRewards } = useRewards()
   const pathname = useRoute()
@@ -1099,9 +1099,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         },
       }, conversationId, surface), () => received)
     } catch {
+      // A turn that failed before a word arrived used to be painted as '…' —
+      // the same three dots as the typing indicator, so the learner read it as
+      // Yuvi still thinking and waited ("אתה פה?", "למה אתה לא עונה?"). Say
+      // what happened, in words, so the next message is theirs to send.
       setMessages((prev) => prev.map((m) => (
         m.id === assistantId && !m.text
-          ? { ...m, text: '…', isVisualizing: false }
+          ? { ...m, text: t('companion.replyFailed'), isVisualizing: false }
           : m.id === assistantId ? { ...m, isVisualizing: false } : m
       )))
     } finally {
@@ -1113,7 +1117,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       liveTurnInProgress.current = false
       window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
     }
-  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface, t])
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -1758,7 +1762,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   shouldPlayRef.current = shouldPlay
 
   const NUDGE_TYPES = useMemo(() => new Set([
-    'misconception', 'mistake', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
+    'misconception', 'mistake', 'partial', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
     // `kudos` is deliberately NOT here. Teacher praise is not a tutoring nudge:
     // it is a named adult saying something to a child, and Yuvi paraphrasing it
     // into a new conversation both changed the words and let them scroll away.

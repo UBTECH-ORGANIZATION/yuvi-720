@@ -647,6 +647,7 @@
   "companion.history.messageCount": "{count} رسائل",
   "companion.history.error": "تعذر تحميل سجل المحادثات حاليًا.",
   "companion.history.retry": "حاول مرة أخرى",
+  "companion.replyFailed": "حدث خلل عندي للحظة ولم أستطع الرد. هل يمكنك الكتابة لي مرة أخرى؟",
   "teacher.title": "عرض الصف",
   "teacher.subtitle": "رؤى مبنية على بيانات — مع الأدلة الخام",
   "teacher.appbar.name": "مساحة المعلّم",

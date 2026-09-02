@@ -647,6 +647,7 @@
   "companion.history.messageCount": "{count} הודעות",
   "companion.history.error": "לא הצלחנו לטעון את היסטוריית השיחות כרגע.",
   "companion.history.retry": "ניסיון נוסף",
+  "companion.replyFailed": "משהו השתבש אצלי רגע ולא הצלחתי לענות. אפשר לכתוב לי שוב?",
   "teacher.title": "תמונת כיתה",
   "teacher.subtitle": "תובנות מבוססות נתונים — עם העדות הגולמית",
   "teacher.appbar.name": "מרחב המורה",
