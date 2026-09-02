@@ -17,8 +17,12 @@
 .sp-tour__overlay {
   position: fixed;
   inset: 0;
-  z-index: 900;
-  /* above the assistant dock, below nothing else */
+  /* Above the companion panel (1420) and its dock (1410), because the lesson
+     tour narrates the inside of that panel: at the old 900 the card rendered
+     underneath the open chat, and the Next button could not be pressed at all.
+     Still below the visual/explainer overlays (2200+), which are modal and
+     never open while a tour is running. */
+  z-index: 1600;
   opacity: 0.72;
 }
 
@@ -79,7 +83,7 @@
 
 .sp-tour__card {
   position: fixed;
-  z-index: 902;
+  z-index: 1602;
   /* above the flying guide */
   width: 320px;
   max-width: calc(100vw - var(--sp-6));
@@ -202,7 +206,7 @@
 }
 
 .sp-tour__guide {
-  z-index: 901;
+  z-index: 1601;
   /* above the scrim, below the card */
   opacity: 0;
   transition: transform 380ms var(--sp-ease), opacity 260ms var(--sp-ease);

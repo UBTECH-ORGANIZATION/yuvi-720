@@ -27,6 +27,8 @@ interface Props {
   placement: Placement
   rect: TargetRect | null
   index: number
+  /** Position among the steps actually shown; skipped steps are not counted. */
+  current: number
   total: number
   isRtl: boolean
   onBack: () => void
@@ -36,11 +38,12 @@ interface Props {
 }
 
 export function TourStepCard(
-  { titleKey, bodyKey, values, placement, rect, index, total, isRtl, onBack, onNext, onSkip }: Props
+  { titleKey, bodyKey, values, placement, rect, index, current, total, isRtl,
+    onBack, onNext, onSkip }: Props
 ) {
   const { t } = useI18n()
   const cardRef = useRef<HTMLDivElement | null>(null)
-  const isLast = index === total - 1
+  const isLast = current === total
 
   // Focus the card on every step so a keyboard user follows the tour rather
   // than being left back on whatever had focus before it opened.
@@ -87,7 +90,7 @@ export function TourStepCard(
 
       <div className="sp-tour__foot">
         <span className="sp-tour__progress" aria-live="polite">
-          {t('tour.progress', { current: index + 1, total })}
+          {t('tour.progress', { current, total })}
         </span>
         <div className="sp-tour__actions">
           {onSkip ? (

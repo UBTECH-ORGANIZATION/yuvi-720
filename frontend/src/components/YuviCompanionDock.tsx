@@ -10,6 +10,9 @@ import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { YuviHeadIcon } from './YuviHeadIcon'
 import './Yuvi-companion-dock.css'
 
+/** How close the cursor has to get before Yuvi notices it, in px from his centre. */
+const NOTICE_RADIUS = 220
+
 /**
  * One global Yuvi control for learner routes.
  * - Yuvi does exactly one thing here: he opens the Learning Coach. The studio
@@ -25,12 +28,21 @@ export function YuviCompanionDock() {
   const { design, loaded } = useYuviDesign()
   /* The tour borrows Yuvi. He flies the page himself during it, so the dock
      unmounts its own avatar rather than hiding it — two of him is confusing,
-     and two WebGL contexts on a school laptop is worse. */
+     and two WebGL contexts on a school laptop is worse.
+
+     But only the AVATAR stands down. The dock itself stays visible and
+     pressable, because the lesson tour spotlights it and asks the child to open
+     the chat themselves — hiding the whole dock made that step point at a box
+     with no size, and the provider skipped it in silence. Going to the studio is
+     the one case where Yuvi is genuinely gone from the page. */
   const { isGuideFlying } = useTour()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
+  const dockRef = useRef<HTMLElement | null>(null)
   const studioOpen = transition?.isOpen ?? false
-  const away = studioOpen || isGuideFlying
+  const away = studioOpen
+  const avatarAway = studioOpen || isGuideFlying
   const [isScrolling, setIsScrolling] = useState(false)
+  const [isNear, setIsNear] = useState(false)
 
   useEffect(() => {
     if (loaded) avatarRef.current?.applyDesign(design, false)
@@ -56,7 +68,39 @@ export function YuviCompanionDock() {
     }
   }, [isOpen, isOpening, isClosing])
 
+  /* Yuvi notices a cursor coming near, which is most of what makes him read as
+     alive rather than as a button with a face. Measured from his centre so it
+     is a circle, not the dock's square, and coalesced onto a frame so a fast
+     mouse cannot flood React with state updates. */
+  useEffect(() => {
+    if (isOpen || away) {
+      setIsNear(false)
+      return
+    }
+    let frame = 0
+    const onMove = (event: PointerEvent) => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        const box = dockRef.current?.getBoundingClientRect()
+        if (!box) return
+        const dx = event.clientX - (box.x + box.width / 2)
+        const dy = event.clientY - (box.y + box.height / 2)
+        setIsNear(Math.hypot(dx, dy) < NOTICE_RADIUS)
+      })
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('pointermove', onMove)
+    }
+  }, [isOpen, away])
+
   const previewText = isStreaming ? t('companion.thinking') : preview
+  /* The same words as the launcher button, bent around the ring — the invitation
+     should not be a second, different promise. RTL reverses the index so the
+     text reads outward the correct way round rather than mirrored. */
+  const orbitCharacters = Array.from(t('companion.launcher'))
   const showPreview = !isOpen && (isStreaming || unreadCount > 0) && Boolean(previewText)
   const openImmediately = () => {
     flushSync(() => open())
@@ -64,7 +108,8 @@ export function YuviCompanionDock() {
 
   return (
     <aside
-      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}${away ? ' is-away' : ''}${isScrolling && !isOpen && !isOpening && !isClosing ? ' is-scrolling' : ''}`}
+      ref={dockRef}
+      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}${away ? ' is-away' : ''}${isNear && !isOpen ? ' is-near' : ''}${isScrolling && !isOpen && !isOpening && !isClosing ? ' is-scrolling' : ''}`}
       aria-label={t('companion.title')}
       aria-hidden={away || undefined}
       data-tour="learner.companion"
@@ -89,11 +134,31 @@ export function YuviCompanionDock() {
         }}
       >
         <span className="Yuvi-companion-dock__base" aria-hidden="true" />
+        <span className="Yuvi-companion-dock__ring Yuvi-companion-dock__ring--outer" aria-hidden="true">
+          <span className="Yuvi-companion-dock__orbit-node Yuvi-companion-dock__orbit-node--one" />
+          <span className="Yuvi-companion-dock__orbit-node Yuvi-companion-dock__orbit-node--two" />
+        </span>
+        <span className="Yuvi-companion-dock__ring Yuvi-companion-dock__ring--inner" aria-hidden="true" />
+        {/* Decorative: the launcher name is already on the button and the
+            tooltip, so a screen reader hearing it a third time learns nothing. */}
+        <span className="Yuvi-companion-dock__orbit-label" aria-hidden="true" dir={direction}>
+          {orbitCharacters.map((character, index) => (
+            <span
+              key={`${character}-${index}`}
+              style={{
+                '--orbit-index': direction === 'rtl' ? orbitCharacters.length - 1 - index : index,
+                '--orbit-count': Math.max(orbitCharacters.length - 1, 1),
+              } as React.CSSProperties}
+            >
+              <span>{character}</span>
+            </span>
+          ))}
+        </span>
         <span className="Yuvi-companion-dock__tooltip" role="tooltip" dir={direction}>
           {t('companion.tooltip')}
         </span>
         <div className="Yuvi-companion-dock__robot">
-          {loaded && !away && (
+          {loaded && !avatarAway && (
             <YuviAvatar3D
               ref={avatarRef}
               initialDesign={design}
@@ -107,8 +172,15 @@ export function YuviCompanionDock() {
               onAvatarClick={openImmediately}
             />
           )}
-          {!loaded && !away && (
+          {!loaded && !avatarAway && (
             <span className="Yuvi-companion-dock__loader" role="presentation" />
+          )}
+          {/* Yuvi is out flying the tour, so his plinth keeps a flat stand-in
+              rather than an empty hole the child is being asked to press. */}
+          {isGuideFlying && !studioOpen && (
+            <span className="Yuvi-companion-dock__standin" aria-hidden="true">
+              <YuviHeadIcon />
+            </span>
           )}
           <span className="Yuvi-companion-dock__thrusters" aria-hidden="true">
             <i />

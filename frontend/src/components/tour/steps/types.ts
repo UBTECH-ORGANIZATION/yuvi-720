@@ -20,6 +20,11 @@ export interface TourStep {
       they do, the step's own `route` is not enforced — otherwise the click the
       step asked for would be undone the instant they made it. */
   awaitRoute?: string
+  /** This step is finished by the learner OPENING something themselves: the
+      `data-tour` value that appears once they have. The route equivalent for
+      panels, which change no URL — asking a child to press the companion and
+      then advancing for them would teach the press without them making it. */
+  awaitTarget?: string
   titleKey: string
   bodyKey: string
   placement: Placement

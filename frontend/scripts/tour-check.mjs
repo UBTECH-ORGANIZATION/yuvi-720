@@ -30,9 +30,12 @@ const check = (label, ok, detail = '') => {
 
 /* Put the account back to "has never seen the tour" so the run is repeatable.
    Out of band on purpose: the PATCH lane is union-only and must stay that way,
-   so there is deliberately no endpoint that un-completes a tour. */
+   so there is deliberately no endpoint that un-completes a tour.
+   The venv interpreter, not PATH's `python` — the script imports backend
+   packages, and on a machine without a global `python` this threw ENOENT
+   before the check had run a single assertion. */
 const resetTour = () => {
-  execFileSync('python', ['scripts/reset_tour.py', 'gal', 'teacher'],
+  execFileSync('./.venv/bin/python', ['scripts/reset_tour.py', 'gal', 'teacher'],
                { cwd: '../backend', stdio: 'pipe' })
 }
 

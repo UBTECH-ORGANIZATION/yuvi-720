@@ -40,6 +40,12 @@ class TourDefaults(unittest.IsolatedAsyncioTestCase):
         # API: re-offering a redesigned tour means a new slug, not a migration.
         self.assertIn("learner.v1", repository.TOUR_SLUGS)
 
+    def test_the_lesson_tour_is_a_known_versioned_slug(self):
+        # The first-lesson tour records against its own slug, so a child who has
+        # seen the dashboard tour still gets shown how a lesson works.
+        self.assertIn("lesson.v1", repository.TOUR_SLUGS)
+        self.assertNotIn("lesson", repository.TOUR_SLUGS)
+
     async def test_an_account_predating_the_phase_still_reads_a_list(self):
         """An old user document has no `tours_completed`; the default fills in."""
         with patch.object(repository, "get_user_by_id",
