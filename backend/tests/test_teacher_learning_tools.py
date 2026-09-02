@@ -334,3 +334,149 @@ class TheRegistryStaysHonest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WhoIsInsideALearning(unittest.IsolatedAsyncioTestCase):
+    """#536: "מי התנסה בלומדה / מי מתקשה בה" used to get a count and a shrug."""
+
+    async def test_the_tool_returns_ids_by_a_stated_rule(self):
+        view = {"component_id": "c-hard", "group_size": 3,
+                "tried": ["kid-a", "kid-b"], "struggling": ["kid-b"],
+                "solved_everything": ["kid-a"], "not_started": ["kid-c"],
+                "evidence": {"struggle_min_attempts": 3, "struggle_max_success": 0.5}}
+        with patch("app.services.learning_analytics.learners_in_learning",
+                   AsyncMock(return_value=view)):
+            result = await _dispatch(
+                "get_learning_learners", {"group_id": "group-1", "component_id": "c-hard"})
+        self.assertEqual(result["data"]["struggling"], ["kid-b"])
+        self.assertEqual(result["data"]["tried"], ["kid-a", "kid-b"])
+        self.assertNotIn("display_name", str(result))
+
+    async def test_a_learning_nobody_opened_is_empty_not_a_list_of_nobody(self):
+        view = {"component_id": "c-new", "group_size": 3, "tried": [], "struggling": [],
+                "solved_everything": [], "not_started": ["kid-a", "kid-b", "kid-c"],
+                "evidence": {}}
+        with patch("app.services.learning_analytics.learners_in_learning",
+                   AsyncMock(return_value=view)):
+            result = await _dispatch(
+                "get_learning_learners", {"group_id": "group-1", "component_id": "c-new"})
+        self.assertIsNone(result["data"])
+        self.assertEqual(result["reason"], "nobody_has_opened_this_learning")
+
+    async def test_the_analytics_judge_struggling_exactly_as_the_listing_counts(self):
+        from app.services import learning_analytics as la
+        rows = [
+            ("kid-a", [{"component_id": "c1", "attempts": 4, "correct": 4}]),
+            ("kid-b", [{"component_id": "c1", "attempts": 6, "correct": 1}]),      # struggling
+            ("kid-c", [{"component_id": "c1", "attempts": 1, "correct": 0}]),      # too few to judge
+            ("kid-d", [{"component_id": "c2", "attempts": 9, "correct": 0}]),      # other lesson
+        ]
+        with patch.object(la, "_per_learner_rows", AsyncMock(return_value=rows)), \
+             patch("app.brain.org.learners_in_group",
+                   AsyncMock(return_value=["kid-a", "kid-b", "kid-c", "kid-d"])):
+            view = await la.learners_in_learning("group-1", "c1")
+        self.assertEqual(view["tried"], ["kid-a", "kid-b", "kid-c"])
+        self.assertEqual(view["struggling"], ["kid-b"])
+        self.assertEqual(view["solved_everything"], ["kid-a"])
+        self.assertEqual(view["not_started"], ["kid-d"])
+
+
+class TheSubjectFilterKnowsItsNames(unittest.IsolatedAsyncioTestCase):
+    """#539: 125 attempts on linear equations answered "no math activity"."""
+
+    def test_teacher_words_map_to_catalogue_ids(self):
+        self.assertEqual(data_tools.normalize_subject("מתמטיקה"), "math")
+        self.assertEqual(data_tools.normalize_subject("הנדסה"), "math")
+        self.assertEqual(data_tools.normalize_subject("Math"), "math")
+        self.assertEqual(data_tools.normalize_subject("מדעים"), "science")
+        self.assertIsNone(data_tools.normalize_subject(""))
+        self.assertEqual(data_tools.normalize_subject("history"), "history")
+
+    async def test_an_empty_filter_falls_back_to_the_whole_picture_labelled(self):
+        wide = {"progress": {"math": {"percent": 40, "objectives_mastered": 2,
+                                      "objectives_in_progress": 3}},
+                "struggle_items": [{"label": "משוואות", "subject": "math"}]}
+        calls = []
+
+        async def insights(learner_id, language="he", subject=None):
+            calls.append(subject)
+            return {"progress": {}, "struggle_items": []} if subject else wide
+
+        with patch("app.services.insights.student_insights", AsyncMock(side_effect=insights)):
+            result = await _dispatch(
+                "get_student_overview", {"learner_id": "kid-a", "subject": "הנדסה"})
+        self.assertEqual(calls, ["math", None])
+        self.assertEqual(result["data"]["subject_filter_ignored"], "math")
+        self.assertEqual(result["data"]["subjects_with_activity"], ["math"])
+        self.assertIn("progress", result["data"])
+
+    async def test_a_child_with_no_activity_anywhere_still_says_so(self):
+        with patch("app.services.insights.student_insights",
+                   AsyncMock(return_value={"progress": {}, "struggle_items": []})):
+            result = await _dispatch(
+                "get_student_overview", {"learner_id": "kid-a", "subject": "math"})
+        self.assertIsNone(result["data"])
+        self.assertEqual(result["reason"], "learner_has_no_activity")
+
+
+
+class WellbeingLeavesItsWordsOnTheProfile(unittest.IsolatedAsyncioTestCase):
+    """#538: the chat said "עלה משפט על גירושי ההורים", verbatim, from a flag."""
+
+    def test_a_flag_is_projected_to_its_shape(self):
+        from app.agents.teacher_tools.wellbeing_projection import soften_wellbeing
+        payload = {
+            "attention": {"kind": "wellbeing", "reason": "שיתף/ה מצוקה",
+                          "evidence": "עלה משפט על גירושי ההורים",
+                          "raw_evidence": {"at": "2026-08-27", "category": "distress"}},
+            "wellbeing_flags": [{"evidence": "ההורים שלי מתגרשים", "at": "2026-08-27",
+                                 "source": "coach_chat", "category": "distress"}],
+            "attention_all": [{"kind": "rapid_guessing", "evidence": "4 תשובות מהירות מדי"}],
+        }
+        out = soften_wellbeing(payload, "he")
+        text = str(out)
+        self.assertNotIn("גירוש", text)
+        self.assertNotIn("מתגרשים", text)
+        self.assertTrue(out["attention"]["detail_on_profile"])
+        self.assertEqual(out["wellbeing_flags"][0]["at"], "2026-08-27")
+        # Academic evidence is untouched — it is a number, not a confidence.
+        self.assertEqual(out["attention_all"][0]["evidence"], "4 תשובות מהירות מדי")
+
+    async def test_the_overview_tool_never_ships_the_words(self):
+        wide = {"progress": {"math": {"percent": 40}}, "struggle_items": [],
+                "attention": {"kind": "wellbeing", "evidence": "משפט על גירושי ההורים"},
+                "wellbeing_flags": [{"evidence": "משפט על גירושי ההורים", "category": "distress"}]}
+        with patch("app.services.insights.student_insights", AsyncMock(return_value=wide)):
+            result = await _dispatch("get_student_overview", {"learner_id": "kid-a"})
+        self.assertNotIn("גירוש", str(result))
+        self.assertTrue(result["data"]["attention"]["detail_on_profile"])
+
+
+class ActivityWithoutMasteryIsStillActivity(unittest.IsolatedAsyncioTestCase):
+    """#539: 125 attempts on linear equations, no mastery entry yet → the
+    overview must say WHERE the child has been working, not "no activity"."""
+
+    async def test_attempts_fold_by_subject_when_insights_are_empty(self):
+        rows = [
+            {"objective_id": "MOE.MATH.LIN-1", "subject": "math", "attempts": 100, "correct": 60,
+             "last_at": "2026-08-25T10:00:00Z"},
+            {"objective_id": "MOE.MATH.LIN-1", "subject": "math", "attempts": 25, "correct": 13,
+             "last_at": "2026-08-20T10:00:00Z"},
+        ]
+        with patch("app.services.insights.student_insights",
+                   AsyncMock(return_value={"progress": {}, "struggle_items": []})), \
+             patch("app.services.learner_activity.question_summary",
+                   AsyncMock(side_effect=lambda lid, subject=None:
+                             rows if subject in (None, "math") else [])), \
+             patch("app.services.kata_catalog.get_objective",
+                   return_value={"title": "פתרון משוואות ליניאריות"}):
+            asked_math = await _dispatch(
+                "get_student_overview", {"learner_id": "kid-a", "subject": "מתמטיקה"})
+            asked_geometry = await _dispatch(
+                "get_student_overview", {"learner_id": "kid-a", "subject": "הנדסה"})
+        math = asked_math["data"]["activity_by_subject"]["math"]
+        self.assertEqual((math["attempts"], math["correct"]), (125, 73))
+        self.assertEqual(math["last_at"], "2026-08-25T10:00:00Z")
+        self.assertEqual(math["objectives"][0]["title"], "פתרון משוואות ליניאריות")
+        # Geometry is math in the catalogue: same answer, and no "no activity".
+        self.assertEqual(asked_geometry["data"]["subjects_with_activity"], ["math"])

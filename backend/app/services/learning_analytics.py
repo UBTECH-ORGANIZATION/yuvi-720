@@ -690,6 +690,50 @@ def question_texts(component_id: str) -> dict[str, Optional[str]]:
     return texts
 
 
+async def learners_in_learning(group_id: str, component_id: str) -> dict[str, Any]:
+    """Who is behind one learning's numbers: tried, struggling, solved.
+
+    The ONE place learner ids leave this module besides ``difficulties``. It
+    exists for the teacher's direct question — "מי התנסה בלומדה", "מי מתקשה
+    בה" — which the counts on the listing could not answer (#536). Ids only,
+    roster order; the caller renders names. ``struggling`` is the exact
+    per-learner judgement ``_fold`` counts (STRUGGLE_MIN_ATTEMPTS attempts and a
+    rate under STRUGGLE_MAX_SUCCESS), so the names and the number agree.
+    """
+    from app.brain import org
+
+    learner_ids = await org.learners_in_group(group_id)
+    tried: list[str] = []
+    struggling: list[str] = []
+    solved: list[str] = []
+    for learner_id, rows in await _per_learner_rows(learner_ids, None):
+        mine = [row for row in rows if row.get("component_id") == component_id]
+        if not mine:
+            continue
+        attempts = sum(int(row.get("attempts") or 0) for row in mine)
+        correct = sum(int(row.get("correct") or 0) for row in mine)
+        if not attempts:
+            continue
+        tried.append(learner_id)
+        rate = _rate(correct, attempts)
+        if attempts >= STRUGGLE_MIN_ATTEMPTS and rate is not None and rate < STRUGGLE_MAX_SUCCESS:
+            struggling.append(learner_id)
+        if correct > 0 and correct == attempts:
+            solved.append(learner_id)
+    return {
+        "component_id": component_id,
+        "group_size": len(learner_ids),
+        "tried": tried,
+        "struggling": struggling,
+        "solved_everything": solved,
+        "not_started": [learner_id for learner_id in learner_ids if learner_id not in tried],
+        "evidence": {
+            "struggle_min_attempts": STRUGGLE_MIN_ATTEMPTS,
+            "struggle_max_success": STRUGGLE_MAX_SUCCESS,
+        },
+    }
+
+
 async def learning_detail(
     group_id: str,
     component_id: str,

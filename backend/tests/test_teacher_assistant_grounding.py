@@ -116,6 +116,49 @@ class GroundingTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("180", result["text"])
         self.assertIsNone(result["text_key"])
 
+    async def test_a_follow_up_about_a_number_from_an_earlier_turn_ships(self):
+        """#537 / #539. The assistant said "583 מתוך 845" a turn ago; asked
+        what it means, it may explain without a fresh tool round — those
+        figures already passed this gate when they were written."""
+        history = [
+            {"role": "user", "content": "מה זה משקף לי?"},
+            {"role": "assistant",
+             "content": "בלומדות שנפתחו היו 583 תשובות נכונות מתוך 845 ניסיונות, כלומר 69%."},
+        ]
+        with patch.object(teacher_assistant, "call_llm", AsyncMock(return_value=text_message(
+                "583 מתוך 845 הוא מספר התשובות הנכונות מכלל הניסיונות — זה ה-69% שמוצג."))) as llm:
+            result = await teacher_assistant.run_assistant(
+                "teacher-a", "583 מתוך 845 מה הכוונה?", history=history, context=context())
+
+        self.assertIsNotNone(result["text"], "a follow-up on the assistant's own figures was discarded")
+        self.assertIsNone(result["text_key"])
+        self.assertEqual(llm.await_count, 1, "a known figure burned a forced round")
+
+    async def test_a_number_on_the_teachers_screen_is_not_a_new_claim(self):
+        """#535. The screen block carries the page's visible figures, in the
+        shape the page holds them (a 0.69 rate); the teacher reads 69%."""
+        screen = {"screen": "learnings", "group_id": "group-mine",
+                  "visible": {"attempts": 845, "correct": 583, "success_rate": 0.69}}
+        with patch.object(teacher_assistant, "call_llm", AsyncMock(return_value=text_message(
+                "69% הוא שיעור ההצלחה: 583 תשובות נכונות מתוך 845 ניסיונות."))) as llm:
+            result = await teacher_assistant.run_assistant(
+                "teacher-a", "מה זה 69% שכתוב פה?", context=context(screen=screen))
+
+        self.assertIsNotNone(result["text"])
+        self.assertEqual(llm.await_count, 1)
+
+    async def test_a_figure_nobody_has_seen_still_forces_a_round(self):
+        """The relaxation is exact: a NEW number is still a claim."""
+        history = [{"role": "assistant", "content": "היו 583 תשובות נכונות מתוך 845."}]
+        rounds = [text_message("בשבוע שעבר היו 900 ניסיונות."),
+                  text_message("בשבוע שעבר היו 900 ניסיונות.")]
+        with patch.object(teacher_assistant, "call_llm", AsyncMock(side_effect=rounds)):
+            result = await teacher_assistant.run_assistant(
+                "teacher-a", "וכמה היו בשבוע שעבר?", history=history, context=context())
+
+        self.assertIsNone(result["text"])
+        self.assertEqual(result["text_key"], teacher_assistant.UNKNOWN_NO_DATA)
+
     async def test_a_conversational_reply_is_not_forced_through_tools(self):
         """"תודה" must not burn a forced round."""
         with patch.object(teacher_assistant, "call_llm",

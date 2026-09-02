@@ -38,7 +38,7 @@ _STREAM_HEADERS = {
 }
 
 MAX_MESSAGE = 2000
-HISTORY_TURNS = 6
+HISTORY_TURNS = teacher_assistant.HISTORY_TURNS
 ROLE = "teacher_assistant"
 
 

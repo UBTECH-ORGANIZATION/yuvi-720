@@ -147,6 +147,11 @@ export interface ScreenContext {
   group_id?: string | null
   learner_id?: string | null
   subject?: string | null
+  /** The headline figures the page is showing, as the page holds them
+   *  (rates as fractions, counts as counts). The server treats them as
+   *  grounded — they are the teacher's own screen — so "what is this 69%"
+   *  gets an answer instead of "I cannot see your screen" (#535). */
+  visible?: Record<string, unknown> | null
 }
 
 export interface AssistantThread {

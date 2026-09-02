@@ -67,6 +67,7 @@ import { subjectLabel } from '../shared/subjectLabel'
 import { StatDelta } from './StatDelta'
 import { StudentBandDialog } from './StudentBandDialog'
 import { StudentsBandCard } from './StudentsBandCard'
+import { useVisibleScreenData } from '../assistant/screenData'
 import './teacher-home.css'
 
 export function TeacherHomePage() {
@@ -90,6 +91,25 @@ export function TeacherHomePage() {
   const [engagement, setEngagement] = useState<Engagement | null>(null)
   const [gaps, setGaps] = useState<LearningGap[]>([])
   const [mood, setMood] = useState<ClassMood | null>(null)
+
+  /* The stats row as numbers, for the assistant dock (#535/#537). Shares and
+     counts only; the children behind a mood family stay on the card. */
+  useVisibleScreenData(engagement || mood ? {
+    engagement: engagement ? {
+      window_days: engagement.window_days,
+      active_pct: engagement.active_pct,
+      active_students: engagement.active_students,
+      students_total: engagement.students_total,
+      avg_active_minutes: engagement.timing_available ? engagement.avg_active_minutes : null,
+      previous_active_pct: engagement.previous?.active_pct ?? null,
+    } : null,
+    mood: mood ? {
+      answered_students: mood.answered_students,
+      students_total: mood.students_total,
+      positive_pct: mood.enough ? mood.positive_pct : null,
+      skipped: mood.skipped,
+    } : null,
+  } : null)
   const [moments, setMoments] = useState<Moment[]>([])
   const [momentsLoading, setMomentsLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(true)

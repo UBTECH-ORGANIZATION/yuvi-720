@@ -63,6 +63,7 @@ import { Badge, type BadgeGlyph, type BadgeTier } from '../../../components/Badg
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { agoLabel } from '../live/LiveNow'
 import { useRoute } from '../../../app/router'
+import { useVisibleScreenData } from '../assistant/screenData'
 import './teacher-student.css'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { countKey } from '../shared/countLabel'
@@ -82,6 +83,23 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const { subject, subjects, groupId } = useTeacherScope()
   const route = useRoute()
   const [detail, setDetail] = useState<StudentDetail | null>(null)
+
+  /* The status band as numbers, for the assistant dock: progress per subject
+     and how many attention flags are open. The learner id already rides in
+     the screen block; nothing here names the child. */
+  useVisibleScreenData(detail ? {
+    objectives_progress: Object.fromEntries(
+      Object.entries(detail.objectives_progress ?? {}).map(([subject, row]) => [
+        subject, {
+          percent: row.percent,
+          mastered: row.objectives_mastered,
+          in_progress: row.objectives_in_progress,
+          needs_review: row.objectives_needs_review,
+          total: row.objectives_total,
+        },
+      ])),
+    attention_flags: (detail.attention_all ?? []).length,
+  } : null)
   const [badges, setBadges] = useState<TeacherBadge[]>([])
   const [activity, setActivity] = useState<QuestionRow[] | null>(null)
   const [trends, setTrends] = useState<LearnerTrends | null>(null)
