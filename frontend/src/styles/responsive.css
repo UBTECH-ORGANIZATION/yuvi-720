@@ -92,6 +92,19 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .app-bar.is-compact .app-bar-menu-toggle[aria-expanded='true'] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
   .app-bar.is-compact .app-bar-menu-toggle:focus-visible { outline: none; box-shadow: var(--sp-ring), var(--sp-shadow-sm); }
 
+  /* Learner lane: the burger sits BESIDE THE LOGO (inline-start — the right,
+     on the RTL page), not floating mid-bar next to the studio button. The
+     logo column is auto here rather than 1fr — the learner's leading slot is
+     only the logo, so the flexible column moves to the account cluster. The
+     teacher bar keeps the shared layout: its leading slot carries the scope
+     control, which needs the flexible first column. */
+  .app-bar--learner.is-compact {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+  .app-bar--learner.is-compact .app-bar-user {
+    justify-self: end;
+  }
+
   .app-bar.is-compact .app-bar-menu-backdrop {
     position: fixed;
     inset: var(--mapping-app-bar-height, 73px) 0 0;

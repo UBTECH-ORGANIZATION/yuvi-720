@@ -24,6 +24,7 @@ import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/
 import { navigate, useRoute } from '../app/router'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
+import { useTour } from './tour/TourProvider'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
 
@@ -215,6 +216,9 @@ export function CompanionChat() {
   } = useCompanion()
   const pathname = useRoute()
   const isTaskMode = pathname.startsWith('/learning/lesson')
+  // The tour flies its own Yuvi. Two live avatars would be two WebGL contexts
+  // and two robots on one screen, so the header stage stands down until it lands.
+  const { isGuideFlying } = useTour()
   // Indexed, not `.at(-1)`: the build's lib is ES2020, which has no Array.at.
   const latestReply = messages[messages.length - 1]
   const latestReplySupportsSuggestions = latestReply?.role === 'assistant'
@@ -981,11 +985,12 @@ export function CompanionChat() {
             {isTaskMode && (
               <div
                 className="sp-companion__yuvi-stage"
+                data-tour="learner.lessonYuvi"
                 data-yuvi-activity={speech.state === 'playing' ? 'speaking' : activity}
                 aria-hidden="true"
               >
                 <span className="sp-companion__yuvi-orbit" />
-                {(loaded || YuviFallbackReady) && showLiveYuvi ? (
+                {(loaded || YuviFallbackReady) && showLiveYuvi && !isGuideFlying ? (
                   <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
                     <YuviAvatar3D
                       key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
@@ -1072,7 +1077,7 @@ export function CompanionChat() {
           )}
 
           {isTaskMode && (
-            <div className="sp-companion__task-tabs" role="tablist" aria-label={t('companion.task.tabs')}>
+            <div className="sp-companion__task-tabs" data-tour="learner.lessonTabs" role="tablist" aria-label={t('companion.task.tabs')}>
               <button
                 type="button"
                 role="tab"
@@ -1368,7 +1373,7 @@ export function CompanionChat() {
               {isTaskMode ? (
                 !isStreaming
                 && (pendingAlternative || isVideoScreen || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
-                  <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
+                  <div className="sp-companion__support-options" data-tour="learner.lessonHelp" role="group" aria-label={t('companion.task.actions')}>
                     {pendingAlternative && (
                       <button
                         type="button"
@@ -1440,7 +1445,7 @@ export function CompanionChat() {
                   </div>
                 )
               )}
-              <form className="sp-companion__composer" onSubmit={submit}>
+              <form className="sp-companion__composer" data-tour="learner.lessonAsk" onSubmit={submit}>
                 <input
                   ref={inputRef}
                   value={draft}
@@ -1463,9 +1468,10 @@ export function CompanionChat() {
                 {isTaskMode && (
                   <button
                     type="button"
-                    className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}${handBlocked ? ' is-blocked' : ''}`}
+                    data-tour="learner.lessonHand"
+                    className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}`}
                     onClick={raiseHand}
-                    aria-disabled={handBlocked}
+                    disabled={handState === 'sending' || (handCooling && !handRaised)}
                     aria-label={handLabel}
                     aria-expanded={handState === 'confirming'}
                     data-tooltip={handLabel}

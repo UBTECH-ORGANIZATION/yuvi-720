@@ -25,6 +25,9 @@ import {
 import {
   LEARNER_TOUR_ID, canTakeLearnerTour, learnerTour, learnerTourSteps,
 } from '../src/components/tour/steps/learnerTour.ts'
+import {
+  LESSON_ROUTE, LESSON_TOUR_ID, canTakeLessonTour, lessonTour, lessonTourSteps,
+} from '../src/components/tour/steps/lessonTour.ts'
 import { needsStudentParam, tourLocaleKeys } from '../src/components/tour/steps/types.ts'
 
 /* Both step lists go through the same contract. Adding a tour here is what
@@ -32,6 +35,7 @@ import { needsStudentParam, tourLocaleKeys } from '../src/components/tour/steps/
 const TOURS = [
   { name: 'teacher', steps: teacherTourSteps },
   { name: 'learner', steps: learnerTourSteps },
+  { name: 'lesson', steps: lessonTourSteps },
 ]
 
 const ROOT = new URL('../../', import.meta.url).pathname
@@ -76,11 +80,13 @@ test('every step key exists in all three locales', () => {
 test('the welcome greeting keeps its name slot in every language', () => {
   // A locale that drops `{name}` greets a child as nobody; one that renames it
   // prints the braces at them.
-  for (const language of LANGUAGES) {
-    assert.match(
-      messages[language]['tour.learner.welcome.title'], /\{name\}/,
-      `${language} lost {name} from the learner welcome`
-    )
+  for (const key of ['tour.learner.welcome.title', 'tour.lesson.welcome.title']) {
+    for (const language of LANGUAGES) {
+      assert.match(
+        messages[language][key], /\{name\}/,
+        `${language} lost {name} from ${key}`
+      )
+    }
   }
 })
 
@@ -116,6 +122,7 @@ const ROUTE_OWNERS: Record<string, string> = {
   [`/teacher/student/${STUDENT_TOKEN}`]: 'features/teacher-app/student/',
   '/student-dashboard': 'features/student-dashboard/',
   '/badges': 'features/badges/',
+  [LESSON_ROUTE]: 'features/learning-lesson/',
 }
 
 /** Mounted by a shell, so present on every route inside it. */
@@ -303,7 +310,33 @@ test('the learner tour flies, and its slug is versioned', () => {
 
 test('a child cannot walk out of their first run, but a teacher can', () => {
   assert.equal(learnerTour.dismissible, false)
+  assert.equal(lessonTour.dismissible, false)
   assert.equal(teacherTour.dismissible, true)
+})
+
+test('only a learner is offered the lesson tour', () => {
+  assert.equal(canTakeLessonTour(['learner']), true)
+  assert.equal(canTakeLessonTour(['teacher']), false)
+  assert.equal(canTakeLessonTour(['admin']), false)
+  assert.equal(canTakeLessonTour(undefined), false)
+})
+
+test('the lesson tour flies, is versioned, and needs no student lookup', () => {
+  assert.equal(lessonTour.guide, 'flying')
+  assert.match(LESSON_TOUR_ID, /\.v\d+$/)
+  assert.equal(needsStudentParam(lessonTourSteps), false)
+})
+
+test('the lesson tour never leaves the lesson', () => {
+  /* Every step narrates something on the lesson screen. A step that navigated
+     away would abandon the lesson the child had just opened — and the tour is
+     not dismissible, so they could not get back to it themselves. */
+  for (const step of lessonTourSteps) {
+    assert.equal(step.route, LESSON_ROUTE,
+      `lesson step "${step.id}" routes to ${step.route}`)
+    assert.equal(step.awaitRoute, undefined,
+      `lesson step "${step.id}" waits for a route change`)
+  }
 })
 
 test('a step that hands over the click waits for a route the app really has', () => {
@@ -318,5 +351,25 @@ test('a step that hands over the click waits for a route the app really has', ()
       `step "${step.id}" waits for a click it does not let through`)
     assert.notEqual(step.awaitRoute, step.route,
       `step "${step.id}" waits for the route it is already on`)
+  }
+})
+
+test('a step that waits for a panel waits for something the app renders', () => {
+  /* `awaitTarget` is the panel equivalent of `awaitRoute`, and carries the same
+     risk: pointed at an attribute nothing renders, a non-dismissible tour would
+     sit there forever. It must also let the click through, or the step asks for
+     a press the scrim is swallowing. */
+  const targets = collectTourTargets()
+  for (const tour of TOURS) {
+    for (const step of tour.steps) {
+      if (!step.awaitTarget) continue
+      assert.ok(targets.has(step.awaitTarget),
+        `${tour.name} step "${step.id}" waits for data-tour="${step.awaitTarget}", `
+          + 'which no component renders')
+      assert.ok(step.interactive,
+        `${tour.name} step "${step.id}" waits for a click it does not let through`)
+      assert.notEqual(step.awaitTarget, step.target,
+        `${tour.name} step "${step.id}" waits for the target it already spotlights`)
+    }
   }
 })

@@ -47,9 +47,9 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
   /* The sub-group scope is the PORTAL's, not this page's. The page used to
      fetch its own list and keep its own `'all'`, which is how switching class
      kept the old selection and sent a stale `subgroup_id` the server 403'd
-     into a swallowed catch. The chips below still render — they are this
-     screen's handle on the same scope, like the roster's cards. */
-  const { groupId, subgroups, subgroupId, setSubgroupId } = useTeacherScope()
+     into a swallowed catch. The portal's scope bar is the only handle now —
+     this screen just narrows by whatever it says. */
+  const { groupId, subgroups, subgroupId } = useTeacherScope()
   const { nameOf } = useTeacherRoster()
   const [data, setData] = useState<TaskTracking | null>(null)
   const [prose, setProse] = useState<TaskSummaryProse | null>(null)
@@ -233,22 +233,8 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
         </div>
       ) : null}
 
-      {subgroups.length > 0 ? (
-        <div className="tch-track__scope">
-          <button type="button" className={`tch-chip${scope === 'all' ? ' is-on' : ''}`}
-                  onClick={() => setSubgroupId(null)}>
-            {t('tch.tasks.scope.class')}
-          </button>
-          {subgroups.map((subgroup) => (
-            <button key={subgroup.id} type="button"
-                    className={`tch-chip${scope === subgroup.id ? ' is-on' : ''}`}
-                    onClick={() => setSubgroupId(subgroup.id)}>
-              {subgroup.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
+      {/* No local sub-group chips: the portal's scope bar is the one handle on
+          that filter, and this screen simply honours it. */}
       <div className="tch-stats">
         <Stat label={t('tch.tasks.stat.assigned')} value={String(learners.length)} />
         <Stat label={t('tch.tasks.stat.completed')} value={String(done.length)} />
@@ -273,14 +259,11 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
           {prose.bullets.length ? (
             <ul>
               {prose.bullets.map((bullet) => (
+                /* The claim alone. The "why" drill-down read as chrome on
+                   every bullet and told the teacher little the sentence
+                   itself did not. */
                 <li key={bullet.ref}>
                   <span>{bullet.text}</span>
-                  {bullet.why ? (
-                    <details className="tch-track__why">
-                      <summary>{t('tch.evidence.why')}</summary>
-                      <p>{bullet.why}</p>
-                    </details>
-                  ) : null}
                 </li>
               ))}
             </ul>

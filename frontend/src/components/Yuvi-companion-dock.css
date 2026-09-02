@@ -1,8 +1,8 @@
 /* Closed companion: Yuvi rests in the physical bottom-right corner. */
 .Yuvi-companion-dock {
   position: fixed;
-  inset-block-end: max(16px, env(safe-area-inset-bottom));
-  right: 16px;
+  inset-block-end: max(10px, env(safe-area-inset-bottom));
+  right: 8px;
   /* Intentional physical placement requested for every language. */
   left: auto;
   z-index: 1410;
@@ -131,11 +131,15 @@
   opacity: 0;
 }
 
-/* Small hint bubble shown on hover / focus only. */
+/* Small hint bubble shown on hover / focus only.
+   Centred on the dock, not anchored to its right edge: Yuvi is drawn dead
+   centre of his canvas (measured at 49.2% of it), so a right-anchored bubble
+   put the arrow 46px to his right, pointing at empty air beside his shoulder. */
 .Yuvi-companion-dock__tooltip {
   position: absolute;
   inset-block-end: 100%;
-  right: 4px;
+  left: 50%;
+  right: auto;
   z-index: 6;
   margin-block-end: 4px;
   padding: 7px 12px;
@@ -145,8 +149,8 @@
   font: 700 var(--sp-fs-xs)/1.2 var(--sp-font);
   white-space: nowrap;
   opacity: 0;
-  transform: translateY(6px) scale(.96);
-  transform-origin: bottom right;
+  transform: translate(-50%, 6px) scale(.96);
+  transform-origin: bottom center;
   box-shadow: 0 12px 28px rgba(61, 46, 139, 0.28);
   pointer-events: none;
   transition: opacity 160ms ease, transform 180ms var(--sp-ease);
@@ -156,20 +160,128 @@
   content: '';
   position: absolute;
   inset-block-start: 100%;
-  right: 20px;
+  left: 50%;
+  right: auto;
   border: 6px solid transparent;
   border-block-start-color: var(--sp-primary-700);
+  transform: translateX(-50%);
 }
 
 .Yuvi-companion-dock__portal:has(.Yuvi-companion-dock__robot:hover) .Yuvi-companion-dock__tooltip,
 .Yuvi-companion-dock__portal:focus-within .Yuvi-companion-dock__tooltip {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translate(-50%, 0) scale(1);
 }
 
 .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__tooltip,
 .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__tooltip {
   opacity: 0 !important;
+}
+
+/* The orbital portal Yuvi sits inside. Restored from the dock's first version,
+   deliberately smaller: that one was 174px and the rings filled it, so on a
+   150px dock the same proportions would crowd him. Hairline rings and small
+   gradient dots keep it in the family of `thinking-orbit.css`. */
+.Yuvi-companion-dock__ring {
+  position: absolute;
+  z-index: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: border-color 220ms ease;
+}
+
+.Yuvi-companion-dock__ring--outer {
+  inset: 16px;
+  border: 1px solid rgba(111, 91, 255, 0.28);
+  animation: Yuvi-portal-spin 18s linear infinite;
+}
+
+.Yuvi-companion-dock__ring--inner {
+  inset: 32px;
+  border: 1px dashed rgba(76, 201, 240, 0.5);
+  animation: Yuvi-portal-spin 12s linear infinite reverse;
+}
+
+/* Children of the outer ring rather than siblings, so they travel with it —
+   and stop with it, which is how they inherit the reduced-motion rule below. */
+.Yuvi-companion-dock__orbit-node {
+  position: absolute;
+  inset-inline-start: calc(50% - 5px);
+  inline-size: 10px;
+  block-size: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(62, 45, 150, 0.25);
+}
+
+.Yuvi-companion-dock__orbit-node--one {
+  inset-block-start: -5px;
+  background: var(--sp-teal-500);
+}
+
+.Yuvi-companion-dock__orbit-node--two {
+  inset-block-end: -5px;
+  background: var(--sp-primary-600);
+}
+
+.Yuvi-companion-dock__orbit-label {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.96);
+  transition: opacity 180ms ease, transform 220ms var(--sp-ease);
+}
+
+/* Each glyph rides a zero-size anchor rotated about the dock's centre. Wider
+   arc and smaller type than the original, because the same Hebrew string now
+   has to fit a noticeably shorter radius. */
+.Yuvi-companion-dock__orbit-label>span {
+  --orbit-angle: calc(-64deg + (128deg * var(--orbit-index) / var(--orbit-count)));
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 0;
+  block-size: 0;
+  transform: rotate(var(--orbit-angle)) translateY(-70px);
+  transform-origin: center;
+}
+
+.Yuvi-companion-dock__orbit-label>span>span {
+  display: block;
+  color: var(--sp-primary-700);
+  font: 800 11px/1 var(--sp-font);
+  transform: translate(-50%, -50%);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.98),
+    0 0 5px rgba(255, 255, 255, 0.96),
+    0 3px 9px rgba(62, 45, 150, 0.2);
+}
+
+.Yuvi-companion-dock__portal:has(.Yuvi-companion-dock__robot:hover) .Yuvi-companion-dock__orbit-label,
+.Yuvi-companion-dock__portal:focus-within .Yuvi-companion-dock__orbit-label {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* The cursor is in the neighbourhood: Yuvi lifts and the rings brighten, so he
+   reads as noticing rather than waiting. `translate` rather than `transform`,
+   which the idle animation already owns. */
+.Yuvi-companion-dock.is-near .Yuvi-companion-dock__robot {
+  translate: 0 -4px;
+}
+
+.Yuvi-companion-dock.is-near .Yuvi-companion-dock__ring--outer {
+  border-color: rgba(111, 91, 255, 0.55);
+}
+
+.Yuvi-companion-dock.is-near .Yuvi-companion-dock__ring--inner {
+  border-color: rgba(76, 201, 240, 0.8);
+}
+
+.Yuvi-companion-dock.is-near .Yuvi-companion-dock__base {
+  transform: translateX(-50%) scale(1.06);
 }
 
 .Yuvi-companion-dock__robot {
@@ -179,6 +291,7 @@
   pointer-events: auto;
   filter: drop-shadow(0 13px 16px rgba(54, 42, 126, 0.2));
   animation: Yuvi-idle-hint 7s ease-in-out infinite;
+  transition: translate 260ms var(--sp-ease);
 }
 
 .Yuvi-companion-dock__robot:hover {
@@ -262,6 +375,25 @@
   border-inline-end-color: var(--sp-teal-500);
   border-radius: 50%;
   animation: Yuvi-chat-loader-spin 700ms linear infinite;
+}
+
+/* Shown only while the tour's guide is flying: the plinth keeps a flat Yuvi so
+   the dock still reads as him and as something to press, without a second
+   WebGL avatar on the page. */
+.Yuvi-companion-dock__standin {
+  position: absolute;
+  inset-block-start: 58px;
+  inset-inline-start: calc(50% - 26px);
+  inline-size: 52px;
+  block-size: 52px;
+  display: grid;
+  place-items: center;
+  opacity: 0.85;
+}
+
+.Yuvi-companion-dock__standin svg {
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 .Yuvi-companion-dock__preview {
@@ -808,6 +940,11 @@
   .Yuvi-companion-dock__portal::after,
   .Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal {
     animation: none;
+  }
+
+  /* Noticing the cursor is fine; moving because of it is not. */
+  .Yuvi-companion-dock.is-near .Yuvi-companion-dock__robot {
+    translate: none;
   }
 
   .Yuvi-companion-dock__loader {

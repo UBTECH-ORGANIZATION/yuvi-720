@@ -153,4 +153,8 @@ async def regenerate(
         focus={"slide_index": slide_index, "question_index": question_index}
         if keep_existing else None,
     )
+    # The failure chip reads the LATEST generation entry per component, so a
+    # successful redo must be logged or a component that failed once and was
+    # then regenerated keeps reporting itself as missing.
+    await store.record_generation(task_id, component=component, ok=True)
     return content

@@ -126,6 +126,8 @@ export function AssistantDock() {
   const [threads, setThreads] = useState<AssistantThread[]>([])
   const [showThreads, setShowThreads] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
+  /** The in-flight answer's kill switch — non-null exactly while streaming. */
+  const abortRef = useRef<AbortController | null>(null)
   /* Thread resolution is a round trip, and a teacher can type into an open dock
      faster than it completes. Until it settles, sending would file the question
      under the wrong thread — so the send button waits, and the input does not. */
@@ -272,6 +274,10 @@ export function AssistantDock() {
     ])
     setDraft('')
     setIsBusy(true)
+    // The teacher can pull the plug mid-answer (#540): stop keeps whatever
+    // streamed so far and frees the composer immediately.
+    const controller = new AbortController()
+    abortRef.current = controller
 
     const patch = (change: Partial<DockMessage>) =>
       setMessages((current) =>
@@ -283,6 +289,7 @@ export function AssistantDock() {
         question,
         { language, screen, history, conversationId },
         {
+          signal: controller.signal,
           onText: (chunk) =>
             setMessages((current) => current.map((message) =>
               message.id === answerId ? { ...message, text: message.text + chunk } : message
@@ -300,8 +307,10 @@ export function AssistantDock() {
         }
       )
     } catch {
-      patch({ failed: true })
+      // A deliberate stop is not a failure — the partial answer stands as-is.
+      if (!controller.signal.aborted) patch({ failed: true })
     } finally {
+      abortRef.current = null
       patch({ streaming: false })
       setIsBusy(false)
       void refreshThreads()
@@ -481,15 +490,29 @@ export function AssistantDock() {
           aria-label={t('tch.assistant.placeholder')}
           onChange={(event) => setDraft(event.target.value)}
         />
-        <button
-          type="submit"
-          className="tch-dock__send"
-          disabled={!draft.trim() || isBusy || !isReady}
-          aria-label={t('tch.assistant.send')}
-          title={t('tch.assistant.send')}
-        >
-          <Icon name="send" size={17} aria-hidden />
-        </button>
+        {isBusy ? (
+          /* While Yuvi writes, the send button IS the stop button (#540) —
+             one tap keeps what streamed so far and frees the composer. */
+          <button
+            type="button"
+            className="tch-dock__send tch-dock__send--stop"
+            aria-label={t('tch.assistant.stop')}
+            title={t('tch.assistant.stop')}
+            onClick={() => abortRef.current?.abort()}
+          >
+            <span className="tch-dock__stopSquare" aria-hidden />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="tch-dock__send"
+            disabled={!draft.trim() || !isReady}
+            aria-label={t('tch.assistant.send')}
+            title={t('tch.assistant.send')}
+          >
+            <Icon name="send" size={17} aria-hidden />
+          </button>
+        )}
       </form>
     </aside>
   )

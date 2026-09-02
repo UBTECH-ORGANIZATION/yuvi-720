@@ -45,7 +45,15 @@ function scalarText(value: unknown, t: Translate, language: string): string {
     return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100)
   }
   if (typeof value === 'string') {
-    return looksLikeIsoDate(value) ? formatDate(value, language) : value
+    if (looksLikeIsoDate(value)) return formatDate(value, language)
+    // Vendor and coach diagnostic tags (`sign-error`, `place-value`,
+    // `unit-confusion`…) reach evidence verbatim. The known ones get their
+    // pedagogic Hebrew; a tag nobody has mapped yet degrades to a
+    // de-hyphenated phrase — never to a raw machine code (#508).
+    const tagged = t(`tch.tag.${value}`)
+    if (tagged !== `tch.tag.${value}`) return tagged
+    if (/^[a-z][a-z0-9]*([-_][a-z0-9]+)+$/.test(value)) return value.split(/[-_]/).join(' ')
+    return value
   }
   return String(value)
 }

@@ -169,9 +169,15 @@ try {
 
   // ── Yuvi is on stage, and the dock has stood down ────────────────────────
   check('Yuvi is flying the tour', (await page.locator('.sp-tour__guide').count()) === 1)
+  /* Asserted on the avatar, not on a class: the dock deliberately stays visible
+     and pressable during a tour (the lesson tour spotlights it and asks the
+     child to open the chat), so "stood down" means its 3D Yuvi is unmounted —
+     not that the whole dock is hidden. */
   const dockHidden = await page.evaluate(() => {
     const dock = document.querySelector('.Yuvi-companion-dock')
-    return !dock || dock.classList.contains('is-away')
+    if (!dock) return true
+    if (dock.classList.contains('is-away')) return true
+    return dock.querySelectorAll('canvas').length === 0
   })
   check('the dock stands its own Yuvi down, so there is only ever one', dockHidden)
   check('and only one WebGL canvas is alive',

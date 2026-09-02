@@ -134,6 +134,11 @@ class RegenerateRequest(BaseModel):
     question_index: Optional[int] = None
 
 
+class ArchiveRequest(BaseModel):
+    """One flag both ways: `true` files the task away, `false` restores it."""
+    archived: bool
+
+
 @router.get("/catalog/learnings")
 async def catalog_learnings(language: str = "he",
                             session=Depends(require_teacher_session)):
@@ -386,6 +391,24 @@ async def close_task(task_id: str, payload: Optional[LaunchActionRequest] = None
             session["sub"], task_id, launch_id=(payload.launch_id if payload else None)))
     except AssignError as error:
         return _failed(error)
+
+
+@router.post("/tasks/{task_id}/archive")
+async def archive_task(task_id: str, payload: ArchiveRequest,
+                       session=Depends(require_teacher_session)):
+    """Put a task away (or bring it back) without touching its history.
+
+    A flag, not a delete: an archived task keeps its openings and the
+    children's work, it just stops taking up a row a teacher reads past
+    every day. The list endpoint still returns it — hiding is the client's
+    choice, so the archive view costs no second query.
+    """
+    try:
+        await _owned(session["sub"], task_id)
+    except AssignError as error:
+        return _failed(error)
+    await store.update_task(task_id, archived=bool(payload.archived))
+    return _ok({"archived": bool(payload.archived)})
 
 
 @router.delete("/tasks/{task_id}")

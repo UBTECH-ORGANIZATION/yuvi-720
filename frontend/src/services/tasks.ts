@@ -183,6 +183,9 @@ export interface MyTask {
   completed_at: string | null
   /** The teacher shut this opening — it can be read, not answered. */
   closed: boolean
+  /** Per-part progress, e.g. `{ practice: { answered: 3, total: 8 } }`.
+   *  The presentation has no per-question state, so it never appears here. */
+  progress: Record<string, { answered: number; total: number }>
   /** Words. There is deliberately no number here. */
   feedback: string | null
 }
@@ -299,6 +302,8 @@ export interface TaskSummary {
   target: { kind: 'learner' | 'subgroup' | 'group'; id: string } | null
   group_id: string
   components: TaskComponent[]
+  /** Filed away by the teacher — kept with all its history, hidden by default. */
+  archived: boolean
   deadline: string | null
   created_at: string
   /** Across every opening — the per-opening split is the tracking screen's. */
@@ -397,6 +402,12 @@ export interface LearnerAttempt {
 export function listTeacherTasks(groupId?: string, signal?: AbortSignal) {
   const query = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
   return apiGet<{ tasks: TaskSummary[] }>(`/api/teacher/tasks${query}`, { signal })
+}
+
+export function setTaskArchived(taskId: string, archived: boolean) {
+  return apiPost<{ archived: boolean }>(
+    `/api/teacher/tasks/${encodeURIComponent(taskId)}/archive`, { archived },
+  )
 }
 
 export function createTask(input: {

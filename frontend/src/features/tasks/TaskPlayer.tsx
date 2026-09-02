@@ -144,6 +144,10 @@ export function TaskPlayer({
   const [demoChecked, setDemoChecked] = useState(false)
   const [hints, setHints] = useState<Set<string>>(new Set())
   const [step, setStep] = useState(0)
+  /* Which question is on screen, in paced mode. One at a time, because a page
+     of eight questions reads as a wall — a child answers the one in front of
+     them and the rail says how far along they are. */
+  const [qIndex, setQIndex] = useState(0)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -173,6 +177,37 @@ export function TaskPlayer({
   })
 
   const elapsed = () => Math.round((Date.now() - startedAt.current) / 1000)
+
+  /* The child's live run: one question at a time with a progress rail. Every
+     review surface — a submitted paper, the teacher's rehearsal, the review
+     screen — keeps the full scroll, because reading back is a different job
+     from answering. */
+  const paced = !readOnly && !result && !demo && !teacher
+
+  const isAnswered = useCallback((question: LearnerQuestion) => {
+    const given = answers[question.id]
+    return given !== undefined && given !== '' &&
+      !(Array.isArray(given) && given.length === 0)
+  }, [answers])
+
+  /* Reopening the paper resumes it: the first question still blank is where
+     the child left off, and a deck they already walked past is not replayed. */
+  useEffect(() => {
+    if (!paced || !Object.keys(initialAnswers ?? {}).length) return
+    for (let index = 0; index < steps.length; index += 1) {
+      const component = steps[index]
+      if (component === 'presentation') continue
+      const items = questionsIn(content, component)
+      const position = items.findIndex((question) =>
+        question.scored !== false && !isAnswered(question))
+      if (position !== -1) {
+        setStep(index)
+        setQIndex(position)
+        return
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resume once, on mount
+  }, [])
 
   /* Debounced autosave. The comparison against the last saved payload is what
      keeps a re-render — or a reorder that produced the same array — from
@@ -229,6 +264,29 @@ export function TaskPlayer({
   const shown = result ? (result.content ?? content) : content
   const done = Boolean(result) || readOnly || (demo && demoChecked)
 
+  const items = current === 'presentation' ? [] : questionsIn(shown, current)
+  const clampedQ = Math.min(qIndex, Math.max(items.length - 1, 0))
+  const atFirstItem = !paced || current === 'presentation' || clampedQ <= 0
+  const atLastItem = !paced || current === 'presentation' ||
+    items.length === 0 || clampedQ >= items.length - 1
+  const hasBack = paced ? (step > 0 || !atFirstItem) : step > 0
+  const hasNext = paced ? (!atLastItem || step < steps.length - 1) : step < steps.length - 1
+
+  const goNext = () => {
+    if (paced && !atLastItem) { setQIndex(clampedQ + 1); return }
+    setStep((position) => position + 1)
+    setQIndex(0)
+  }
+  const goBack = () => {
+    if (paced && !atFirstItem) { setQIndex(clampedQ - 1); return }
+    const previous = steps[step - 1]
+    setStep((position) => position - 1)
+    // Stepping back into a question part lands on its LAST question — the one
+    // next to where the child just was — not back at its start.
+    setQIndex(paced && previous && previous !== 'presentation'
+      ? Math.max(questionsIn(shown, previous).length - 1, 0) : 0)
+  }
+
   /* Marked here, from the key, and only once the teacher asks. Computed per
      render rather than stored, so "try again" is a flag flip and cannot leave
      a stale verdict behind. */
@@ -240,15 +298,50 @@ export function TaskPlayer({
   }
 
   return (
-    <div className="yv-player">
-      {steps.length > 1 ? (
+    <div className={`yv-player${paced ? ' yv-player--paced' : ''}`}>
+      {paced ? (
+        /* The task as a route: its parts in order, each question part carrying
+           its own answered/total checkpoint. Always drawn — even one part
+           deserves its counter — so a child sees the shape of the whole task
+           before the first question. */
+        <nav className="yv-player__timeline" aria-label={t('tasks.steps.label')}>
+          {steps.map((component, index) => {
+            const parts = component === 'presentation' ? []
+              : questionsIn(shown, component).filter(
+                (question) => question.scored !== false)
+            const answered = parts.filter(isAnswered).length
+            const complete = parts.length > 0 ? answered >= parts.length : step > index
+            return (
+              <button
+                key={component} type="button"
+                className={`yv-player__tlStop${index === step ? ' is-at' : ''}${
+                  complete ? ' is-done' : ''}`}
+                aria-current={index === step ? 'step' : undefined}
+                onClick={() => { setStep(index); setQIndex(0) }}
+              >
+                <span className="yv-player__tlDot" aria-hidden="true">
+                  {complete ? <Icon name="check" size={13} />
+                    : <Icon name={component === 'presentation' ? 'book'
+                      : component === 'test' ? 'document' : 'click'} size={13} />}
+                </span>
+                <span className="yv-player__tlLabel">
+                  {t(`tasks.component.${component}`)}
+                </span>
+                {parts.length > 0 ? (
+                  <span className="yv-player__tlCount">{answered}/{parts.length}</span>
+                ) : null}
+              </button>
+            )
+          })}
+        </nav>
+      ) : steps.length > 1 ? (
         <nav className="yv-player__steps" aria-label={t('tasks.steps.label')}>
           {steps.map((component, index) => (
             <button
               key={component} type="button"
               className={`yv-player__step${index === step ? ' is-at' : ''}`}
               aria-current={index === step ? 'step' : undefined}
-              onClick={() => setStep(index)}
+              onClick={() => { setStep(index); setQIndex(0) }}
             >
               <Icon name={component === 'presentation' ? 'book'
                 : component === 'test' ? 'document' : 'click'} size={15} />
@@ -267,6 +360,75 @@ export function TaskPlayer({
           slideActions={slideActions}
           onFinished={() => { if (step < steps.length - 1) { /* the child advances */ } }}
         />
+      ) : paced ? (
+        /* The live run: one question on stage, a rail alongside saying how far
+           along the paper is and which questions still wait. */
+        <div className="yv-player__paced">
+          <aside className="yv-player__rail" aria-label={t('tasks.paced.rail')}>
+            <p className="yv-player__railCount" dir="auto">
+              {t('tasks.paced.progress', {
+                done: String(scored.length - unanswered.length),
+                all: String(scored.length),
+              })}
+            </p>
+            <span className="yv-player__railBar" aria-hidden="true">
+              <span className="yv-player__railFill" style={{
+                inlineSize: scored.length
+                  ? `${Math.round(((scored.length - unanswered.length) / scored.length) * 100)}%`
+                  : '0%',
+              }} />
+            </span>
+            <ol className="yv-player__railDots">
+              {items.map((question, index) => (
+                <li key={`${question.id}:${index}`}>
+                  <button
+                    type="button"
+                    className={`yv-player__railDot${index === clampedQ ? ' is-at' : ''}${
+                      question.scored === false || isAnswered(question) ? ' is-done' : ''}`}
+                    aria-current={index === clampedQ ? 'step' : undefined}
+                    aria-label={t('tasks.paced.goto', { n: String(index + 1) })}
+                    onClick={() => setQIndex(index)}
+                  >
+                    {index + 1}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </aside>
+
+          <div className="yv-player__pacedMain">
+            {current === 'test' && content.test?.time_limit_minutes ? (
+              <p className="yv-player__limit">
+                <Icon name="clock" size={15} />
+                {t('tasks.test.limit', { n: String(content.test.time_limit_minutes) })}
+              </p>
+            ) : null}
+            <p className="yv-player__position" dir="auto">
+              {t('tasks.paced.position', {
+                n: String(clampedQ + 1), all: String(items.length),
+              })}
+            </p>
+            {items.length > 0 ? (
+              items[clampedQ].scored === false ? (
+                <StudyBlock key={`${items[clampedQ].id}:${clampedQ}`}
+                            block={items[clampedQ] as never} />
+              ) : (
+                <QuestionCard
+                  key={`${items[clampedQ].id}:${clampedQ}`}
+                  question={items[clampedQ]}
+                  index={clampedQ}
+                  value={answers[items[clampedQ].id]}
+                  onChange={(value) => answer(items[clampedQ].id, value)}
+                  readOnly={done}
+                  verdict={demoVerdict(items[clampedQ])}
+                  showHint={hints.has(items[clampedQ].id)}
+                  onAskHint={() => setHints((current) =>
+                    new Set(current).add(items[clampedQ].id))}
+                />
+              )
+            ) : null}
+          </div>
+        </div>
       ) : (
         <div className="yv-player__questions">
           {current === 'test' && content.test?.time_limit_minutes ? (
@@ -301,16 +463,14 @@ export function TaskPlayer({
       )}
 
       <footer className="yv-player__foot">
-        {step > 0 ? (
-          <button type="button" className="sp-btn sp-btn--ghost"
-                  onClick={() => setStep((position) => position - 1)}>
+        {hasBack ? (
+          <button type="button" className="sp-btn sp-btn--ghost" onClick={goBack}>
             {t('tasks.back')}
           </button>
         ) : <span />}
 
-        {step < steps.length - 1 ? (
-          <button type="button" className="sp-btn yv-player__next"
-                  onClick={() => setStep((position) => position + 1)}>
+        {hasNext ? (
+          <button type="button" className="sp-btn yv-player__next" onClick={goNext}>
             {t('tasks.next')}
             <Icon name="arrow" size={16} />
           </button>

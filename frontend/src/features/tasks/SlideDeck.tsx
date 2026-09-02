@@ -136,6 +136,22 @@ export function SlideDeck({ slides, onFinished, subject, theme, teacher, slideAc
       aria-roledescription="carousel"
       data-ground={ground}
     >
+      {/* A visible way out of fullscreen. ESC works, but a projector-side
+          teacher should not need to know a keyboard shortcut (#486). */}
+      {presenting ? (
+        <button
+          type="button"
+          className="yv-deck__exit"
+          aria-label={t('tasks.deck.exit')}
+          title={t('tasks.deck.exit')}
+          onClick={() => {
+            if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+            setPresenting(false)
+          }}
+        >
+          <Icon name="close" size={18} />
+        </button>
+      ) : null}
       {/* The frame measures; the stage is measured. They are separate elements
           because a scaled element reports its scaled size, and a fit computed
           from that converges on zero. */}

@@ -128,6 +128,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
     from app.agents import tutor_decision
+    from app.auth import repository as auth_repository
     from app.services import (
         direct_messages, events, kudos, learner_activity, learner_signals,
         mentoring, mentoring_assist, notifications, org_repository,
@@ -137,6 +138,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     from app.services.rewards import wallet
 
     index_steps = (
+        # Every login resolves a username; without this it scans the collection.
+        ("users", auth_repository.ensure_indexes),
         # Authorization hot path: every teacher read resolves links + enrollments.
         ("org", org_repository.ensure_indexes),
         # The replay cursor query, (teacher_id, seq).

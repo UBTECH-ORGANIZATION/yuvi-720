@@ -556,7 +556,7 @@ export function LessonPage() {
         )}
 
         {session && !loading && !error && !lockedOut && (
-          <section className="learning-player-shell" aria-label={t('learning.lesson.frameLabel')}>
+          <section className="learning-player-shell" data-tour="learner.lessonStage" aria-label={t('learning.lesson.frameLabel')}>
             {!session.language_supported && (
               <div className="learning-player-notice" role="status">
                 <Icon name="alert" size={16} />
@@ -597,47 +597,47 @@ export function LessonPage() {
                   )}
                 </div>
               ) : (
-              <>
-              {frameState === 'loading' && (
-                <div className="learning-player-loading" role="status">
-                  <span className="learning-player-spinner" aria-hidden="true" />
-                  <span>{t('learning.lesson.frameLoading')}</span>
-                </div>
-              )}
-              {frameState === 'error' && (
-                <div className="learning-player-loading learning-player-loading--error" role="alert">
-                  <Icon name="alert" size={26} />
-                  <strong>{t('learning.lesson.frameError')}</strong>
-                  <span>{t('learning.lesson.frameError.body')}</span>
-                  <button
-                    className="learning-primary-button"
-                    type="button"
-                    onClick={() => setReloadKey((key) => key + 1)}
-                  >
-                    {t('learning.lesson.frameError.retry')}
-                  </button>
-                </div>
-              )}
-              <iframe
-                key={session.session_id}
-                className="learning-provider-frame"
-                src={session.player_url}
-                title={session.component.title}
-                sandbox="allow-scripts allow-same-origin"
-                // `storage-access` grants nothing by itself: it is the embedder's
-                // half of the Storage Access API, without which a player that
-                // asks for its own cookies in a frame is refused before it can
-                // even prompt. Harmless for content that never asks.
-                allow="autoplay; storage-access"
-                onLoad={handleFrameLoad}
-              />
-              <LessonPointLayer
-                pointer={coachPointer}
-                playback={playback}
-                language={language}
-                onDismiss={() => setCoachPointer(null)}
-              />
-              </>
+                <>
+                  {frameState === 'loading' && (
+                    <div className="learning-player-loading" role="status">
+                      <span className="learning-player-spinner" aria-hidden="true" />
+                      <span>{t('learning.lesson.frameLoading')}</span>
+                    </div>
+                  )}
+                  {frameState === 'error' && (
+                    <div className="learning-player-loading learning-player-loading--error" role="alert">
+                      <Icon name="alert" size={26} />
+                      <strong>{t('learning.lesson.frameError')}</strong>
+                      <span>{t('learning.lesson.frameError.body')}</span>
+                      <button
+                        className="learning-primary-button"
+                        type="button"
+                        onClick={() => setReloadKey((key) => key + 1)}
+                      >
+                        {t('learning.lesson.frameError.retry')}
+                      </button>
+                    </div>
+                  )}
+                  <iframe
+                    key={session.session_id}
+                    className="learning-provider-frame"
+                    src={session.player_url}
+                    title={session.component.title}
+                    sandbox="allow-scripts allow-same-origin"
+                    // `storage-access` grants nothing by itself: it is the embedder's
+                    // half of the Storage Access API, without which a player that
+                    // asks for its own cookies in a frame is refused before it can
+                    // even prompt. Harmless for content that never asks.
+                    allow="autoplay; storage-access"
+                    onLoad={handleFrameLoad}
+                  />
+                  <LessonPointLayer
+                    pointer={coachPointer}
+                    playback={playback}
+                    language={language}
+                    onDismiss={() => setCoachPointer(null)}
+                  />
+                </>
               )}
               {reentryOpen && (
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
@@ -728,10 +728,10 @@ export function LessonPage() {
                     {!progressionReady
                       ? t('learning.lesson.completionDialog.progressing')
                       : whatNowOpen
-                      ? whatNowMessage
-                      : nextComponent
-                      ? t('learning.lesson.completionDialog.next', { title: nextComponent.title })
-                      : t('learning.lesson.completed.body')}
+                        ? whatNowMessage
+                        : nextComponent
+                          ? t('learning.lesson.completionDialog.next', { title: nextComponent.title })
+                          : t('learning.lesson.completed.body')}
                   </p>
                   {pathGrew && whatNowOpen && (
                     <p className="learning-whatnow__grew">

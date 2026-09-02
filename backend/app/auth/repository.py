@@ -80,7 +80,7 @@ ALLOWED_PREFERENCES = set(DEFAULT_PREFERENCES)
 # The learner slug is versioned: completion is permanent and there is no
 # un-complete API, so re-offering a redesigned tour means adding `learner.v2`
 # here rather than clearing anybody's history.
-TOUR_SLUGS = frozenset({"teacher", "learner.v1"})
+TOUR_SLUGS = frozenset({"teacher", "learner.v1", "lesson.v1"})
 
 
 def _now() -> str:
@@ -325,3 +325,42 @@ async def set_agency_started_at(user_id: str, value: Optional[str]) -> None:
     """Onboarding span marker: set on first mapping load, cleared on completion
     (drives the agency `completed` duration = results-approved − mapping-start)."""
     await _set_fields(user_id, {"agency_started_at": value})
+
+
+_indexes_ready = False
+
+
+async def ensure_indexes() -> None:
+    """Index the login lookup, and keep handles unique.
+
+    `get_user_by_username` runs `find_one({"username": ...})` on every single
+    login, and this collection had no index at all — so each one scanned every
+    account in the deployment. Invisible in a demo, and the sharpest spike of a
+    school day is thousands of children signing in inside five minutes.
+
+    Unique because a duplicate handle is a security problem, not just an
+    untidiness: `find_one` would return whichever of the two Mongo reached
+    first, so which account you log into would be arbitrary. Nothing else
+    enforces this — `upsert_user` keys on `_id` alone.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = _collection()
+    if collection is None:
+        return
+    try:
+        await collection.create_index("username", name="username_unique", unique=True)
+        _indexes_ready = True
+        return
+    except Exception as exc:
+        print(f"⚠️ users unique index refused ({type(exc).__name__}) — "
+              "duplicate usernames? falling back to a non-unique index")
+
+    # Without this second attempt a single duplicate handle would leave the
+    # login scan in place, which is the failure this function exists to remove.
+    try:
+        await collection.create_index("username", name="username_lookup")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ users index setup skipped: {type(exc).__name__}")
