@@ -52,13 +52,19 @@ import {
   type TeacherTaskContent,
 } from '../../../services/tasks'
 import { LaunchDialog, type LaunchChoice } from './LaunchDialog'
-import { clearAudience, readAudience } from './taskSeed'
+import { clearAudience, putSeed, readAudience } from './taskSeed'
 import './teacher-tasks.css'
 
 /** Three parts, matching the player exactly — see the note on its own `ORDER`.
  *  `interactive` content still renders, inside practice. */
 const ORDER: TaskComponent[] = ['presentation', 'practice', 'test']
 const POLL_MS = 4000
+
+/** The stable reasons the server refuses an edit — each has its own Hebrew
+ *  sentence. Anything else falls back to the generic apology (#491). */
+const EDIT_ERROR_CODES = new Set([
+  'already_sent', 'bad_content', 'not_found', 'bad_component',
+])
 
 export function TaskReviewPage({ taskId }: { taskId: string }) {
   const { t } = useI18n()
@@ -80,7 +86,9 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
      for the case where the teacher is unhappy with what Yuvi wrote, and that is
      not the common case — reading it is. */
   const [editing, setEditing] = useState(false)
-  const [failed, setFailed] = useState(false)
+  /* null = no failure; '' = failed for an unknown reason; otherwise the
+     backend's stable error code, spoken to the teacher in their language. */
+  const [failed, setFailed] = useState<string | null>(null)
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -125,12 +133,12 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
 
   const act = async (key: string, run: () => Promise<unknown>) => {
     setBusy(key)
-    setFailed(false)
+    setFailed(null)
     try {
       await run()
       await load()
-    } catch {
-      setFailed(true)
+    } catch (error) {
+      setFailed((error as { code?: string })?.code ?? '')
     } finally {
       setBusy(null)
     }
@@ -186,6 +194,42 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
                       `/teacher/tasks/${encodeURIComponent(taskId)}`)}>
               <Icon name="chart" size={15} />
               {t('tch.tasks.progress.link')}
+            </button>
+          ) : null}
+          {/* Back to SETTINGS, not just to the list. A teacher unhappy with
+              the result used to have to retype the whole form; this reopens
+              the builder pre-filled with this task's spec (#486). What comes
+              out is a new task — the generated one stays until deleted. */}
+          {data !== null ? (
+            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                    title={t('tch.tasks.backToSettingsNote')}
+                    onClick={() => {
+                      const spec = (data.task.spec ?? {}) as Record<string, unknown> & {
+                        title?: string; topic?: string; difficulty?: 'easy' | 'medium' | 'hard'
+                        notes?: string; components?: string[]
+                        source?: { objective_id?: string | null } | null
+                        practice?: { question_count?: number }
+                        test?: { question_count?: number }
+                        presentation?: { slide_count?: number }
+                      }
+                      putSeed({
+                        title: spec.title ?? '',
+                        topic: spec.topic ?? '',
+                        objectiveId: spec.source?.objective_id ?? null,
+                        learnerIds: readAudience(taskId),
+                        difficulty: spec.difficulty,
+                        notes: spec.notes,
+                        components: spec.components,
+                        counts: {
+                          presentation: spec.presentation?.slide_count,
+                          practice: spec.practice?.question_count,
+                          test: spec.test?.question_count,
+                        },
+                      })
+                      navigate('/teacher/tasks')
+                    }}>
+              <Icon name="note" size={15} />
+              {t('tch.tasks.backToSettings')}
             </button>
           ) : null}
           <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
@@ -260,8 +304,28 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
             </p>
           ) : null}
 
-          {failed ? (
-            <p className="tch-builder__failed" dir="auto">{t('tch.tasks.reviewFailed')}</p>
+          {failed !== null ? (
+            <p className="tch-builder__failed" dir="auto">
+              {EDIT_ERROR_CODES.has(failed)
+                ? t(`tch.tasks.editError.${failed}`)
+                : t('tch.tasks.reviewFailed')}
+            </p>
+          ) : null}
+
+          {/* Yuvi rewriting a component takes long enough for a teacher to
+              conclude the screen died — the button's tiny label is not enough
+              feedback for a minute-long wait. One loud strip, present for the
+              whole of it (#489). */}
+          {busy !== null && busy !== 'launch' ? (
+            <p className="tch-review__workingBar" role="status" aria-live="polite" dir="auto">
+              <svg className="sp-spinner" width={20} height={20} viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
+                <path d="M12 3a9 9 0 1 0 9 9" />
+              </svg>
+              {t(busy.startsWith('edit:') ? 'tch.tasks.workingEdit'
+                : busy.startsWith('regen:') ? 'tch.tasks.workingRegen'
+                : 'tch.tasks.working')}
+            </p>
           ) : null}
 
           {/* One toolbar, directly above the thing it controls: how to view it,

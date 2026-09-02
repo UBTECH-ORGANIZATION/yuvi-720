@@ -20,7 +20,7 @@
  * tab shows — counts only, never a ranking of children.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
   Card, EmptyState, ErrorState, Hint, Icon, Panel, SkeletonCard, StatusPill,
@@ -122,11 +122,88 @@ export function TeacherLearningsPage() {
 
   /* A different class or a different subject lane is a different map — an open
      objective from the old one must not keep the teacher trapped inside it,
-     and the catalogue folds back down too. */
+     and the catalogue folds back down too. Only on a REAL change, though: the
+     scope provider settles groupId/subject asynchronously after mount, and
+     that settling used to fire this reset a beat after the return-restore
+     (#513) had reopened the teacher's objective, silently wiping it. */
+  const prevLens = useRef<{ groupId: string | null; subject: string | null }>(
+    { groupId: null, subject: null })
   useEffect(() => {
-    setOpenObjective(null)
-    setShowCatalog(false)
+    const prev = prevLens.current
+    prevLens.current = { groupId: groupId || null, subject: subject || null }
+    const really = (before: string | null, now: string) =>
+      before !== null && before !== (now || null)
+    if (really(prev.groupId, groupId ?? '') || really(prev.subject, subject ?? '')) {
+      setOpenObjective(null)
+      setShowCatalog(false)
+    }
   }, [groupId, subject])
+
+  /* Scroll memory (#513). The shell's scroller outlives the route, but the
+     learning page it navigates to is shorter, so the browser clamps the
+     position while the teacher is away and "back to the list" lands at the
+     top. The position is saved as the teacher scrolls; it is restored only
+     when the visit is a RETURN — the learning page raises a flag on mount —
+     so a fresh arrival from the dashboard still starts at the top. */
+  useEffect(() => {
+    const scroller = document.querySelector('.sp-teacher-shell__main')
+    if (!scroller) return
+    const save = () => {
+      try {
+        // While a return is pending, the browser's clamp-to-top on the fresh
+        // mount fires scroll events too — those must not overwrite the
+        // position the teacher actually left at.
+        if (sessionStorage.getItem('yuvi.teacher.learningsReturn') === '1') return
+        sessionStorage.setItem('yuvi.teacher.learningsScroll', String(scroller.scrollTop))
+      } catch { /* private mode — the feature quietly does not exist */ }
+    }
+    scroller.addEventListener('scroll', save, { passive: true })
+    return () => scroller.removeEventListener('scroll', save)
+  }, [])
+  /* Which objective the teacher was inside — remembered alongside the scroll,
+     because restoring a position measured against the EXPANDED view onto the
+     collapsed objectives map just gets clamped back to the top. The return
+     state is read ONCE, during the first render, before the save effects
+     below get a chance to overwrite it with this mount's blank state. */
+  const returning = useRef<{ top: number; objective: string } | null>(null)
+  if (returning.current === null) {
+    let top = 0
+    let objective = ''
+    try {
+      // Peek, never consume: the page can mount twice in quick succession
+      // (the first mount is torn down before its data arrives), and a flag
+      // eaten by the throwaway mount left the real one with nothing to
+      // restore. The flag is cleared only when the restore actually applies.
+      if (sessionStorage.getItem('yuvi.teacher.learningsReturn') === '1') {
+        top = Number(sessionStorage.getItem('yuvi.teacher.learningsScroll') ?? 0)
+        objective = sessionStorage.getItem('yuvi.teacher.learningsObjective') ?? ''
+      }
+    } catch { /* private mode */ }
+    returning.current = { top, objective }
+  }
+  /* Written only after a deliberate change — the mount echo (null before the
+     teacher touched anything) must not blank what the previous visit saved. */
+  const objectiveDirty = useRef(false)
+  useEffect(() => {
+    if (openObjective === null && !objectiveDirty.current) return
+    objectiveDirty.current = true
+    try { sessionStorage.setItem('yuvi.teacher.learningsObjective', openObjective ?? '') }
+    catch { /* private mode */ }
+  }, [openObjective])
+  useEffect(() => {
+    if (!view) return
+    const saved = returning.current
+    if (!saved || (!saved.top && !saved.objective)) return
+    returning.current = { top: 0, objective: '' }
+    try { sessionStorage.removeItem('yuvi.teacher.learningsReturn') } catch { /* ok */ }
+    if (saved.objective) setOpenObjective(saved.objective)
+    if (!saved.top) return
+    // Two frames: one for the objective's rows to mount, one for layout —
+    // restoring before the list has height would just be clamped to the top.
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.querySelector('.sp-teacher-shell__main')?.scrollTo({ top: saved.top })
+    }))
+  }, [view])
 
   const filtered = useMemo(() => {
     const rows = view?.learnings ?? []

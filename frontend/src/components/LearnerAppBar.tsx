@@ -3,6 +3,7 @@ import { useRoute, navigate } from '../app/router'
 import { useI18n } from '../i18n/I18nProvider'
 import { useBrain } from '../providers/BrainProvider'
 import { getMyUnread } from '../services/directMessages'
+import { listMyTasks } from '../services/tasks'
 import { subscribe } from '../services/realtime'
 import { AppBar } from './AppBar'
 import { Icon } from './primitives'
@@ -39,6 +40,33 @@ function useMyUnread(pathname: string) {
   return count
 }
 
+/** Tasks still waiting for the child: assigned, open, and not yet handed in.
+ *  Re-counted on entering or leaving the tasks lane — where the number changes
+ *  by the child's own hand — and slowly in the background for the teacher's. */
+function useOpenTasks(pathname: string) {
+  const [count, setCount] = useState(0)
+  const onTasks = pathname.startsWith('/tasks')
+
+  useEffect(() => {
+    let active = true
+    const read = () => {
+      listMyTasks()
+        .then((result) => {
+          if (!active) return
+          setCount(result.tasks.filter((task) => (
+            !task.closed && task.status !== 'submitted' && task.status !== 'graded'
+          )).length)
+        })
+        .catch(() => { if (active) setCount(0) })
+    }
+    read()
+    const timer = window.setInterval(read, 120_000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [onTasks])
+
+  return count
+}
+
 type LearnerSection = 'dashboard' | 'learning' | 'tasks' | 'goals' | 'chat' | 'calendar'
 
 interface LearnerAppBarProps {
@@ -61,6 +89,7 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   const { brain } = useBrain()
   const activeSection = sectionForRoute(pathname)
   const unread = useMyUnread(pathname)
+  const openTasks = useOpenTasks(pathname)
   const displayName = studentName || brain?.identity.display_name || t('sdash.learnerFallback')
 
   const navigation = (
@@ -91,6 +120,14 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
       >
         <Icon name="backpack" size={16} />
         <span>{t('sdash.nav.tasks')}</span>
+        {/* Tasks waiting to be done — same contract as the chat badge, so a
+            child knows there is homework without opening the list. */}
+        {openTasks > 0 && (
+          <span className="learner-app-nav__badge"
+                aria-label={t('sdash.nav.openTasks', { count: String(openTasks) })}>
+            {openTasks > 99 ? '99+' : openTasks}
+          </span>
+        )}
       </button>
       <button
         className={activeSection === 'goals' ? 'is-active' : ''}
@@ -133,6 +170,11 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   return (
     <AppBar
       center={navigation}
+      className="app-bar--learner"
+      /* The trailing cluster carries the wide studio button, so the nav runs
+         out of room well before the shared 1200 default — the two collided
+         instead of folding. Gal tuned this by eye: fold at 1350. */
+      compactBelow={1350}
       trailing={
         <div className="learner-app-bar__trailing">
           <StudioLaunchButton />

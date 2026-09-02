@@ -71,6 +71,7 @@ async def task_summary(task: dict[str, Any]) -> dict[str, Any]:
         "target": task.get("target"),
         "group_id": task.get("group_id"),
         "components": (task.get("spec") or {}).get("components") or [],
+        "archived": bool(task.get("archived")),
         "deadline": task.get("deadline"),
         "created_at": task.get("created_at"),
         "assigned": len(activations),

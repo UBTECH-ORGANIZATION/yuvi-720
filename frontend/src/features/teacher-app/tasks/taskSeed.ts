@@ -41,6 +41,13 @@ export interface TaskSeed {
   objectiveId?: string | null
   /** Who the finding was about. A suggestion for the send dialog, never a send. */
   learnerIds: string[]
+  /* The review screen's "back to settings" carries the WHOLE spec, so changing
+     one detail of a generated task is not typing the form again (#486). All
+     optional: a gap-row seed still sends only title/topic/audience. */
+  difficulty?: 'easy' | 'medium' | 'hard'
+  notes?: string
+  components?: string[]
+  counts?: { presentation?: number; practice?: number; test?: number }
 }
 
 function audienceKey(taskId: string): string {
@@ -75,6 +82,13 @@ export function takeSeed(): TaskSeed | null {
       learnerIds: Array.isArray(parsed.learnerIds)
         ? parsed.learnerIds.filter((id): id is string => typeof id === 'string')
         : [],
+      ...(parsed.difficulty === 'easy' || parsed.difficulty === 'medium' || parsed.difficulty === 'hard'
+        ? { difficulty: parsed.difficulty } : {}),
+      ...(typeof parsed.notes === 'string' && parsed.notes ? { notes: parsed.notes } : {}),
+      ...(Array.isArray(parsed.components)
+        ? { components: parsed.components.filter((c): c is string => typeof c === 'string') }
+        : {}),
+      ...(parsed.counts && typeof parsed.counts === 'object' ? { counts: parsed.counts } : {}),
     }
   } catch {
     return null

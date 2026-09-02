@@ -11,6 +11,44 @@ from typing import Any
 from app.services.tasks import store
 
 
+def _answered(value: Any) -> bool:
+    """The player's own definition of "answered", mirrored: an empty string or
+    an empty list is a question still waiting, not one done."""
+    if value is None or value == "":
+        return False
+    if isinstance(value, list) and not value:
+        return False
+    return True
+
+
+async def _progress(task_id: str, components: list[str],
+                    answers: dict[str, Any]) -> dict[str, Any]:
+    """How far along each part is: `{"practice": {"answered": 3, "total": 8}}`.
+
+    The presentation carries no per-question state, so it is simply absent —
+    the card renders it as a part with no counter. Counts only scored
+    questions, so study cards do not make a finished part look unfinished.
+    """
+    progress: dict[str, Any] = {}
+    for component in components:
+        if component == "presentation":
+            continue
+        row = await store.get_content(task_id, component)
+        questions = [
+            question for question in
+            (((row or {}).get("content") or {}).get("questions") or [])
+            if question.get("scored") is not False
+        ]
+        if not questions:
+            continue
+        progress[component] = {
+            "answered": sum(1 for question in questions
+                            if _answered(answers.get(str(question.get("id"))))),
+            "total": len(questions),
+        }
+    return progress
+
+
 async def list_for_learner(learner_id: str) -> list[dict[str, Any]]:
     """Return one learner-safe row per task opening, newest first."""
     rows = {
@@ -42,6 +80,9 @@ async def list_for_learner(learner_id: str) -> list[dict[str, Any]]:
             "completed_at": attempt.get("completed_at"),
             "closed": bool(launch and launch.get("status") != "active"),
             "feedback": attempt.get("feedback"),
+            "progress": await _progress(
+                task_id, (task.get("spec") or {}).get("components") or [],
+                attempt.get("answers") or {}),
         })
     tasks.reverse()
     return tasks

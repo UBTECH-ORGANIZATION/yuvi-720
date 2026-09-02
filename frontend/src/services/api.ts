@@ -52,9 +52,15 @@ async function request<T>(method: string, path: string, body?: unknown, init?: R
     if (!response.ok) {
       // Carry the status on the error: callers that must distinguish an expected
       // refusal (a 409 for a component the route has not opened) from a genuine
-      // failure should not have to parse the message to do it.
-      const failure = new Error(`${method} ${path} failed with ${response.status}`) as Error & { status: number }
+      // failure should not have to parse the message to do it. The body often
+      // says WHY ({"error": "bad_content"}) — carry that too, so a screen can
+      // tell the teacher the reason instead of a generic apology (#491).
+      const failure = new Error(`${method} ${path} failed with ${response.status}`) as Error & { status: number; code?: string }
       failure.status = response.status
+      try {
+        const payload = await response.json() as { error?: unknown }
+        if (typeof payload?.error === 'string' && payload.error) failure.code = payload.error
+      } catch { /* not JSON — the status is all we have */ }
       throw failure
     }
     return await (response.json() as Promise<T>)

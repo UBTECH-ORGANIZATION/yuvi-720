@@ -24,10 +24,12 @@ interface AppBarProps {
    *  carrying more in its leading slot needs to fold sooner — the teacher's,
    *  with three scope segments, runs out at about 1265. */
   compactBelow?: number
+  /** Extra class on the header, for per-lane compact layout overrides. */
+  className?: string
 }
 
 export function AppBar({
-  activeStep, center, leading, trailing, compactBelow = 1200,
+  activeStep, center, leading, trailing, compactBelow = 1200, className,
 }: AppBarProps) {
   const { t } = useI18n()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
@@ -66,7 +68,8 @@ export function AppBar({
   }, [isNavigationOpen])
 
   return (
-    <header ref={appBarRef} className={`app-bar${isCompact ? ' is-compact' : ''}`}>
+    <header ref={appBarRef}
+            className={`app-bar${isCompact ? ' is-compact' : ''}${className ? ` ${className}` : ''}`}>
       <div className="app-bar-left">
         <div className="app-bar-brand" aria-label={t('app.brand')}>
           <BrandLogo />

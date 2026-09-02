@@ -989,6 +989,11 @@
   flex-wrap: wrap;
 }
 
+/* The opened "why" is a paragraph, not a chip — it takes a full row of its
+   own under the actions instead of squeezing into their flex line. */
+.tch-difficulty__actions .tch-evidence__raw,
+.tch-difficulty__actions .tch-why { flex-basis: 100%; }
+
 /* The row's two quick actions, icon-only: worded buttons repeated on every gap
    made the actions the loudest text on the card. Square, and paired tighter
    than the row gap so they read as one small toolbar; each names itself via
