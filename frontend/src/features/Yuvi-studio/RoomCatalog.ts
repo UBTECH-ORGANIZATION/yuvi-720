@@ -1051,19 +1051,26 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
         group.add(at(kit.rbox(1.15, 0.05, 0.26, 0.02, kit.mat('wood', DARKWOOD)), 0, y, 0.11))
         group.add(at(kit.box(1.1, 0.012, 0.02, kit.mat('emissive', 0xffe6b0)), 0, y + 0.03, 0.23))
       }
-      const coin = (x: number, y: number, color: number) => {
+      // Ribbon above each disc, so this reads as medals and not as a second
+      // trophy shelf next to the buyable one (#532).
+      const medal = (x: number, y: number, color: number, ribbon: number) => {
         const disc = at(kit.cyl(0.11, 0.11, 0.02, kit.mat('metal', color), 20), x, y, 0.11)
         disc.rotation.x = Math.PI / 2
         group.add(disc)
         group.add(at(kit.tor(0.115, 0.014, gold), x, y, 0.11))
         const spark = at(kit.sph(0.035, kit.mat('emissive', 0xfff6d8)), x, y, 0.135)
         group.add(spark)
+        for (const side of [-1, 1]) {
+          const strap = at(kit.plane(0.05, 0.19, kit.mat('fabric', ribbon)), x + side * 0.05, y + 0.2, 0.105)
+          strap.rotation.z = side * 0.32
+          group.add(strap)
+        }
       }
-      coin(-0.34, 1.49, 0xe1954e)
-      coin(0, 1.51, 0xa9b7cc)
-      coin(0.34, 1.49, 0xf3c64c)
-      coin(-0.18, 1.97, 0xa9b7cc)
-      coin(0.2, 1.97, 0xf3c64c)
+      medal(-0.34, 1.49, 0xe1954e, 0x4cc9f0)
+      medal(0, 1.51, 0xa9b7cc, 0xff8fd0)
+      medal(0.34, 1.49, 0xf3c64c, 0x5ce67e)
+      medal(-0.18, 1.97, 0xa9b7cc, 0xffd166)
+      medal(0.2, 1.97, 0xf3c64c, 0x4cc9f0)
       return group
     },
   },

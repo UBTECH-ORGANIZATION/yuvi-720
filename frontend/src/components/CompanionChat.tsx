@@ -331,6 +331,10 @@ export function CompanionChat() {
       () => setHandState((value) => (value === 'sending' ? value : 'idle')),
       6000)
   }
+  // `aria-disabled`, not `disabled`: a native disabled button drops out of the
+  // tab order and takes its tooltip with it, so the child is left with a dull
+  // button and no way to learn why it will not respond (#517).
+  const handBlocked = handState === 'sending' || (handCooling && !handRaised)
   const handLabel = handRaised
     ? t('companion.hand.raisedTooltip')
     : handCooling ? t('companion.hand.sent') : t('companion.hand.tooltip')
