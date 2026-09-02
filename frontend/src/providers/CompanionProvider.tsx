@@ -34,6 +34,7 @@ import { useRoute } from '../app/router'
 import { pointerMatchesKey } from '../services/pointer'
 import { useAuth } from './AuthProvider'
 import { useRewards } from './RewardsProvider'
+import { pollLosesScreen } from './questionKey'
 
 /* CompanionProvider — owns Yuvi's live state and paginated server history (F3).
    The prompt window and full transcript remain in Mongo/Cosmos; no localStorage. */
@@ -1318,6 +1319,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // engagement, and schedules the screen's intro.
   const applyQuestionKey = useCallback((key: string | null, source: 'push' | 'poll') => {
     if (key === currentQuestionKeyRef.current) return
+    // A poll that names no screen has lost the position, not moved the learner
+    // to the cover (see `pollLosesScreen`). Adopting it re-tagged the next
+    // message to the Introduction. The support flags above were still taken
+    // from that poll; only the key is held.
+    if (source === 'poll' && pollLosesScreen(key, currentQuestionKeyRef.current)) return
     const movedScreen = introParts(key).item !== introParts(currentQuestionKeyRef.current).item
     currentQuestionKeyRef.current = key
     setCurrentQuestionKey(key)
