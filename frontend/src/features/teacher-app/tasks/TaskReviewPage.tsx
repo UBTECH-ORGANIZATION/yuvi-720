@@ -52,7 +52,7 @@ import {
   type TeacherTaskContent,
 } from '../../../services/tasks'
 import { LaunchDialog, type LaunchChoice } from './LaunchDialog'
-import { clearAudience, putSeed, readAudience } from './taskSeed'
+import { clearAudience, putSeed, readAudience, readOrigin } from './taskSeed'
 import './teacher-tasks.css'
 
 /** Three parts, matching the player exactly — see the note on its own `ORDER`.
@@ -225,6 +225,9 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
                           practice: spec.practice?.question_count,
                           test: spec.test?.question_count,
                         },
+                        // Cancelling the reopened builder lands back on the
+                        // profile this task was started from (#486 follow-up).
+                        returnTo: readOrigin(taskId),
                       })
                       navigate('/teacher/tasks')
                     }}>

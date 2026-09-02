@@ -336,6 +336,30 @@ class GeneratingAWholeTask(unittest.TestCase):
         self.assertEqual(second["status"], "generating")
         self.assertEqual(started, 1)
 
+    def test_a_run_in_flight_is_visible_to_a_plain_read(self):
+        """The review screen's first GET can beat the run's own
+        `status="generating"` write (#490 follow-up): the registry, not the
+        document, says whether a task is being written right now."""
+        task = {"_id": "tsk-3", "status": "draft", "spec": {}}
+
+        async def slow_generate(task_id):
+            await asyncio.sleep(0.05)
+            return task
+
+        async def scenario():
+            with patch("app.services.tasks.store.get_task", AsyncMock(return_value=task)):
+                with patch.object(generate, "generate_task", AsyncMock(side_effect=slow_generate)):
+                    before = generate.is_running("tsk-3")
+                    await generate.get_or_start("tsk-3")
+                    during = generate.is_running("tsk-3")
+                    await asyncio.sleep(0.1)
+                    return before, during, generate.is_running("tsk-3")
+
+        before, during, after = run(scenario())
+        self.assertFalse(before)
+        self.assertTrue(during)
+        self.assertFalse(after)
+
 
 class TheRubricGrader(unittest.TestCase):
     QUESTION = {

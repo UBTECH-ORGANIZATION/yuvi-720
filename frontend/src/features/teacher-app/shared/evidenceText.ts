@@ -226,7 +226,7 @@ const TEMPLATES: Template[] = [
           ? t('tch.evidence.sent.det.misconception')
           : t('tch.evidence.sent.det.misconceptionN', { count: streak }))
         const tag = typeof raw.misconception === 'string' ? raw.misconception.trim() : ''
-        if (tag) parts.push(t('tch.evidence.sent.det.pattern', { tag }))
+        if (tag) parts.push(t('tch.evidence.sent.det.pattern', { tag: misconceptionLabel(tag, t) }))
         // What "failure" means here, said once and in the same breath as the
         // count — a number of failures is only readable next to its definition.
         parts.push(t('tch.evidence.sent.det.whatCounts'))
@@ -363,7 +363,11 @@ const TEMPLATES: Template[] = [
       const samples = Array.isArray(raw.sample_misconceptions) ? raw.sample_misconceptions : []
       const parts = samples
         .filter((pair): pair is [string, number] => Array.isArray(pair) && pair.length >= 1)
-        .map(([tag, count]) => (count && count > 1 ? `${tag} ×${count}` : String(tag)))
+        .map(([tag, count]) => {
+          const label = misconceptionLabel(tag, t)
+          return count && count > 1 ? `${label} ×${count}` : label
+        })
+        .filter(Boolean)
       return parts.length
         ? t('tch.evidence.sent.misconceptions', { list: parts.join(' · ') })
         : null
@@ -482,7 +486,7 @@ const TEMPLATES: Template[] = [
     needs: ['tag'],
     consumes: ['tag', 'resolved_at', 'objective_id'],
     render: (raw, t, language) => {
-      const sentence = t('tch.evidence.sent.misconceptionGone', { tag: String(raw.tag) })
+      const sentence = t('tch.evidence.sent.misconceptionGone', { tag: misconceptionLabel(raw.tag, t) })
       return typeof raw.resolved_at === 'string'
         ? `${sentence} ${t('tch.evidence.sent.onDate', {
             date: formatDate(raw.resolved_at, language),
@@ -708,6 +712,22 @@ function list(value: unknown): string[] {
  * Falls back to the generic evidence rendering for a signal nobody has written
  * a sentence for yet — a new backend signal degrades to readable prose rather
  * than to a missing "why?". */
+/* The vendor's misconception tags — `sign-error`, `unit-confusion` — reached
+ * the screen verbatim inside a Hebrew sentence (#511). The vocabulary is the
+ * content's and open-ended, so this is a dictionary for the tags seen so far
+ * and a readable fallback for the rest: dashes and underscores become spaces,
+ * and the tag is quoted so it reads as a name, never as broken copy. */
+const TAG_KEY = /[^a-z0-9]+/g
+
+export function misconceptionLabel(tag: unknown, t: Translate): string {
+  const raw = String(tag ?? '').trim()
+  if (!raw) return ''
+  const key = `tch.misconception.${raw.toLowerCase().replace(TAG_KEY, '_').replace(/^_|_$/g, '')}`
+  const known = t(key)
+  if (known !== key) return known
+  return `“${raw.replace(/[-_]+/g, ' ')}”`
+}
+
 export function describeSignal(
   signal: string,
   value: unknown,

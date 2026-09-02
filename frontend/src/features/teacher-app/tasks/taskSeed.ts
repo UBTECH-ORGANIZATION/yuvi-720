@@ -31,6 +31,7 @@
 
 const SEED_KEY = 'yuvi.teacher.taskSeed'
 const AUDIENCE_PREFIX = 'yuvi.teacher.taskAudience'
+const ORIGIN_PREFIX = 'yuvi.teacher.taskOrigin'
 
 export interface TaskSeed {
   /** What the task is provisionally called. The teacher edits it. */
@@ -48,10 +49,41 @@ export interface TaskSeed {
   notes?: string
   components?: string[]
   counts?: { presentation?: number; practice?: number; test?: number }
+  /* Where the teacher was when they started — a student profile, usually.
+     Cancelling a builder that arrived from there goes BACK there, not to the
+     tasks list the teacher never asked for (#486 follow-up). */
+  returnTo?: string
 }
 
 function audienceKey(taskId: string): string {
   return `${AUDIENCE_PREFIX}:${taskId}`
+}
+
+function originKey(taskId: string): string {
+  return `${ORIGIN_PREFIX}:${taskId}`
+}
+
+/** The screen a task was started from, kept by task id for the review page:
+ *  its "back to settings" reopens the builder, and cancelling THAT must land
+ *  on the profile the teacher came from, not on the list (#486 follow-up).
+ *  Same life as the audience — one tab, until the task is sent. */
+export function putOrigin(taskId: string, path: string | undefined): void {
+  if (!taskId || !path || !path.startsWith('/')) return
+  try {
+    window.sessionStorage.setItem(originKey(taskId), path)
+  } catch {
+    /* see above */
+  }
+}
+
+export function readOrigin(taskId: string): string | undefined {
+  if (!taskId) return undefined
+  try {
+    const path = window.sessionStorage.getItem(originKey(taskId))
+    return path && path.startsWith('/') ? path : undefined
+  } catch {
+    return undefined
+  }
 }
 
 export function putSeed(seed: TaskSeed): void {
@@ -89,6 +121,8 @@ export function takeSeed(): TaskSeed | null {
         ? { components: parsed.components.filter((c): c is string => typeof c === 'string') }
         : {}),
       ...(parsed.counts && typeof parsed.counts === 'object' ? { counts: parsed.counts } : {}),
+      ...(typeof parsed.returnTo === 'string' && parsed.returnTo.startsWith('/')
+        ? { returnTo: parsed.returnTo } : {}),
     }
   } catch {
     return null

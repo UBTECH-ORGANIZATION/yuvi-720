@@ -102,6 +102,25 @@ export function TeacherLearningsPage() {
      at the top. Route state, deliberately not a route: the way back must also
      survive nothing — leaving the page and returning starts at the map. */
   const [openObjective, setOpenObjective] = useState<string | null>(null)
+  /* Where the map was scrolled to when the teacher stepped into an objective
+     (#513 follow-up). The drill view is a different height, so the browser
+     clamps the scroller while they are inside; "back to all objectives" puts
+     the map back under the same card they clicked, not at the top. */
+  const mapScroll = useRef(0)
+  const enterObjective = (key: string) => {
+    mapScroll.current = document.querySelector('.sp-teacher-shell__main')?.scrollTop ?? 0
+    setOpenObjective(key)
+  }
+  const leaveObjective = () => {
+    setOpenObjective(null)
+    const top = mapScroll.current
+    if (!top) return
+    // Two frames: the map's cards must exist and have height before the
+    // scroller can be asked to show them.
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.querySelector('.sp-teacher-shell__main')?.scrollTo({ top })
+    }))
+  }
   /* The first glance is only the objectives the class is actually working —
      the full catalogue is one click below, not on the screen by default. */
   const [showCatalog, setShowCatalog] = useState(false)
@@ -396,7 +415,7 @@ export function TeacherLearningsPage() {
           <button
             type="button"
             className="sp-btn sp-btn--ghost sp-btn--sm"
-            onClick={() => setOpenObjective(null)}
+            onClick={leaveObjective}
           >
             <Icon name="chevronLeft" size={15} aria-hidden />
             {t('tch.learnings.backToObjectives')}
@@ -449,7 +468,16 @@ export function TeacherLearningsPage() {
              now" — the all-time totals live on in the catalogue coverage
              hint and the cards below. Label first: with a comparison chip
              attached, value-then-label reads backwards (see the home strip). */}
+      {/* The strip wears its window on its sleeve (#534): four numbers with
+          change chips read as four unrelated dashboards until one line says
+          they are all THIS week against last week. Each card also answers
+          "what is this number" on hover, so the label can stay two words. */}
+      <p className="tch-learnings__stripCaption" dir="auto">
+        <Icon name="calendar" size={14} aria-hidden />
+        {t('tch.learnings.kpi.caption', { days: view.pulse?.window_days ?? 7 })}
+      </p>
       <section className="tch-stats" aria-label={t('tch.kpi.stripLabel')}>
+        <Hint text={t('tch.learnings.kpi.weekLearnings.hint')}>
         <Card className="tch-stat">
           <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
             <Icon name="library" size={18} />
@@ -469,7 +497,9 @@ export function TeacherLearningsPage() {
             </span>
           </span>
         </Card>
+        </Hint>
 
+        <Hint text={t('tch.learnings.kpi.successRate.hint')}>
         <Card className="tch-stat">
           <span className="tch-stat__icon tch-stat__icon--success" aria-hidden="true">
             <Icon name="check" size={18} />
@@ -494,7 +524,9 @@ export function TeacherLearningsPage() {
             </span>
           </span>
         </Card>
+        </Hint>
 
+        <Hint text={t('tch.learnings.kpi.classMinutes.hint')}>
         <Card className="tch-stat">
           <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
             <Icon name="clock" size={18} />
@@ -522,7 +554,9 @@ export function TeacherLearningsPage() {
             </span>
           </span>
         </Card>
+        </Hint>
 
+        <Hint text={t('tch.learnings.kpi.activeLearners.hint')}>
         <Card className="tch-stat">
           <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
             <Icon name="users" size={18} />
@@ -542,6 +576,7 @@ export function TeacherLearningsPage() {
             </span>
           </span>
         </Card>
+        </Hint>
       </section>
 
       {/* ── find it ───────────────────────────────────────────────────────── */}
@@ -618,7 +653,7 @@ export function TeacherLearningsPage() {
                       key={group.key}
                       group={group}
                       showSubject={!subject}
-                      onOpen={() => setOpenObjective(group.key)}
+                      onOpen={() => enterObjective(group.key)}
                     />
                   ))}
                 </div>
@@ -657,7 +692,7 @@ export function TeacherLearningsPage() {
                       <ObjectiveCard
                         key={group.key}
                         group={group}
-                        onOpen={() => setOpenObjective(group.key)}
+                        onOpen={() => enterObjective(group.key)}
                       />
                     ))}
                   </div>
@@ -764,8 +799,8 @@ function ObjectiveCard({ group, showSubject = false, onOpen }: {
                (correct/attempts) stays on hover. */
             <span
               className="tch-objective__rateWrap"
-              title={t('tch.kpi.successOf', {
-                correct: group.correct, attempts: group.attempts })}
+              title={`${t('tch.learnings.objRate.hint')} ${t('tch.kpi.successOf', {
+                correct: group.correct, attempts: group.attempts })}`}
             >
               <strong className={`tch-objective__rate is-${tone}`} dir="ltr">
                 {ratePercent(group.successRate)}

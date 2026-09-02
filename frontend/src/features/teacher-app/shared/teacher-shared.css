@@ -1048,6 +1048,8 @@
   gap: var(--sp-2);
 }
 .tch-preview__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+/* Restart, new tab, close — one small toolbar at the far end of the title. */
+.tch-preview__acts { display: inline-flex; align-items: center; gap: var(--sp-1); flex: none; }
 .tch-preview__frame,
 .tch-preview__loading {
   flex: 1;
