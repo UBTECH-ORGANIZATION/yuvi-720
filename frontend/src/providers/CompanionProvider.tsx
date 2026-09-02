@@ -186,7 +186,6 @@ interface CompanionContextValue {
   panelWidth: number
   setPanelWidth: (width: number) => void
   open: () => void
-  finishOpening: () => void
   close: () => void
   toggle: () => void
   messages: CoachMessage[]
@@ -506,7 +505,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const introducedQuestionsRef = useRef<Set<string>>(new Set())
   const isOpenRef = useRef(false)
   const isClosingRef = useRef(false)
-  const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Chat-action queue (the orchestrator) ────────────────────────────────────
@@ -713,17 +711,22 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     enqueueChatAction({ kind: 'welcome', targetQuestionKey: currentQuestionKeyRef.current })
   }, [activityScoped, surface.component_id, lessonEpoch, supportStateEpoch, currentQuestionKey, enqueueChatAction])
 
-  const finishOpening = useCallback(() => {
-    if (openingTimer.current) clearTimeout(openingTimer.current)
-    openingTimer.current = null
-    setIsOpening(false)
-  }, [])
+  /* The opening animation ends on a timer owned by the state it describes, not
+     on one armed inside `open()`. Anything that cleared that timer while the
+     panel was already open latched `is-opening` on for good, because `open()`
+     returns early for an already-open panel and never re-armed it — and the
+     lesson header holds Yuvi at `opacity: 0` for as long as that class is
+     there, so he never appeared in a lesson at all. */
+  useEffect(() => {
+    if (!isOpening) return undefined
+    const timer = window.setTimeout(() => setIsOpening(false), COMPANION_OPENING_MS)
+    return () => window.clearTimeout(timer)
+  }, [isOpening])
 
   const open = useCallback(() => {
     setUnreadCount(0)
     if (isOpenRef.current) return
     isOpenRef.current = true
-    if (openingTimer.current) clearTimeout(openingTimer.current)
     if (closingTimer.current) clearTimeout(closingTimer.current)
     closingTimer.current = null
     isClosingRef.current = false
@@ -731,15 +734,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     const shouldAnimate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     setIsOpening(shouldAnimate)
     setIsOpen(true)
-    if (shouldAnimate) {
-      openingTimer.current = setTimeout(finishOpening, COMPANION_OPENING_MS)
-    }
-  }, [finishOpening])
+  }, [])
 
   const close = useCallback(() => {
     if (!isOpenRef.current || isClosingRef.current) return
-    if (openingTimer.current) clearTimeout(openingTimer.current)
-    openingTimer.current = null
     setIsOpening(false)
     const shouldAnimate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (!shouldAnimate) {
@@ -764,7 +762,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   }, [close, open])
 
   useEffect(() => () => {
-    if (openingTimer.current) clearTimeout(openingTimer.current)
     if (closingTimer.current) clearTimeout(closingTimer.current)
   }, [])
 
@@ -780,9 +777,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       open()
     } else if (wasOnLessonRef.current) {
       lessonConversationIdRef.current = null
-      if (openingTimer.current) clearTimeout(openingTimer.current)
       if (closingTimer.current) clearTimeout(closingTimer.current)
-      openingTimer.current = null
       closingTimer.current = null
       isClosingRef.current = false
       isOpenRef.current = false
@@ -1912,7 +1907,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         panelWidth,
         setPanelWidth,
         open,
-        finishOpening,
         close,
         toggle,
         messages: visibleMessages,

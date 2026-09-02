@@ -31,6 +31,9 @@ import { TourStepCard } from './TourStepCard'
 import { TEACHER_TOUR_ID, canTakeTeacherTour, teacherTour } from './steps/teacherTour'
 import { LEARNER_TOUR_ID, canTakeLearnerTour, learnerTour } from './steps/learnerTour'
 import {
+  LESSON_ROUTE, LESSON_TOUR_ID, canTakeLessonTour, lessonTour,
+} from './steps/lessonTour'
+import {
   needsStudentParam, routeForStep, type TourDefinition, type TourStep,
 } from './steps/types'
 import { useTargetRect } from './useTargetRect'
@@ -54,6 +57,7 @@ const TourContext = createContext<TourValue | null>(null)
 const TOURS: Record<string, TourDefinition> = {
   [TEACHER_TOUR_ID]: teacherTour,
   [LEARNER_TOUR_ID]: learnerTour,
+  [LESSON_TOUR_ID]: lessonTour,
 }
 
 const DEFAULT_PADDING = 10
@@ -89,6 +93,15 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
   // than bounced between.
   const stride = useRef(1)
 
+  /* Steps the learner was actually shown. A step can drop out for several
+     unrelated reasons — its target is not on screen, its route is
+     unresolvable, or the thing it asks the learner to open is open already —
+     so this is recorded from the card being on screen rather than from any one
+     of those paths. Without it the lesson tour's `door` step, which skips
+     itself on every normal run, made the footer read "1, 2, 4 … of 8" and
+     promise an eighth step that never came. */
+  const [shownSteps, setShownSteps] = useState<ReadonlySet<number>>(() => new Set())
+
   const completed = useMemo(
     () => new Set(user?.preferences?.tours_completed ?? []), [user])
 
@@ -110,6 +123,7 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     setParams({ ...next, values })
     stride.current = 1
     setIndex(0)
+    setShownSteps(new Set())
     setTourId(id)
     /* Only tours that actually name a student pay for the lookup. The resolver
        reads the teacher roster, so firing it for the learner tour would have a
@@ -183,6 +197,17 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
   const onRoute = !wantedRoute || route.split('?')[0] === wantedRoute.split('?')[0]
   const rect = useTargetRect(step && onRoute ? step.target : null, reducedMotion)
 
+  /* The panel equivalent of `arrived`: the thing the step asked the learner to
+     open has appeared. Measured with the same hook as any other target so an
+     element that is present but not yet laid out does not count as open. */
+  const awaitedRect = useTargetRect(
+    step && onRoute ? step.awaitTarget ?? null : null, reducedMotion)
+  const opened = Boolean(step?.awaitTarget) && awaitedRect !== null && awaitedRect !== 'missing'
+
+  useEffect(() => {
+    if (opened) advance(1)
+  }, [opened, advance])
+
   // Past the end (or before the start) means the tour is over.
   useEffect(() => {
     if (!tourId) return
@@ -245,6 +270,30 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     startTour(LEARNER_TOUR_ID)
   }, [user, route, stage, verified, completed, startTour, markSeen])
 
+  /* "First lesson" means a lesson that actually opened, not a lesson URL. The
+     page announces its session once the provider has handed one back, which is
+     also the moment the stage exists to be spotlit — starting on the route
+     alone would run the tour against a loading screen, or against the error
+     state of a lesson that never opened at all. */
+  const [lessonLive, setLessonLive] = useState(false)
+  useEffect(() => {
+    const onSession = () => setLessonLive(true)
+    window.addEventListener('yuvilab:lesson-session-created', onSession)
+    return () => window.removeEventListener('yuvilab:lesson-session-created', onSession)
+  }, [])
+
+  useEffect(() => {
+    if (!user || autoStarted.current.has(LESSON_TOUR_ID)) return
+    if (!lessonLive || !route.startsWith(LESSON_ROUTE)) return
+    if (!canTakeLessonTour(user.roles)) return
+    if (completed.has(LESSON_TOUR_ID)) return
+    autoStarted.current.add(LESSON_TOUR_ID)
+    // Recorded on offer, not on completion — same reasoning as the dashboard
+    // tour above: what happens exactly once is the offer.
+    markSeen(LESSON_TOUR_ID)
+    startTour(LESSON_TOUR_ID)
+  }, [user, route, lessonLive, completed, startTour, markSeen])
+
   /* Yuvi cannot be in two places. While the guide is up the dock stands its own
      avatar down, and on the `landing` step the guide bows out so the dock is
      the one he arrives at — which is also why only one WebGL context is ever
@@ -258,6 +307,19 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     startTour,
   }), [tourId, guideFlying, completed, startTour])
 
+  /* Counted over the steps that survived, not the steps that were written.
+     A step still on screen after the grace period is one the learner saw; one
+     that stepped over itself first never lands here, so it is neither counted
+     nor promised. */
+  let seenBefore = 0
+  let passedOver = 0
+  for (let at = 0; at < index; at += 1) {
+    if (shownSteps.has(at)) seenBefore += 1
+    else passedOver += 1
+  }
+  const shownTotal = Math.max(1, steps.length - passedOver)
+  const shownCurrent = Math.min(shownTotal, seenBefore + 1)
+
   const measured = rect && rect !== 'missing' ? rect : null
   /* Show the card as soon as we are on the right route, even while the target
      is still being measured — it simply starts centred with nothing spotlit and
@@ -265,6 +327,24 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
      produced a dead screen for the whole lookup window, which is what made a
      short (and therefore step-skipping) timeout feel necessary. */
   const showing = step !== null && onRoute
+
+  /* A step counts as shown once it is on screen AND settled — its target has
+     been found, or it never had one. A step whose target turns out to be
+     missing skips itself and never lands here, so it is neither counted nor
+     promised. Settling is the signal rather than elapsed time: the help step
+     legitimately vanishes on screens with nothing to hint about, and it can
+     sit on screen measuring for longer than any grace period worth picking. */
+  useEffect(() => {
+    if (!showing) return
+    const settled = step?.target ? measured !== null : paramsReady
+    if (!settled) return
+    setShownSteps((current) => {
+      if (current.has(index)) return current
+      const next = new Set(current)
+      next.add(index)
+      return next
+    })
+  }, [showing, index, step, measured, paramsReady])
 
   return (
     <TourContext.Provider value={value}>
@@ -294,7 +374,8 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
             placement={step.placement}
             rect={measured}
             index={index}
-            total={steps.length}
+            current={shownCurrent}
+            total={shownTotal}
             isRtl={direction === 'rtl'}
             onBack={() => advance(-1)}
             onNext={() => advance(1)}
