@@ -526,6 +526,21 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
     if (!seed) return
     setTitle(seed.title)
     setTopic(seed.topic)
+    // A "back to settings" seed carries the whole spec of the task the teacher
+    // was reviewing — restore it so one changed detail is not a retyped form.
+    if (seed.difficulty) setDifficulty(seed.difficulty)
+    if (seed.notes) setNotes(seed.notes)
+    if (seed.components?.length) {
+      setComponents(seed.components.filter(
+        (c): c is BuildableComponent => c === 'presentation' || c === 'practice' || c === 'test'))
+    }
+    if (seed.counts) {
+      setCounts((current) => ({
+        practice: seed.counts?.practice ?? current.practice,
+        test: seed.counts?.test ?? current.test,
+        presentation: seed.counts?.presentation ?? current.presentation,
+      }))
+    }
   }, [seed])
 
   useEffect(() => {

@@ -882,6 +882,28 @@
 .yv-deck.is-presenting .yv-deck__notes,
 .yv-deck.is-presenting .yv-deck__tools { display: none; }
 
+/* The way out. Rendered only while presenting; physical corner (top and the
+   inline-end side), quiet until hovered so it does not compete with a slide. */
+.yv-deck__exit {
+  position: absolute;
+  inset-block-start: var(--sp-3);
+  inset-inline-end: var(--sp-3);
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 1px solid var(--sp-border);
+  border-radius: 50%;
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  opacity: .7;
+  cursor: pointer;
+}
+.yv-deck__exit:hover { opacity: 1; color: var(--sp-ink-700); }
+.yv-deck__exit:focus-visible { outline: none; box-shadow: var(--sp-ring); opacity: 1; }
+
 /* ── on paper ───────────────────────────────────────────────────────────── */
 
 /* Off screen entirely, and the only thing on paper. Rendered rather than

@@ -530,6 +530,22 @@
 /* The plane points the way the text flows. */
 [dir='rtl'] .tch-dock__send .sp-icon { transform: scaleX(-1); }
 
+/* The stop face of the same button: red, with the universal filled square —
+   an interruption should not wear the send button's friendly purple. */
+.tch-dock__send--stop {
+  display: grid;
+  place-content: center;
+  background: linear-gradient(135deg, var(--sp-danger-600), #d02748);
+  box-shadow: 0 4px 12px rgba(208, 39, 72, .35);
+}
+.tch-dock__send--stop:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(208, 39, 72, .45); }
+.tch-dock__stopSquare {
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 3px;
+  background: #fff;
+}
+
 .tch-dock__send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(91, 70, 200, .4); }
 .tch-dock__send:focus-visible { outline: 2px solid var(--sp-primary-700); outline-offset: 2px; }
 .tch-dock__send:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }

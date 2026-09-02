@@ -716,6 +716,26 @@
   color: var(--sp-ink-500);
 }
 
+/* The whole-width strip that says Yuvi is working. Sticky, so a teacher who
+   scrolled into the deck still sees that the minute-long rewrite is alive. */
+.tch-review__workingBar {
+  position: sticky;
+  inset-block-start: var(--sp-2);
+  z-index: 3;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-primary-100, var(--sp-surface-2));
+  border: 1px solid var(--sp-border-strong);
+  color: var(--sp-ink-700);
+  font-weight: 600;
+  box-shadow: var(--sp-shadow-sm);
+}
+.tch-review__workingBar .sp-spinner { flex: none; }
+
 .tch-review__sent {
   margin: 0;
   display: flex;
