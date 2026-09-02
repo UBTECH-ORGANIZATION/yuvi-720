@@ -420,6 +420,28 @@ class RegeneratingOneComponent(unittest.TestCase):
         self.assertEqual(seen["existing"], GOOD_PRACTICE)
         self.assertEqual(seen["focus"]["question_index"], 0)
 
+    def test_a_successful_redo_clears_the_failure_from_the_log(self):
+        """A component that failed once and was then regenerated must stop
+        reporting itself as missing — the chip reads the LATEST entry."""
+        with _Isolated():
+            async def scenario():
+                task_id = await _ready_task()
+                await store.record_generation(
+                    task_id, component="practice", ok=False,
+                    detail="SpecError: unparseable_response")
+
+                async def fake(task, component, task_spec, **kwargs):
+                    return GOOD_PRACTICE
+
+                with patch.object(generate, "generate_component", fake):
+                    await revise.regenerate(task_id, "practice")
+                task = await store.get_task(task_id)
+                return task.get("generation") or []
+
+            log = run(scenario())
+        latest = {e["component"]: e for e in log}
+        self.assertTrue(latest["practice"]["ok"])
+
     def test_a_plain_regeneration_sends_no_existing_content(self):
         with _Isolated():
             async def scenario():
