@@ -41,6 +41,7 @@ import {
   byAttention, groupByObjective, learningName, needsAttention,
   objectiveGroupName, type ObjectiveGroup,
 } from './learningRows'
+import { useVisibleScreenData } from '../assistant/screenData'
 import './teacher-learnings.css'
 
 /** The bucket for rows whose unit the catalogue does not know. Not an id, so it
@@ -228,6 +229,38 @@ export function TeacherLearningsPage() {
       ? objectiveGroups.find((group) => group.key === openObjective) ?? null
       : null,
     [openObjective, objectiveGroups])
+
+  /* The KPI strip and the open drill, as numbers, for the assistant dock: a
+     teacher asking "מה זה 583 מתוך 845" gets it explained from their own
+     screen (#535). Labels only — a lomda title is fine, a child's name is not. */
+  useVisibleScreenData(view ? {
+    totals: {
+      catalog_total: view.totals.catalog_total,
+      learnings_opened: view.totals.learnings,
+      attempts: view.totals.attempts,
+      correct: view.totals.correct,
+      success_rate: view.totals.success_rate,
+      active_learners: view.totals.active_learners,
+      group_size: view.totals.group_size,
+    },
+    this_week: view.pulse ? {
+      window_days: view.pulse.window_days,
+      attempts: view.pulse.current.attempts,
+      correct: view.pulse.current.correct,
+      success_rate: view.pulse.current.success_rate,
+      previous_success_rate: view.pulse.previous.success_rate,
+      active_learners: view.pulse.current.active_learners,
+    } : null,
+    open_objective: drill ? {
+      title: drill.title,
+      subject: drill.subject,
+      learnings: drill.rows.length,
+      started: drill.started,
+      attempts: drill.attempts,
+      correct: drill.correct,
+      success_rate: drill.successRate,
+    } : null,
+  } : null)
 
   const subjectSections = useMemo(() => {
     const bySubject = new Map<string, ObjectiveGroup<LearningRow>[]>()

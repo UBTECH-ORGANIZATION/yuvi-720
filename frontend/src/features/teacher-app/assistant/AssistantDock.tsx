@@ -48,6 +48,7 @@ import { actionIdOf, actionKey } from './actionKey'
 import { renderAnswer } from './StudentRef'
 import { trimPartialMarkers } from './studentRefs'
 import { ToolTrace } from './ToolTrace'
+import { useScreenData } from './screenData'
 import './assistant-dock.css'
 
 interface DockMessage {
@@ -204,9 +205,13 @@ export function AssistantDock() {
 
   // `useRoute()` returns pathname + search as one string; the screen is keyed
   // off the path alone.
+  /* What the page on screen has published — its KPI numbers — rides along
+     with WHICH screen it is, so the assistant can explain what the teacher is
+     reading rather than say it cannot see it. */
+  const visible = useScreenData()
   const screen = useMemo(
-    () => screenFor(route.split('?')[0], groupId, subject),
-    [route, groupId, subject]
+    () => ({ ...screenFor(route.split('?')[0], groupId, subject), visible }),
+    [route, groupId, subject, visible]
   )
 
   useEffect(() => {

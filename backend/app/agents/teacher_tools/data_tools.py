@@ -26,6 +26,9 @@ from app.agents.teacher_tools.registry import TeacherTool, TeacherToolContext, r
 _PII_KEYS = {"display_name", "full_name", "username", "email", "national_id"}
 
 
+from app.agents.teacher_tools.wellbeing_projection import soften_wellbeing  # noqa: E402
+
+
 def scrub(value: Any) -> Any:
     """Recursively drop PII keys from a tool result."""
     if isinstance(value, dict):
@@ -206,7 +209,67 @@ def _match_tier(query: str, name: str) -> Optional[str]:
     return None
 
 
-_TIER_ORDER = ("exact", "prefix", "contains", "typo")
+_TIER_ORDER = ("exact", "prefix", "contains", "typo", "script")
+
+# Hebrew ↔ Latin, by sound — enough to fold "גל" onto "gal", "נועה" onto "noa"
+# and "יובל" onto "yuval" when the roster holds a name in one script and the
+# teacher types it in the other (#538). Not a transliteration standard: both
+# sides are reduced to a consonant skeleton (Latin vowels and y dropped, since
+# Hebrew writes few vowels), and the Hebrew letters that read EITHER way fork
+# the skeleton — ו is v or a vowel, ב is b or v, פ is p or f, י is a vowel —
+# so a name matches if any reading of it does. Applied only as the LAST tier,
+# so it never outranks a real same-script match.
+_HEB_TO_LAT: dict[str, tuple[str, ...]] = {
+    "א": ("",), "ב": ("b", "v"), "ג": ("g",), "ד": ("d",), "ה": ("h",), "ו": ("v", ""),
+    "ז": ("z",), "ח": ("ch",), "ט": ("t",), "י": ("",), "כ": ("k", "ch"), "ל": ("l",),
+    "מ": ("m",), "נ": ("n",), "ס": ("s",), "ע": ("",), "פ": ("p", "f"), "צ": ("ts",),
+    "ק": ("k",), "ר": ("r",), "ש": ("sh", "s"), "ת": ("t",),
+}
+_LAT_FOLD = (("ph", "f"), ("ck", "k"), ("c", "k"), ("q", "k"), ("w", "v"), ("x", "ks"),
+             ("th", "t"), ("j", "g"))
+_MAX_SOUND_VARIANTS = 64
+
+
+def _latin_key(text: str) -> str:
+    for pair in _LAT_FOLD:
+        text = text.replace(*pair)
+    text = "".join(ch for ch in text if ch not in "aeiouy'")
+    # A trailing h is a Hebrew ה that mostly reads as a vowel ("נועה", "שירה").
+    return text.strip("h")
+
+
+def _sound_keys(name: str) -> set[str]:
+    """Every consonant skeleton one word can have, in either script."""
+    text = _normalize_name(name)
+    if not any("\u0590" <= ch <= "\u05ff" for ch in text):
+        return {_latin_key(text)}
+    variants = {""}
+    for ch in text:
+        readings = _HEB_TO_LAT.get(ch, (ch,))
+        variants = {prefix + reading for prefix in variants for reading in readings}
+        if len(variants) > _MAX_SOUND_VARIANTS:
+            variants = set(list(variants)[:_MAX_SOUND_VARIANTS])
+    return {_latin_key(variant) for variant in variants}
+
+
+def _script_match(query: str, name: str) -> bool:
+    """Does the query name the same person across scripts?
+
+    Word by word: every word of the query must sound like SOME word of the
+    name, so "בן שרעבי" finds "Ben Sharabi" and "בן" alone finds him too. A
+    skeleton of one letter is accepted only for a query long enough to be a
+    real name ("noa" → "n"); a two-letter query has to keep both consonants.
+    """
+    name_keys = [_sound_keys(token) for token in name.split()]
+    if not name_keys:
+        return False
+    for word in query.split():
+        wanted = _sound_keys(word)
+        if len(_normalize_name(word)) < 3:
+            wanted = {key for key in wanted if len(key) >= 2}
+        if not wanted or not any(wanted & keys for keys in name_keys):
+            return False
+    return True
 
 
 async def _find_student(context: TeacherToolContext, args: dict) -> dict:
@@ -231,7 +294,10 @@ async def _find_student(context: TeacherToolContext, args: dict) -> dict:
         name = names.get(learner_id)
         if not name:
             continue      # never finished mapping — no name to match against
-        tier = _match_tier(query, _normalize_name(name))
+        normalized = _normalize_name(name)
+        tier = _match_tier(query, normalized)
+        if tier is None and _script_match(query, normalized):
+            tier = "script"
         if tier:
             by_tier[tier].append(learner_id)
 
@@ -535,18 +601,147 @@ async def _get_learning_detail(context: TeacherToolContext, args: dict) -> dict:
     })}
 
 
+async def _get_learning_learners(context: TeacherToolContext, args: dict) -> dict:
+    """WHO is inside one learning — tried, struggling, solved, not started.
+
+    Learner ids, never names: the model writes `{{student:<id>}}` and the
+    teacher's screen renders the name, the same contract as every other tool.
+    A selection by a stated rule, not a ranking (MoE C5).
+    """
+    from app.services import learning_analytics
+
+    view = await learning_analytics.learners_in_learning(
+        str(args["group_id"]), str(args["component_id"]))
+    if not view.get("tried"):
+        return empty("nobody_has_opened_this_learning",
+                     component_id=args.get("component_id"))
+    return {"data": scrub(view)}
+
+
 # ── student ──────────────────────────────────────────────────────────────────
+
+#: How a teacher names a subject, mapped to the catalogue id the data is keyed
+#: by. The model passes whatever the teacher said — "מתמטיקה", "math", "הנדסה" —
+#: and the catalogue knows only its ids. Geometry is not a subject of its own in
+#: the catalogue; it lives inside math, so a question about it is a math
+#: question (#539: "linear equations" activity answered "no math activity").
+_SUBJECT_ALIASES = {
+    "math": "math", "maths": "math", "mathematics": "math", "מתמטיקה": "math",
+    "מתמטי": "math", "חשבון": "math", "الرياضيات": "math", "رياضيات": "math",
+    "geometry": "math", "גיאומטריה": "math", "הנדסה": "math", "algebra": "math",
+    "אלגברה": "math", "الهندسة": "math",
+    "science": "science", "sciences": "science", "מדעים": "science", "מדע": "science",
+    "العلوم": "science", "علوم": "science", "physics": "science", "פיזיקה": "science",
+    "biology": "science", "ביולוגיה": "science", "chemistry": "science", "כימיה": "science",
+    "english": "english", "אנגלית": "english", "الإنجليزية": "english",
+}
+
+
+def normalize_subject(raw: Any) -> Optional[str]:
+    """A subject as the teacher said it → the catalogue id, or None for "all".
+
+    Unknown names pass through lower-cased rather than being dropped, so a
+    subject the catalogue adds tomorrow still filters — it just has no alias yet.
+    """
+    text = str(raw or "").strip().casefold()
+    if not text:
+        return None
+    return _SUBJECT_ALIASES.get(text, text)
+
 
 async def _get_student_overview(context: TeacherToolContext, args: dict) -> dict:
     from app.services import insights
 
     learner_id = str(args["learner_id"])
+    subject = normalize_subject(args.get("subject"))
     result = await insights.student_insights(
-        learner_id, language=context.language, subject=args.get("subject") or None
+        learner_id, language=context.language, subject=subject
     )
-    if not result.get("progress") and not result.get("struggle_items"):
-        return empty("learner_has_no_activity", learner_id=learner_id)
-    return {"data": scrub(result)}
+    if result.get("progress") or result.get("struggle_items"):
+        return {"data": soften_wellbeing(scrub(result), context.language)}
+
+    # Nothing under this subject. Before answering "no activity" — which reads
+    # as "this child has done nothing" — look without the filter: a child with
+    # 125 attempts on linear equations has math activity whatever name the
+    # teacher used for it, and a filter that hides that is worse than no
+    # filter. The unfiltered picture ships, labelled, with the subjects that
+    # actually carry data so the model can say where the activity is.
+    if subject:
+        wide = await insights.student_insights(learner_id, language=context.language)
+        if wide.get("progress") or wide.get("struggle_items"):
+            active = sorted({
+                str(name) for name, row in (wide.get("progress") or {}).items()
+                if isinstance(row, dict) and (row.get("percent") or row.get("objectives_mastered")
+                                              or row.get("objectives_in_progress"))
+            } | {
+                str(item.get("subject")) for item in (wide.get("struggle_items") or [])
+                if item.get("subject")
+            })
+            return {"data": soften_wellbeing(scrub({
+                **wide,
+                "subject_filter_ignored": subject,
+                "subjects_with_activity": active,
+            }), context.language)}
+    # Still nothing from insights. Insights is built on MASTERY — a child who
+    # has answered a hundred questions but earned no mastery entry yet has no
+    # `progress`, and the tool used to call that "no activity" while
+    # `get_student_activity` on the same child listed 125 attempts (#539). The
+    # attempts are the activity; fold them by subject so the answer can say
+    # where the child has been working.
+    activity = await _activity_by_subject(learner_id, subject)
+    if not activity and subject:
+        activity = await _activity_by_subject(learner_id, None)
+        if activity:
+            return {"data": scrub({
+                "progress": {}, "struggle_items": [],
+                "activity_by_subject": activity,
+                "subject_filter_ignored": subject,
+                "subjects_with_activity": sorted(activity),
+                "note": "activity_without_mastery_yet",
+            })}
+    if activity:
+        return {"data": scrub({
+            "progress": {}, "struggle_items": [],
+            "activity_by_subject": activity,
+            "subjects_with_activity": sorted(activity),
+            "note": "activity_without_mastery_yet",
+        })}
+    return empty("learner_has_no_activity", learner_id=learner_id)
+
+
+async def _activity_by_subject(learner_id: str, subject: Optional[str]) -> dict[str, Any]:
+    """Attempts folded by subject, from the same rows `get_student_activity` lists."""
+    from app.services import kata_catalog, learner_activity
+
+    rows = await learner_activity.question_summary(learner_id, subject=subject)
+    folded: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        attempts = int(row.get("attempts") or 0)
+        if not attempts:
+            continue
+        name = row.get("subject") or kata_catalog.subject_of(row.get("objective_id")) or "other"
+        bucket = folded.setdefault(str(name), {
+            "attempts": 0, "correct": 0, "questions": 0, "last_at": None, "objectives": {},
+        })
+        bucket["attempts"] += attempts
+        bucket["correct"] += int(row.get("correct") or 0)
+        bucket["questions"] += 1
+        last_at = row.get("last_at")
+        if last_at and (bucket["last_at"] is None or str(last_at) > str(bucket["last_at"])):
+            bucket["last_at"] = last_at
+        objective_id = row.get("objective_id")
+        if objective_id:
+            objective = bucket["objectives"].setdefault(str(objective_id), {
+                "objective_id": objective_id,
+                "title": (kata_catalog.get_objective(str(objective_id)) or {}).get("title"),
+                "attempts": 0, "correct": 0,
+            })
+            objective["attempts"] += attempts
+            objective["correct"] += int(row.get("correct") or 0)
+    for bucket in folded.values():
+        top = sorted(bucket["objectives"].values(), key=lambda o: -o["attempts"])[:5]
+        bucket["objectives"] = top
+    return folded
 
 
 async def _get_student_mastery(context: TeacherToolContext, args: dict) -> dict:
@@ -566,7 +761,7 @@ async def _get_student_activity(context: TeacherToolContext, args: dict) -> dict
     learner_id = str(args["learner_id"])
     limit = int(args.get("limit") or 20)
     rows = await learner_activity.question_summary(
-        learner_id, subject=args.get("subject") or None
+        learner_id, subject=normalize_subject(args.get("subject"))
     )
     if not rows:
         return empty("no_events_in_window", learner_id=learner_id)
@@ -616,7 +811,7 @@ async def _get_student_description(context: TeacherToolContext, args: dict) -> d
     description = view.get("student_description") or {}
     if not description:
         return empty("no_description_yet", learner_id=learner_id)
-    return {"data": scrub(description)}
+    return {"data": soften_wellbeing(scrub(description), context.language)}
 
 
 # ── live ─────────────────────────────────────────────────────────────────────
@@ -638,7 +833,7 @@ async def _get_my_alerts(context: TeacherToolContext, args: dict) -> dict:
         for alert in alerts if alert.get("status") == teacher_alerts.STATUS_OPEN
     ][:6]
 
-    result: dict[str, Any] = {"data": scrub(alerts)}
+    result: dict[str, Any] = {"data": soften_wellbeing(scrub(alerts), context.language)}
     if open_alerts:
         result["offer"] = {
             "kind": "ack_alerts",
@@ -934,7 +1129,8 @@ def register_all() -> None:
             "THIS IS THE TOOL FOR ANY QUESTION ABOUT LESSONS — 'which learning did "
             "they struggle with most', 'what should we go over again', 'which lesson "
             "took the longest', 'what have they not opened yet'. Ranking lessons is "
-            "allowed; ranking students is not, and this returns no learner ids."
+            "allowed; ranking students is not, and this returns no learner ids — "
+            "for WHO tried or struggles in a lesson, call get_learning_learners."
         ),
         parameters={"type": "object", "properties": {
             **_GROUP_ID,
@@ -965,11 +1161,35 @@ def register_all() -> None:
         handler=_get_learning_detail, group_args=("group_id",),
     ))
     register(TeacherTool(
+        name="get_learning_learners",
+        description=(
+            "WHO is inside one lesson (learning): which students tried it, which "
+            "are struggling in it (a stated rule — enough attempts and a low "
+            "success rate), which solved everything, and who has not started. "
+            "THIS answers 'מי התנסה בלומדה', 'מי מתקשה בלומדה', 'מי עוד לא פתח את "
+            "הלומדה'. Call it after get_group_learnings when the teacher asks WHO, "
+            "not how many. Write each student as {{student:<id>}}; never say you "
+            "cannot tell who is behind a count."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "component_id": {"type": "string",
+                             "description": "A component_id from get_group_learnings."},
+        }, "required": ["group_id", "component_id"]},
+        handler=_get_learning_learners, group_args=("group_id",),
+    ))
+    register(TeacherTool(
         name="get_student_overview",
         description="One student: progress, struggle items, strengths and attention flags, each with evidence.",
         parameters={"type": "object", "properties": {
             **_LEARNER_ID,
-            "subject": {"type": "string", "description": "Optional subject filter."},
+            "subject": {"type": "string", "description": (
+                "Optional subject filter, in the teacher's words (מתמטיקה / math / "
+                "הנדסה — geometry counts as math). When the filter finds nothing but "
+                "the student has activity elsewhere, the reply carries "
+                "`subject_filter_ignored` and `subjects_with_activity`: say WHERE "
+                "the activity is, never that there is none."
+            )},
         }, "required": ["learner_id"]},
         handler=_get_student_overview, learner_args=("learner_id",),
     ))

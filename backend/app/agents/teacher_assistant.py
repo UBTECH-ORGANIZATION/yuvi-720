@@ -30,6 +30,7 @@ name, the teacher always does.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, AsyncGenerator, Optional
 
 from app.agents import teacher_tools
@@ -52,6 +53,11 @@ UNKNOWN_NOT_ENOUGH = "tch.assistant.unknown.notEnoughEvidence"
 UNKNOWN_OFFER_ONLY = "tch.assistant.unknown.offerOnly"
 UNAVAILABLE = "tch.assistant.unavailable"
 
+#: Prior turns replayed to the model. Ten, not six: a teacher's follow-up
+#: ("על רקע מה לפני רגע פרטת לי?") lands two or three exchanges after the
+#: long tool-grounded answer it refers to, and six turns cut that answer off.
+HISTORY_TURNS = 10
+
 
 def _system_prompt(language: str, screen: dict[str, Any]) -> str:
     lang_name = _LANG_NAME.get(language, "Hebrew")
@@ -64,8 +70,9 @@ learning platform. You help a teacher understand their own students. Answer in {
 
 GROUNDING — these are absolute:
 1. Every factual claim about a student, a group, or a metric MUST come from a tool result in \
-this conversation turn. If no tool returned it, say you do not have it and name which tool \
-could get it. Never fill a gap with a plausible number.
+this conversation — this turn, or an earlier turn whose answer you already gave. If no tool \
+returned it, say you do not have it and name which tool could get it. Never fill a gap with \
+a plausible number.
 2. Do NOT do arithmetic on tool output. Do not derive percentages, averages, trends or \
 rankings the tools did not return. If a teacher asks for a figure no tool provides, say it is \
 not computed and tell them what is.
@@ -78,6 +85,12 @@ teachers have names, not ids.
 4. Call `list_students` before assuming any learner id exists. Never invent one.
 5. If a tool returns an error of `not_authorized`, tell the teacher that student is not in \
 one of their groups. Do not speculate about the student.
+6. What you yourself told the teacher earlier in this conversation, and the numbers inside \
+the screen line above, ARE grounded — they came from tools when you said them. When the \
+teacher asks what one of them means or what it was based on, explain it directly; never \
+retract or disown an earlier answer of yours as "unfounded", and never re-fetch it just to \
+repeat it. Never say you cannot see their screen, and never ask which screen they are on: \
+the screen line says where they are and what it shows.
 6. When the teacher writes a student's NAME, call `find_student` with the name exactly as \
 they wrote it — it searches every group they teach, not just the class on screen. NEVER ask \
 the teacher for a learner id, and never say you only see ids or cannot see names. If several \
@@ -125,6 +138,9 @@ one `attention` flag with evidence, a `band` (red/orange/green, with the reasons
 the child there), `activity`, and `today_feeling` — today's check-in. These are the same \
 signals the teacher's students screen shows; use them instead of saying you cannot see \
 who is marked.
+- "Who tried / who struggles / who has not opened a lesson" is `get_learning_learners` \
+(after `get_group_learnings` gives you the component_id). Never answer a WHO question about \
+a lesson with a count and a suggestion to look elsewhere.
 - "How is the class feeling" is `get_class_mood` — check-in counts, the window before, \
 and the children's own written notes. Share a feeling with care: name the child's words \
 only when the teacher asks about wellbeing, and never inventory every child's mood \
@@ -151,7 +167,10 @@ count you hold.
 - Never narrate your own bookkeeping: not which sources disagreed, not which numbers you \
 reconciled, not what you leaned on. The teacher gets the conclusion, not the audit.
 - A distress or wellbeing signal a child shared is never an item in a list. Give it one \
-careful sentence of its own, and the human next step, before anything numeric.
+careful sentence of its own, and the human next step, before anything numeric. \
+You are never given a child's own words about their wellbeing — only the category, the date \
+and that the detail is on the profile. Say it that way, in one sentence, and suggest a \
+quiet conversation; never reconstruct or guess what the child wrote.
 - Use bullets ONLY to list three or more comparable items, at most four of them, never nested, \
 and never with a heading above them. Prose is the default.
 - NEVER write a tool name, a field name, or an internal identifier in your answer — not \
@@ -265,12 +284,69 @@ offering to schedule a second copy of the same date.
 A teacher reads this between lessons."""
 
 
-def _needs_grounding(text: str) -> bool:
-    """Would this answer be a factual claim about students or metrics?
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+_STUDENT_REF = re.compile(r"\{\{student:([^}]+)\}\}")
+
+
+def _number_forms(raw: str) -> set[str]:
+    """The spellings one figure can take across a screen and a sentence.
+
+    A screen reports `success_rate: 0.69`; the teacher reads "69%" and the
+    model writes "69". A card says 1,200; the model writes 1200. The gate
+    compares spellings, so every spelling of a known figure must be known.
+    """
+    text = raw.replace(",", "")
+    forms = {raw, text}
+    try:
+        value = float(text)
+    except ValueError:
+        return forms
+    if value == int(value):
+        forms.add(str(int(value)))
+    if 0 < value < 1:
+        forms.add(str(int(round(value * 100))))      # 0.69 → "69"
+    return forms
+
+
+def known_facts(history: Optional[list[dict[str, Any]]],
+                screen: Optional[dict[str, Any]]) -> frozenset[str]:
+    """Figures the teacher has already been shown this conversation.
+
+    Two sources the gate may lean on without a fresh tool call:
+
+    * the assistant's OWN earlier turns — every number there passed this same
+      gate when it was written, so explaining "583 מתוך 845" one turn later is
+      not a new claim, and refusing it with "not enough evidence" was the
+      context-loss bug (#537, #539);
+    * the screen block the client reported, including the page's visible
+      numbers when it carries them — a teacher reading 69% off their own
+      screen and asking what it means must not be told the assistant cannot
+      see it (#535).
+    """
+    facts: set[str] = set()
+    for turn in history or []:
+        if turn.get("role") == "assistant" and turn.get("content"):
+            content = str(turn["content"])
+            for number in _NUMBER.findall(content):
+                facts.update(_number_forms(number))
+            facts.update(_STUDENT_REF.findall(content))
+    if screen:
+        for number in _NUMBER.findall(json.dumps(screen, ensure_ascii=False)):
+            facts.update(_number_forms(number))
+        learner_id = screen.get("learner_id")
+        if learner_id:
+            facts.add(str(learner_id))
+    return frozenset(facts)
+
+
+def _needs_grounding(text: str, known: frozenset[str] = frozenset()) -> bool:
+    """Would this answer be a NEW factual claim about students or metrics?
 
     Conservative on purpose in the *cheap* direction: greetings, thanks and
     product chit-chat are exempt so they don't burn a forced tool round, while
-    anything containing a number or a student reference is treated as factual.
+    a number or a student reference the conversation has not seen before is
+    treated as factual. Figures in `known` — what the assistant already said,
+    or what is on the teacher's screen — are not new claims.
 
     This is a heuristic and is not the security boundary — scope is enforced in
     `registry.dispatch`. It only decides whether to spend one more round.
@@ -278,11 +354,13 @@ def _needs_grounding(text: str) -> bool:
     stripped = (text or "").strip()
     if not stripped:
         return False
-    if len(stripped) < 25 and not any(ch.isdigit() for ch in stripped):
+    numbers = _NUMBER.findall(stripped)
+    refs = _STUDENT_REF.findall(stripped)
+    if not numbers and not refs:
         return False
-    if any(ch.isdigit() for ch in stripped):
+    if any(not (_number_forms(number) & known) for number in numbers):
         return True
-    return "{{student:" in stripped
+    return any(ref not in known for ref in refs)
 
 
 async def _resolve_scope(teacher_id: str) -> tuple[frozenset[str], frozenset[str], bool]:
@@ -431,7 +509,7 @@ def _opening_messages(
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": _system_prompt(context.language, context.screen)}
     ]
-    for turn in (history or [])[-6:]:
+    for turn in (history or [])[-HISTORY_TURNS:]:
         role = turn.get("role")
         if role in {"user", "assistant"} and turn.get("content"):
             messages.append({"role": role, "content": str(turn["content"])})
@@ -455,6 +533,7 @@ async def run_assistant(
     )
 
     messages = _opening_messages(context, user_message, history)
+    known = known_facts(history, context.screen)
 
     trace: list[dict[str, Any]] = []
     offers: list[dict[str, Any]] = []
@@ -477,7 +556,7 @@ async def run_assistant(
         break
 
     # Layer 2 — a factual-looking answer with an empty trace does not ship.
-    if text and not trace and _needs_grounding(text):
+    if text and not trace and _needs_grounding(text, known):
         forced = await _round(messages, context, index=teacher_tools.MAX_ROUNDS, force_tools=True)
         if isinstance(forced, dict) and forced.get("tool_calls"):
             messages.append(forced)
@@ -542,6 +621,7 @@ async def run_assistant_stream(
     )
 
     messages = _opening_messages(context, user_message, history)
+    known = known_facts(history, context.screen)
 
     trace: list[dict[str, Any]] = []
     offers: list[dict[str, Any]] = []
@@ -596,7 +676,7 @@ async def run_assistant_stream(
 
     # Layer 2 — a factual-looking answer with an empty trace does not ship. Nothing
     # was streamed on that round (the trace was empty), so replacing it is still free.
-    if text and not trace and _needs_grounding(text):
+    if text and not trace and _needs_grounding(text, known):
         async for event in play_round(teacher_tools.MAX_ROUNDS, force_tools=True):
             yield event
         forced = holder[0] if holder else None

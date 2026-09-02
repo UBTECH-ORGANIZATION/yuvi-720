@@ -128,6 +128,40 @@ class FindStudentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["data"]["matches"][0]["learner_id"], JOHN)
         self.assertEqual(result["data"]["match_quality"], "typo")
 
+    async def test_a_hebrew_query_finds_a_child_registered_in_latin(self):
+        """#538: the roster says "Gal"; the teacher types גל."""
+        GAL = "kid-gal"
+        names = {**NAMES, GAL: "Gal"}
+        ctx = context(allowed_learner_ids=frozenset({NOA_A, NOA_B, TAL, JOHN, GAL}))
+        with patch("app.services.teacher_roster.names_for",
+                   AsyncMock(side_effect=lambda ids: {i: names.get(i) for i in ids})):
+            result = await self.find("גל", ctx)
+        self.assertEqual([m["learner_id"] for m in result["data"]["matches"]], [GAL])
+        self.assertEqual(result["data"]["match_quality"], "script")
+
+    async def test_a_latin_query_finds_a_child_registered_in_hebrew(self):
+        """The other direction, with a full name: "ben sharabi" → בן שרעבי."""
+        BEN = "kid-ben"
+        names = {**NAMES, BEN: "בן שרעבי"}
+        ctx = context(allowed_learner_ids=frozenset({NOA_A, NOA_B, TAL, JOHN, BEN}))
+        with patch("app.services.teacher_roster.names_for",
+                   AsyncMock(side_effect=lambda ids: {i: names.get(i) for i in ids})):
+            full = await self.find("Ben Sharabi", ctx)
+            first = await self.find("ben", ctx)
+        self.assertEqual([m["learner_id"] for m in full["data"]["matches"]], [BEN])
+        self.assertEqual([m["learner_id"] for m in first["data"]["matches"]], [BEN])
+
+    async def test_the_script_tier_never_outranks_a_same_script_match(self):
+        """A real Hebrew match wins even when a Latin name also sounds alike."""
+        DAN = "kid-dan"
+        names = {**NAMES, DAN: "Dan"}
+        ctx = context(allowed_learner_ids=frozenset({NOA_A, NOA_B, TAL, JOHN, DAN}))
+        with patch("app.services.teacher_roster.names_for",
+                   AsyncMock(side_effect=lambda ids: {i: names.get(i) for i in ids})):
+            result = await self.find("טל", ctx)
+        self.assertEqual(result["data"]["match_quality"], "exact")
+        self.assertEqual([m["learner_id"] for m in result["data"]["matches"]], [TAL])
+
     async def test_niqqud_in_the_roster_does_not_hide_a_child(self):
         """The teacher types plain letters; the stored name carries niqqud."""
         result = await self.find("טל בן־דוד")
