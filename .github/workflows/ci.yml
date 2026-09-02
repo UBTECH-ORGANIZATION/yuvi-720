@@ -6,6 +6,11 @@ name: CI
 
 on:
   pull_request:
+  # Dispatched by content-nightly.yml on its PR branch: a pull request opened
+  # with GITHUB_TOKEN never fires `pull_request`, so the nightly asks for the
+  # checks by hand. The job names below are the branch rule's required checks,
+  # and a dispatched run reports them on the same commit the PR points at.
+  workflow_dispatch:
   workflow_call:
     inputs:
       ref:

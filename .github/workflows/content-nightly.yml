@@ -1,9 +1,19 @@
 # Nightly content intelligence: keep content/context/ in step with the live
 # Kata catalog. Fetch → fingerprint diff → browse changed lomdot → regenerate
-# stale texts → commit. A quiet catalog commits nothing and deploys nothing;
-# a change-night commit dispatches the normal dev-slot deploy (GITHUB_TOKEN
-# pushes never fire push triggers on their own, and the coach reads the config
-# baked into the image, so an explicit dispatch is what ships it).
+# stale texts → open a pull request. A quiet catalog opens nothing.
+#
+# A PR, not a push: `main` only accepts pull requests with the three CI checks
+# green (repository rule), so a direct push from here is rejected. The change
+# lands on a rolling `content/nightly` branch; the PR is created once and then
+# updated in place on later nights until someone merges it. Merging by hand
+# fires the normal push→main dev-slot deploy — the explicit deploy dispatch this
+# job used to make is gone with the direct push.
+#
+# Two things GITHUB_TOKEN cannot do on its own, and how they are handled:
+# - a PR it opens never fires `pull_request`, so CI is dispatched explicitly
+#   on the branch (ci.yml has `workflow_dispatch` for exactly this);
+# - opening a PR at all needs the repo setting "Allow GitHub Actions to create
+#   and approve pull requests" (Settings → Actions → General).
 #
 # Required repo secrets (App-Service settings today, mirrored here by an
 # admin): KATA_API_KEY, APIM_BASE_URL, APIM_SUBSCRIPTION_KEY.
@@ -29,6 +39,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
   actions: write
 
 concurrency:
@@ -97,27 +108,38 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      - name: Commit the refreshed config
-        id: commit
+      - name: Open (or update) the content pull request
         if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: content/nightly
         run: |
           git config user.name "content-pipeline[bot]"
           git config user.email "content-pipeline@users.noreply.github.com"
           git add content/context
           if git diff --cached --quiet; then
-            echo "changed=0" >> "$GITHUB_OUTPUT"
-            echo "catalog unchanged — nothing to commit"
-          else
-            git commit -m "content: nightly context refresh $(date -u +%F)"
-            git push origin main
-            echo "changed=1" >> "$GITHUB_OUTPUT"
+            echo "catalog unchanged — nothing to propose"
+            exit 0
+          fi
+          stamp="$(date -u +%F)"
+          git commit -m "content: nightly context refresh ${stamp}"
+          # Force, on purpose: the branch is rebuilt from tonight's main every
+          # run, so an unmerged PR simply moves forward to the newest refresh.
+          git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+          if [ -z "$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base main --head "${BRANCH}" \
+              --title "content: nightly context refresh ${stamp}" \
+              --body "$(cat <<EOF
+          Automated refresh of \`content/context/\` from the live Kata catalog by the content-nightly pipeline.
+
+          Merging ships it to the dev slot through the normal push→main deploy. Nothing reaches production without the manual promote.
+
+          If this PR sits unmerged, the next nightly run updates it in place rather than opening another.
+          EOF
+          )"
           fi
 
-      # The coach reads the config from inside the Docker image, so a real
-      # content change must go through the normal gated deploy (CI first,
-      # dev slot only; production waits for a manual promote).
-      - name: Ship the change to the dev slot
-        if: ${{ steps.commit.outputs.changed == '1' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy-spark.yml --ref main -f promote=false
+          # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not
+          # fire them, so ask for them on this exact commit.
+          gh workflow run ci.yml --ref "${BRANCH}"
