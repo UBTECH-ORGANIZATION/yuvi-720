@@ -44,7 +44,7 @@ class MemoryStorage {
 const storage = new MemoryStorage()
 ;(globalThis as { window?: unknown }).window = { sessionStorage: storage }
 
-const { clearAudience, putAudience, putSeed, readAudience, takeSeed } =
+const { clearAudience, putAudience, putOrigin, putSeed, readAudience, readOrigin, takeSeed } =
   await import('../src/features/teacher-app/tasks/taskSeed.ts')
 
 const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
@@ -214,5 +214,53 @@ describe('a gap is answered with material, not with a goal', () => {
       assert.ok(table['tch.tasks.launchSuggested'], `${language} cannot explain the ticks`)
       assert.ok(table['tch.gaps.taskTitle'].includes('{label}'), `${language}: no objective`)
     }
+  })
+})
+
+describe('cancelling lands where the teacher came from (#486, QA rounds 2 and 3)', () => {
+  const review = read('../src/features/teacher-app/tasks/TaskReviewPage.tsx')
+  const builder = read('../src/features/teacher-app/tasks/TeacherTasksPage.tsx')
+
+  beforeEach(() => {
+    for (const key of storage.keys()) storage.removeItem(key)
+    storage.throwOnWrite = false
+  })
+
+  it('carries both the return path and the profile the chain started from', () => {
+    putSeed({ ...SEED, returnTo: '/teacher/tasks/tsk-1/review', origin: '/teacher/student/moti' })
+    assert.deepEqual(takeSeed(), {
+      ...SEED, returnTo: '/teacher/tasks/tsk-1/review', origin: '/teacher/student/moti',
+    })
+  })
+
+  it('takes only paths of its own app as somewhere to go', () => {
+    storage.setItem('yuvi.teacher.taskSeed', JSON.stringify({
+      ...SEED, returnTo: 'https://elsewhere.example/', origin: 42,
+    }))
+    const seed = takeSeed()
+    assert.equal(seed?.returnTo, undefined)
+    assert.equal(seed?.origin, undefined)
+  })
+
+  it('remembers a profile per task, and nothing that is not a path', () => {
+    putOrigin('tsk-1', '/teacher/student/moti')
+    putOrigin('tsk-2', 'javascript:alert(1)')
+    putOrigin('tsk-3', undefined)
+    assert.equal(readOrigin('tsk-1'), '/teacher/student/moti')
+    assert.equal(readOrigin('tsk-2'), undefined)
+    assert.equal(readOrigin('tsk-3'), undefined)
+  })
+
+  it('"back to settings" sends cancel back to the task that is already built', () => {
+    // Round 3: a teacher who reopened the settings and changed nothing was
+    // dropped on the profile, and read that as the task having disappeared.
+    // The built task is one screen away and that is where cancel goes.
+    assert.match(review, /returnTo: `\/teacher\/tasks\/\$\{encodeURIComponent\(taskId\)\}\/review`/)
+    assert.match(review, /origin: readOrigin\(taskId\)/)
+  })
+
+  it('a revised task inherits the profile, not the review screen it was reopened from', () => {
+    assert.match(builder, /putOrigin\(created\.task\._id, seed\?\.origin \?\? seed\?\.returnTo\)/)
+    assert.match(builder, /if \(seed\?\.returnTo\) navigate\(seed\.returnTo\)/)
   })
 })

@@ -375,6 +375,13 @@ def _object_tail(object_id: Any) -> str:
     return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
 
 
+#: An unknown page id this soon after a KNOWN screen's own entry is that screen
+#: still loading (CET fires several `initialized` per page open — the learner has
+#: not moved). Measured bursts sit at 0.4–0.8s; a real click to the next page is
+#: never this fast. See the unmapped-entry branch in `_apply_event_to_brain`.
+_SCREEN_LOAD_BURST_SECONDS = 3.0
+
+
 def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
     """An `initialized`/enter whose object names a PAGE we could not map.
 
@@ -1562,12 +1569,28 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         # the coach quoted another screen's coordinates. Unknown beats wrong:
         # the entry fallback re-grounds on their last recorded screen, flagged
         # assumed, and the variant hedge applies.
-        set_updates["current_state.item_id"] = None
-        set_updates["current_state.question_id"] = None
-        if event_at:
-            set_updates["current_state.at"] = (
-                event.get("occurred_at") or event.get("stored_at")
-            )
+        #
+        # EXCEPT inside the player's own load burst. CET announces several page
+        # ids within a second of opening a screen: measured 2026-09-02 on
+        # COMPL-00001, the question page's `initialized` at +0.00s and an id the
+        # catalog does not list at +0.74s, the learner having touched nothing
+        # (44 of 51 unknown-page entries across 42 sessions arrived under a
+        # second after the previous one). Clearing there took the pointer off
+        # question 1 one second after the coach introduced it, the client's
+        # poll adopted the empty key, and the learner's next message was filed
+        # under the introduction. A page id that follows a KNOWN screen this
+        # closely is part of that screen's load, not a move away from it.
+        in_load_burst = bool(
+            same_component and prior_state.get("item_id") and event_at and pointer_at
+            and (event_at - pointer_at).total_seconds() <= _SCREEN_LOAD_BURST_SECONDS
+        )
+        if not in_load_burst:
+            set_updates["current_state.item_id"] = None
+            set_updates["current_state.question_id"] = None
+            if event_at:
+                set_updates["current_state.at"] = (
+                    event.get("occurred_at") or event.get("stored_at")
+                )
     # Which representation the learner chose for a teaching screen ("listening"
     # = watch the clip, "cards" = flip the info cards). The screens themselves
     # are identical to us either way, so this is the only way the coach can talk

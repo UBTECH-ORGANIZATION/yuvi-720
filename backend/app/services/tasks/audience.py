@@ -47,6 +47,37 @@ MAX_QUESTION_CHARS = 160
 MIN_SHARED = 2
 
 
+#: The learner's own description (`student_description.blocks`) reaches the
+#: prompt only when the task is for a few children. Across a class the lines
+#: describe nobody in particular, and a prompt that says "she prefers a worked
+#: example first" about thirty learners is a prompt that is wrong about most.
+MAX_PROFILED_LEARNERS = 3
+MAX_PROFILE_LINES = 3
+#: Which blocks say something a task can act on. Motivation patterns are the
+#: coach's business — a worksheet cannot be "encouraged by streaks".
+PROFILE_BLOCKS = ("learning_preferences", "how_to_reach", "what_frustrates")
+
+
+def _profile_lines(brain: Any) -> list[str]:
+    """Current entries of the acting-relevant blocks, PII-stripped, no ids."""
+    from app.agents.safety import strip_pii
+    from app.brain.description import active_entries
+
+    blocks = ((brain or {}).get("student_description") or {}).get("blocks") or {}
+    lines: list[str] = []
+    for key in PROFILE_BLOCKS:
+        for entry in active_entries(blocks.get(key)):
+            text = " ".join(str(entry.get("text") or "").split())
+            if not text:
+                continue
+            clean, _ = strip_pii(text)
+            lines.append(clean[:MAX_PROFILE_CHARS])
+    return lines
+
+
+MAX_PROFILE_CHARS = 200
+
+
 def _mastery_band(scores: list[float]) -> Optional[str]:
     """The spread, as a range rather than an average.
 
@@ -84,6 +115,7 @@ async def audience_brief(
         "questions": [],
         "misconceptions": [],
         "mastery": None,
+        "profile": [],
     }
     if not ids:
         return brief
@@ -91,11 +123,14 @@ async def audience_brief(
     # ── what the brain knows: mastery spread and repeated misconceptions ──
     scores: list[float] = []
     tally: dict[str, int] = {}
+    profile: list[str] = []
     for learner_id in ids:
         try:
             brain = await get_brain(learner_id)
         except Exception:
             continue                      # one unreadable record is not the brief's problem
+        if len(ids) <= MAX_PROFILED_LEARNERS:
+            profile.extend(_profile_lines(brain))
         entry = entry_for((brain or {}).get("mastery"), objective_id) if objective_id else {}
         if not entry:
             continue
@@ -110,6 +145,11 @@ async def audience_brief(
                 tally[tag] = tally.get(tag, 0) + 1
 
     brief["mastery"] = _mastery_band(scores)
+    seen: set[str] = set()
+    brief["profile"] = [
+        line for line in profile
+        if not (line in seen or seen.add(line))
+    ][:MAX_PROFILE_LINES]
     floor = MIN_SHARED if len(ids) > 1 else 1
     brief["misconceptions"] = [
         {"tag": tag, "shared_by": count}
@@ -162,7 +202,8 @@ def render(brief: dict[str, Any], objective_title: Optional[str] = None) -> str:
         return ""
     questions = brief.get("questions") or []
     misconceptions = brief.get("misconceptions") or []
-    if not questions and not misconceptions and not brief.get("mastery"):
+    profile = brief.get("profile") or []
+    if not questions and not misconceptions and not brief.get("mastery") and not profile:
         # Only a head-count. True, and not worth a section — the task is for a
         # group of a known size and nothing more is known about them.
         return ""
@@ -176,6 +217,17 @@ def render(brief: dict[str, Any], objective_title: Optional[str] = None) -> str:
     ]
     if objective_title:
         lines.append(f"  - Objective: {objective_title}")
+    if profile:
+        # The learner's own record of how they learn, in the words Yuvi keeps
+        # it in. This is what made the difference between "a task about the
+        # topic" and "a task for this child" — the profile said short steps,
+        # one worked example, then graded practice, and the task ignored it
+        # because the generator was never told (#488).
+        lines.append("  - How they learn best (from what they told Yuvi and how they "
+                     "work). Shape the deck's pacing and the questions' scaffolding "
+                     "to this:")
+        for row in profile:
+            lines.append(f"      · {row}")
     if misconceptions:
         lines.append("  - Mistakes they keep repeating (fix THESE):")
         for row in misconceptions:

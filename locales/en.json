@@ -647,6 +647,7 @@
   "companion.history.messageCount": "{count} messages",
   "companion.history.error": "Conversation history could not be loaded right now.",
   "companion.history.retry": "Try again",
+  "companion.replyFailed": "Something went wrong on my side and I couldn't answer. Could you write to me again?",
   "teacher.title": "Class view",
   "teacher.subtitle": "Data-driven insights — with the raw evidence",
   "teacher.appbar.name": "Teacher space",

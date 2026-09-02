@@ -555,6 +555,32 @@ async def _call(component: str, task_id: str, task_spec: dict[str, Any],
     return spec_module.loads_model_json(raw)
 
 
+#: Element types that carry a picture on their own. One of these, or two of
+#: anything drawable, is a diagram; a lone line with a caption is not.
+_RICH_ELEMENTS = frozenset({
+    "polygon", "circle", "rectangle", "arc", "axes", "number_line",
+    "molecule", "prop", "drawing",
+})
+
+
+def scene_is_substantive(scene: dict[str, Any]) -> bool:
+    """Would this scene show a child anything?
+
+    The planner's contract lets a scene through with a single stroke and a
+    label: valid, renderable, and on a slide it is a large white card with one
+    line and one word on it (#487: a "מסה או נפח?" comparison whose diagram
+    was a vertical line and the word "נפח"). In the chat that is a bubble the
+    learner scrolls past; on a deck it is a slide the teacher has to delete.
+    The words are kept and the picture is dropped, which is what the deck
+    looked like before the diagram budget existed.
+    """
+    elements = [row for row in (scene.get("elements") or []) if isinstance(row, dict)]
+    drawable = [row for row in elements if row.get("type") != "text"]
+    if any(row.get("type") in _RICH_ELEMENTS for row in drawable):
+        return True
+    return len(drawable) >= 2
+
+
 async def _add_visuals(slides: list[dict[str, Any]], language: str,
                        usage: UsageContext) -> None:
     """Render up to `MAX_VISUALS` diagrams, in place. Failure is never fatal.
@@ -584,7 +610,7 @@ async def _add_visuals(slides: list[dict[str, Any]], language: str,
                 hint, spec_module.segments_to_text(slide.get("body")), language, usage,
                 text_filter=lambda text: safety.screen_output(text, language).text,
             )
-            if scene:
+            if scene and scene_is_substantive(scene):
                 slide["visual"] = await render_visual(scene)
         except Exception as exc:  # a missing diagram must not cost the deck
             print(f"⚠️ task visual render failed: {type(exc).__name__}: {exc}")

@@ -199,3 +199,68 @@ class TheSpecKeepsTheAudience(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheBriefCarriesHowTheyLearn(unittest.TestCase):
+    """#488: a task built from one child's profile ignored the profile.
+
+    The brain already held "start with one short worked example, then short
+    graded practice" — the generator was simply never told, so it wrote a task
+    about the topic in general and the judge then scored it as not personal.
+    The current entries of the acting-relevant blocks now ride in the brief;
+    withdrawn entries, names and ids do not, and a whole class gets none of it.
+    """
+
+    def _brain_with_profile(self, learner_id):
+        brain = _brain(learner_id, 0.4, ["unit-confusion"])
+        brain["student_description"] = {"blocks": {
+            "learning_preferences": [
+                {"text": "נוח להתחיל בדוגמה קצרה ואז לעבור לתרגול מדורג.",
+                 "evidence": ["stated_by_learner"], "valid_at": "2026-08-16", "invalid_at": None},
+                {"text": "העדפה ישנה שבוטלה", "evidence": [],
+                 "valid_at": "2026-08-01", "invalid_at": "2026-08-10"},
+            ],
+            "what_frustrates": [
+                {"text": "הסברים ארוכים בלי דוגמה מתסכלים אותו.", "evidence": [],
+                 "valid_at": "2026-08-16", "invalid_at": None},
+            ],
+            "motivational_patterns": [
+                {"text": "רצף ימים מניע אותו", "evidence": [], "valid_at": "2026-08-16",
+                 "invalid_at": None},
+            ],
+        }}
+        return brain
+
+    def test_one_child_s_current_profile_reaches_the_prompt(self):
+        brain = self._brain_with_profile("learner-moti")
+        with patch("app.brain.repository.get_brain", new=AsyncMock(return_value=brain)):
+            brief = run(audience.audience_brief(["learner-moti"], objective_id="OBJ.1"))
+        text = audience.render(brief, "מסה ונפח")
+        self.assertIn("דוגמה קצרה", text)
+        self.assertIn("הסברים ארוכים", text)
+        self.assertIn("How they learn best", text)
+
+    def test_withdrawn_entries_and_the_coach_s_own_blocks_stay_out(self):
+        brain = self._brain_with_profile("learner-moti")
+        with patch("app.brain.repository.get_brain", new=AsyncMock(return_value=brain)):
+            brief = run(audience.audience_brief(["learner-moti"], objective_id="OBJ.1"))
+        text = audience.render(brief)
+        self.assertNotIn("שבוטלה", text)
+        self.assertNotIn("רצף ימים", text)
+        self.assertNotIn("moti", text.lower())
+
+    def test_a_whole_class_gets_no_profile_lines(self):
+        ids = [f"learner-{n}" for n in range(6)]
+        with patch("app.brain.repository.get_brain",
+                   new=AsyncMock(side_effect=lambda lid: self._brain_with_profile(lid))):
+            brief = run(audience.audience_brief(ids, objective_id="OBJ.1"))
+        self.assertEqual(brief["profile"], [])
+        self.assertNotIn("How they learn best", audience.render(brief))
+
+    def test_a_profile_alone_is_enough_to_say_something(self):
+        brain = {"student_description": {"blocks": {"learning_preferences": [
+            {"text": "צעדים קצרים, דוגמה אחת ברורה, ואז תרגול.", "evidence": [],
+             "valid_at": "2026-08-16", "invalid_at": None}]}}}
+        with patch("app.brain.repository.get_brain", new=AsyncMock(return_value=brain)):
+            brief = run(audience.audience_brief(["learner-x"]))
+        self.assertIn("צעדים קצרים", audience.render(brief))

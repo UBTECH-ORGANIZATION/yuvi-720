@@ -39,16 +39,36 @@ _COOLDOWN_SECONDS = {
     # this cross-question cooldown can be short — long enough to avoid spamming a
     # rapid wrong-wrong burst, short enough to react on the next question.
     "mistake": 30,
+    "partial": 30,
     "success": 120,
     "idle": 120,
 }
 # Escalations first (repeated failure), then the gentle first-mistake nudge, then
-# success. `idle` is published by the watchdog, not through this candidate loop.
+# the partial-credit nudge, then success. `idle` is published by the watchdog,
+# not through this candidate loop.
 _PRIORITY = (
     "wheel_spinning", "misconception", "rapid_guessing", "slow_progress",
-    "mistake", "success",
+    "mistake", "partial", "success",
 )
+
+
+def is_partial_success(result: dict[str, Any]) -> bool:
+    """The player accepted the answer but not all of it.
+
+    CET reports a multi-blank question as `success=true` with `scaled=0.75`
+    when three of four blanks are right — and shows the child "עוד קצת" on the
+    screen. Treating that as a success made Yuvi say "כל הכבוד" next to a red
+    cross, and the praise named the value the child had got wrong (#525).
+    """
+    if (result or {}).get("success") is not True:
+        return False
+    scaled = (result or {}).get("score_scaled")
+    if isinstance(scaled, bool) or not isinstance(scaled, (int, float)):
+        return False
+    return 0.0 < float(scaled) < 1.0
 _last_published: dict[tuple[str, str], float] = {}
+# Per-question dedupe for the partial-credit nudge (learner → last nudged item).
+_last_partial_key: dict[str, str] = {}
 # Per-question dedupe for the first-mistake nudge (learner → last nudged item).
 _last_mistake_key: dict[str, str] = {}
 # Last screen key pushed per learner — dedupes `screen_change` so repeated
@@ -307,9 +327,23 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
             "elapsed_seconds": elapsed,
             "timing_quality": timing.get("quality"),
         }
+    # Partial credit is a correction moment, not a celebration: the screen is
+    # still showing the child which part to fix. Its own nudge, its own dedupe
+    # per question, and it keeps the `success` lane below from firing.
+    partial = is_partial_success(result)
+    if partial and verb in ("answered", "attempted"):
+        partial_key = f"{event.get('object_id')}|{event.get('question_id')}"
+        if _last_partial_key.get(learner_id) != partial_key:
+            candidates["partial"] = {
+                "type": "partial",
+                "objective_id": objective_id,
+                "question_id": event.get("question_id"),
+                "_key": partial_key,
+            }
+
     # Motivation (720): encourage on a completion, an improvement-after-errors
     # recovery, or sustained effort over time — all as one gentle `success` nudge.
-    if result.get("success") is True and verb in ("answered", "attempted", "completed"):
+    if result.get("success") is True and not partial and verb in ("answered", "attempted", "completed"):
         reason: Optional[str] = "completed" if verb == "completed" else None
         if reason is None and objective_id:
             recent = await get_recent_events(learner_id, objective_id, limit=20)
@@ -408,6 +442,8 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
             # escalation outranks it) so each fires once per question / session.
             if trigger_type == "mistake":
                 _last_mistake_key[learner_id] = trigger.get("_key")
+            if trigger_type == "partial":
+                _last_partial_key[learner_id] = trigger.get("_key")
             if trigger_type == "success" and trigger.get("_streak_session"):
                 _last_streak_session[learner_id] = trigger["_streak_session"]
             if trigger_type == "success" and trigger.get("_success_key"):

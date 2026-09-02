@@ -225,9 +225,13 @@ export function TaskReviewPage({ taskId }: { taskId: string }) {
                           practice: spec.practice?.question_count,
                           test: spec.test?.question_count,
                         },
-                        // Cancelling the reopened builder lands back on the
-                        // profile this task was started from (#486 follow-up).
-                        returnTo: readOrigin(taskId),
+                        // Cancelling the reopened builder lands back HERE, on
+                        // the task that is already built — not on the profile,
+                        // where a teacher read the task as having vanished
+                        // (#486, QA round 3). The profile still rides along so
+                        // the revised task knows where the chain started.
+                        returnTo: `/teacher/tasks/${encodeURIComponent(taskId)}/review`,
+                        origin: readOrigin(taskId),
                       })
                       navigate('/teacher/tasks')
                     }}>

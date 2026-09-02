@@ -34,6 +34,7 @@ import { useRoute } from '../app/router'
 import { pointerMatchesKey } from '../services/pointer'
 import { useAuth } from './AuthProvider'
 import { useRewards } from './RewardsProvider'
+import { pollLosesScreen } from './questionKey'
 
 /* CompanionProvider — owns Yuvi's live state and paginated server history (F3).
    The prompt window and full transcript remain in Mongo/Cosmos; no localStorage. */
@@ -349,7 +350,7 @@ function introDisposition(
 }
 
 export function CompanionProvider({ children }: { children: ReactNode }) {
-  const { language } = useI18n()
+  const { language, t } = useI18n()
   const { user } = useAuth()
   const { refresh: refreshRewards } = useRewards()
   const pathname = useRoute()
@@ -1098,9 +1099,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         },
       }, conversationId, surface), () => received)
     } catch {
+      // A turn that failed before a word arrived used to be painted as '…' —
+      // the same three dots as the typing indicator, so the learner read it as
+      // Yuvi still thinking and waited ("אתה פה?", "למה אתה לא עונה?"). Say
+      // what happened, in words, so the next message is theirs to send.
       setMessages((prev) => prev.map((m) => (
         m.id === assistantId && !m.text
-          ? { ...m, text: '…', isVisualizing: false }
+          ? { ...m, text: t('companion.replyFailed'), isVisualizing: false }
           : m.id === assistantId ? { ...m, isVisualizing: false } : m
       )))
     } finally {
@@ -1112,7 +1117,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       liveTurnInProgress.current = false
       window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
     }
-  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface, t])
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -1318,6 +1323,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // engagement, and schedules the screen's intro.
   const applyQuestionKey = useCallback((key: string | null, source: 'push' | 'poll') => {
     if (key === currentQuestionKeyRef.current) return
+    // A poll that names no screen has lost the position, not moved the learner
+    // to the cover (see `pollLosesScreen`). Adopting it re-tagged the next
+    // message to the Introduction. The support flags above were still taken
+    // from that poll; only the key is held.
+    if (source === 'poll' && pollLosesScreen(key, currentQuestionKeyRef.current)) return
     const movedScreen = introParts(key).item !== introParts(currentQuestionKeyRef.current).item
     currentQuestionKeyRef.current = key
     setCurrentQuestionKey(key)
@@ -1752,7 +1762,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   shouldPlayRef.current = shouldPlay
 
   const NUDGE_TYPES = useMemo(() => new Set([
-    'misconception', 'mistake', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
+    'misconception', 'mistake', 'partial', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
     // `kudos` is deliberately NOT here. Teacher praise is not a tutoring nudge:
     // it is a named adult saying something to a child, and Yuvi paraphrasing it
     // into a new conversation both changed the words and let them scroll away.

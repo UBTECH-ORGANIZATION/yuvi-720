@@ -76,5 +76,77 @@ class UnmappedScreenEntries(unittest.TestCase):
             self._event(verb="answered")))
 
 
+class UnmappedEntriesInsideTheLoadBurst(unittest.IsolatedAsyncioTestCase):
+    """CET fires several `initialized` within a second of opening a screen.
+
+    Measured 2026-09-02 on COMPL-00001, both launches identical: the question
+    page's entry at +0.00s (mapped → item-00001), then `msvi90dt1kxpui6fl`
+    at +0.74s, which the catalog does not list. Clearing the pointer there put
+    the learner's next chat message under the Introduction one second after
+    the coach had introduced question 1. Inside the burst the unknown id is the
+    same screen still loading; well after it, it is still a move away.
+    """
+
+    ITEM = f"{COMPONENT}-item-00001"
+
+    async def _fold(self, event: dict, prior_state: dict) -> dict:
+        captured: dict = {}
+
+        async def fake_apply(_lid, set_updates, inc_updates=None):
+            captured["set"] = set_updates
+
+        with mock.patch.object(events, "get_brain",
+                               new=mock.AsyncMock(return_value={"current_state": prior_state, "mastery": {}})), \
+             mock.patch.object(events, "apply_brain_operators",
+                               new=mock.AsyncMock(side_effect=fake_apply)), \
+             mock.patch.object(events, "is_component_completion", return_value=False):
+            await events._apply_event_to_brain(event)
+        return captured.get("set", {})
+
+    def _unmapped_entry(self, at: str) -> dict:
+        return {"learner_id": "gal", "verb": "enter", "launch": COMPONENT,
+                "unit_id": "unit-1", "object_id": PAGE_OBJECT, "sub_item_id": None,
+                "question_id": None, "occurred_at": at}
+
+    def _on_question_one(self, at: str) -> dict:
+        return {"component_id": COMPONENT, "item_id": self.ITEM,
+                "question_id": "q1", "at": at}
+
+    async def test_an_unknown_page_in_the_load_burst_keeps_the_screen(self):
+        """The measured case: +0.74s after question 1's own entry."""
+        sets = await self._fold(
+            self._unmapped_entry("2026-09-02T12:49:58.103Z"),
+            self._on_question_one("2026-09-02T12:49:57.362Z"),
+        )
+        self.assertNotIn("current_state.item_id", sets)
+        self.assertNotIn("current_state.question_id", sets)
+
+    async def test_an_unknown_page_well_after_arrival_still_clears_the_screen(self):
+        """Unknown beats wrong is unchanged for a real move to an unlearned page."""
+        sets = await self._fold(
+            self._unmapped_entry("2026-09-02T12:50:20.000Z"),
+            self._on_question_one("2026-09-02T12:49:57.362Z"),
+        )
+        self.assertIsNone(sets.get("current_state.item_id", "untouched"))
+        self.assertIsNone(sets.get("current_state.question_id", "untouched"))
+
+    async def test_no_known_screen_means_nothing_to_hold(self):
+        """A burst right after the lomda open (no item yet) is not protected."""
+        sets = await self._fold(
+            self._unmapped_entry("2026-09-02T12:49:40.627Z"),
+            {"component_id": COMPONENT, "item_id": None, "question_id": None,
+             "at": "2026-09-02T12:49:39.754Z"},
+        )
+        self.assertIsNone(sets.get("current_state.item_id", "untouched"))
+
+    async def test_another_lesson_is_never_the_same_screen_loading(self):
+        sets = await self._fold(
+            self._unmapped_entry("2026-09-02T12:49:58.103Z"),
+            {"component_id": "some-other-component", "item_id": "some-other-component-item-00002",
+             "question_id": "q1", "at": "2026-09-02T12:49:57.362Z"},
+        )
+        self.assertIsNone(sets.get("current_state.item_id", "untouched"))
+
+
 if __name__ == "__main__":
     unittest.main()

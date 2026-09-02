@@ -252,6 +252,61 @@ def _activeness_hints(activeness: dict[str, Any], locale: str) -> list[str]:
     return hints[:2]
 
 
+def _activeness_map_lines(activeness: dict[str, Any], locale: str) -> list[str]:
+    """The activeness map as the LEARNER sees it, one line per domain.
+
+    A learner asked "why is my self-awareness so low?" on the dashboard and
+    the coach, which had only phrasing hints and the week's movement, answered
+    with a generic mindfulness routine (#527). The map itself says three things
+    the child can read: the domain's band word, what strengthens it, and the
+    one thing to do — the same copy the dashboard renders. That is what the
+    coach is given here; the 0–100 score still never leaves the server.
+    """
+    from app.services.dashboard import BAND_WORDS, COMPETENCY_META, COMPETENCY_ORDER, _t
+
+    lang = locale if locale in {"he", "ar", "en"} else "he"
+    copy = _locale_copy(lang)
+    lines: list[str] = []
+    for key in COMPETENCY_ORDER:
+        value = (activeness or {}).get(key)
+        if not isinstance(value, (int, float)):
+            continue
+        # Same bands as the dashboard card (`services.dashboard`): the coach
+        # and the screen must call the same domain by the same word.
+        tone = "strong" if value >= 70 else "steady" if value >= 45 else "support"
+        parts = [f"{_t(COMPETENCY_META, key, lang)}: {_t(BAND_WORDS, tone, lang)}"]
+        helps = copy.get(f"sdash.skill.{key}.tip")
+        action = copy.get(f"actmap.improve.{key}")
+        if helps:
+            parts.append(f"what strengthens it: {helps}")
+        if action:
+            parts.append(f"one thing to do: {action}")
+        lines.append(" — ".join(parts))
+    return lines
+
+
+_LOCALE_COPY_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _locale_copy(lang: str) -> dict[str, str]:
+    """The learner-facing strings, read once per language from `locales/`."""
+    cached = _LOCALE_COPY_CACHE.get(lang)
+    if cached is not None:
+        return cached
+    try:
+        import json
+
+        from app.core.paths import LOCALES_DIR
+
+        with open(LOCALES_DIR / f"{lang}.json", encoding="utf-8") as handle:
+            loaded = json.load(handle)
+        copy = {k: v for k, v in loaded.items() if isinstance(v, str)}
+    except Exception:  # copy is an enhancement to the prompt, never a dependency
+        copy = {}
+    _LOCALE_COPY_CACHE[lang] = copy
+    return copy
+
+
 # What actually moved each activeness domain this week, phrased as the observed
 # behaviour. The dashboard card asserts the same fact to the learner, so a coach
 # answering "why did this go down?" must cite it rather than offer hypotheses.
@@ -575,6 +630,7 @@ async def build_coach_bundle(
         for line in stance_for(mastery_map, objective_id, objective_title, locale)
     ]
     coaching_hints = _activeness_hints(get_path(brain, "profile.activeness") or {}, locale)
+    activeness_map = _activeness_map_lines(get_path(brain, "profile.activeness") or {}, locale)
     # Named without the metric it derives from: the prompt must never carry the
     # internal score's identity, only the verbal reading of it.
     weekly_movement = _movement_lines(
@@ -871,6 +927,7 @@ async def build_coach_bundle(
         "mastery_stance": mastery_stance,
         "coaching_hints": coaching_hints,
         "weekly_movement": weekly_movement,
+        "activeness_map": activeness_map,
         "personalization_gaps": personalization_gaps,
         "mapping_clarifications": clarifications,
         "reflection_summary": {

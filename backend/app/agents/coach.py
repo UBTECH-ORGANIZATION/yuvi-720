@@ -332,6 +332,15 @@ PROACTIVE_PROMPTS = {
         "ar": "أجاب/ت الطالب/ة إجابة صحيحة. ابدأ/ي بكلمة ثناء قصيرة وصادقة على النجاح (مثل \"أحسنت\" أو \"عمل رائع\" — هذا تعزيز نجاح مشروع، لا عبارة موافقة فارغة)، واعترف/ي بالجهد أو التقدّم؛ وإذا جاء النجاح بعد أخطاء فاذكر/ي التحسّن نفسه لتعزيز الشعور بالكفاءة والمثابرة. لا تسأل/ي \"ما الذي ساعدك\" — فأزرار اختيار منفصلة تتكفّل بهذا السؤال.",
         "en": "The learner answered correctly. Open with a short, genuine word of praise for the success (e.g. \"Well done\" or \"Nice work\" — this is legitimate success feedback, not an empty agreement phrase), acknowledging the effort or progress; if the success came after mistakes, name the improvement itself to build capability and persistence. Do NOT ask \"what helped you\" — separate choice buttons already handle that question.",
     },
+    # A multi-part answer the player accepted with partial credit (CET: several
+    # blanks, `success=true, scaled=0.75`, the last blank wrong and the lomda
+    # itself saying "עוד קצת"). Praising it as correct contradicted the screen
+    # and, worse, named the missing value (#525).
+    "partial": {
+        "he": "לפי הלומדה התשובה נכונה בחלקה: חלק מהסעיפים נכונים ונשאר חלק לתקן. הכר/י בקצרה במה שכבר עובד — בלי לצטט ערכים או מילים מהתשובה הנכונה — וכוון/ני לחלק שנשאר בשאלה מנחה אחת, בלי לגלות אותו. אל תשבח/י כאילו הכול נכון ואל תאמר/י \"כל הכבוד\".",
+        "ar": "وفق اللومدة الإجابة صحيحة جزئيًا: بعض الأجزاء صحيحة وبقي جزء للتصحيح. اعترف/ي باختصار بما يعمل — دون اقتباس قيم أو كلمات من الإجابة الصحيحة — ووجّه/ي إلى الجزء المتبقي بسؤال موجّه واحد دون كشفه. لا تمدح/ي كأن كل شيء صحيح ولا تقل/ي \"أحسنت\".",
+        "en": "The player marked this answer partially correct: some parts are right and one still needs fixing. Briefly acknowledge what already works — without quoting values or words from the correct answer — and point at the remaining part with one guiding question, without revealing it. Do not praise as if everything were right; no \"well done\".",
+    },
     "rapid_guessing": {
         "he": "נמדדו כמה תשובות מהירות מאוד ברצף. הצע/י בחום לעצור רגע ולנסות יחד צעד אחד לאט — בלי שיפוטיות ובלי לרמוז לניחוש.",
         "ar": "رُصدت عدة إجابات سريعة جدًا متتالية. اقترح/ي بلطف التوقّف لحظة وتجربة خطوة واحدة ببطء معًا — دون إصدار حكم ودون التلميح إلى التخمين.",
@@ -516,6 +525,85 @@ def _has_personalization(bundle: dict) -> bool:
         if any(src.get(k) for k in ("interests", "preferences", "characteristics", "learning_style", "strategies")):
             return True
     return bool(bundle.get("student_description") or bundle.get("strategies"))
+
+
+# Children do not speak in the screen's vocabulary, and they share things
+# without a question mark. Both instruction sets get these lines at runtime so
+# neither mode can drift from the other (#524, #522).
+NATURAL_LANGUAGE_RULES = {
+    "he": (
+        "שפה של ילדים: תרגם/י בעצמך תיאורים יומיומיים למושגי המסך (\"הנקודה על הקו\" = נקודה על הציר, "
+        "\"מה שנותן לתות צבע\" = הדוגמה מהשיעור) בלי לדרוש ניסוח מדויק. אם באמת לא ברור למה הכוונה — "
+        "שאל/י שאלת הבהרה אחת קצרה, לא תשובה כללית. כשהתלמיד/ה משתף/ת דוגמה, ניסיון או פרט (גם בלי "
+        "סימן שאלה) — התייחס/י אליו ישירות והמשך/י ממנו; לעולם אל תתעלם/י ממנו ואל תחזור/י על הבקשה "
+        "הקודמת. אל תיתן/י הוראות טכניות (\"רענן/י את המסך\", \"היכנס/י לחשבון\"): אם ההודעה לא נראתה, "
+        "התנצל/י במשפט אחד וענה/י על מה שנשאל."
+    ),
+    "ar": (
+        "لغة الأطفال: ترجم/ي بنفسك الأوصاف اليومية إلى مفاهيم الشاشة (\"النقطة على الخط\" = نقطة على المحور) "
+        "دون طلب صياغة دقيقة. إن لم يتضح المقصود فعلًا — اطرح/ي سؤال توضيح قصيرًا واحدًا، لا إجابة عامة. "
+        "حين يشارك الطالب/ة مثالًا أو محاولة أو تفصيلًا (حتى بلا علامة استفهام) — تعامل/ي معه مباشرة وتابع/ي منه؛ "
+        "لا تتجاهل/يه أبدًا ولا تكرر/ي الطلب السابق. لا تعطِ تعليمات تقنية (\"حدّث/ي الشاشة\"): إن لم تُرَ الرسالة، "
+        "اعتذر/ي بجملة واحدة وأجب/أجيبي عمّا سُئل."
+    ),
+    "en": (
+        "Children's language: translate everyday descriptions into the screen's terms yourself "
+        "(\"the dot on the line\" = a point on the axis) without demanding precise wording. If the meaning "
+        "is genuinely unclear, ask ONE short clarifying question rather than giving a generic answer. When "
+        "the learner shares an example, an attempt or a detail (even without a question mark), respond to it "
+        "directly and continue from it; never ignore it and never repeat the previous request. Give no "
+        "technical instructions (\"refresh the screen\"): if a message was missed, apologise in one sentence "
+        "and answer what was asked."
+    ),
+}
+
+# The activeness map, when the bundle carries it, is the learner's own screen.
+ACTIVENESS_MAP_RULE = {
+    "he": (
+        "learner_map הוא מה שהתלמיד/ה רואה במפת הפעלנות: כל תחום, המילה שמתארת אותו, מה מחזק אותו "
+        "ומה כדאי לעשות. כשנשאלת מה תחום אומר, למה הוא נמוך או איך משפרים אותו — ענה/י מהשורה של אותו "
+        "תחום (ומ-weekly_movement אם יש שורה עליו), בלי ציון מספרי ובלי לנחש סיבות."
+    ),
+    "ar": (
+        "learner_map هو ما يراه الطالب/ة في خريطة الفاعلية: كل مجال، الكلمة التي تصفه، ما يقوّيه وما يُستحسن فعله. "
+        "حين تُسأل ماذا يعني مجال، أو لماذا هو منخفض، أو كيف يُحسَّن — أجب/أجيبي من سطر ذلك المجال (ومن weekly_movement "
+        "إن وُجد سطر عنه)، دون درجة رقمية ودون تخمين أسباب."
+    ),
+    "en": (
+        "learner_map is what the learner sees on their activeness map: each domain, the word describing it, "
+        "what strengthens it and the one thing to do. When asked what a domain means, why it is low or how to "
+        "improve it, answer from that domain's line (and from weekly_movement if it has a row), with no numeric "
+        "score and no guessed causes."
+    ),
+}
+
+# How to address the learner, from the form they chose for themselves at
+# onboarding. Kept out of the prompt until now, so a girl read "אתה" (#522).
+ADDRESS_FORM = {
+    "he": {
+        "female": "פנה אל התלמידה בלשון נקבה בלבד לאורך כל התשובה (את, תכתבי, נסי) — לא בלשון זכר ולא בצורות לוכסן.",
+        "male": "פנה אל התלמיד בלשון זכר בלבד לאורך כל התשובה (אתה, תכתוב, נסה) — לא בלשון נקבה ולא בצורות לוכסן.",
+    },
+    "ar": {
+        "female": "خاطب/ي الطالبة بصيغة المؤنث فقط طوال الرد — لا بصيغة المذكر ولا بصيغ الشرطة المائلة.",
+        "male": "خاطب/ي الطالب بصيغة المذكر فقط طوال الرد — لا بصيغة المؤنث ولا بصيغ الشرطة المائلة.",
+    },
+    "en": {
+        "female": "The learner is a girl; where gender shows in your wording, use it consistently.",
+        "male": "The learner is a boy; where gender shows in your wording, use it consistently.",
+    },
+}
+
+
+async def _address_form(learner_id: str) -> Optional[str]:
+    """`female` / `male` from the learner's own onboarding choice, else None."""
+    try:
+        from learner_state import get_learner_state
+
+        gender = str(((await get_learner_state(learner_id)) or {}).get("gender") or "").strip().lower()
+    except Exception:
+        return None
+    return gender if gender in ("female", "male") else None
 
 
 FALLBACK_REPLY = {
@@ -731,6 +819,10 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"mastery_stance: {joined(bundle.get('mastery_stance'))}",
         f"coaching_hints: {joined(bundle.get('coaching_hints'))}",
         f"weekly_movement: {joined(bundle.get('weekly_movement'))}",
+        # Named `learner_map`, not `activeness_map`: the personalization test
+        # guards that no raw activeness figure reaches the prompt by asserting
+        # the word never appears — and the lines carry band words, never scores.
+        f"learner_map: {joined(bundle.get('activeness_map'))}",
         f"personalization_gaps: {joined(bundle.get('personalization_gaps'))}",
         f"learner_clarifications: {joined(bundle.get('mapping_clarifications'))}",
         f"teacher_guidance: {joined(bundle.get('teacher_guidance'))}",
@@ -1043,8 +1135,13 @@ async def run_coach_stream(
         )
         if category in ("distress", "personal", "harmful"):
             if category == "distress":
+                # `screened_message`, not `prompt_text`: the prompt is resolved
+                # AFTER this gate, so naming it here raised UnboundLocalError,
+                # the stream broke before a word was sent, and the learner saw
+                # a bubble of three dots (observed 31/8–1/9: "הלב דופק מהר
+                # בהתרגשות ופחד", "למה המודעות העצמית שלי כל כך נמוכה").
                 await safety.record_wellbeing_flag(
-                    learner_id, evidence=prompt_text, language=lang, source="coach_chat"
+                    learner_id, evidence=screened_message, language=lang, source="coach_chat"
                 )
             yield safety.redirect_message(category, lang)
             return
@@ -1266,6 +1363,12 @@ async def run_coach_stream(
         else GENERAL_COMPANION_INSTRUCTIONS[lang]
     )
     instructions = f"{instructions}\n- {GROUNDING_GUARDRAIL[lang]}"
+    instructions = f"{instructions}\n- {NATURAL_LANGUAGE_RULES[lang]}"
+    if bundle.get("activeness_map"):
+        instructions = f"{instructions}\n- {ACTIVENESS_MAP_RULE[lang]}"
+    address = await _address_form(learner_id)
+    if address:
+        instructions = f"{instructions}\n- {ADDRESS_FORM[lang][address]}"
     on_lesson_screen = (bundle.get("current") or {}).get("on_lesson_screen", True)
     if not on_lesson_screen:
         instructions = f"{instructions}\n- {OFF_LESSON_CONTEXT[lang]}"

@@ -525,3 +525,35 @@ class TheLevelIsAnInstruction(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ADiagramHasToShowSomething(unittest.TestCase):
+    """#487: a comparison slide's diagram was one vertical line and a word —
+    a large white card with nothing on it. The words stay; the picture goes."""
+
+    def test_a_lone_line_with_a_caption_is_not_a_diagram(self):
+        scene = {"elements": [{"type": "line", "points": [[0, 0], [0, 2]]},
+                              {"type": "text", "text": "נפח"}]}
+        self.assertFalse(generate.scene_is_substantive(scene))
+
+    def test_one_shape_is_a_diagram(self):
+        scene = {"elements": [{"type": "rectangle", "center": [0, 0], "width": 2, "height": 1},
+                              {"type": "text", "text": "נפח"}]}
+        self.assertTrue(generate.scene_is_substantive(scene))
+
+    def test_two_strokes_are_a_diagram(self):
+        scene = {"elements": [{"type": "line", "points": [[0, 0], [0, 2]]},
+                              {"type": "arrow", "points": [[0, 0], [2, 0]]}]}
+        self.assertTrue(generate.scene_is_substantive(scene))
+
+    def test_a_thin_scene_leaves_the_slide_without_a_visual(self):
+        slides = [{"layout": "compare", "title": "מסה או נפח?", "visual_hint": "a beaker",
+                   "sides": [{"label": "מסה", "items": ["a"]}, {"label": "נפח", "items": ["b"]}]}]
+        thin = {"use_visual": True, "elements": [{"type": "line", "points": [[0, 0], [0, 2]]}]}
+        with patch("app.agents.manim_visual.plan_manim_visual", AsyncMock(return_value=thin)), \
+             patch("app.agents.manim_visual.render_visual", AsyncMock(return_value={"type": "scene"})) as render:
+            asyncio.run(generate._add_visuals(slides, "he", generate._usage("tsk-1", "presentation")))
+        self.assertNotIn("visual", slides[0])
+        self.assertNotIn("visual_hint", slides[0])
+        render.assert_not_called()
+

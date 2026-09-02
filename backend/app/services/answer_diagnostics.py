@@ -60,8 +60,10 @@ def diagnose_answer(
     provider_score_scaled: object,
 ) -> Optional[dict[str, Any]]:
     """Return answer evidence without changing the provider's scoring verdict."""
-    if provider_success is True:
-        return {"outcome": "correct", "correctness": 1.0, "source": "provider_success"}
+    # The score is read BEFORE the success flag: CET accepts a multi-blank
+    # answer with `success=true` and `scaled=0.75` when one blank is wrong
+    # (measured 1/9: "3, ימינה, 2, למעלה" — the lomda itself said "עוד קצת").
+    # Reading `success` first called that correct, and the coach praised it.
     if isinstance(provider_score_scaled, (int, float)) and not isinstance(provider_score_scaled, bool):
         score = max(0.0, min(1.0, float(provider_score_scaled)))
         if 0.0 < score < 1.0:
@@ -70,6 +72,8 @@ def diagnose_answer(
                 "correctness": round(score, 3),
                 "source": "provider_score",
             }
+    if provider_success is True:
+        return {"outcome": "correct", "correctness": 1.0, "source": "provider_success"}
 
     answers = question.get("correctAnswers") or []
     if not isinstance(answers, list) or len(answers) != 1:
