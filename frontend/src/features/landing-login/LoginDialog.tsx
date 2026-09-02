@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/primitives/Modal'
+import { Icon } from '../../components/primitives/Icon'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth, type AuthUser } from '../../providers/AuthProvider'
 import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
@@ -23,6 +24,7 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [revealed, setRevealed] = useState(false)
   const [helloIndex, setHelloIndex] = useState(0)
 
   // Yuvi cycles through a few greetings while the learner signs in.
@@ -42,6 +44,7 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   const close = () => {
     setError(null)
     setPassword('')
+    setRevealed(false)
     setPending(false)
     onClose()
   }
@@ -96,55 +99,69 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
       </div>
 
       <div className="auth-forge__card" dir={direction}>
-      <h2 className="sp-modal__title" id="auth-dialog-title">{t('auth.dialog.title')}</h2>
-      <p className="sp-modal__subtitle">{t('auth.dialog.subtitle')}</p>
+        <h2 className="sp-modal__title" id="auth-dialog-title">{t('auth.dialog.title')}</h2>
+        <p className="sp-modal__subtitle">{t('auth.dialog.subtitle')}</p>
 
-      <form className="sp-modal__form" onSubmit={onSubmit}>
-        <div className="sp-modal__field">
-          <label className="sp-modal__label" htmlFor="auth-username">{t('auth.field.username')}</label>
-          <input
-            id="auth-username"
-            className="sp-input"
-            type="text"
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            /* auto: the localized placeholder reads in the locale's direction,
-               while a typed Latin credential flips to LTR on its own. */
-            dir="auto"
-            value={username}
-            disabled={pending}
-            placeholder={t('auth.field.usernamePlaceholder')}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        </div>
+        <form className="sp-modal__form" onSubmit={onSubmit}>
+          <div className="sp-modal__field">
+            <label className="sp-modal__label" htmlFor="auth-username">{t('auth.field.username')}</label>
+            <input
+              id="auth-username"
+              className="sp-input"
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              /* auto: the localized placeholder reads in the locale's direction,
+                 while a typed Latin credential flips to LTR on its own. */
+              dir="auto"
+              value={username}
+              disabled={pending}
+              placeholder={t('auth.field.usernamePlaceholder')}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          </div>
 
-        <div className="sp-modal__field">
-          <label className="sp-modal__label" htmlFor="auth-password">{t('auth.field.password')}</label>
-          <input
-            id="auth-password"
-            className="sp-input"
-            type="password"
-            autoComplete="current-password"
-            dir="auto"
-            value={password}
-            disabled={pending}
-            placeholder={t('auth.field.passwordPlaceholder')}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
+          <div className="sp-modal__field">
+            <label className="sp-modal__label" htmlFor="auth-password">{t('auth.field.password')}</label>
+            <div className="sp-modal__input-wrap">
+              <input
+                id="auth-password"
+                className="sp-input"
+                type={revealed ? 'text' : 'password'}
+                autoComplete="current-password"
+                dir="auto"
+                value={password}
+                disabled={pending}
+                placeholder={t('auth.field.passwordPlaceholder')}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="sp-modal__reveal"
+                onClick={() => setRevealed((value) => !value)}
+                disabled={pending}
+                aria-controls="auth-password"
+                aria-pressed={revealed}
+                aria-label={t(revealed ? 'auth.field.passwordHide' : 'auth.field.passwordShow')}
+                title={t(revealed ? 'auth.field.passwordHide' : 'auth.field.passwordShow')}
+              >
+                <Icon name={revealed ? 'eyeOff' : 'eye'} size={18} />
+              </button>
+            </div>
+          </div>
 
-        {error ? <p className="sp-modal__error" role="alert">{error}</p> : null}
+          {error ? <p className="sp-modal__error" role="alert">{error}</p> : null}
 
-        <div className="sp-modal__actions">
-          <button type="button" className="sp-btn sp-btn--ghost sp-btn--pill" onClick={close} disabled={pending}>
-            {t('auth.action.cancel')}
-          </button>
-          <button type="submit" className="sp-btn sp-btn--gradient sp-btn--pill" disabled={pending}>
-            {pending ? t('auth.action.submitting') : t('auth.action.submit')}
-          </button>
-        </div>
-      </form>
+          <div className="sp-modal__actions">
+            <button type="button" className="sp-btn sp-btn--ghost sp-btn--pill" onClick={close} disabled={pending}>
+              {t('auth.action.cancel')}
+            </button>
+            <button type="submit" className="sp-btn sp-btn--gradient sp-btn--pill" disabled={pending}>
+              {pending ? t('auth.action.submitting') : t('auth.action.submit')}
+            </button>
+          </div>
+        </form>
       </div>
     </Modal>
   )
