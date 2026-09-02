@@ -57,6 +57,23 @@
 .tch-student__who { flex: 1; min-inline-size: 0; display: grid; gap: 2px; justify-items: start; }
 .tch-student__identity h1 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 
+/* The standing good-word door (#485). A ghost button here read as a disabled
+   control — QA: "pale, looks inactive" — so it wears the brand tint: it is the
+   one positive action on a page that otherwise points at problems, and it
+   should look like an invitation, not a leftover. */
+.tch-student__praiseBtn {
+  background: var(--sp-primary-100);
+  border: 1px solid var(--sp-primary-500);   /* solid: dashed reads as "empty slot" */
+  color: var(--sp-primary-700);
+  font-weight: 600;
+}
+.tch-student__praiseBtn:hover,
+.tch-student__praiseBtn:focus-visible {
+  background: var(--sp-primary-600);
+  border-color: var(--sp-primary-600);
+  color: #fff;
+}
+
 /* On the identity row itself: plain figures with a hairline between them.
    The `.tch-stat` names are kept (the harnesses count them) but the shared
    card look is switched off — no surface, no border, no hover lift. */

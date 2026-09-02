@@ -525,3 +525,119 @@ class TheLevelIsAnInstruction(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ADiagramHasToShowSomething(unittest.TestCase):
+    """#487: a comparison slide's diagram was one vertical line and a word —
+    a large white card with nothing on it. The words stay; the picture goes."""
+
+    def test_a_lone_line_with_a_caption_is_not_a_diagram(self):
+        scene = {"elements": [{"type": "line", "points": [[0, 0], [0, 2]]},
+                              {"type": "text", "text": "נפח"}]}
+        self.assertFalse(generate.scene_is_substantive(scene))
+
+    def test_one_shape_is_a_diagram(self):
+        scene = {"elements": [{"type": "rectangle", "center": [0, 0], "width": 2, "height": 1},
+                              {"type": "text", "text": "נפח"}]}
+        self.assertTrue(generate.scene_is_substantive(scene))
+
+    def test_two_strokes_are_a_diagram(self):
+        scene = {"elements": [{"type": "line", "points": [[0, 0], [0, 2]]},
+                              {"type": "arrow", "points": [[0, 0], [2, 0]]}]}
+        self.assertTrue(generate.scene_is_substantive(scene))
+
+    def test_a_thin_scene_leaves_the_slide_without_a_visual(self):
+        slides = [{"layout": "compare", "title": "מסה או נפח?", "visual_hint": "a beaker",
+                   "sides": [{"label": "מסה", "items": ["a"]}, {"label": "נפח", "items": ["b"]}]}]
+        thin = {"use_visual": True, "elements": [{"type": "line", "points": [[0, 0], [0, 2]]}]}
+        with patch("app.agents.manim_visual.plan_manim_visual", AsyncMock(return_value=thin)), \
+             patch("app.agents.manim_visual.render_visual", AsyncMock(return_value={"type": "scene"})) as render:
+            asyncio.run(generate._add_visuals(slides, "he", generate._usage("tsk-1", "presentation")))
+        self.assertNotIn("visual", slides[0])
+        self.assertNotIn("visual_hint", slides[0])
+        render.assert_not_called()
+
+
+class TheRunActsOnTheJudgeSFindings(unittest.TestCase):
+    """#488/#492: the judge's findings were a list for the teacher to work
+    through by hand. The run now applies them once, then measures again."""
+
+    LOW = {"judged": True, "overall": 4.3, "findings": [
+        {"component": "presentation", "item": 1,
+         "problem": "השקופית אינה מתייחסת לקשיים של הילד"},
+        {"component": "practice", "item": 2, "problem": "התרגול נשאר כללי"},
+        {"component": "practice", "item": 4, "problem": "יחידות באנגלית"},
+    ]}
+    HIGH = {"judged": True, "overall": 7.5, "findings": []}
+
+    def test_below_the_concern_line_with_named_parts_means_a_revision(self):
+        self.assertTrue(generate._needs_revision(self.LOW))
+        self.assertFalse(generate._needs_revision(self.HIGH))
+        self.assertFalse(generate._needs_revision({"judged": False, "overall": 2.0,
+                                                   "findings": self.LOW["findings"]}))
+        self.assertFalse(generate._needs_revision({"judged": True, "overall": 3.0,
+                                                   "findings": [{"component": "", "problem": "x"}]}))
+
+    def test_the_instruction_is_that_part_s_findings_and_nothing_else(self):
+        text = generate.findings_instruction(self.LOW, "practice")
+        self.assertIn("item 2: התרגול נשאר כללי", text)
+        self.assertIn("item 4: יחידות באנגלית", text)
+        self.assertNotIn("השקופית", text)
+        self.assertEqual(generate.findings_instruction(self.HIGH, "practice"), "")
+
+    def test_each_named_part_is_revised_once_and_the_task_measured_again(self):
+        written: dict[str, Any] = {}
+
+        async def update_task(task_id, **fields):
+            written.update(fields)
+            return {}
+
+        with patch("app.services.tasks.revise.regenerate", AsyncMock(return_value={})) as regen, \
+             patch("app.services.tasks.quality.review", AsyncMock(return_value=self.HIGH)) as review, \
+             patch("app.services.tasks.store.update_task", AsyncMock(side_effect=update_task)):
+            asyncio.run(generate._revise_from_findings("tsk-1", self.LOW))
+
+        self.assertEqual(regen.await_count, 2)
+        components = [call.args[1] for call in regen.await_args_list]
+        self.assertEqual(components, ["presentation", "practice"])
+        for call in regen.await_args_list:
+            self.assertTrue(call.kwargs["keep_existing"])
+            self.assertIn("Fix each one", call.kwargs["instructions"])
+        review.assert_awaited_once()
+        self.assertTrue(written["quality"]["auto_revised"])
+        self.assertEqual(written["quality"]["overall_before_revision"], 4.3)
+        self.assertEqual(written["quality"]["overall"], 7.5)
+
+    def test_a_task_is_not_called_ready_until_the_revision_is_done(self):
+        order: list[str] = []
+        task = {"_id": "tsk-1", "status": "draft", "generation": [],
+                "spec": {"title": "מסה ונפח", "language": "he", "components": ["practice"],
+                         "practice": {"question_count": 2}}}
+
+        async def update_task(task_id, **fields):
+            if "status" in fields:
+                order.append(f"status:{fields['status']}")
+            task.update(fields)
+            return task
+
+        async def review(task_id):
+            order.append("review")
+            return self.LOW if order.count("review") == 1 else self.HIGH
+
+        async def regenerate(task_id, component, **kwargs):
+            order.append(f"revise:{component}")
+            return {}
+
+        with patch("app.services.tasks.store.get_task", AsyncMock(return_value=task)), \
+             patch("app.services.tasks.store.update_task", AsyncMock(side_effect=update_task)), \
+             patch("app.services.tasks.store.record_generation", AsyncMock()), \
+             patch.object(generate, "audience_block_for", AsyncMock(return_value="")), \
+             patch.object(generate, "generate_component", AsyncMock(return_value={"questions": []})), \
+             patch("app.services.tasks.quality.review", AsyncMock(side_effect=review)), \
+             patch("app.services.tasks.revise.regenerate", AsyncMock(side_effect=regenerate)):
+            asyncio.run(generate.generate_task("tsk-1"))
+
+        # The judge also named the presentation; this task has none, so only
+        # the part that exists is rewritten.
+        self.assertEqual(order, ["status:generating", "review", "revise:practice",
+                                 "review", "status:ready"])
