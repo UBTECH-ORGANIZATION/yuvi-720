@@ -133,6 +133,11 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   return (
     <AppBar
       center={navigation}
+      className="app-bar--learner"
+      /* The trailing cluster carries the wide studio button, so the nav runs
+         out of room well before the shared 1200 default — the two collided
+         instead of folding. Gal tuned this by eye: fold at 1350. */
+      compactBelow={1350}
       trailing={
         <div className="learner-app-bar__trailing">
           <StudioLaunchButton />
