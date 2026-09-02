@@ -195,8 +195,9 @@ export function TeacherTasksPage() {
             onCancel={() => {
               setBuilding(false)
               setSeed(null)
-              // A seed that came from a profile goes back to it — the teacher
-              // cancelled a task, not their reading of that child.
+              // A seed that came from a profile goes back to it, and one that
+              // came from a built task's "back to settings" goes back to that
+              // task — the teacher cancelled a revision, not the task itself.
               if (seed?.returnTo) navigate(seed.returnTo)
             }}
             onDone={() => { setBuilding(false); setSeed(null); void load() }}
@@ -810,9 +811,10 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
       // The EDITED list, not the seed's: a teacher who removed two children
       // from the brief must not find them ticked again in the send dialog.
       if (audience.length) putAudience(created.task._id, audience)
-      // And where the teacher started from, so the review screen's "back to
-      // settings" can still hand them back to that profile.
-      putOrigin(created.task._id, seed?.returnTo)
+      // And the profile the chain started from, so a revised version built
+      // from THIS task's "back to settings" still knows the way home. A seed
+      // from a profile has no separate origin: cancel and home are one place.
+      putOrigin(created.task._id, seed?.origin ?? seed?.returnTo)
       // Straight into generation: a draft nobody generates is a task that
       // never happens, and the teacher has already said what they want.
       await startGeneration(created.task._id)

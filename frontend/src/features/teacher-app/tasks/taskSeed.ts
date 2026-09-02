@@ -49,10 +49,16 @@ export interface TaskSeed {
   notes?: string
   components?: string[]
   counts?: { presentation?: number; practice?: number; test?: number }
-  /* Where the teacher was when they started — a student profile, usually.
-     Cancelling a builder that arrived from there goes BACK there, not to the
-     tasks list the teacher never asked for (#486 follow-up). */
+  /* Where cancelling this builder lands. A builder opened from a profile goes
+     BACK to that profile; one reopened by "back to settings" goes back to the
+     task it was reopened from — the teacher has a finished task on the other
+     side of that button, and a cancel that hid it behind the profile read as
+     the task having vanished (#486, QA rounds 2 and 3). */
   returnTo?: string
+  /* The profile the whole chain started from, carried to the task the
+     builder creates so ITS "back to settings" still knows the way home. Falls
+     back to `returnTo` when the builder was opened from the profile itself. */
+  origin?: string
 }
 
 function audienceKey(taskId: string): string {
@@ -63,10 +69,9 @@ function originKey(taskId: string): string {
   return `${ORIGIN_PREFIX}:${taskId}`
 }
 
-/** The screen a task was started from, kept by task id for the review page:
- *  its "back to settings" reopens the builder, and cancelling THAT must land
- *  on the profile the teacher came from, not on the list (#486 follow-up).
- *  Same life as the audience — one tab, until the task is sent. */
+/** The profile a task was started from, kept by task id so a revised version
+ *  built from this task's "back to settings" inherits it. Same life as the
+ *  audience — one tab, until the task is sent. */
 export function putOrigin(taskId: string, path: string | undefined): void {
   if (!taskId || !path || !path.startsWith('/')) return
   try {
@@ -123,6 +128,8 @@ export function takeSeed(): TaskSeed | null {
       ...(parsed.counts && typeof parsed.counts === 'object' ? { counts: parsed.counts } : {}),
       ...(typeof parsed.returnTo === 'string' && parsed.returnTo.startsWith('/')
         ? { returnTo: parsed.returnTo } : {}),
+      ...(typeof parsed.origin === 'string' && parsed.origin.startsWith('/')
+        ? { origin: parsed.origin } : {}),
     }
   } catch {
     return null
