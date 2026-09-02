@@ -115,10 +115,15 @@ export function YuviCompanionDock() {
             <i />
           </span>
         </div>
+        {/* A dot, not a count (#483): "1" borrows the inbox's grammar and sends
+            the child hunting for an unread message that Yuvi simply wants to
+            say out loud. The count still reaches screen readers. */}
         {unreadCount > 0 && !isOpen && (
-          <span className="Yuvi-companion-dock__unread" aria-label={t('companion.unread')}>
-            {unreadCount}
-          </span>
+          <span
+            className="Yuvi-companion-dock__unread"
+            role="status"
+            aria-label={t('companion.unread')}
+          />
         )}
       </div>
     </aside>

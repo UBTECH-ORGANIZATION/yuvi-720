@@ -327,6 +327,10 @@ export function CompanionChat() {
       () => setHandState((value) => (value === 'sending' ? value : 'idle')),
       6000)
   }
+  // `aria-disabled`, not `disabled`: a native disabled button drops out of the
+  // tab order and takes its tooltip with it, so the child is left with a dull
+  // button and no way to learn why it will not respond (#517).
+  const handBlocked = handState === 'sending' || (handCooling && !handRaised)
   const handLabel = handRaised
     ? t('companion.hand.raisedTooltip')
     : handCooling ? t('companion.hand.sent') : t('companion.hand.tooltip')
@@ -624,7 +628,7 @@ export function CompanionChat() {
     setMessageRatings((current) => ({ ...current, [messageId]: rating }))
     // The conversation is the MoE rating object; repeated ratings are fine
     // (latest wins). Failure is silent — the local echo still reflects the tap.
-    void rateCoachConversation(activeConversationId || 'default', rating).catch(() => {})
+    void rateCoachConversation(activeConversationId || 'default', rating).catch(() => { })
   }
 
   const HELPED_ORDER: HelpMethod[] = ['hint', 'explanation', 'yuvi_chat']
@@ -635,7 +639,7 @@ export function CompanionChat() {
       const next = picked.includes(method) ? picked.filter((m) => m !== method) : [...picked, method]
       const [component_id, item_id, question_id] = (attribution.questionKey || '').split('|')
       // Latest full set wins server-side; local echo keeps the green state even if it fails.
-      void saveHelpedAttribution({ component_id, item_id, question_id, methods: next }).catch(() => {})
+      void saveHelpedAttribution({ component_id, item_id, question_id, methods: next }).catch(() => { })
       return { ...current, [messageId]: next }
     })
   }
@@ -903,7 +907,7 @@ export function CompanionChat() {
   const isVideoScreen = Boolean(liveItem && itemMedia[liveItem] === 'video')
   const openSectionAsks = activeSection
     ? !activeSection.isIntro && !activeSection.asksNothing
-      && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
+    && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
     // No thread yet (Yuvi has not opened the screen) — fall back to the lesson's
     // own position rather than hiding help the learner may already need. A
     // catalog-known `step` never asks, so it is safe to hide support immediately
@@ -916,649 +920,649 @@ export function CompanionChat() {
 
   return (
     <>
-    {!isTaskMode && <div
-      className={`sp-companion-backdrop${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
-      aria-hidden="true"
-      onPointerDown={close}
-    />}
-    <div
-      className={`sp-companion-slot${isTaskMode ? ' sp-companion-slot--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
-      style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
-    >
-    <section
-      id="Yuvi-companion-panel"
-      className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${fullscreenAnim ? ` is-fs-${fullscreenAnim}` : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
-      role="dialog"
-      aria-labelledby="Yuvi-companion-title"
-      dir={direction}
-      data-opening={isOpening ? 'true' : 'false'}
-      data-closing={isClosing ? 'true' : 'false'}
-      style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
-    >
-      {!isTaskMode && !fullscreen && <div
-        className="sp-companion__resizer"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={t('companion.resize')}
-        aria-valuemin={MIN_PANEL_WIDTH}
-        aria-valuemax={maximumPanelWidth()}
-        aria-valuenow={panelWidth}
-        tabIndex={0}
-        onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
-          if (event.pointerType === 'mouse' && event.button !== 0) return
-          event.preventDefault()
-          event.currentTarget.setPointerCapture(event.pointerId)
-          setIsResizing(true)
-        }}
-        onPointerMove={(event: ReactPointerEvent<HTMLDivElement>) => {
-          if (!isResizing || !event.currentTarget.hasPointerCapture(event.pointerId)) return
-          const panelRight = event.currentTarget.parentElement?.getBoundingClientRect().right || window.innerWidth
-          setPanelWidth(clampPanelWidth(panelRight - event.clientX))
-        }}
-        onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-          setIsResizing(false)
-        }}
-        onPointerCancel={() => setIsResizing(false)}
-        onKeyDown={(event) => {
-          let next = panelWidth
-          if (event.key === 'ArrowLeft') next += 16
-          else if (event.key === 'ArrowRight') next -= 16
-          else if (event.key === 'Home') next = MIN_PANEL_WIDTH
-          else if (event.key === 'End') next = maximumPanelWidth()
-          else return
-          event.preventDefault()
-          setPanelWidth(clampPanelWidth(next))
-        }}
+      {!isTaskMode && <div
+        className={`sp-companion-backdrop${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
+        aria-hidden="true"
+        onPointerDown={close}
       />}
-      <header className="sp-companion__head">
-        {isTaskMode && (
-          <div
-            className="sp-companion__yuvi-stage"
-            data-yuvi-activity={speech.state === 'playing' ? 'speaking' : activity}
-            aria-hidden="true"
-          >
-            <span className="sp-companion__yuvi-orbit" />
-            {(loaded || YuviFallbackReady) && showLiveYuvi ? (
-              <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
-                <YuviAvatar3D
-                  key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
-                  initialDesign={design}
-                  label={t('companion.title')}
-                  muted
-                  frontFacing={settleHeaderYuvi}
-                  followPointer
-                  thinking={activity === 'thinking'}
-                  speaking={activity === 'speaking' || speech.state === 'playing'}
-                />
-              </Suspense>
-            ) : (
-              <span className="sp-companion__yuvi-loader" role="presentation" />
-            )}
-          </div>
-        )}
-        <div className="sp-companion__id">
-          <span className="sp-companion__avatar"><YuviHeadIcon /></span>
-          <div>
-            <p id="Yuvi-companion-title" className="sp-companion__title">{t('companion.title')}</p>
-            <p className="sp-companion__subtitle">{t('companion.subtitle')}</p>
-          </div>
-        </div>
-        {!isTaskMode && <div className="sp-companion__head-actions">
-          <button
-            type="button"
-            className={`sp-companion__head-action${historyOpen ? ' is-active' : ''}`}
-            onClick={() => setHistoryOpen((value) => !value)}
-            aria-label={t('companion.history.open')}
-            data-tooltip={t('companion.history.open')}
-            hidden={fullscreen}
-          >
-            <Icon name="clock" size={18} />
-          </button>
-          <button
-            type="button"
-            className="sp-companion__head-action"
-            onClick={() => void createConversation()}
-            disabled={newConversationDisabled}
-            aria-label={newConversationLabel}
-            data-tooltip={newConversationLabel}
-          >
-            <Icon name="plus" size={18} />
-          </button>
-          <button
-            type="button"
-            className={`sp-companion__head-action${fullscreen ? ' is-active' : ''}`}
-            onClick={() => changeFullscreen(!fullscreen)}
-            aria-pressed={fullscreen}
-            aria-label={fullscreen ? t('companion.collapse') : t('companion.expand')}
-            data-tooltip={fullscreen ? t('companion.collapse') : t('companion.expand')}
-          >
-            <Icon name={fullscreen ? 'collapse' : 'expand'} size={18} />
-          </button>
-          <button
-            type="button"
-            className="sp-companion__close"
-            onClick={requestClose}
-            aria-label={t('companion.close')}
-            data-tooltip={t('companion.close')}
-          >
-            <Icon name="close" size={18} />
-          </button>
-        </div>}
-      </header>
-
-      <p className="sp-companion__disclosure" dir="auto">
-        <Icon name="lock" size={13} strokeWidth={2} aria-hidden="true" />
-        {disclosure || t('companion.disclosure')}
-      </p>
-
-      {/* Raise-hand outcome, said out loud: a child who asked for a person must
-          see whether one is coming. `role="status"` so it is announced too. */}
-      {(handState === 'sent' || handState === 'unreached') && (
-        <p
-          className={`sp-companion__hand-status${handState === 'unreached' ? ' is-unreached' : ''}`}
-          role="status"
-          dir="auto"
+      <div
+        className={`sp-companion-slot${isTaskMode ? ' sp-companion-slot--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
+        style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
+      >
+        <section
+          id="Yuvi-companion-panel"
+          className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${fullscreenAnim ? ` is-fs-${fullscreenAnim}` : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
+          role="dialog"
+          aria-labelledby="Yuvi-companion-title"
+          dir={direction}
+          data-opening={isOpening ? 'true' : 'false'}
+          data-closing={isClosing ? 'true' : 'false'}
+          style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
         >
-          <Icon name="hand" size={13} strokeWidth={2} aria-hidden="true" />
-          {t(handState === 'sent' ? 'companion.hand.sent' : 'companion.hand.unreached')}
-        </p>
-      )}
-
-      {isTaskMode && (
-        <div className="sp-companion__task-tabs" role="tablist" aria-label={t('companion.task.tabs')}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={taskView === 'chat'}
-            className={taskView === 'chat' ? 'is-active' : ''}
-            onClick={() => setTaskView('chat')}
-          >
-            <Icon name="message" size={16} />
-            <span>{t('companion.task.tabChat')}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={taskView === 'roadmap'}
-            className={taskView === 'roadmap' ? 'is-active' : ''}
-            onClick={() => setTaskView('roadmap')}
-          >
-            <Icon name="spark" size={16} />
-            <span>{t('companion.task.tabRoadmap')}</span>
-          </button>
-        </div>
-      )}
-
-      {(historyOpen || fullscreen) && !isTaskMode && (
-        <section className="sp-companion__history" aria-labelledby="companion-history-title">
-          <div className="sp-companion__history-heading">
-            <div>
-              <h2 id="companion-history-title">{t('companion.history.title')}</h2>
-              <p>{t('companion.history.subtitle')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void createConversation()}
-              disabled={newConversationDisabled}
-              title={newConversationLabel}
-            >
-              <Icon name="plus" size={17} />
-              <span>{t('companion.history.new')}</span>
-            </button>
-          </div>
-          <div className="sp-companion__history-list" ref={historyRef} onScroll={onHistoryScroll}>
-            {historyError && !conversations.length && (
-              <div className="sp-companion__history-state" role="alert">
-                <Icon name="alert" size={23} />
-                <p>{t('companion.history.error')}</p>
-                <button type="button" onClick={() => void reloadHistory()}>{t('companion.history.retry')}</button>
-              </div>
-            )}
-            {!historyError && !isLoadingConversations && conversations.length === 0 && (
-              <div className="sp-companion__history-state">
-                <Icon name="message" size={25} />
-                <p>{t('companion.history.empty')}</p>
-              </div>
-            )}
-            {conversations.map((conversation) => (
-              <article
-                className={`sp-companion__conversation${conversation.id === activeConversationId ? ' is-active' : ''}`}
-                key={conversation.id}
+          {!isTaskMode && !fullscreen && <div
+            className="sp-companion__resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t('companion.resize')}
+            aria-valuemin={MIN_PANEL_WIDTH}
+            aria-valuemax={maximumPanelWidth()}
+            aria-valuenow={panelWidth}
+            tabIndex={0}
+            onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
+              if (event.pointerType === 'mouse' && event.button !== 0) return
+              event.preventDefault()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              setIsResizing(true)
+            }}
+            onPointerMove={(event: ReactPointerEvent<HTMLDivElement>) => {
+              if (!isResizing || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+              const panelRight = event.currentTarget.parentElement?.getBoundingClientRect().right || window.innerWidth
+              setPanelWidth(clampPanelWidth(panelRight - event.clientX))
+            }}
+            onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId)
+              }
+              setIsResizing(false)
+            }}
+            onPointerCancel={() => setIsResizing(false)}
+            onKeyDown={(event) => {
+              let next = panelWidth
+              if (event.key === 'ArrowLeft') next += 16
+              else if (event.key === 'ArrowRight') next -= 16
+              else if (event.key === 'Home') next = MIN_PANEL_WIDTH
+              else if (event.key === 'End') next = maximumPanelWidth()
+              else return
+              event.preventDefault()
+              setPanelWidth(clampPanelWidth(next))
+            }}
+          />}
+          <header className="sp-companion__head">
+            {isTaskMode && (
+              <div
+                className="sp-companion__yuvi-stage"
+                data-yuvi-activity={speech.state === 'playing' ? 'speaking' : activity}
+                aria-hidden="true"
               >
-                {deletePendingId === conversation.id ? (
-                  <div
-                    className="sp-companion__conversation-confirm"
-                    role="alertdialog"
-                    aria-label={t('companion.history.delete')}
-                  >
-                    <Icon name="trash" size={19} />
-                    <p>{t('companion.history.deleteConfirm')}</p>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setDeletePendingId(null)}
-                        disabled={deletingId === conversation.id}
-                        autoFocus
-                      >
-                        {t('companion.history.cancel')}
-                      </button>
-                      <button
-                        type="button"
-                        className="is-danger"
-                        onClick={() => void confirmDeleteConversation(conversation.id)}
-                        disabled={deletingId === conversation.id}
-                      >
-                        {deletingId === conversation.id
-                          ? t('companion.history.deleting')
-                          : t('companion.history.confirmDelete')}
-                      </button>
-                    </div>
-                  </div>
+                <span className="sp-companion__yuvi-orbit" />
+                {(loaded || YuviFallbackReady) && showLiveYuvi ? (
+                  <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
+                    <YuviAvatar3D
+                      key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
+                      initialDesign={design}
+                      label={t('companion.title')}
+                      muted
+                      frontFacing={settleHeaderYuvi}
+                      followPointer
+                      thinking={activity === 'thinking'}
+                      speaking={activity === 'speaking' || speech.state === 'playing'}
+                    />
+                  </Suspense>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="sp-companion__conversation-open"
-                      onClick={() => void openConversation(conversation.id)}
-                      disabled={isStreaming}
-                      aria-current={conversation.id === activeConversationId ? 'page' : undefined}
-                      aria-label={t('companion.history.openConversation', {
-                        title: conversation.title || t('companion.history.untitled'),
-                      })}
-                    >
-                      <span className="sp-companion__conversation-icon"><Icon name="message" size={18} /></span>
-                      <span className="sp-companion__conversation-copy">
-                        <strong dir="auto">{conversation.title || t('companion.history.untitled')}</strong>
-                        <small dir="auto">{conversation.preview
-                          ? conversationPreview(conversation.preview)
-                          : t('companion.history.emptyConversation')}</small>
-                        <span>
-                          <time dateTime={conversation.updated_at}>{formatDate(conversation.updated_at)}</time>
-                          <i aria-hidden="true" />
-                          {t('companion.history.messageCount', { count: conversation.message_count })}
-                        </span>
-                      </span>
-                      <Icon name="arrow" size={16} className="sp-companion__conversation-arrow" />
-                    </button>
-                    <button
-                      type="button"
-                      className="sp-companion__conversation-delete"
-                      onClick={() => setDeletePendingId(conversation.id)}
-                      disabled={isStreaming}
-                      aria-label={t('companion.history.deleteConversation', {
-                        title: conversation.title || t('companion.history.untitled'),
-                      })}
-                      data-tooltip={t('companion.history.delete')}
-                    >
-                      <Icon name="trash" size={16} />
-                    </button>
-                  </>
+                  <span className="sp-companion__yuvi-loader" role="presentation" />
                 )}
-              </article>
-            ))}
-            {isLoadingConversations && (
-              <div className="sp-companion__history-loader" role="status">
-                <span aria-hidden="true" />
-                {t('companion.history.loading')}
               </div>
             )}
-          </div>
-        </section>
-      )}
-      {(!historyOpen || fullscreen || isTaskMode) && (
-        <>
-          {!isTaskMode && !fullscreen && <div className="sp-companion__thread-bar">
-            <span><Icon name="message" size={15} /></span>
-            <div>
-              <small>{t('companion.history.current')}</small>
-              <strong dir="auto">{activeConversation?.title || t('companion.history.untitled')}</strong>
-            </div>
-            <button type="button" onClick={() => setHistoryOpen(true)}>{t('companion.history.open')}</button>
-          </div>}
-          {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
-            <div className="sp-companion__roadmap-view" role="tabpanel">
-              <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
-                <CompanionTrack3D
-                  unit={lessonRoadmap.unit}
-                  activeComponentId={lessonRoadmap.activeComponentId}
-                  travellingFromId={lessonRoadmap.travellingFromId}
-                  onSelect={(component) => {
-                    const params = new URLSearchParams({
-                      unit: lessonRoadmap.unit.id,
-                      component: component.id,
-                    })
-                    navigate(`/learning/lesson?${params.toString()}`)
-                  }}
-                />
-              </Suspense>
-            </div>
-          ) : taskView === 'chat' && <div
-            className="sp-companion__body"
-            ref={bodyRef}
-            onScroll={onMessageScroll}
-            role="log"
-            aria-live="polite"
-            aria-relevant="additions text"
-          >
-            {isLoadingMessages && (
-              <div className="sp-companion__messages-loader" role="status">
-                <span aria-hidden="true" />
-                {t('companion.history.loadingMessages')}
+            <div className="sp-companion__id">
+              <span className="sp-companion__avatar"><YuviHeadIcon /></span>
+              <div>
+                <p id="Yuvi-companion-title" className="sp-companion__title">{t('companion.title')}</p>
+                <p className="sp-companion__subtitle">{t('companion.subtitle')}</p>
               </div>
-            )}
-            {/* In a lesson the view is this launch's live turns only — a
-                "scroll up for older messages" hint would be noise there. */}
-            {!isTaskMode && hasMoreMessages && !isLoadingMessages && (
-              <p className="sp-companion__more-hint">{t('companion.history.scrollForMore')}</p>
-            )}
-            {/* In a lesson, the welcome / per-question intro carries the greeting,
-                so the generic greeting only shows in the general companion. */}
-            {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
-            {isTaskMode
-              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }) => {
-                  const open = isSectionOpen(group)
-                  const isCurrent = group.key === currentGroupKey
-                  return (
-                    <section
-                      key={group.key}
-                      className={`sp-companion__qsection${isCurrent ? ' is-current' : ''}${open ? '' : ' is-collapsed'}`}
-                      // Which screen this thread belongs to, and the number the
-                      // learner sees for it — so a mismatch between the chat and
-                      // the content is visible in the DOM instead of guessed at.
-                      data-item={group.item || undefined}
-                      data-question-number={isIntro || asksNothing ? undefined : questionNumber}
-                      data-teaching={isTeaching ? 'true' : undefined}
-                      data-kind={kind || undefined}
-                    >
-                      {sections.length > 1 && (
+            </div>
+            {!isTaskMode && <div className="sp-companion__head-actions">
+              <button
+                type="button"
+                className={`sp-companion__head-action${historyOpen ? ' is-active' : ''}`}
+                onClick={() => setHistoryOpen((value) => !value)}
+                aria-label={t('companion.history.open')}
+                data-tooltip={t('companion.history.open')}
+                hidden={fullscreen}
+              >
+                <Icon name="clock" size={18} />
+              </button>
+              <button
+                type="button"
+                className="sp-companion__head-action"
+                onClick={() => void createConversation()}
+                disabled={newConversationDisabled}
+                aria-label={newConversationLabel}
+                data-tooltip={newConversationLabel}
+              >
+                <Icon name="plus" size={18} />
+              </button>
+              <button
+                type="button"
+                className={`sp-companion__head-action${fullscreen ? ' is-active' : ''}`}
+                onClick={() => changeFullscreen(!fullscreen)}
+                aria-pressed={fullscreen}
+                aria-label={fullscreen ? t('companion.collapse') : t('companion.expand')}
+                data-tooltip={fullscreen ? t('companion.collapse') : t('companion.expand')}
+              >
+                <Icon name={fullscreen ? 'collapse' : 'expand'} size={18} />
+              </button>
+              <button
+                type="button"
+                className="sp-companion__close"
+                onClick={requestClose}
+                aria-label={t('companion.close')}
+                data-tooltip={t('companion.close')}
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>}
+          </header>
+
+          <p className="sp-companion__disclosure" dir="auto">
+            <Icon name="lock" size={13} strokeWidth={2} aria-hidden="true" />
+            {disclosure || t('companion.disclosure')}
+          </p>
+
+          {/* Raise-hand outcome, said out loud: a child who asked for a person must
+          see whether one is coming. `role="status"` so it is announced too. */}
+          {(handState === 'sent' || handState === 'unreached') && (
+            <p
+              className={`sp-companion__hand-status${handState === 'unreached' ? ' is-unreached' : ''}`}
+              role="status"
+              dir="auto"
+            >
+              <Icon name="hand" size={13} strokeWidth={2} aria-hidden="true" />
+              {t(handState === 'sent' ? 'companion.hand.sent' : 'companion.hand.unreached')}
+            </p>
+          )}
+
+          {isTaskMode && (
+            <div className="sp-companion__task-tabs" role="tablist" aria-label={t('companion.task.tabs')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={taskView === 'chat'}
+                className={taskView === 'chat' ? 'is-active' : ''}
+                onClick={() => setTaskView('chat')}
+              >
+                <Icon name="message" size={16} />
+                <span>{t('companion.task.tabChat')}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={taskView === 'roadmap'}
+                className={taskView === 'roadmap' ? 'is-active' : ''}
+                onClick={() => setTaskView('roadmap')}
+              >
+                <Icon name="spark" size={16} />
+                <span>{t('companion.task.tabRoadmap')}</span>
+              </button>
+            </div>
+          )}
+
+          {(historyOpen || fullscreen) && !isTaskMode && (
+            <section className="sp-companion__history" aria-labelledby="companion-history-title">
+              <div className="sp-companion__history-heading">
+                <div>
+                  <h2 id="companion-history-title">{t('companion.history.title')}</h2>
+                  <p>{t('companion.history.subtitle')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void createConversation()}
+                  disabled={newConversationDisabled}
+                  title={newConversationLabel}
+                >
+                  <Icon name="plus" size={17} />
+                  <span>{t('companion.history.new')}</span>
+                </button>
+              </div>
+              <div className="sp-companion__history-list" ref={historyRef} onScroll={onHistoryScroll}>
+                {historyError && !conversations.length && (
+                  <div className="sp-companion__history-state" role="alert">
+                    <Icon name="alert" size={23} />
+                    <p>{t('companion.history.error')}</p>
+                    <button type="button" onClick={() => void reloadHistory()}>{t('companion.history.retry')}</button>
+                  </div>
+                )}
+                {!historyError && !isLoadingConversations && conversations.length === 0 && (
+                  <div className="sp-companion__history-state">
+                    <Icon name="message" size={25} />
+                    <p>{t('companion.history.empty')}</p>
+                  </div>
+                )}
+                {conversations.map((conversation) => (
+                  <article
+                    className={`sp-companion__conversation${conversation.id === activeConversationId ? ' is-active' : ''}`}
+                    key={conversation.id}
+                  >
+                    {deletePendingId === conversation.id ? (
+                      <div
+                        className="sp-companion__conversation-confirm"
+                        role="alertdialog"
+                        aria-label={t('companion.history.delete')}
+                      >
+                        <Icon name="trash" size={19} />
+                        <p>{t('companion.history.deleteConfirm')}</p>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setDeletePendingId(null)}
+                            disabled={deletingId === conversation.id}
+                            autoFocus
+                          >
+                            {t('companion.history.cancel')}
+                          </button>
+                          <button
+                            type="button"
+                            className="is-danger"
+                            onClick={() => void confirmDeleteConversation(conversation.id)}
+                            disabled={deletingId === conversation.id}
+                          >
+                            {deletingId === conversation.id
+                              ? t('companion.history.deleting')
+                              : t('companion.history.confirmDelete')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
                         <button
                           type="button"
-                          className="sp-companion__qdivider"
-                          onClick={() => toggleSection(group.key, !open)}
-                          aria-expanded={open}
+                          className="sp-companion__conversation-open"
+                          onClick={() => void openConversation(conversation.id)}
+                          disabled={isStreaming}
+                          aria-current={conversation.id === activeConversationId ? 'page' : undefined}
+                          aria-label={t('companion.history.openConversation', {
+                            title: conversation.title || t('companion.history.untitled'),
+                          })}
                         >
-                          <span className="sp-companion__qdivider-rule" aria-hidden="true" />
-                          <span className="sp-companion__qdivider-chip">
-                            <svg
-                              className={`sp-companion__qchevron${open ? ' is-open' : ''}`}
-                              viewBox="0 0 24 24" aria-hidden="true" focusable="false"
-                            >
-                              <path d="m6 9 6 6 6-6" />
-                            </svg>
-                            {plays && !isIntro && (
-                              <Icon name="play" size={12} aria-label={t('companion.thread.watch')} />
-                            )}
-                            {/* Captioned for what the screen IS. A video that also
+                          <span className="sp-companion__conversation-icon"><Icon name="message" size={18} /></span>
+                          <span className="sp-companion__conversation-copy">
+                            <strong dir="auto">{conversation.title || t('companion.history.untitled')}</strong>
+                            <small dir="auto">{conversation.preview
+                              ? conversationPreview(conversation.preview)
+                              : t('companion.history.emptyConversation')}</small>
+                            <span>
+                              <time dateTime={conversation.updated_at}>{formatDate(conversation.updated_at)}</time>
+                              <i aria-hidden="true" />
+                              {t('companion.history.messageCount', { count: conversation.message_count })}
+                            </span>
+                          </span>
+                          <Icon name="arrow" size={16} className="sp-companion__conversation-arrow" />
+                        </button>
+                        <button
+                          type="button"
+                          className="sp-companion__conversation-delete"
+                          onClick={() => setDeletePendingId(conversation.id)}
+                          disabled={isStreaming}
+                          aria-label={t('companion.history.deleteConversation', {
+                            title: conversation.title || t('companion.history.untitled'),
+                          })}
+                          data-tooltip={t('companion.history.delete')}
+                        >
+                          <Icon name="trash" size={16} />
+                        </button>
+                      </>
+                    )}
+                  </article>
+                ))}
+                {isLoadingConversations && (
+                  <div className="sp-companion__history-loader" role="status">
+                    <span aria-hidden="true" />
+                    {t('companion.history.loading')}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+          {(!historyOpen || fullscreen || isTaskMode) && (
+            <>
+              {!isTaskMode && !fullscreen && <div className="sp-companion__thread-bar">
+                <span><Icon name="message" size={15} /></span>
+                <div>
+                  <small>{t('companion.history.current')}</small>
+                  <strong dir="auto">{activeConversation?.title || t('companion.history.untitled')}</strong>
+                </div>
+                <button type="button" onClick={() => setHistoryOpen(true)}>{t('companion.history.open')}</button>
+              </div>}
+              {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
+                <div className="sp-companion__roadmap-view" role="tabpanel">
+                  <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
+                    <CompanionTrack3D
+                      unit={lessonRoadmap.unit}
+                      activeComponentId={lessonRoadmap.activeComponentId}
+                      travellingFromId={lessonRoadmap.travellingFromId}
+                      onSelect={(component) => {
+                        const params = new URLSearchParams({
+                          unit: lessonRoadmap.unit.id,
+                          component: component.id,
+                        })
+                        navigate(`/learning/lesson?${params.toString()}`)
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              ) : taskView === 'chat' && <div
+                className="sp-companion__body"
+                ref={bodyRef}
+                onScroll={onMessageScroll}
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+              >
+                {isLoadingMessages && (
+                  <div className="sp-companion__messages-loader" role="status">
+                    <span aria-hidden="true" />
+                    {t('companion.history.loadingMessages')}
+                  </div>
+                )}
+                {/* In a lesson the view is this launch's live turns only — a
+                "scroll up for older messages" hint would be noise there. */}
+                {!isTaskMode && hasMoreMessages && !isLoadingMessages && (
+                  <p className="sp-companion__more-hint">{t('companion.history.scrollForMore')}</p>
+                )}
+                {/* In a lesson, the welcome / per-question intro carries the greeting,
+                so the generic greeting only shows in the general companion. */}
+                {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
+                {isTaskMode
+                  ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }) => {
+                    const open = isSectionOpen(group)
+                    const isCurrent = group.key === currentGroupKey
+                    return (
+                      <section
+                        key={group.key}
+                        className={`sp-companion__qsection${isCurrent ? ' is-current' : ''}${open ? '' : ' is-collapsed'}`}
+                        // Which screen this thread belongs to, and the number the
+                        // learner sees for it — so a mismatch between the chat and
+                        // the content is visible in the DOM instead of guessed at.
+                        data-item={group.item || undefined}
+                        data-question-number={isIntro || asksNothing ? undefined : questionNumber}
+                        data-teaching={isTeaching ? 'true' : undefined}
+                        data-kind={kind || undefined}
+                      >
+                        {sections.length > 1 && (
+                          <button
+                            type="button"
+                            className="sp-companion__qdivider"
+                            onClick={() => toggleSection(group.key, !open)}
+                            aria-expanded={open}
+                          >
+                            <span className="sp-companion__qdivider-rule" aria-hidden="true" />
+                            <span className="sp-companion__qdivider-chip">
+                              <svg
+                                className={`sp-companion__qchevron${open ? ' is-open' : ''}`}
+                                viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+                              >
+                                <path d="m6 9 6 6 6-6" />
+                              </svg>
+                              {plays && !isIntro && (
+                                <Icon name="play" size={12} aria-label={t('companion.thread.watch')} />
+                              )}
+                              {/* Captioned for what the screen IS. A video that also
                                 asks keeps its number alongside the medium, so the
                                 thread is honest about both. */}
-                            <span>{[
-                              isIntro ? t('companion.thread.intro')
-                                : kind === 'watch' || kind === 'read' ? [
+                              <span>{[
+                                isIntro ? t('companion.thread.intro')
+                                  : kind === 'watch' || kind === 'read' ? [
                                     t(kind === 'watch' ? 'companion.thread.watch' : 'companion.thread.read'),
                                     questionNumber ? questionLabel(questionNumber, partIndex) : '',
                                   ].filter(Boolean).join(' · ')
-                                : asksNothing || !questionNumber ? t('companion.thread.step')
-                                : questionLabel(questionNumber, partIndex),
-                            ].filter(Boolean).join(' · ')}</span>
-                            {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
-                          </span>
-                          <span className="sp-companion__qdivider-rule" aria-hidden="true" />
-                        </button>
-                      )}
-                      {open && group.messages.map(renderMessage)}
-                    </section>
-                  )
-                })
-              : messages.map(renderMessage)}
-          </div>}
-        </>
-      )}
+                                    : asksNothing || !questionNumber ? t('companion.thread.step')
+                                      : questionLabel(questionNumber, partIndex),
+                              ].filter(Boolean).join(' · ')}</span>
+                              {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
+                            </span>
+                            <span className="sp-companion__qdivider-rule" aria-hidden="true" />
+                          </button>
+                        )}
+                        {open && group.messages.map(renderMessage)}
+                      </section>
+                    )
+                  })
+                  : messages.map(renderMessage)}
+              </div>}
+            </>
+          )}
 
-      {/* ── a word from a teacher ──────────────────────────────────────────
+          {/* ── a word from a teacher ──────────────────────────────────────────
           Not a coach turn: a card over the conversation, carrying the
           teacher's own sentence, that stays until the child acknowledges it.
           Praise from a named adult should not scroll away unread. */}
-      {pendingKudos && (
-        <div className="sp-companion__kudos" role="dialog" aria-modal="true"
-             aria-label={t('companion.kudos.title')}>
-          <div className="sp-companion__kudos-card">
-            <span className="sp-companion__kudos-glow" aria-hidden="true" />
-            <YuviHeadIcon width={44} height={44} className="sp-companion__kudos-face" />
-            <p className="sp-companion__kudos-eyebrow">
-              {pendingKudos.teacher_name
-                ? t('companion.kudos.fromNamed', { name: pendingKudos.teacher_name })
-                : t('companion.kudos.from')}
-            </p>
-            <p className="sp-companion__kudos-message" dir="auto">{pendingKudos.message}</p>
-            {/* The gift sits UNDER the sentence, small. A card that led with the
+          {pendingKudos && (
+            <div className="sp-companion__kudos" role="dialog" aria-modal="true"
+              aria-label={t('companion.kudos.title')}>
+              <div className="sp-companion__kudos-card">
+                <span className="sp-companion__kudos-glow" aria-hidden="true" />
+                <YuviHeadIcon width={44} height={44} className="sp-companion__kudos-face" />
+                <p className="sp-companion__kudos-eyebrow">
+                  {pendingKudos.teacher_name
+                    ? t('companion.kudos.fromNamed', { name: pendingKudos.teacher_name })
+                    : t('companion.kudos.from')}
+                </p>
+                <p className="sp-companion__kudos-message" dir="auto">{pendingKudos.message}</p>
+                {/* The gift sits UNDER the sentence, small. A card that led with the
                 number would read as a payment slip, and the thing worth having
                 here is being noticed by a person, not the sparks. */}
-            {pendingKudos.sparks > 0 && (
-              <p className="sp-companion__kudos-sparks">
-                <Icon name="spark" size={14} aria-hidden />
-                {t('companion.kudos.sparks', { sparks: pendingKudos.sparks })}
-              </p>
-            )}
-            {pendingKudos.created_at && (
-              <time className="sp-companion__kudos-time" dateTime={pendingKudos.created_at}>
-                {formatMessageTime(pendingKudos.created_at, language)}
-              </time>
-            )}
-            <button
-              type="button"
-              className="sp-companion__kudos-ok"
-              onClick={() => void acknowledgeKudos()}
-              autoFocus
-            >
-              {t('companion.kudos.ok')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {(!historyOpen || fullscreen || isTaskMode) && (!isTaskMode || taskView === 'chat') && (
-        <div className="sp-companion__composer-shell">
-          {isTaskMode ? (
-            !isStreaming
-              && (pendingAlternative || isVideoScreen || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
-              <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
-                {pendingAlternative && (
-                  <button
-                    type="button"
-                    className="sp-companion__support-option sp-companion__support-option--alt"
-                    onClick={openExplainer}
-                  >
-                    <Icon name="spark" size={16} />
-                    <span>{t('companion.task.altSwitch')}</span>
-                  </button>
+                {pendingKudos.sparks > 0 && (
+                  <p className="sp-companion__kudos-sparks">
+                    <Icon name="spark" size={14} aria-hidden />
+                    {t('companion.kudos.sparks', { sparks: pendingKudos.sparks })}
+                  </p>
                 )}
-                {isVideoScreen ? (
-                  <>
-                    {!supportUsed.videoSummary && <button
-                      type="button"
-                      className="sp-companion__support-option"
-                      onClick={() => void requestSupport('video_summary')}
-                    >
-                      <Icon name="book" size={16} />
-                      <span>{t('companion.task.videoSummary')}</span>
-                    </button>
-                    }
-                    {!supportUsed.videoVisual && <button
-                      type="button"
-                      className="sp-companion__support-option"
-                      onClick={() => void requestSupport('video_visual')}
-                    >
-                      <Icon name="spark" size={16} />
-                      <span>{t('companion.task.button2')}</span>
-                    </button>
-                    }
-                  </>
-                ) : <>
-                {openSectionAsks && !supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel && (
-                  <button
-                    type="button"
-                    className="sp-companion__support-option"
-                    onClick={() => void requestSupport('hint')}
-                  >
-                    <Icon name="lightbulb" size={16} />
-                    <span>{t('companion.task.hintAsk')}</span>
-                  </button>
+                {pendingKudos.created_at && (
+                  <time className="sp-companion__kudos-time" dateTime={pendingKudos.created_at}>
+                    {formatMessageTime(pendingKudos.created_at, language)}
+                  </time>
                 )}
-                {openSectionAsks && !supportUsed.explanation && (
-                  <button
-                    type="button"
-                    className="sp-companion__support-option"
-                    onClick={() => void requestSupport('explanation')}
-                  >
-                    <Icon name="book" size={16} />
-                    <span>{t('companion.task.explain')}</span>
-                  </button>
-                )}
-                </>}
-              </div>
-            )
-          ) : (
-            !isStreaming && !draft.trim() && latestReplySupportsSuggestions && (
-              <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
-                {SUGGESTION_KEYS.map((key) => (
-                  <button
-                    type="button"
-                    key={key}
-                    className="sp-companion__suggestion"
-                    onClick={() => void send(t(key))}
-                  >
-                    {t(key)}
-                  </button>
-                ))}
-              </div>
-            )
-          )}
-          <form className="sp-companion__composer" onSubmit={submit}>
-            <input
-              ref={inputRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={t('companion.placeholder')}
-              aria-label={t('companion.placeholder')}
-              dir={draft.trim() ? 'auto' : direction}
-            />
-            {/* Send sits BESIDE the box, not inside it, so the raise-hand can
-                stand next to it as a peer: writing to Yuvi and calling a person
-                are the two ways out of being stuck, said in one row. */}
-            <button
-              type="submit"
-              className="sp-companion__send"
-              disabled={isStreaming || !draft.trim()}
-              aria-label={t('companion.send')}
-            >
-              <Icon name="arrow" size={18} />
-            </button>
-            {isTaskMode && (
-              <button
-                type="button"
-                className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}`}
-                onClick={raiseHand}
-                disabled={handState === 'sending' || (handCooling && !handRaised)}
-                aria-label={handLabel}
-                aria-expanded={handState === 'confirming'}
-                data-tooltip={handLabel}
-              >
-                <Icon name="hand" size={18} />
-              </button>
-            )}
-          </form>
-          {/* The confirmation, as a dialog inside the panel: the question is
-              asked in words, with a real yes and a real no — not a second tap
-              on the same icon that a child has to know about. */}
-          {handState === 'confirming' && (
-            <div
-              className="sp-companion__handConfirm"
-              role="alertdialog"
-              aria-label={t('companion.hand.confirmTitle')}
-            >
-              <span className="sp-companion__handConfirmIcon" aria-hidden="true">
-                <Icon name="hand" size={20} />
-              </span>
-              <p className="sp-companion__handConfirmTitle">{t('companion.hand.confirmTitle')}</p>
-              <p className="sp-companion__handConfirmBody">{t('companion.hand.confirmBody')}</p>
-              <div className="sp-companion__handConfirmActions">
                 <button
                   type="button"
-                  className="sp-companion__handConfirmYes"
-                  onClick={() => void sendHand()}
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  className="sp-companion__kudos-ok"
+                  onClick={() => void acknowledgeKudos()}
                   autoFocus
                 >
-                  {t('companion.hand.confirmYes')}
-                </button>
-                <button
-                  type="button"
-                  className="sp-companion__handConfirmNo"
-                  onClick={() => setHandState('idle')}
-                >
-                  {t('companion.hand.confirmNo')}
+                  {t('companion.kudos.ok')}
                 </button>
               </div>
             </div>
           )}
+
+          {(!historyOpen || fullscreen || isTaskMode) && (!isTaskMode || taskView === 'chat') && (
+            <div className="sp-companion__composer-shell">
+              {isTaskMode ? (
+                !isStreaming
+                && (pendingAlternative || isVideoScreen || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
+                  <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
+                    {pendingAlternative && (
+                      <button
+                        type="button"
+                        className="sp-companion__support-option sp-companion__support-option--alt"
+                        onClick={openExplainer}
+                      >
+                        <Icon name="spark" size={16} />
+                        <span>{t('companion.task.altSwitch')}</span>
+                      </button>
+                    )}
+                    {isVideoScreen ? (
+                      <>
+                        {!supportUsed.videoSummary && <button
+                          type="button"
+                          className="sp-companion__support-option"
+                          onClick={() => void requestSupport('video_summary')}
+                        >
+                          <Icon name="book" size={16} />
+                          <span>{t('companion.task.videoSummary')}</span>
+                        </button>
+                        }
+                        {!supportUsed.videoVisual && <button
+                          type="button"
+                          className="sp-companion__support-option"
+                          onClick={() => void requestSupport('video_visual')}
+                        >
+                          <Icon name="spark" size={16} />
+                          <span>{t('companion.task.button2')}</span>
+                        </button>
+                        }
+                      </>
+                    ) : <>
+                      {openSectionAsks && !supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel && (
+                        <button
+                          type="button"
+                          className="sp-companion__support-option"
+                          onClick={() => void requestSupport('hint')}
+                        >
+                          <Icon name="lightbulb" size={16} />
+                          <span>{t('companion.task.hintAsk')}</span>
+                        </button>
+                      )}
+                      {openSectionAsks && !supportUsed.explanation && (
+                        <button
+                          type="button"
+                          className="sp-companion__support-option"
+                          onClick={() => void requestSupport('explanation')}
+                        >
+                          <Icon name="book" size={16} />
+                          <span>{t('companion.task.explain')}</span>
+                        </button>
+                      )}
+                    </>}
+                  </div>
+                )
+              ) : (
+                !isStreaming && !draft.trim() && latestReplySupportsSuggestions && (
+                  <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
+                    {SUGGESTION_KEYS.map((key) => (
+                      <button
+                        type="button"
+                        key={key}
+                        className="sp-companion__suggestion"
+                        onClick={() => void send(t(key))}
+                      >
+                        {t(key)}
+                      </button>
+                    ))}
+                  </div>
+                )
+              )}
+              <form className="sp-companion__composer" onSubmit={submit}>
+                <input
+                  ref={inputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={t('companion.placeholder')}
+                  aria-label={t('companion.placeholder')}
+                  dir={draft.trim() ? 'auto' : direction}
+                />
+                {/* Send sits BESIDE the box, not inside it, so the raise-hand can
+                stand next to it as a peer: writing to Yuvi and calling a person
+                are the two ways out of being stuck, said in one row. */}
+                <button
+                  type="submit"
+                  className="sp-companion__send"
+                  disabled={isStreaming || !draft.trim()}
+                  aria-label={t('companion.send')}
+                >
+                  <Icon name="arrow" size={18} />
+                </button>
+                {isTaskMode && (
+                  <button
+                    type="button"
+                    className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}${handBlocked ? ' is-blocked' : ''}`}
+                    onClick={raiseHand}
+                    aria-disabled={handBlocked}
+                    aria-label={handLabel}
+                    aria-expanded={handState === 'confirming'}
+                    data-tooltip={handLabel}
+                  >
+                    <Icon name="hand" size={18} />
+                  </button>
+                )}
+              </form>
+              {/* The confirmation, as a dialog inside the panel: the question is
+              asked in words, with a real yes and a real no — not a second tap
+              on the same icon that a child has to know about. */}
+              {handState === 'confirming' && (
+                <div
+                  className="sp-companion__handConfirm"
+                  role="alertdialog"
+                  aria-label={t('companion.hand.confirmTitle')}
+                >
+                  <span className="sp-companion__handConfirmIcon" aria-hidden="true">
+                    <Icon name="hand" size={20} />
+                  </span>
+                  <p className="sp-companion__handConfirmTitle">{t('companion.hand.confirmTitle')}</p>
+                  <p className="sp-companion__handConfirmBody">{t('companion.hand.confirmBody')}</p>
+                  <div className="sp-companion__handConfirmActions">
+                    <button
+                      type="button"
+                      className="sp-companion__handConfirmYes"
+                      onClick={() => void sendHand()}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      autoFocus
+                    >
+                      {t('companion.hand.confirmYes')}
+                    </button>
+                    <button
+                      type="button"
+                      className="sp-companion__handConfirmNo"
+                      onClick={() => setHandState('idle')}
+                    >
+                      {t('companion.hand.confirmNo')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {expandedVisual && (
+        <div
+          className="sp-companion-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={expandedVisual.title || t('companion.visual.open')}
+          onClick={() => setExpandedVisual(null)}
+        >
+          <button
+            type="button"
+            className="sp-companion-lightbox__close"
+            aria-label={t('companion.visual.close')}
+            onClick={() => setExpandedVisual(null)}
+            autoFocus
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+          <figure className="sp-companion-lightbox__content" onClick={(event) => event.stopPropagation()}>
+            {expandedVisual.type === 'video' ? (
+              <video
+                src={expandedVisual.data_url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                aria-label={expandedVisual.alt || expandedVisual.title}
+              />
+            ) : expandedVisual.type === 'scene' ? (
+              // Enlarging must show the SAME picture, bigger. This used to render
+              // `data_url` — the SVG fallback — so the preview and the "large"
+              // view were the output of two different renderers.
+              <SceneRenderer visual={expandedVisual} />
+            ) : (
+              <img src={expandedVisual.data_url} alt={expandedVisual.alt || expandedVisual.title} />
+            )}
+            {expandedVisual.caption && <figcaption dir="auto">{expandedVisual.caption}</figcaption>}
+          </figure>
         </div>
       )}
-    </section>
-    </div>
 
-    {expandedVisual && (
-      <div
-        className="sp-companion-lightbox"
-        role="dialog"
-        aria-modal="true"
-        aria-label={expandedVisual.title || t('companion.visual.open')}
-        onClick={() => setExpandedVisual(null)}
-      >
-        <button
-          type="button"
-          className="sp-companion-lightbox__close"
-          aria-label={t('companion.visual.close')}
-          onClick={() => setExpandedVisual(null)}
-          autoFocus
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
-        <figure className="sp-companion-lightbox__content" onClick={(event) => event.stopPropagation()}>
-          {expandedVisual.type === 'video' ? (
-            <video
-              src={expandedVisual.data_url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              aria-label={expandedVisual.alt || expandedVisual.title}
-            />
-          ) : expandedVisual.type === 'scene' ? (
-            // Enlarging must show the SAME picture, bigger. This used to render
-            // `data_url` — the SVG fallback — so the preview and the "large"
-            // view were the output of two different renderers.
-            <SceneRenderer visual={expandedVisual} />
-          ) : (
-            <img src={expandedVisual.data_url} alt={expandedVisual.alt || expandedVisual.title} />
-          )}
-          {expandedVisual.caption && <figcaption dir="auto">{expandedVisual.caption}</figcaption>}
-        </figure>
-      </div>
-    )}
-
-    {explainerOpen && (
-      <QuestionExplainer
-        componentId={lessonRoadmap?.activeComponentId ?? null}
-        language={language}
-        onClose={closeExplainer}
-      />
-    )}
+      {explainerOpen && (
+        <QuestionExplainer
+          componentId={lessonRoadmap?.activeComponentId ?? null}
+          language={language}
+          onClose={closeExplainer}
+        />
+      )}
     </>
   )
 }

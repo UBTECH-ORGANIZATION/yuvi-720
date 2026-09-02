@@ -70,6 +70,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
   sound: <><path d="M4 9.5h3L11.5 6v12L7 14.5H4z" /><path d="M15 9.5a4 4 0 0 1 0 5" /><path d="M17.8 7a7.5 7.5 0 0 1 0 10" /></>,
   mute: <><path d="M4 9.5h3L11.5 6v12L7 14.5H4z" /><path d="m15.5 10 4 4m0-4-4 4" /></>,
   eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></>,
+  eyeOff: <><path d="M10.6 6.2A8.6 8.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.1 3.7" /><path d="M6.3 7.9A15.6 15.6 0 0 0 2.5 12S6 18 12 18a9.4 9.4 0 0 0 3.9-.8" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="m3.5 3.5 17 17" /></>,
 }
 
 export interface IconProps extends Omit<HTMLAttributes<SVGElement>, 'children'> {
