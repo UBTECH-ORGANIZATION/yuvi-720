@@ -116,6 +116,8 @@ class IndexBootstrap(unittest.TestCase):
         # The labels are per-module, the requirements per-collection, so map the
         # collections a module owns onto its label.
         owned = {
+            # Read by username on every login — the sharpest spike of a school day.
+            "users": {"users"},
             "org": {"org_groups", "org_teacher_links", "org_enrollments", "org_audit"},
             "teacher_alerts": {"teacher_alerts"},
             "notifications": {"notifications"},
