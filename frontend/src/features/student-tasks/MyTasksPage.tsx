@@ -12,8 +12,10 @@ import { useEffect, useState } from 'react'
 import { navigate } from '../../app/router'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon, SkeletonRows } from '../../components/primitives'
+import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { listMyTasks, type MyTask } from '../../services/tasks'
+import { clearCelebration, peekCelebration } from './sparksCelebration'
 import './student-tasks.css'
 import { formatDay } from '../../i18n/dates'
 
@@ -40,6 +42,10 @@ export function MyTasksPage() {
   const { t, language } = useI18n()
   const [tasks, setTasks] = useState<MyTask[] | null>(null)
   const [error, setError] = useState(false)
+  /* Peeked, not consumed: the page can mount twice on arrival, and a take-once
+     on the throwaway mount would swallow the celebration. Cleared on close. */
+  const [celebration, setCelebration] = useState(() => peekCelebration())
+  const dismissCelebration = () => { clearCelebration(); setCelebration(null) }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -93,6 +99,30 @@ export function MyTasksPage() {
             ) : null}
           </>
         )}
+
+        {/* The handing-in moment: the child is back on their list, and the
+            sparks land here as a dialog. Words first, never a mark. */}
+        <Modal open={celebration !== null} onClose={dismissCelebration}
+               titleId="st-cheer-title">
+          <div className="st-cheer" role="status">
+            <span className="st-done__mark" aria-hidden="true">
+              <Icon name="spark" size={28} />
+            </span>
+            <h2 id="st-cheer-title" className="st-cheer__title">
+              {t('tasks.done.title')}
+            </h2>
+            {celebration?.message ? (
+              <p className="st-done__said">{celebration.message}</p>
+            ) : null}
+            <p className="st-done__sparks">
+              <Icon name="spark" size={16} />
+              {t('tasks.done.sparks', { n: String(celebration?.sparks ?? 0) })}
+            </p>
+            <button type="button" className="sp-btn" onClick={dismissCelebration}>
+              {t('tasks.done.great')}
+            </button>
+          </div>
+        </Modal>
       </main>
     </>
   )
@@ -133,6 +163,27 @@ function TaskRow({ task, language }: { task: MyTask; language: string }) {
               </span>
             ) : null}
           </span>
+          {/* What the task is made of and how far each part is — so a child
+              knows "practice 3/8" before opening, not after. Finished tasks
+              drop it: the sentence below is their whole story. */}
+          {!done && task.components.length > 0 ? (
+            <span className="st-row__parts">
+              {task.components.map((component) => {
+                const part = task.progress?.[component]
+                return (
+                  <span key={component} className={`st-row__part${
+                    part && part.answered >= part.total ? ' is-full' : ''}`}>
+                    <Icon name={component === 'presentation' ? 'book'
+                      : component === 'test' ? 'document' : 'click'} size={13} />
+                    {t(`tasks.component.${component}`)}
+                    {part ? (
+                      <b>{part.answered}/{part.total}</b>
+                    ) : null}
+                  </span>
+                )
+              })}
+            </span>
+          ) : null}
           {/* Words, never a mark. */}
           {done && task.feedback ? (
             <span className="st-row__said">{task.feedback}</span>

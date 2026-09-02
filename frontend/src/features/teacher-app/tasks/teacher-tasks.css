@@ -570,6 +570,14 @@
 }
 .tch-tasks__search { max-inline-size: 22rem; flex: 1 1 14rem; }
 
+/* Pushed to the far edge: a view switch, not one more filter chip. */
+.tch-tasks__archiveToggle {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
 /* A heading now, not a button — where the title took you used to be a guess. */
 .tch-task__title {
   margin: 0;

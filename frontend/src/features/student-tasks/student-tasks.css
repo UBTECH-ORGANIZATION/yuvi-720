@@ -87,6 +87,58 @@
 }
 
 .st-row__said { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+/* The parts strip: what the task is made of, each with its own counter. */
+.st-row__parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-1);
+}
+
+.st-row__part {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  font-size: var(--sp-fs-xs, 12px);
+  color: var(--sp-ink-500);
+  background: var(--sp-surface);
+}
+
+.st-row__part b { font-variant-numeric: tabular-nums; color: var(--sp-ink-700); }
+
+.st-row__part.is-full {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+  background: var(--sp-primary-050);
+}
+.st-row__part.is-full b { color: var(--sp-primary-700); }
+
+/* The handing-in dialog: sparks over the list the child is back on. */
+.st-cheer {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: var(--sp-3);
+  max-inline-size: 380px;
+  padding: var(--sp-2);
+}
+.st-cheer__title { margin: 0; font-size: var(--sp-fs-xl, 22px); color: var(--sp-ink-900); }
+.st-cheer .sp-btn { margin-block-start: var(--sp-2); min-inline-size: 9rem; }
+
+/* The leave-confirm: a reassurance with two doors. */
+.st-leave { display: grid; gap: var(--sp-3); max-inline-size: 360px; }
+.st-leave__title { margin: 0; font-size: var(--sp-fs-lg, 18px); color: var(--sp-ink-900); }
+.st-leave__body  { margin: 0; color: var(--sp-ink-500); }
+.st-leave__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-2);
+}
 /* The arrow points the way the reader travels, which is the other way in RTL. */
 .st-row__go { flex: none; color: var(--sp-ink-300); }
 [dir="rtl"] .st-row__go { transform: scaleX(-1); }
@@ -94,7 +146,7 @@
 /* ── solving ────────────────────────────────────────────────────────────── */
 
 .st-solve {
-  inline-size: min(100%, 960px);
+  inline-size: min(100%, 1200px);
   margin-inline: auto;
   padding: var(--sp-5) var(--sp-gutter, var(--sp-5)) var(--sp-8);
   display: grid;

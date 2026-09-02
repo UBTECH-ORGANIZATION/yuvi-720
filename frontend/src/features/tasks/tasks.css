@@ -55,6 +55,11 @@
 .yv-player {
   display: grid;
   gap: var(--sp-5);
+  /* Explicit 100%: the auto margins cancel the parent grid's stretch, and a
+     player whose only child is the deck (which sizes to its PARENT) then
+     collapsed to content width — a 392px "postcard" presentation on a 1440px
+     screen. */
+  inline-size: 100%;
   max-inline-size: 760px;
   margin-inline: auto;
   padding-block-end: var(--sp-8);
@@ -87,6 +92,170 @@
 }
 
 .yv-player__questions { display: grid; gap: var(--sp-4); }
+
+/* ── the paced run: rail + one question on stage ────────────────────────── */
+
+/* The top timeline: the task's parts as stops on one line. */
+.yv-player__timeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.yv-player__tlStop {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm);
+  cursor: pointer;
+  position: relative;
+}
+
+/* The line between stops — what makes this a route and not a row of chips. */
+.yv-player__tlStop + .yv-player__tlStop::before {
+  content: '';
+  inline-size: var(--sp-3);
+  block-size: 2px;
+  background: var(--sp-border);
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--sp-3) - 1px);
+  inset-block-start: 50%;
+}
+
+.yv-player__tlDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  background: var(--sp-primary-050);
+  color: var(--sp-primary-700);
+  flex: none;
+}
+
+.yv-player__tlStop.is-at {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+  font-weight: 600;
+}
+
+.yv-player__tlStop.is-done .yv-player__tlDot {
+  background: var(--sp-primary-600);
+  color: #fff;
+}
+
+.yv-player__tlCount {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--sp-fs-xs, 12px);
+  padding: 1px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-050);
+  color: var(--sp-primary-700);
+}
+
+/* Wider than the read-back scroll: the rail needs a column of its own, and
+   the presentation deserves a real stage, not a strip. */
+.yv-player--paced { max-inline-size: 1120px; }
+
+.yv-player__paced {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+.yv-player__rail {
+  position: sticky;
+  inset-block-start: var(--sp-5);
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 16px;
+  background: var(--sp-surface);
+}
+
+.yv-player__railCount {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.yv-player__railBar {
+  display: block;
+  block-size: 6px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-050, var(--sp-border));
+  overflow: hidden;
+}
+
+.yv-player__railFill {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--sp-primary-500);
+  transition: inline-size 240ms ease;
+}
+
+.yv-player__railDots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 32px);
+  gap: var(--sp-2);
+}
+
+.yv-player__railDot {
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yv-player__railDot.is-done {
+  background: var(--sp-primary-050);
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+}
+
+.yv-player__railDot.is-at {
+  background: var(--sp-primary-600);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 700;
+}
+
+.yv-player__pacedMain { display: grid; gap: var(--sp-3); min-inline-size: 0; }
+
+.yv-player__position {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-500);
+}
+
+/* On a phone the rail folds above the question as a horizontal strip. */
+@media (max-width: 719px) {
+  .yv-player__paced { grid-template-columns: minmax(0, 1fr); }
+  .yv-player__rail { position: static; }
+  .yv-player__railDots { grid-template-columns: repeat(auto-fill, 30px); }
+}
 
 .yv-player__limit {
   display: flex;

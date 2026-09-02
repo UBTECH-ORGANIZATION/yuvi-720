@@ -27,9 +27,10 @@ import { useAuth } from '../../../providers/AuthProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
   closeTask, createTask, deleteTask, listCatalogLearnings, listTeacherTasks,
-  taskImpact,
+  setTaskArchived, taskImpact,
   startGeneration, suggestTaskNotes,
-  type CatalogLearning, type TaskComponent, type TaskSpecInput, type TaskSummary,
+  type CatalogLearning, type TaskComponent, type TaskSpecInput, type TaskStatus,
+  type TaskSummary,
 } from '../../../services/tasks'
 import { subjectLabel } from '../shared/subjectLabel'
 import { clearDraft, isEmptyDraft, loadDraft, saveDraft } from './builderDraft'
@@ -75,6 +76,10 @@ export function TeacherTasksPage() {
      spells it `null`. */
   const subject = scopeSubject ?? 'all'
   const setSubject = (next: string) => setScopeSubject(next === 'all' ? null : next)
+  const [status, setStatus] = useState<'all' | TaskStatus>('all')
+  /* A view, not a filter: on, the list IS the archive. Off is the everyday
+     list, which never shows archived rows — that is what archiving is for. */
+  const [showArchived, setShowArchived] = useState(false)
   /* Arriving from somewhere that already knows what the task is about — the
      class-gaps panel sends the objective and the children it is a gap for. */
   const [seed, setSeed] = useState<TaskSeed | null>(null)
@@ -111,17 +116,38 @@ export function TeacherTasksPage() {
   /* Filtered in the browser rather than on the server: this list is one class's
      tasks, it is already loaded, and a round trip per keystroke would make
      search feel slower than scrolling. */
-  const subjects = useMemo(() => (
-    [...new Set((tasks ?? []).map((task) => task.subject).filter(Boolean))] as string[]
+  /* The pool the other filters slice: everyday rows or the archive, never
+     mixed. Chips derive from the pool so the archive view offers its own
+     subjects and statuses, not the everyday list's. */
+  const pool = useMemo(() => (
+    (tasks ?? []).filter((task) => task.archived === showArchived)
+  ), [tasks, showArchived])
+  const archivedCount = useMemo(() => (
+    (tasks ?? []).filter((task) => task.archived).length
   ), [tasks])
+
+  const subjects = useMemo(() => (
+    [...new Set(pool.map((task) => task.subject).filter(Boolean))] as string[]
+  ), [pool])
+  const statuses = useMemo(() => (
+    (['draft', 'generating', 'ready', 'live', 'closed'] as TaskStatus[])
+      .filter((entry) => pool.some((task) => task.status === entry))
+  ), [pool])
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    return (tasks ?? []).filter((task) => (
+    return pool.filter((task) => (
       (subject === 'all' || task.subject === subject) &&
+      (status === 'all' || task.status === status) &&
       (!needle || (task.title ?? '').toLowerCase().includes(needle))
     ))
-  }, [tasks, query, subject])
+  }, [pool, query, subject, status])
+
+  /* Restoring the last archived task would otherwise leave the teacher inside
+     an archive view with no rows and no toggle to leave it by. */
+  useEffect(() => {
+    if (showArchived && tasks !== null && archivedCount === 0) setShowArchived(false)
+  }, [showArchived, tasks, archivedCount])
 
   return (
     <div className="tch-tasks">
@@ -177,13 +203,16 @@ export function TeacherTasksPage() {
           and the threshold was set at five on a hunch that a class with three
           tasks is a class you can read. Classes get their fourth task in a
           fortnight, and until then the box costs a row of chrome. */}
-      {(tasks?.length ?? 0) > 1 ? (
+      {(tasks?.length ?? 0) > 1 || archivedCount > 0 ? (
         <div className="tch-tasks__filters">
           <input className="sp-input tch-tasks__search" value={query} dir="auto"
                  type="search" aria-label={t('tch.tasks.searchLabel')}
                  placeholder={t('tch.tasks.searchLabel')}
                  onChange={(event) => setQuery(event.target.value)} />
-          {subjects.length > 1 ? (
+          {/* One subject plus untagged rows is still a choice worth offering —
+              the chip row appears as soon as it would change what is shown. */}
+          {subjects.length > 1 ||
+           (subjects.length === 1 && pool.some((task) => !task.subject)) ? (
             <div className="tch-builder__chips">
               <button type="button" className={`tch-chip${subject === 'all' ? ' is-on' : ''}`}
                       aria-pressed={subject === 'all'} onClick={() => setSubject('all')}>
@@ -198,6 +227,31 @@ export function TeacherTasksPage() {
                 </button>
               ))}
             </div>
+          ) : null}
+          {statuses.length > 1 ? (
+            <div className="tch-builder__chips">
+              <button type="button" className={`tch-chip${status === 'all' ? ' is-on' : ''}`}
+                      aria-pressed={status === 'all'} onClick={() => setStatus('all')}>
+                {t('tch.tasks.allStatuses')}
+              </button>
+              {statuses.map((entry) => (
+                <button key={entry} type="button"
+                        className={`tch-chip${status === entry ? ' is-on' : ''}`}
+                        aria-pressed={status === entry}
+                        onClick={() => setStatus(entry)}>
+                  {t(`tch.tasks.status.${entry}`)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {archivedCount > 0 ? (
+            <button type="button"
+                    className={`tch-chip tch-tasks__archiveToggle${showArchived ? ' is-on' : ''}`}
+                    aria-pressed={showArchived}
+                    onClick={() => { setShowArchived((current) => !current); setStatus('all') }}>
+              <Icon name="inbox" size={14} />
+              {t('tch.tasks.archiveToggle', { n: String(archivedCount) })}
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -329,6 +383,18 @@ function TaskRow({ task, onChanged }: { task: TaskSummary; onChanged: () => void
             {t('tch.tasks.close')}
           </button>
         ) : null}
+        {/* Filing away, not deleting — the reversible neighbour of the trash
+            button, and the same button brings an archived task back. */}
+        <button
+          type="button"
+          className="sp-btn sp-btn--ghost sp-btn--sm"
+          disabled={busy}
+          aria-label={t(task.archived ? 'tch.tasks.unarchive' : 'tch.tasks.archive')}
+          title={t(task.archived ? 'tch.tasks.unarchive' : 'tch.tasks.archive')}
+          onClick={() => void act(() => setTaskArchived(task.id, !task.archived))}
+        >
+          <Icon name="inbox" size={15} />
+        </button>
         {/* Last in the row and icon-only: a destructive action should be
             reachable, not prominent, and it must not sit where a thumb aiming
             for "review" lands. */}

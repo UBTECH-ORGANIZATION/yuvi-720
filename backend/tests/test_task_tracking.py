@@ -275,5 +275,23 @@ async def _run_tracking():
     return await tracking.for_task(task)
 
 
+class ArchivingIsAFlagNotADelete(unittest.TestCase):
+    def test_the_flag_round_trips_and_the_history_stays(self):
+        with _Isolated():
+            async def scenario():
+                task = await _seeded()
+                before = await tracking.task_summary(task)
+                await store.update_task(task["_id"], archived=True)
+                after = await tracking.task_summary(await store.get_task(task["_id"]))
+                return before, after
+
+            before, after = run(scenario())
+        self.assertFalse(before["archived"])
+        self.assertTrue(after["archived"])
+        # Archived, not erased: the class's numbers are still on the row.
+        self.assertEqual(after["completed"], before["completed"])
+        self.assertEqual(after["launch_count"], before["launch_count"])
+
+
 if __name__ == "__main__":
     unittest.main()

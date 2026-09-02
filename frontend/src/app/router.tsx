@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react'
 
+/* A screen may hold navigation for a beat — mid-task, leaving deserves a
+   "your progress is saved" confirm rather than a silent jump. The guard gets
+   the destination and returns true to let it through, false to swallow it
+   (after showing its own UI). One guard at a time: the focus surface owns it,
+   and MUST clear it on unmount or the app stops navigating. */
+type NavigationGuard = (path: string) => boolean
+
+let navigationGuard: NavigationGuard | null = null
+
+export function setNavigationGuard(guard: NavigationGuard | null) {
+  navigationGuard = guard
+}
+
 export function navigate(path: string, options: { replace?: boolean } = {}) {
   if (`${window.location.pathname}${window.location.search}` === path) return
+  if (navigationGuard && !navigationGuard(path)) return
   // `replace` is for automatic redirects: it keeps the route we bounced away
   // from out of history, so Back doesn't land on it and bounce again.
   if (options.replace) window.history.replaceState({}, '', path)
