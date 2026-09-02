@@ -811,22 +811,34 @@
 }
 
 /* #504: the name filter living where the eyes scan — the student column head.
-   Bare input, no pill: it is a column header that happens to take letters. */
+   It was a bare input dressed as a column label, and QA read it as a label:
+   nobody types into a heading. Now it looks like what it is — a small search
+   box with its own frame and ground — while still sitting in the column. */
 .tch-liveHead__search {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
+  gap: var(--sp-2);
+  padding: 4px var(--sp-3);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
   color: var(--sp-ink-500);
+  min-inline-size: 0;
 }
+.tch-liveHead__search .sp-icon { flex: none; color: var(--sp-primary-600); }
 .tch-liveHead__search input {
   inline-size: 100%;
   min-inline-size: 0;
   border: 0;
   background: transparent;
   font: inherit;
-  color: var(--sp-ink-700);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
   padding: 0;
 }
 .tch-liveHead__search input:focus { outline: none; }
-.tch-liveHead__search input::placeholder { color: inherit; font-weight: 600; }
-.tch-liveHead__search:focus-within { color: var(--sp-ink-900); }
+.tch-liveHead__search input::placeholder { color: var(--sp-ink-400); font-weight: 500; }
+.tch-liveHead__search:focus-within {
+  border-color: var(--sp-primary-500);
+  box-shadow: var(--sp-ring);
+}

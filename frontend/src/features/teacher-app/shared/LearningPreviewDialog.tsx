@@ -26,12 +26,18 @@ export function LearningPreviewDialog({
   const { t } = useI18n()
   const [view, setView] = useState<LearningPreview | null>(null)
   const [failed, setFailed] = useState(false)
+  /* Bumped to remount the iframe. The content is the vendor's own player,
+     and it locks its "check" button after a wrong answer until the marked
+     item is fixed — a teacher skimming slides hits that wall on a misclick
+     (#510). A restart is the teacher's way out that never leaves the page. */
+  const [run, setRun] = useState(0)
 
   useEffect(() => {
     if (!componentId) return
     let alive = true
     setView(null)
     setFailed(false)
+    setRun(0)
     previewLearning(componentId)
       .then((payload) => { if (alive) setView(payload) })
       .catch(() => { if (alive) setFailed(true) })
@@ -49,14 +55,39 @@ export function LearningPreviewDialog({
         <h2 id="tch-preview-title" dir="auto">
           {title || view?.title || t('tch.learnings.preview')}
         </h2>
-        <button
-          type="button"
-          className="sp-btn sp-btn--ghost sp-btn--sm"
-          onClick={onClose}
-          aria-label={t('tch.learnings.previewClose')}
-        >
-          <Icon name="close" size={16} aria-hidden />
-        </button>
+        <div className="tch-preview__acts">
+          {view?.embeddable ? (
+            <>
+              <button
+                type="button"
+                className="sp-btn sp-btn--ghost sp-btn--sm"
+                onClick={() => setRun((value) => value + 1)}
+                title={t('tch.learnings.previewRestartHint')}
+              >
+                <Icon name="refresh" size={15} aria-hidden />
+                {t('tch.learnings.previewRestart')}
+              </button>
+              <a
+                href={view.player_url}
+                target="_blank"
+                rel="noreferrer"
+                className="sp-btn sp-btn--ghost sp-btn--sm"
+                title={t('tch.learnings.previewOpenTab')}
+                aria-label={t('tch.learnings.previewOpenTab')}
+              >
+                <Icon name="external" size={15} aria-hidden />
+              </a>
+            </>
+          ) : null}
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={onClose}
+            aria-label={t('tch.learnings.previewClose')}
+          >
+            <Icon name="close" size={16} aria-hidden />
+          </button>
+        </div>
       </div>
       {failed ? (
         <p className="tch-preview__error" role="alert">{t('tch.learnings.previewError')}</p>
@@ -66,6 +97,7 @@ export function LearningPreviewDialog({
         </div>
       ) : view.embeddable ? (
         <iframe
+          key={run}
           className="tch-preview__frame"
           src={view.player_url}
           title={title || view.title}

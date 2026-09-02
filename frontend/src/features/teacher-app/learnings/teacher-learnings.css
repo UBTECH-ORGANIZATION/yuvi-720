@@ -6,6 +6,23 @@
 
 .tch-learnings > .tch-stats { margin-block-end: var(--sp-5); }
 
+/* The window the four numbers share, said once above them (#534). */
+.tch-learnings__stripCaption {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+}
+.tch-learnings__stripCaption .sp-icon { color: var(--sp-primary-600); }
+
+/* Each KPI sits inside the tooltip primitive's wrapper span; the grid child is
+   that span, so the card must fill it or the row breaks into ragged heights. */
+.tch-learnings > .tch-stats > .sp-hint { display: block; min-inline-size: 0; }
+.tch-learnings > .tch-stats > .sp-hint > .tch-stat { block-size: 100%; }
+
 /* ── inside one objective: the way back + a hero naming it ─────────────────*/
 
 .tch-learnings__drillHead {

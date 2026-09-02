@@ -811,6 +811,19 @@ async def generate_task(task_id: str) -> dict[str, Any]:
     return updated or {}
 
 
+def is_running(task_id: str) -> bool:
+    """Whether a generation pass is in flight for this task right now.
+
+    The registry, not the stored status, is the truth about "generating": the
+    builder starts a run and navigates to the review screen in the same
+    breath, and that screen's first read can land before the run has written
+    `status="generating"` — showing "no content yet" and a generate button for
+    a task that is being written at that very moment (#490 follow-up).
+    """
+    running = _tasks.get(task_id)
+    return bool(running and not running.done())
+
+
 async def get_or_start(task_id: str) -> dict[str, Any]:
     """The task's state, starting generation if it has not run.
 
@@ -822,8 +835,7 @@ async def get_or_start(task_id: str) -> dict[str, Any]:
     if task is None:
         return {"status": "not_found"}
 
-    running = _tasks.get(task_id)
-    if running and not running.done():
+    if is_running(task_id):
         return {"status": "generating", "task": task}
     if task.get("status") in ("ready", "live", "closed"):
         return {"status": task["status"], "task": task,

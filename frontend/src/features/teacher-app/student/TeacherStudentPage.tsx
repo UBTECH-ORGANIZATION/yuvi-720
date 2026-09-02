@@ -133,10 +133,13 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
      mount, so the seed rides to the tasks screen the old way. */
   const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
   const buildTask = (seed: TaskSeed) => {
+    // The profile is where this started, and where a cancelled builder — on
+    // the tasks screen, after "back to settings" — must return (#486).
+    const seeded = { ...seed, returnTo: route.split('?')[0] }
     if (groupId) {
-      setBuilderSeed(seed)
+      setBuilderSeed(seeded)
     } else {
-      putSeed(seed)
+      putSeed(seeded)
       navigate('/teacher/tasks')
     }
   }

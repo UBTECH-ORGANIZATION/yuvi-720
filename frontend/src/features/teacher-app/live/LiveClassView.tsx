@@ -478,7 +478,7 @@ export function LiveClassView({
             <input
               type="search"
               value={query}
-              placeholder={t('tch.liveView.col.student')}
+              placeholder={t('tch.liveView.searchPlaceholder')}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>

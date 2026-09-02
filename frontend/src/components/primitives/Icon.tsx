@@ -35,6 +35,8 @@ const ICON_PATHS: Record<string, ReactNode> = {
   chevronLeft: <path d="m14 6-6 6 6 6" />,
   chevronUp: <path d="m6 14 6-6 6 6" />,
   chevronDown: <path d="m6 10 6 6 6-6" />,
+  refresh: <><path d="M20 12a8 8 0 1 1-2.3-5.7" /><path d="M20 4v5h-5" /></>,
+  external: <><path d="M14 4h6v6" /><path d="M20 4 11 13" /><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></>,
   expand: <><path d="M8 3H4a1 1 0 0 0-1 1v4" /><path d="M16 3h4a1 1 0 0 1 1 1v4" /><path d="M16 21h4a1 1 0 0 0 1-1v-4" /><path d="M8 21H4a1 1 0 0 1-1-1v-4" /></>,
   /* Teacher app additions (F6). Line-only, matching the set above — no emoji. */
   users: <><circle cx="9" cy="8" r="3.2" /><path d="M2.8 20a6.2 6.2 0 0 1 12.4 0" /><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.6" /><path d="M17.5 14.4A6.2 6.2 0 0 1 21.2 20" /></>,

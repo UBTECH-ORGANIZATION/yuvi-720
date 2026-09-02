@@ -268,8 +268,11 @@ async def get_task(task_id: str, session=Depends(require_teacher_session)):
         task = await _owned(session["sub"], task_id)
     except AssignError as error:
         return _failed(error)
+    # A run in flight outranks whatever status the document carries: the
+    # review screen's first read can beat the run's own "generating" write.
+    status = "generating" if generate.is_running(task_id) else task.get("status")
     return _ok({"task": task, "content": await store.all_content(task_id),
-                "status": task.get("status")})
+                "status": status})
 
 
 @router.post("/tasks/{task_id}/quality")

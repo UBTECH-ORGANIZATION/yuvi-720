@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describeEvidence, describeSignal } from '../src/features/teacher-app/shared/evidenceText.ts'
+import { describeEvidence, describeSignal, misconceptionLabel } from '../src/features/teacher-app/shared/evidenceText.ts'
 
 const messages: Record<string, string> = JSON.parse(
   readFileSync(fileURLToPath(new URL('../../locales/he.json', import.meta.url)), 'utf8')
@@ -205,5 +205,28 @@ describe('describeSignal', () => {
     const text = describeSignal('default', null, {}, t, 'he').join(' ')
     assert.ok(text.length > 12, text)
     assert.ok(!/^default$/.test(text), text)
+  })
+})
+
+/* #511: the content vendor's misconception tags are machine names. A teacher
+ * reads a Hebrew label for the ones we know, and a readable quoted phrase —
+ * never a bare `sign-error` — for the ones we do not. */
+describe('misconception tags read as words', () => {
+  it('translates the tags the content has emitted so far', () => {
+    assert.equal(misconceptionLabel('sign-error', t), messages['tch.misconception.sign_error'])
+    assert.equal(misconceptionLabel('angle_type_confusion', t), messages['tch.misconception.angle_type_confusion'])
+    assert.equal(misconceptionLabel('Place-Value', t), messages['tch.misconception.place_value'])
+  })
+  it('humanises an unknown tag instead of leaking it', () => {
+    assert.equal(misconceptionLabel('fraction_of_a_set', t), '“fraction of a set”')
+    assert.equal(misconceptionLabel('', t), '')
+  })
+  it('never prints a raw tag in the recurring-mistakes sentence', () => {
+    const lines = describeEvidence(
+      { sample_misconceptions: [['sign-error', 6], ['unit-confusion', 4], ['weird-new-tag', 1]] }, t, 'he')
+    assert.equal(lines.length, 1)
+    assert.ok(!lines[0].includes('sign-error'), lines[0])
+    assert.ok(lines[0].includes(messages['tch.misconception.sign_error'] + ' ×6'), lines[0])
+    assert.ok(lines[0].includes('“weird new tag”'), lines[0])
   })
 })
