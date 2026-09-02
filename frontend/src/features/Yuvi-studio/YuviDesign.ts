@@ -1,7 +1,9 @@
-// Yuvi avatar design model — mirrors the persisted `learner_state.avatar` shape.
+// Yuvi avatar design model — mirrors the persisted `learner_state.yuvi_design`
+// shape. Kept apart from `learner_state.avatar`, which is the profile-picture
+// choice: sharing one field meant each feature erased the other.
 // The design is non-identifying UI state: colours, a variant, and equipped items.
 
-export type YuviVariant = 'classic' | 'girl'
+export type YuviVariant = 'classic'
 export type YuviSlot = 'headTop' | 'face' | 'back' | 'handR' | 'body'
 
 export interface YuviColors {
@@ -48,7 +50,7 @@ export function normalizeDesign(raw: unknown): YuviDesign {
   if (!raw || typeof raw !== 'object') return base
   const record = raw as Record<string, unknown>
 
-  if (record.variant === 'classic' || record.variant === 'girl') {
+  if (record.variant === 'classic') {
     base.variant = record.variant
   }
   if (record.colors && typeof record.colors === 'object') {

@@ -8,7 +8,7 @@ import { Icon } from '../../../components/primitives'
  * the same object.
  */
 export function StationPanel({
-  title, closeLabel, onClose, wallet, nav, context, footer, children,
+  title, closeLabel, onClose, wallet, nav, context, footer, children, demo = false,
 }: {
   title: string
   closeLabel: string
@@ -18,6 +18,8 @@ export function StationPanel({
   context?: ReactNode
   footer?: ReactNode
   children: ReactNode
+  /** A welcome walkthrough can show this real panel without accepting edits. */
+  demo?: boolean
 }) {
   // Walking onto a station opens a panel the learner never clicked, so focus
   // has to follow them into it or the keyboard is left back on the stage.
@@ -25,7 +27,7 @@ export function StationPanel({
   useEffect(() => { headingRef.current?.focus() }, [])
 
   return (
-    <aside className="ys-panel">
+    <aside className={`ys-panel${demo ? ' ys-panel--demo' : ''}`} aria-disabled={demo || undefined}>
       <div className="ys-panel__head">
         <h1 className="ys-panel__title" ref={headingRef} tabIndex={-1}>{title}</h1>
         {wallet}

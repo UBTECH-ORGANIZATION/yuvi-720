@@ -138,6 +138,7 @@ class IndexBootstrap(unittest.TestCase):
             "mentoring_conversations": {"mentoring_conversations"},
             "reward_ledger": {"reward_ledger"},
             "tutor_decisions": {"tutor_decisions"},
+            "weekly_studio_surprises": {"weekly_studio_surprises"},
         }
         self.assertEqual(
             steps, set(owned), "server.py index_steps changed — update `owned` here too")

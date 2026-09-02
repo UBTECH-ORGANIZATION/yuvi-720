@@ -29,6 +29,29 @@ async def _learner_events(learner_id: str) -> list[dict[str, Any]]:
         return []
 
 
+def _sections_done(state: dict[str, Any]) -> set[int]:
+    """Official mapping sections whose every saved question has an answer."""
+    progress = state.get("mapping_progress") or {}
+    answers = progress.get("answers") if isinstance(progress, dict) else {}
+    if not isinstance(answers, dict):
+        return set()
+
+    answered_questions: set[int] = set()
+    for question_number in answers:
+        try:
+            answered_questions.add(int(question_number))
+        except (TypeError, ValueError):
+            continue
+
+    from app.services.agency_mapping import section_question_numbers
+
+    return {
+        section_number
+        for section_number, question_numbers in section_question_numbers().items()
+        if set(question_numbers).issubset(answered_questions)
+    }
+
+
 async def sync_unlocks(learner_id: str) -> dict[str, Any]:
     """Grant everything the learner now qualifies for. Returns what they hold.
 
@@ -44,9 +67,10 @@ async def sync_unlocks(learner_id: str) -> dict[str, Any]:
     state = await get_learner_state(learner_id)
     held_avatar = set(state.get("avatar_unlocks") or [])
     held_props = set(state.get("room_unlocks") or [])
+    completed_sections = _sections_done(state)
 
     newly: list[str] = []
-    for item_id in sorted(unlocks.satisfied_ids(badges, streak)):
+    for item_id in sorted(unlocks.satisfied_ids(badges, streak, completed_sections)):
         entry = unlocks.UNLOCKS[item_id]
         if entry["kind"] == "avatar":
             if item_id in held_avatar:
@@ -75,3 +99,9 @@ async def held_props(learner_id: str) -> set[str]:
     """Room items this learner has earned. Used to screen room writes."""
     state = await get_learner_state(learner_id)
     return set(state.get("room_unlocks") or [])
+
+
+async def held_cosmetics(learner_id: str) -> set[str]:
+    """Yuvi cosmetics this learner has earned. Used to screen design writes."""
+    state = await get_learner_state(learner_id)
+    return set(state.get("avatar_unlocks") or [])

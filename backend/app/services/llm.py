@@ -112,6 +112,7 @@ async def call_llm(
     tools: list | None = None,
     tool_choice: str | dict | None = None,
     raise_on_error: bool = False,
+    timeout: float = 30,
 ):
     """Call the shared Azure OpenAI model through the APIM gateway.
 
@@ -166,7 +167,10 @@ async def call_llm(
     usage = None
     finish_reason = None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        # Non-streaming: nothing arrives until the whole completion is done, so
+        # the read timeout must cover the full generation. Callers asking for
+        # thousands of tokens (task generation) pass their own budget.
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(url, json=body, headers=headers)
             if response.status_code == 200:
                 data = response.json()

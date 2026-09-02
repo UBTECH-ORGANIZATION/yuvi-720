@@ -21,7 +21,7 @@
 
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100svh;
   background: radial-gradient(1200px 700px at 80% -10%, #f3e9ff 0%, #e7e0ff 45%, #ddd6fb 100%);
   box-sizing: border-box;
   color: var(--ys-ink);
@@ -50,6 +50,7 @@
   background: var(--ys-panel-bg);
   box-shadow: var(--ys-panel-shadow);
 }
+.ys-panel--demo { pointer-events: none; }
 .ys-panel__head {
   display: flex; align-items: center; gap: 10px;
   padding: 16px 18px 14px;
@@ -77,12 +78,15 @@
 /* Icon over label: the nav stops being one more row of identical pills. */
 .ys-panel__nav {
   display: flex; gap: 4px;
-  padding: 10px 12px;
+  padding: 10px 12px 8px;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ys-accent) var(--ys-surface);
   border-block-end: 1px solid var(--ys-line);
 }
-.ys-panel__nav::-webkit-scrollbar { display: none; }
+.ys-panel__nav::-webkit-scrollbar { block-size: 7px; }
+.ys-panel__nav::-webkit-scrollbar-track { background: var(--ys-surface); border-radius: 999px; }
+.ys-panel__nav::-webkit-scrollbar-thumb { background: var(--ys-accent); border-radius: 999px; }
 .ys-seg {
   flex: 1 1 0;
   display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
@@ -114,6 +118,8 @@
 .ys-section__title { margin: 0; font-size: 14px; font-weight: 800; color: var(--ys-ink); }
 .ys-section__count { font-size: 12.5px; color: var(--ys-ink-soft); font-variant-numeric: tabular-nums; }
 .ys-subhead { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--ys-ink-soft); }
+.ys-general-style { display: flex; flex-direction: column; gap: 10px; }
+.ys-general-style + .ys-general-style { padding-block-start: 14px; border-block-start: 1px solid var(--ys-line); }
 
 /* Filters are underlined text, not pills — a pill already means "category". */
 .ys-toggles { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -153,6 +159,7 @@
 .ys-card:hover:not(:disabled) { transform: translateY(-2px); background: var(--ys-surface-hover); box-shadow: 0 10px 22px rgba(80, 60, 160, .14); }
 .ys-card.is-selected { border-color: var(--ys-accent); background: var(--ys-accent-soft); }
 .ys-card.is-previewing { border-color: #3fd9e0; background: rgba(63, 217, 224, .12); }
+.ys-card.is-highlighted { border-color: #ff5d73; box-shadow: 0 0 0 4px rgba(255, 93, 115, .18), 0 10px 22px rgba(255, 93, 115, .2); animation: ys-card-guide 1.25s ease-in-out infinite; }
 .ys-card:disabled { cursor: not-allowed; opacity: .45; }
 .ys-card__media { inline-size: 100%; block-size: 66px; display: grid; place-items: center; }
 /* A colour swatch needs far less room than a rendered item. */
@@ -198,6 +205,9 @@
 /* A buyable item stays inviting rather than greyed out. */
 .ys-card.is-buyable .ys-card__media img { filter: grayscale(.55) drop-shadow(0 4px 7px rgba(80, 60, 160, .16)); }
 .ys-card.is-buyable:hover .ys-card__media img { filter: none; }
+@keyframes ys-card-guide { 50% { transform: translateY(-3px) scale(1.025); } }
+.ys-swatches--guided { padding: 5px; border-radius: 8px; box-shadow: 0 0 0 2px rgba(255, 93, 115, .48); animation: ys-swatch-guide 1.25s ease-in-out infinite; }
+@keyframes ys-swatch-guide { 50% { box-shadow: 0 0 0 5px rgba(255, 93, 115, .14); } }
 
 .ys-wallet {
   margin-inline-start: auto;
@@ -554,10 +564,6 @@
 .studio-overlay:not(.is-visible) { pointer-events: none; }
 .studio-overlay .Yuvi-studio { height: 100%; }
 
-/* The stage robot stays mounted (warming up) but invisible while the flight
-   Yuvi animates onto its spot, so the hand-off has no blank flash. */
-.ys-stage__canvas.is-flight-hidden { visibility: hidden; }
-
 /* Shared-element FLIP: the studio stage grows from the source robot's spot on
    open and shrinks back on close, driven by CSS keyframes (robust vs. imperative
    transitions). --ys-from / --ys-to carry the measured source transform. */
@@ -721,6 +727,96 @@
 .ys-station:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 12px 26px rgba(20, 12, 60, .34); }
 .ys-station:active { transform: translateY(1px); }
 
+/* The requested geometry is physical: the menu opens to Help's left and the
+   selected answer sits to the menu's right, independent of document direction. */
+.ys-help { position: relative; display: inline-flex; }
+.ys-help__layer { position: absolute; inset-block-end: calc(100% + 10px); inset-inline-end: 0; z-index: 25; }
+.ys-help__menu { animation: ys-help-in .18s ease-out both; }
+.ys-help__menu { position: absolute; inset-inline-end: 0; inset-block-end: 0; inline-size: 278px; block-size: 218px; }
+.ys-help__bubble {
+  position: absolute; z-index: 2; inset-inline-start: calc(100% + 10px); inset-block-start: 50%;
+  inline-size: min(252px, calc(100vw - 48px)); padding: 14px 40px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, .48); border-radius: 8px;
+  background: var(--help-color); color: #fff; box-shadow: 0 18px 38px rgba(1, 7, 28, .45);
+  transform: translateY(-50%);
+  animation: ys-help-bubble-in .18s ease-out both;
+}
+@keyframes ys-help-in { from { opacity: 0; transform: translateY(10px) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes ys-help-bubble-in { from { opacity: 0; transform: translateY(calc(-50% + 10px)) scale(.95); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+.ys-help__close {
+  display: grid; place-items: center; flex: 0 0 auto;
+  inline-size: 28px; block-size: 28px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ys-ink-soft); cursor: pointer;
+}
+.ys-help__close:hover { background: color-mix(in srgb, var(--ys-danger) 11%, transparent); color: var(--ys-danger); }
+.ys-help__topics { position: relative; inline-size: 100%; block-size: 100%; }
+.ys-help__topic-anchor {
+  position: absolute; inset-inline-end: 0; inset-block-end: 0;
+  --help-color: #3e78ca;
+  transform: translate(var(--x), var(--y));
+  animation: ys-help-fan-in .3s cubic-bezier(.18, .86, .25, 1.18) both;
+}
+.ys-help__topic {
+  display: inline-flex; align-items: center; gap: 8px; min-block-size: 38px;
+  padding: 8px 13px 8px 9px; border: 1px solid rgba(255, 255, 255, .34); border-radius: 999px;
+  background: var(--help-color); color: #fff; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; text-align: start;
+  box-shadow: 0 10px 22px rgba(3, 9, 37, .32);
+}
+.ys-help__topic-anchor:nth-child(1) { --x: -184px; --y: -8px; --help-color: #3e78ca; animation-delay: .02s; }
+.ys-help__topic-anchor:nth-child(2) { --x: -205px; --y: -55px; --help-color: #3b9b91; animation-delay: .06s; }
+.ys-help__topic-anchor:nth-child(3) { --x: -192px; --y: -105px; --help-color: #c45b79; animation-delay: .1s; }
+.ys-help__topic-anchor:nth-child(4) { --x: -150px; --y: -151px; --help-color: #9460c4; animation-delay: .14s; }
+.ys-help__topic-anchor:nth-child(5) { --x: -81px; --y: -179px; --help-color: #c28a36; animation-delay: .18s; }
+.ys-help__topic-anchor:hover,
+.ys-help__topic-anchor.is-active { transform: translate(var(--x), var(--y)) scale(1.06); }
+.ys-help__topic-anchor:hover .ys-help__topic,
+.ys-help__topic-anchor.is-active .ys-help__topic { border-color: rgba(255, 255, 255, .82); box-shadow: 0 14px 28px rgba(3, 9, 37, .48); }
+@keyframes ys-help-fan-in { from { opacity: 0; transform: translate(0, 0) scale(.55); } to { opacity: 1; transform: translate(var(--x), var(--y)) scale(1); } }
+.ys-help__dismiss { position: absolute; inset-inline-end: 2px; inset-block-end: 2px; z-index: 1; inline-size: 30px; block-size: 30px; padding: 0; border: 0; border-radius: 50%; background: rgba(11, 24, 64, .9); color: #fff; cursor: pointer; }
+.ys-help__dismiss:hover { background: #d85c75; }
+.ys-help__bubble { padding-inline-end: 38px; }
+.ys-help__bubble .ys-help__close { position: absolute; inset-block-start: 7px; inset-inline-end: 7px; }
+.ys-help__bubble .ys-help__close { color: rgba(255, 255, 255, .78); }
+.ys-help__bubble strong { display: block; font-size: 13px; color: #fff; }
+.ys-help__bubble p { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; line-height: 1.5; color: #fff; }
+.ys-help__action {
+  display: inline-flex; align-items: center; gap: 6px; margin-block-start: 10px;
+  padding: 7px 10px; border: 1px solid rgba(255, 255, 255, .58); border-radius: 6px;
+  background: rgba(255, 255, 255, .14); color: #fff; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 800;
+}
+.ys-help__action:hover { background: rgba(255, 255, 255, .26); }
+.ys-help__close:focus-visible,
+.ys-help__topic:focus-visible,
+.ys-help__action:focus-visible { outline: none; box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28)); }
+
+.ys-surprise-notice {
+  position: absolute; inset-block-start: 18px; inset-inline-start: 50%; z-index: 28;
+  inline-size: min(300px, calc(100% - 32px)); transform: translateX(-50%);
+  overflow: hidden; padding: 12px 40px 12px 12px; border: 1px solid rgba(255, 214, 106, .72); border-radius: 8px;
+  background: linear-gradient(118deg, #152553 0%, #284a91 58%, #266f91 100%);
+  box-shadow: 0 18px 42px rgba(6, 12, 42, .45), inset 0 1px rgba(255, 255, 255, .24);
+  animation: ys-surprise-in .34s cubic-bezier(.2, .85, .3, 1.18) both;
+}
+.ys-surprise-notice .ys-help__close { position: absolute; inset-block-start: 7px; inset-inline-end: 7px; z-index: 1; color: rgba(255, 255, 255, .78); }
+.ys-surprise-notice .ys-help__close:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+.ys-surprise-notice__head { display: flex; align-items: center; gap: 9px; }
+.ys-surprise-notice__spark { display: grid; place-items: center; flex: 0 0 auto; inline-size: 34px; block-size: 34px; border: 1px solid rgba(255, 232, 164, .78); border-radius: 50%; color: #ffe3a0; background: rgba(255, 205, 84, .14); box-shadow: 0 0 0 4px rgba(255, 213, 104, .08); }
+.ys-surprise-notice strong { display: block; color: #fff9e8; font-size: 15px; line-height: 1.25; }
+.ys-surprise-notice__goal { margin-block-start: 12px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; background: rgba(5, 17, 53, .28); }
+.ys-surprise-notice__goal > span { display: flex; align-items: center; gap: 5px; color: #bfeaff; font-size: 11px; font-weight: 800; }
+.ys-surprise-notice bdi { display: block; margin-block-start: 3px; color: #fff; font-size: 14px; font-weight: 900; line-height: 1.35; }
+.ys-surprise-notice p { margin: 10px 0 0; color: #e9f1ff; font-size: 12px; font-weight: 700; line-height: 1.45; text-align: start; }
+.ys-surprise-notice--claimed { border-color: rgba(103, 239, 225, .78); }
+.ys-surprise-confetti { position: absolute; inset: 0; z-index: 27; overflow: hidden; pointer-events: none; }
+.ys-surprise-confetti i { position: absolute; inset-inline-start: calc(8% + (var(--i, 0) * 5%)); inset-block-start: 18%; inline-size: 8px; block-size: 14px; background: #ff5d73; animation: ys-confetti .85s ease-out both; }
+.ys-surprise-confetti i:nth-child(3n) { background: #4eeef0; }
+.ys-surprise-confetti i:nth-child(4n) { background: #ffd166; }
+.ys-surprise-confetti i:nth-child(2n) { animation-delay: .07s; }
+@keyframes ys-confetti { from { opacity: 1; transform: translateY(0) rotate(0); } to { opacity: 0; transform: translateY(220px) rotate(300deg); } }
+@keyframes ys-surprise-in { from { opacity: 0; transform: translate(-50%, -13px) scale(.94); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .ys-surprise-notice, .ys-surprise-confetti i { animation: none; } }
+
 /* A chip is a setting (floor, wall, light). A card is a thing you own. Keeping
    those two apart is what stopped the room panel reading as one long list. */
 .ys-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -750,12 +846,13 @@
   color: #baf3ff;
   backdrop-filter: blur(14px);
 }
+[data-theme='dark'] .ys-help__menu,
+[data-theme='dark'] .ys-help__bubble { border-color: rgba(145, 228, 246, .16); }
 
-/* Right-click menu on a placed prop. It is pinned to a projected 3D point, so
-   it sits over the furniture rather than beside a list of it. */
+/* Hover menu on a placed prop. It is pinned to a projected 3D point, so it
+  sits over the furniture rather than beside a list of it. */
 .ys-propmenu {
   position: fixed; z-index: 30;
-  transform: translate(-50%, -100%);
   min-inline-size: 148px;
   padding: 6px;
   display: flex; flex-direction: column; gap: 2px;
@@ -765,21 +862,62 @@
   box-shadow: 0 18px 40px rgba(20, 12, 60, .34);
   animation: ys-propmenu-in .14s ease-out both;
 }
-@keyframes ys-propmenu-in {
-  from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)) scale(.97); }
-  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+.ys-propmenu--right { transform: translate(14px, -50%); }
+.ys-propmenu--left {
+  transform: translate(calc(-100% - 14px), -50%);
+  animation-name: ys-propmenu-in-left;
 }
-/* The tail points back at the prop the menu belongs to. */
+@keyframes ys-propmenu-in {
+  from { opacity: 0; transform: translate(14px, calc(-50% + 6px)) scale(.97); }
+  to { opacity: 1; transform: translate(14px, -50%) scale(1); }
+}
+@keyframes ys-propmenu-in-left {
+  from { opacity: 0; transform: translate(calc(-100% - 14px), calc(-50% + 6px)) scale(.97); }
+  to { opacity: 1; transform: translate(calc(-100% - 14px), -50%) scale(1); }
+}
+/* The tail points back at the pointer that opened the menu. PHYSICAL sides on
+   purpose: the anchor is a projected 3D point and the --left/--right side
+   classes are physical screen directions, so logical `inset-inline-*` here
+   flipped the tail to the far edge on the RTL page — the menu sat beside the
+   object while its arrow pointed away from it. */
 .ys-propmenu::after {
   content: '';
-  position: absolute; inset-block-start: 100%; inset-inline-start: 50%;
-  inline-size: 12px; block-size: 12px;
-  margin-inline-start: -6px; margin-block-start: -6px;
+  position: absolute; top: 50%; left: -6px;
+  width: 12px; height: 12px;
+  margin-top: -6px;
   background: var(--ys-panel-bg);
-  border-inline-end: 1px solid var(--ys-line);
-  border-block-end: 1px solid var(--ys-line);
+  border-left: 1px solid var(--ys-line);
+  border-bottom: 1px solid var(--ys-line);
   transform: rotate(45deg);
 }
+.ys-propmenu--left::after {
+  left: auto; right: -6px;
+  border-left: none; border-bottom: none;
+  border-top: 1px solid var(--ys-line);
+  border-right: 1px solid var(--ys-line);
+}
+
+/* First visit: the scene stays visible while Yuvi introduces the two stations. */
+.ys-welcome {
+  position: absolute; inset: 0; z-index: 11; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: clamp(18px, 4vw, 44px);
+  background: rgba(7, 11, 35, .38);
+  animation: ys-welcome-in .35s ease-out both;
+}
+.ys-welcome__copy {
+  inline-size: min(380px, 100%); padding: 20px; border-radius: 8px;
+  background: var(--ys-panel-bg); color: var(--ys-ink); pointer-events: auto;
+  box-shadow: 0 18px 42px rgba(2, 5, 24, .34);
+}
+.ys-welcome__eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: var(--ys-accent-ink); }
+.ys-welcome__copy p { margin: 10px 0 18px; font-size: 16px; font-weight: 700; line-height: 1.5; }
+.ys-welcome__copy .ys-btn { display: inline-flex; align-items: center; gap: 8px; }
+.ys-welcome__markers { display: flex; justify-content: space-between; gap: 16px; color: #fff; font-size: 13px; font-weight: 800; }
+.ys-welcome__markers span { display: inline-flex; align-items: center; gap: 6px; opacity: .32; transition: opacity .3s ease, transform .3s ease; }
+.ys-welcome__markers .is-active { opacity: 1; transform: translateY(-4px); }
+@keyframes ys-welcome-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ys-welcome { animation-duration: .12s; } }
 .ys-propmenu__title {
   padding: 4px 10px 6px;
   font-size: 11.5px; font-weight: 800; color: var(--ys-ink-soft);
@@ -800,8 +938,33 @@
   outline: none;
   box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
 }
+.ys-propmenu__colors {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 6px 4px 2px;
+  border-block-start: 1px solid var(--ys-line);
+}
+.ys-propmenu__swatch {
+  inline-size: 23px; block-size: 23px; padding: 0; border: 2px solid var(--ys-panel-bg);
+  border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px var(--ys-line);
+}
+.ys-propmenu__more-colors {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px; border: 0; border-radius: 8px; background: transparent; color: var(--ys-accent-ink);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.ys-propmenu__more-colors:hover { background: var(--ys-accent-soft); }
+.ys-room-color-dialog h2 { margin: 0 0 16px; font-size: 17px; color: var(--ys-ink); }
+.ys-room-color-dialog__swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.ys-room-color-dialog__swatches .ys-swatch { inline-size: 44px; block-size: 44px; }
 @media (prefers-reduced-motion: reduce) {
   .ys-propmenu { animation: none; }
+  .ys-help__menu, .ys-help__bubble, .ys-help__topic-anchor { animation: none; }
+}
+/* Reached by press-and-hold on a tablet, so the rows have to be finger-sized. */
+@media (pointer: coarse) {
+  .ys-propmenu__item { min-block-size: 44px; }
 }
 
 /* ── Room-design walkthrough ───────────────────────────────────────────────
@@ -942,6 +1105,8 @@
     animation-name: ys-sheet-in;
   }
   .ys-stations { inset-block-end: 70svh; }
+  .ys-help__menu { right: 0; inset-block-end: calc(100% + 10px); }
+  .ys-help__bubble { left: auto; right: 0; inset-block-end: calc(100% + 10px); transform: translateY(calc(-100% - 10px)); }
   .ys-grid { grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); }
 }
 @keyframes ys-sheet-in {

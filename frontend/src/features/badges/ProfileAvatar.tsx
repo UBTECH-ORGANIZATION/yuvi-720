@@ -14,7 +14,7 @@ export function announceAvatarUpdated(choice: AvatarChoice) {
 function coerce(raw: unknown): AvatarChoice {
   if (raw && typeof raw === 'object' && 'kind' in raw) {
     const kind = (raw as { kind?: string }).kind
-    if (kind === 'badge' || kind === 'yuvi' || kind === 'initial') return raw as AvatarChoice
+    if (kind === 'badge' || kind === 'initial') return raw as AvatarChoice
   }
   return { kind: 'initial' }
 }

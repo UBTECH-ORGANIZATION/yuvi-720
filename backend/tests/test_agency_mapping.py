@@ -13,6 +13,12 @@ def test_official_dataset_shape():
     assert am.required_question_numbers() == list(range(1, 32))
 
 
+def test_official_question_numbers_are_grouped_by_all_seven_sections():
+    sections = am.section_question_numbers()
+    assert sorted(sections) == list(range(1, 8))
+    assert sorted(question for questions in sections.values() for question in questions) == list(range(1, 32))
+
+
 def test_gender_and_language_resolution():
     he_m = am.get_questionnaire("he", "male")
     he_f = am.get_questionnaire("he", "female")

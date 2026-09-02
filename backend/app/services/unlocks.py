@@ -27,11 +27,14 @@ Rule = dict[str, Any]
 # id -> {kind, rule, requirement_key}
 #   kind: 'avatar' (a Yuvi cosmetic) or 'prop' (a room item)
 #
-# Deliberately absent: crown / jetpack / ironman / propeller. Those are the
-# mapping-section rewards (`PHASE_REWARDS`), a different promise to the learner,
-# and re-pointing them at badges would silently change what they mean.
 UNLOCKS: dict[str, dict[str, Any]] = {
     # ── Yuvi cosmetics ──
+    "crown": {"kind": "avatar", "rule": {"type": "section", "number": 4},
+              "requirementKey": "YuviStudio.unlock.section4"},
+    "jetpack": {"kind": "avatar", "rule": {"type": "section", "number": 5},
+                "requirementKey": "YuviStudio.unlock.section5"},
+    "ironman": {"kind": "avatar", "rule": {"type": "section", "number": 6},
+                "requirementKey": "YuviStudio.unlock.section6"},
     "laurel": {"kind": "avatar", "rule": {"type": "badge", "key": "on_fire"},
                "requirementKey": "YuviStudio.unlock.badge.on_fire"},
     "explorerGoggles": {"kind": "avatar", "rule": {"type": "badge", "key": "comeback"},
@@ -63,6 +66,22 @@ UNLOCKS: dict[str, dict[str, Any]] = {
 AVATAR_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "avatar")
 PROP_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "prop")
 
+# Cosmetics the studio locks but no server rule grants. `propeller` has no
+# earned source yet, so it remains visibly locked until its separate task.
+UNGRANTED_IDS = frozenset({"propeller"})
+
+
+def is_gated_cosmetic(asset_id: str) -> bool:
+    """True when this Yuvi cosmetic may only be worn once it has been earned.
+
+    Three sources, because a cosmetic can be bought with sparks, won with a
+    badge or a streak, or promised for a mapping section. Read from the shop
+    rather than copied, so a price added there cannot quietly become free.
+    """
+    from app.services.rewards.catalog import CATALOG
+
+    return asset_id in AVATAR_IDS or asset_id in CATALOG or asset_id in UNGRANTED_IDS
+
 # `project_badges` identifies a milestone by its coin colour, which is unique per
 # milestone. This maps that back to the readable key the rules above use.
 _MILESTONE_KEY = {
@@ -92,15 +111,19 @@ def _earned_badge_keys(badges: Iterable[dict[str, Any]] | None) -> set[str]:
 def satisfied_ids(
     badges: Iterable[dict[str, Any]] | None,
     current_streak: int = 0,
+    completed_sections: Iterable[int] | None = None,
 ) -> set[str]:
     """Every cosmetic id the learner currently qualifies for."""
     earned = _earned_badge_keys(badges)
+    sections = set(completed_sections or [])
     out: set[str] = set()
     for item_id, entry in UNLOCKS.items():
         rule = entry["rule"]
         if rule["type"] == "badge" and rule["key"] in earned:
             out.add(item_id)
         elif rule["type"] == "streak" and current_streak >= int(rule["days"]):
+            out.add(item_id)
+        elif rule["type"] == "section" and rule["number"] in sections:
             out.add(item_id)
     return out
 

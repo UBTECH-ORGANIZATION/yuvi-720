@@ -106,9 +106,7 @@ function speakInBrowser(text: string, language: string, avatarVariant: YuviVaria
   if (!('speechSynthesis' in window)) throw new Error('speech synthesis unavailable')
   const utterance = new SpeechSynthesisUtterance(normalizeMathForSpeech(text, language))
   utterance.lang = languageKey(language) === 'he' ? 'he-IL' : languageKey(language) === 'ar' ? 'ar-SA' : 'en-US'
-  const preferredNames = avatarVariant === 'girl'
-    ? ['hila', 'zariyah', 'jenny', 'samantha', 'female']
-    : ['avri', 'hamed', 'guy', 'david', 'alex', 'male']
+  const preferredNames = ['avri', 'hamed', 'guy', 'david', 'alex', 'male']
   const localePrefix = utterance.lang.slice(0, 2).toLowerCase()
   const localeVoices = window.speechSynthesis.getVoices()
     .filter((voice) => voice.lang.toLowerCase().startsWith(localePrefix))

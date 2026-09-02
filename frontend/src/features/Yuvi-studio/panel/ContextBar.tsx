@@ -12,7 +12,7 @@ export function ContextBar({
   note?: string
   /** Price, swatches — whatever belongs beside the title. */
   aside?: ReactNode
-  actions: ReactNode
+  actions?: ReactNode
 }) {
   return (
     <div className="ys-ctx">
@@ -22,7 +22,7 @@ export function ContextBar({
         {aside}
         {note && <span className="ys-ctx__note">{note}</span>}
       </div>
-      <div className="ys-ctx__actions">{actions}</div>
+      {actions && <div className="ys-ctx__actions">{actions}</div>}
     </div>
   )
 }

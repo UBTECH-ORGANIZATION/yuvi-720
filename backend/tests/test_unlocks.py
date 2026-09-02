@@ -69,6 +69,13 @@ class UnlockRuleTests(unittest.TestCase):
     def test_streak_below_the_tier_grants_nothing(self) -> None:
         self.assertEqual(unlocks.satisfied_ids([], 2), set())
 
+    def test_mapping_sections_unlock_only_their_matching_cosmetics(self) -> None:
+        at_four = unlocks.satisfied_ids([], 0, {4})
+        at_six = unlocks.satisfied_ids([], 0, {4, 5, 6})
+        self.assertEqual(at_four, {"crown"})
+        self.assertTrue(at_four < at_six)
+        self.assertEqual({"crown", "jetpack", "ironman"}, at_six)
+
     def test_every_rule_has_localizable_copy(self) -> None:
         for item_id, entry in unlocks.UNLOCKS.items():
             self.assertTrue(entry["requirementKey"].startswith("YuviStudio.unlock."), item_id)
@@ -80,11 +87,30 @@ class UnlockRuleTests(unittest.TestCase):
         self.assertFalse(unlocks.is_gated_prop("desk"))
         self.assertFalse(unlocks.is_gated_prop("laurel"))  # a cosmetic, not a prop
 
-    def test_mapping_section_rewards_are_left_alone(self) -> None:
-        # crown / jetpack / ironman / propeller are the mapping-section promise.
-        # Badges must not quietly take them over.
+    def test_every_earned_cosmetic_is_gated(self) -> None:
+        """All three promises — sparks, badges and mapping sections — or the
+        padlock the learner sees is the only thing enforcing any of them."""
+        for asset_id in ("laurel", "explorerGoggles", "streakScarf", "cometTrail"):
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
         for asset_id in ("crown", "jetpack", "ironman", "propeller"):
-            self.assertNotIn(asset_id, unlocks.UNLOCKS)
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
+    def test_the_shop_cannot_drift_away_from_the_gate(self) -> None:
+        """Read from the catalog, never copied — a new priced item is gated the
+        moment it has a price, without anyone remembering a second list."""
+        from app.services.rewards.catalog import CATALOG
+
+        for asset_id in CATALOG:
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
+    def test_free_cosmetics_stay_free(self) -> None:
+        for asset_id in ("snapback", "jacket", "shades", "backpack", "guitar"):
+            self.assertFalse(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
+    def test_mapping_section_rewards_have_their_own_server_rules(self) -> None:
+        for asset_id, section in (("crown", 4), ("jetpack", 5), ("ironman", 6)):
+            self.assertEqual(unlocks.UNLOCKS[asset_id]["rule"], {"type": "section", "number": section})
+        self.assertNotIn("propeller", unlocks.UNLOCKS)
 
     def test_badge_reports_what_it_unlocks(self) -> None:
         self.assertEqual(unlocks.ids_for_badge("aim"), [{"id": "podium", "kind": "prop"}])

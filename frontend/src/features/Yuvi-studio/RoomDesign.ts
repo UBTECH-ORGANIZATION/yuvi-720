@@ -22,7 +22,14 @@ export interface RoomItem {
   tint?: string
 }
 
-export type StationId = 'avatar' | 'room'
+export type StationId = 'avatar' | 'room' | 'explore' | 'mission'
+export interface RoomStation {
+  x: number
+  z: number
+  rot: number
+  /** The two design stations arrive through the first-visit walkthrough. */
+  placed: boolean
+}
 
 /**
  * Where the two walk-in stations stand, and which way they face. The room
@@ -30,7 +37,7 @@ export type StationId = 'avatar' | 'room'
  * derived from its position *and* its angle, so turning the bench takes its
  * doorway with it.
  */
-export type RoomStations = Record<StationId, { x: number; z: number; rot: number }>
+export type RoomStations = Record<StationId, RoomStation>
 
 export interface RoomDesign {
   version: number
@@ -39,6 +46,8 @@ export interface RoomDesign {
   mood: MoodId
   items: RoomItem[]
   stations: RoomStations
+  /** The learner has seen the studio's opening orientation. */
+  introDone: boolean
   /** The learner has been walked through placing and turning the stations. */
   tutorialDone: boolean
 }
@@ -58,8 +67,10 @@ export const MAX_ROOM_ITEMS = 60
 export const DEFAULT_BENCH_ROT = 1.2
 
 export const DEFAULT_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 0, rot: 0 },
-  room: { x: -9, z: 3.9, rot: DEFAULT_BENCH_ROT },
+  avatar: { x: 0, z: 0, rot: 0, placed: false },
+  room: { x: -9, z: 3.9, rot: DEFAULT_BENCH_ROT, placed: false },
+  explore: { x: 8.8, z: -7.5, rot: -0.7, placed: true },
+  mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
@@ -69,6 +80,7 @@ export const DEFAULT_ROOM: RoomDesign = {
   mood: 'studio',
   items: [],
   stations: DEFAULT_STATIONS,
+  introDone: false,
   tutorialDone: false,
 }
 
@@ -79,9 +91,34 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
     wall: room.wall,
     mood: room.mood,
     items: room.items.map((item) => ({ ...item })),
-    stations: { avatar: { ...room.stations.avatar }, room: { ...room.stations.room } },
+    stations: {
+      avatar: { ...room.stations.avatar },
+      room: { ...room.stations.room },
+      explore: { ...room.stations.explore },
+      mission: { ...room.stations.mission },
+    },
+    introDone: room.introDone,
     tutorialDone: room.tutorialDone,
   }
+}
+
+/**
+ * The room as it shipped — except for the walkthrough, which is not decoration.
+ *
+ * `tutorialDone` records something about the learner, not about the room, and
+ * resetting it through `DEFAULT_ROOM` meant a saved reset handed them the same
+ * three-step walkthrough again on their next visit, every time.
+ */
+export function resetRoom(room: RoomDesign): RoomDesign {
+  return { ...cloneRoom(DEFAULT_ROOM), introDone: room.introDone, tutorialDone: room.tutorialDone }
+  const reset = cloneRoom(DEFAULT_ROOM)
+  reset.introDone = room.introDone
+  reset.tutorialDone = room.tutorialDone
+  if (room.introDone) {
+    reset.stations.avatar.placed = true
+    reset.stations.room.placed = true
+  }
+  return reset
 }
 
 let uidSeed = 0
@@ -121,9 +158,10 @@ export function normalizeRoom(raw: unknown): RoomDesign {
     }
   }
 
+  const introDone = record.introDone === true
   const rawStations = record.stations as Record<string, unknown> | undefined
   if (rawStations && typeof rawStations === 'object') {
-    for (const id of ['avatar', 'room'] as StationId[]) {
+    for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {
       const spot = rawStations[id] as Record<string, unknown> | undefined
       if (!spot || typeof spot !== 'object') continue
       if (!isFinitePoint(spot.x) || !isFinitePoint(spot.z)) continue
@@ -131,9 +169,17 @@ export function normalizeRoom(raw: unknown): RoomDesign {
         x: spot.x,
         z: spot.z,
         rot: isFinitePoint(spot.rot) ? spot.rot : DEFAULT_STATIONS[id].rot,
+        placed: typeof spot.placed === 'boolean' ? spot.placed : introDone,
       }
     }
   }
+  // Designs saved before station placement existed had no `placed` field.
+  // Completed introductions must keep both established design stations visible.
+  if (introDone) {
+    base.stations.avatar.placed = true
+    base.stations.room.placed = true
+  }
+  base.introDone = introDone
   base.tutorialDone = record.tutorialDone === true
   return base
 }
@@ -141,11 +187,13 @@ export function normalizeRoom(raw: unknown): RoomDesign {
 /** Layout equality, used for the unsaved-changes guard. */
 export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
   if (a.floor !== b.floor || a.wall !== b.wall || a.mood !== b.mood) return false
-  if (a.tutorialDone !== b.tutorialDone) return false
-  for (const id of ['avatar', 'room'] as StationId[]) {
+  if (a.introDone !== b.introDone || a.tutorialDone !== b.tutorialDone) return false
+  for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {
     if (Math.abs(a.stations[id].x - b.stations[id].x) > 0.001) return false
     if (Math.abs(a.stations[id].z - b.stations[id].z) > 0.001) return false
     if (Math.abs(a.stations[id].rot - b.stations[id].rot) > 0.001) return false
+    if (Math.abs(a.stations[id].rot - b.stations[id].rot) > 0.001) return false
+    if (a.stations[id].placed !== b.stations[id].placed) return false
   }
   if (a.items.length !== b.items.length) return false
   for (let i = 0; i < a.items.length; i++) {

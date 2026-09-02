@@ -547,6 +547,10 @@ async def _call(component: str, task_id: str, task_spec: dict[str, Any],
         [{"role": "user", "content": instruction}],
         usage_context=_usage(task_id, component),
         max_tokens=4000, json_mode=True, model_tier="strong",
+        # A 4000-token strong-tier completion routinely outlives the client's
+        # 30s default; the old default is why components died as
+        # "unparseable_response" (really a ReadTimeout) — #tsk-d6585dd6eec7.
+        timeout=180,
     )
     return spec_module.loads_model_json(raw)
 
@@ -677,6 +681,13 @@ async def generate_component(
     payload = await _call(component, task_id, task_spec, outline or [],
                           existing=existing, focus=focus,
                           audience_block=audience_block)
+    if payload is None:
+        # One more try before giving up: a null payload here is almost always
+        # transient (gateway hiccup, timeout), and the alternative is a task
+        # that ships missing a whole component with no retry in the UI.
+        payload = await _call(component, task_id, task_spec, outline or [],
+                              existing=existing, focus=focus,
+                              audience_block=audience_block)
     if payload is None:
         raise spec_module.SpecError("unparseable_response")
 

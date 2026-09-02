@@ -19,6 +19,22 @@ from learner_state import get_learner_state, update_learner_state
 router = APIRouter(prefix="/api", tags=["learner-state"])
 
 
+def _legacy_design(avatar) -> dict | None:
+    """A Yuvi Studio design that was saved under `avatar` before the split.
+
+    The two features shared one field, so a saved design was read as a
+    profile-picture choice, failed the `kind` test below, and was replaced by
+    the derived coin — the learner's character reset itself on every reload.
+    Recognised by shape and served as `yuvi_design`; nothing is rewritten, so
+    the stale copy simply stops mattering.
+    """
+    if not isinstance(avatar, dict) or avatar.get("kind"):
+        return None
+    if not any(key in avatar for key in ("variant", "colors", "equipped")):
+        return None
+    return avatar
+
+
 @router.get("/learner-state")
 async def read_learner_state(learner_id: str = Depends(require_learner)):
     """Return persisted learner UI state from MongoDB, with local fallback.
@@ -33,6 +49,10 @@ async def read_learner_state(learner_id: str = Depends(require_learner)):
     # learner who pressed "back to my letter", and re-deriving over it would
     # make the reset button do nothing.
     avatar = state.get("avatar")
+    if not state.get("yuvi_design"):
+        legacy = _legacy_design(avatar)
+        if legacy:
+            state = {**state, "yuvi_design": legacy}
     if not (isinstance(avatar, dict) and avatar.get("kind")):
         state = {**state, "avatar": await _earned_avatar(learner_id)}
     return JSONResponse(content=state)
@@ -92,25 +112,73 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     items = room.get("items")
     if not isinstance(items, list):
         return
+    from app.services import studio_surprises
+
+    surprise_kinds = set(studio_surprises.REWARD_KINDS)
     gated = {
         str(item.get("kind"))
         for item in items
         if isinstance(item, dict) and unlocks.is_gated_prop(str(item.get("kind")))
     }
-    if not gated:
+    private_kinds = {
+        str(item.get("kind")) for item in items
+        if isinstance(item, dict) and str(item.get("kind")) in surprise_kinds
+    }
+    if not gated and not private_kinds:
         return
     try:
         held = await unlock_sync.held_props(learner_id)
     except Exception:
         held = set()
-    if gated <= held:
+    permitted_private = {kind for kind in private_kinds if await studio_surprises.can_hold_reward(learner_id, kind)}
+    if gated <= held and private_kinds <= permitted_private:
         return
     room["items"] = [
         item for item in items
         if not (isinstance(item, dict)
                 and unlocks.is_gated_prop(str(item.get("kind")))
                 and str(item.get("kind")) not in held)
+            and not (isinstance(item, dict)
+                 and str(item.get("kind")) in surprise_kinds
+                 and str(item.get("kind")) not in permitted_private)
     ]
+
+
+async def _screen_equipped(learner_id: str, data: dict) -> None:
+    """Take off any Yuvi cosmetic the learner has not earned, slot by slot.
+
+    The studio hides locked items, which stops a learner and stops nobody else:
+    the design is client-writable, so a hand-written PATCH could dress Yuvi in
+    every item in the shop without spending a spark. Sparks are the reward loop,
+    so the server needs its own opinion about what may be worn.
+
+    Emptying the slot rather than refusing the write, exactly as the room does:
+    the colours, the variant and every legitimate slot are the learner's work,
+    and rejecting the whole design would throw all of it away.
+
+    Both fields are screened. A design saved before `yuvi_design` existed is
+    still served back from `avatar` (see `_legacy_design`), so screening only
+    the new field would leave the old one as a way in.
+    """
+    designs = [
+        design for design in (data.get("yuvi_design"), _legacy_design(data.get("avatar")))
+        if isinstance(design, dict) and isinstance(design.get("equipped"), dict)
+    ]
+    gated = [
+        (design, slot, worn)
+        for design in designs
+        for slot, worn in design["equipped"].items()
+        if isinstance(worn, str) and unlocks.is_gated_cosmetic(worn)
+    ]
+    if not gated:
+        return
+    try:
+        held = await unlock_sync.held_cosmetics(learner_id)
+    except Exception:
+        held = set()
+    for design, slot, worn in gated:
+        if worn not in held:
+            design["equipped"][slot] = None
 
 
 @router.patch("/learner-state")
@@ -118,6 +186,7 @@ async def patch_learner_state(data: dict, session=Depends(require_learner_sessio
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
     await _screen_room_items(learner_id, data)
+    await _screen_equipped(learner_id, data)
     # A badge chosen as the profile picture must actually be earned — the picker
     # only offers earned coins, so this rejects tampering, not normal use.
     avatar = data.get("avatar")
