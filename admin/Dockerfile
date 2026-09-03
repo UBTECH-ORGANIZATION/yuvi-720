@@ -26,4 +26,8 @@ RUN test -f ./frontend/dist/index.html
 USER adminapp
 EXPOSE 8000
 
-CMD ["sh", "-c", "python -m scripts.sync_pricing && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
+# Seed the pricing catalog, but never let a transient MongoDB/Cosmos hiccup take
+# down the web tier: the sync is idempotent and re-runs on every start, so a
+# failure is logged and startup continues. `exec` makes uvicorn PID 1 for clean
+# shutdown signal handling.
+CMD ["sh", "-c", "python -m scripts.sync_pricing || echo 'WARN: pricing sync failed; starting web server anyway'; exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
