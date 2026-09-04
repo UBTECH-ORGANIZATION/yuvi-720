@@ -114,6 +114,24 @@ def _instrument_clients() -> list[str]:
     return enabled
 
 
+def _quiet_exporter_logs() -> None:
+    """Keep the exporter's own HTTP chatter out of the slot's log stream.
+
+    ``azure.core`` narrates every telemetry upload at INFO — request URL,
+    every header, the response — and the exporter adds a line per
+    transmission. On the App Service log stream that is a screenful every
+    flush, burying the application's own logs. WARNING keeps real delivery
+    failures visible while silencing the success play-by-play, and also stops
+    the distro's root-logger handler from re-collecting the exporter's own
+    chatter as telemetry.
+    """
+    for name in (
+        "azure.core.pipeline.policies.http_logging_policy",
+        "azure.monitor.opentelemetry.exporter",
+    ):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def configure_telemetry(app, service_name: str = "spark-backend") -> bool:
     """Attach Azure Monitor telemetry to a FastAPI app. Safe to call once.
 
@@ -177,6 +195,7 @@ def configure_telemetry(app, service_name: str = "spark-backend") -> bool:
         )
         FastAPIInstrumentor.instrument_app(app, excluded_urls=_EXCLUDED_URLS)
         clients = _instrument_clients()
+        _quiet_exporter_logs()
         _configured = True
         logger.info(
             "Application Insights configured for %s (%s, %s); dependencies: %s",

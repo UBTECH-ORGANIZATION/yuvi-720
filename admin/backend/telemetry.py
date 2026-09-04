@@ -61,6 +61,20 @@ def _instrument_clients() -> list[str]:
     return enabled
 
 
+def _quiet_exporter_logs() -> None:
+    """Keep the exporter's own HTTP chatter out of the slot's log stream.
+
+    ``azure.core`` narrates every telemetry upload at INFO and the exporter
+    adds a line per transmission — a screenful per flush on the App Service
+    log stream. WARNING keeps real delivery failures visible.
+    """
+    for name in (
+        "azure.core.pipeline.policies.http_logging_policy",
+        "azure.monitor.opentelemetry.exporter",
+    ):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 class RequestTimingMiddleware:
     """Raw-ASGI request timer: `Server-Timing` header plus a slow-request log.
 
@@ -157,6 +171,7 @@ def configure_telemetry(app, service_name: str = "spark-admin") -> bool:
         # span it would be one multi-minute "request" skewing every percentile.
         FastAPIInstrumentor.instrument_app(app, excluded_urls="/healthz,/support/ws")
         clients = _instrument_clients()
+        _quiet_exporter_logs()
         _configured = True
         logger.info(
             "Application Insights configured for %s (%s); dependencies: %s",
