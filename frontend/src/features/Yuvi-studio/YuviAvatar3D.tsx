@@ -964,6 +964,15 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       raycaster.setFromCamera(ndc, camera)
       return room.pickItem(raycaster)
     }
+    const pickStationAt = (clientX: number, clientY: number) => {
+      if (!room) return null
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return null
+      ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      return room.pickStation(raycaster)
+    }
     const onPropHover = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || dragging || placingRef.current) return
       openMenuAt(event.clientX, event.clientY)
@@ -1056,6 +1065,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (travelled > tapSlop || performance.now() - pressAt > 500) return
       const tappedItem = pickRoomItemAt(event.clientX, event.clientY)
       if (tappedItem && onRoomItemTapRef.current?.(tappedItem)) {
+        return
+      }
+      const tappedStation = pickStationAt(event.clientX, event.clientY)
+      if (tappedStation && !lockRoamRef.current) {
+        const target = room?.stationAnchor(tappedStation)
+        if (target) walkTo(target.x, target.z, tappedStation)
         return
       }
       const spot = pickFloor(event)

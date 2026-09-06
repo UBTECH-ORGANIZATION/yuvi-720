@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { navigate } from '../../app/router'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { CalendarItem } from '../../services/calendar'
-import { formatCalendarDay, formatCalendarTime } from './calendarModel'
+import { activeLessonMinutesRemaining, activeLessonProgressPercent, formatCalendarDay, formatCalendarTime } from './calendarModel'
 
 const ICONS = { task: 'backpack', goal: 'target', meeting: 'teacher', event: 'calendar', lesson: 'book' }
 
@@ -12,7 +12,16 @@ export function UpcomingStrip({ items }: { items: CalendarItem[] }) {
   const { t, language } = useI18n()
   const reduceMotion = useReducedMotion()
   const [isOpen, setIsOpen] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const itemsRef = useRef<HTMLUListElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const tick = () => setNow(Date.now())
+    tick()
+    const timer = window.setInterval(tick, 60_000)
+    return () => window.clearInterval(timer)
+  }, [isOpen])
 
   if (!items.length) return null
 
@@ -74,22 +83,28 @@ export function UpcomingStrip({ items }: { items: CalendarItem[] }) {
               </button>
             )}
             <ul id="sd-upcoming-items" className="sd-upcoming__items" ref={itemsRef}>
-              {items.map((item) => (
-                <li key={item.id} className={`sd-upcoming__item is-${item.kind} is-${item.status}`}>
-                  <button type="button" onClick={() => navigate(item.action_route || '/student-dashboard/calendar')}>
-                    <span className="sd-upcoming__icon" aria-hidden="true"><Icon name={ICONS[item.kind]} size={18} /></span>
-                    <span className="sd-upcoming__copy">
-                      <strong dir="auto">{item.title || t('sdash.calendar.untitled')}</strong>
-                      <small className="sd-upcoming__when">
-                        <Icon name="clock" size={12} />
-                        {item.proximity ? t(`sdash.calendar.proximity.${item.proximity}`) : formatCalendarDay(item.start_at.slice(0, 10), language)}
-                        {!item.all_day && ` · ${formatCalendarTime(item.start_at, language)}`}
-                      </small>
-                    </span>
-                    <span className="sd-upcoming__open" aria-hidden="true"><Icon name="chevronLeft" size={15} /></span>
-                  </button>
-                </li>
-              ))}
+              {items.map((item) => {
+                const minutesRemaining = activeLessonMinutesRemaining(item, now)
+                const progressPercent = activeLessonProgressPercent(item, now)
+                const when = minutesRemaining === null
+                  ? <>{item.proximity ? t(`sdash.calendar.proximity.${item.proximity}`) : formatCalendarDay(item.start_at.slice(0, 10), language)}{!item.all_day && ` · ${formatCalendarTime(item.start_at, language)}`}</>
+                  : minutesRemaining <= 5
+                    ? t('sdash.calendar.lesson.nearlyDone')
+                    : t('sdash.calendar.lesson.minutesLeft', { count: minutesRemaining })
+                return (
+                  <li key={item.id} className={`sd-upcoming__item is-${item.kind} is-${item.status}${progressPercent !== null ? ' is-active-lesson' : ''}`}>
+                    {progressPercent !== null && <span className="sd-upcoming__lessonProgress" style={{ width: `${progressPercent}%` }} aria-hidden="true" />}
+                    <button type="button" onClick={() => navigate(item.action_route || '/student-dashboard/calendar')}>
+                      <span className="sd-upcoming__icon" aria-hidden="true"><Icon name={ICONS[item.kind]} size={18} /></span>
+                      <span className="sd-upcoming__copy">
+                        <strong dir="auto">{item.title || t('sdash.calendar.untitled')}</strong>
+                        <small className="sd-upcoming__when"><Icon name="clock" size={12} />{when}</small>
+                      </span>
+                      <span className="sd-upcoming__open" aria-hidden="true"><Icon name="chevronLeft" size={15} /></span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
             {items.length > 3 && (
               <button className="sd-upcoming__scrollArrow sd-upcoming__scrollArrow--forward" type="button" aria-label={t('sdash.upcoming.nextItems')} onClick={() => scrollItems(true)}>

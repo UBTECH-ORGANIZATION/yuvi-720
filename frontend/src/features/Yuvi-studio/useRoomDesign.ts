@@ -148,8 +148,8 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   }
 
   /** The welcome sequence is remembered separately from the room tutorial. */
-  const completeIntro = async () => {
-    const next = { ...cloneRoom(roomRef.current), introDone: true }
+  const completeIntro = async (nextRoom?: RoomDesign) => {
+    const next = { ...cloneRoom(nextRoom ?? roomRef.current), introDone: true }
     setRoom(next)
     return save(next)
   }

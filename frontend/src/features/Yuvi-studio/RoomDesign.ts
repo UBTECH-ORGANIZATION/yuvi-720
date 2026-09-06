@@ -110,7 +110,6 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
  * three-step walkthrough again on their next visit, every time.
  */
 export function resetRoom(room: RoomDesign): RoomDesign {
-  return { ...cloneRoom(DEFAULT_ROOM), introDone: room.introDone, tutorialDone: room.tutorialDone }
   const reset = cloneRoom(DEFAULT_ROOM)
   reset.introDone = room.introDone
   reset.tutorialDone = room.tutorialDone
