@@ -415,6 +415,53 @@ async def request_goal_help(
     return record
 
 
+async def update_conversation(
+    learner_id: str, conversation_id: str, data: dict[str, Any]
+) -> Optional[dict[str, Any]]:
+    """Edit the learner's own documented conversation without replacing its goals."""
+    lid = normalize_learner_id(learner_id)
+    record = await _load_conversation(lid, conversation_id)
+    if record is None or record.get("deleted") or record.get("author") != "learner":
+        return None
+    if "notes" in data:
+        record["notes"] = str(data["notes"] or "").strip()[:4000]
+    if "meeting_stage" in data:
+        record["meeting_stage"] = str(data["meeting_stage"] or "").strip()[:120]
+    await _save_conversation(lid, record)
+    record = dict(record)
+    record.pop("teacher_only_note", None)
+    record["goals"] = _active_goals(_ensure_goals(record))
+    return record
+
+
+async def update_goal(
+    learner_id: str, conversation_id: str, goal_id: str, data: dict[str, Any]
+) -> Optional[dict[str, Any]]:
+    """Edit the learner's own goal while preserving progress and reward data."""
+    lid = normalize_learner_id(learner_id)
+    record = await _load_conversation(lid, conversation_id)
+    if record is None or record.get("deleted") or record.get("author") != "learner":
+        return None
+    _ensure_goals(record)
+    goal = next((item for item in record["goals"] if item.get("id") == goal_id and not item.get("deleted")), None)
+    if goal is None:
+        return None
+    if "title" in data:
+        goal["title"] = str(data["title"] or "").strip()[:300]
+    if "next_steps" in data:
+        goal["next_steps"] = str(data["next_steps"] or "").strip()[:1000]
+    if "deadline" in data:
+        goal["deadline"] = str(data["deadline"] or "").strip()[:40]
+    if not goal.get("title") and not goal.get("next_steps"):
+        return None
+    await _save_conversation(lid, record)
+    await _project_goals(lid)
+    record = dict(record)
+    record.pop("teacher_only_note", None)
+    record["goals"] = _active_goals(record)
+    return record
+
+
 def _may_delete(record: dict[str, Any], *, actor: str, teacher_id: str) -> bool:
     """Whether this actor wrote the thing they are asking to remove."""
     author = record.get("author", "teacher")

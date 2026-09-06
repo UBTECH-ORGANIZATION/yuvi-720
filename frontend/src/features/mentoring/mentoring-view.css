@@ -402,10 +402,21 @@
 .mt-modal__goals { display: grid; gap: var(--sp-3); margin: 0 0 var(--sp-5); padding: 0; list-style: none; }
 .mt-modal__goals li { position: relative; display: grid; gap: 3px; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--sp-border); border-radius: 8px; background: var(--sp-bg-subtle); }
 .mt-modal__goals li > .mt-icon-button { position: absolute; inset-block-start: 6px; inset-inline-end: 6px; }
+.mt-detail__edit { inset-inline-end: 58px; }
+.mt-modal__goal-actions { position: absolute; inset-block-start: 6px; inset-inline-end: 6px; display: flex; gap: var(--sp-1); }
+.mt-modal__goal-actions .mt-icon-button { position: static; }
 .mt-modal__goals strong { color: var(--sp-ink-800); font-size: var(--sp-fs-sm); }
 .mt-modal__goals span { color: var(--sp-ink-600); font-size: var(--sp-fs-sm); }
 .mt-modal__goals small { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
 .mt-modal__empty { margin: 0 0 var(--sp-5); color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.mt-edit-dialog { display: grid; gap: var(--sp-4); max-inline-size: 520px; }
+.mt-edit-dialog__field { display: grid; gap: var(--sp-2); color: var(--sp-ink-700); font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); }
+.mt-edit-dialog__field input, .mt-edit-dialog__field textarea { box-sizing: border-box; inline-size: 100%; padding: var(--sp-3); border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius-md); background: var(--sp-bg-subtle); color: var(--sp-ink-700); font: inherit; }
+.mt-edit-dialog__field textarea { min-block-size: 112px; resize: vertical; }
+.mt-edit-dialog__error { margin: 0; color: #a52d3a; font-size: var(--sp-fs-sm); }
+.mt-rec-dialog > .mt-yuvi-chat__ava { margin-block-end: var(--sp-1); }
+.mt-rec-dialog__lead, .mt-rec-dialog p, .mt-rec-dialog small { margin: 0; color: var(--sp-ink-600); line-height: 1.5; }
+.mt-rec-dialog strong { color: var(--sp-ink-800); font-size: var(--sp-fs-lg); }
 
 /* Composer: conversation + repeatable goals editor */
 .mt-composer__lead { margin: 0 0 var(--sp-5); color: var(--sp-ink-500); font-size: var(--sp-fs-sm); line-height: 1.55; }

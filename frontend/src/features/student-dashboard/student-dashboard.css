@@ -169,13 +169,18 @@
 [dir='ltr'] .sd-upcoming__scrollArrow--forward .sp-icon { transform: rotate(180deg); }
 .sd-upcoming__items { position: absolute; z-index: 2; inset-block: 18px; inset-inline: 68px; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; overflow-x: auto; overflow-y: hidden; list-style: none; scroll-snap-type: inline mandatory; scrollbar-width: none; opacity: 0; animation: sd-scroll-items-in .24s ease var(--sd-scroll-duration) forwards; }
 .sd-upcoming__items::-webkit-scrollbar { display: none; }
-.sd-upcoming__item { --sd-upcoming-accent: var(--sp-primary-600); --sd-upcoming-tint: var(--sp-primary-100); min-inline-size: 0; overflow: hidden; border: 1px solid color-mix(in srgb, var(--sd-upcoming-accent) 18%, transparent); border-inline-start: 3px solid var(--sd-upcoming-accent); border-radius: 7px; background: color-mix(in srgb, var(--sd-upcoming-tint) 28%, rgba(255, 255, 255, .68)); }
+.sd-upcoming__item { --sd-upcoming-accent: var(--sp-primary-600); --sd-upcoming-tint: var(--sp-primary-100); position: relative; min-inline-size: 0; overflow: hidden; border: 1px solid color-mix(in srgb, var(--sd-upcoming-accent) 18%, transparent); border-inline-start: 3px solid var(--sd-upcoming-accent); border-radius: 7px; background: color-mix(in srgb, var(--sd-upcoming-tint) 28%, rgba(255, 255, 255, .68)); }
 .sd-upcoming__item { flex: 0 0 calc((100% - 20px) / 3); scroll-snap-align: start; }
 .sd-upcoming__item.is-task { --sd-upcoming-accent: var(--sp-teal-600); --sd-upcoming-tint: var(--sp-teal-100); }
 .sd-upcoming__item.is-goal, .sd-upcoming__item.is-event { --sd-upcoming-accent: var(--sp-purple-600); --sd-upcoming-tint: var(--sp-purple-100); }
 .sd-upcoming__item.is-meeting { --sd-upcoming-accent: var(--sp-success-600); --sd-upcoming-tint: var(--sp-success-100); }
 .sd-upcoming__item.is-overdue { --sd-upcoming-accent: var(--sp-danger-600); --sd-upcoming-tint: var(--sp-danger-100); }
-.sd-upcoming__item button { display: grid; grid-template-columns: 30px minmax(0, 1fr) 18px; align-items: center; gap: 7px; inline-size: 100%; min-block-size: 60px; padding: 6px 8px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: start; }
+.sd-upcoming__item.is-active-lesson { border-color: color-mix(in srgb, var(--sp-primary-700) 46%, transparent); background: color-mix(in srgb, var(--sp-primary-500) 24%, var(--sp-surface)); }
+.sd-upcoming__lessonProgress { position: absolute; z-index: 0; inset-block: 0; inset-inline-end: 0; background: var(--sp-primary-700); pointer-events: none; }
+.sd-upcoming__item.is-active-lesson .sd-upcoming__copy { padding: 3px 5px; border-radius: 4px; background: var(--sp-surface); }
+.sd-upcoming__item.is-active-lesson .sd-upcoming__when { background: color-mix(in srgb, var(--sp-primary-100) 45%, var(--sp-surface)); }
+.sd-upcoming__item.is-active-lesson .sd-upcoming__icon, .sd-upcoming__item.is-active-lesson .sd-upcoming__open { background: var(--sp-surface); }
+.sd-upcoming__item button { position: relative; z-index: 1; display: grid; grid-template-columns: 30px minmax(0, 1fr) 18px; align-items: center; gap: 7px; inline-size: 100%; min-block-size: 60px; padding: 6px 8px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: start; }
 .sd-upcoming__item button:hover { background: color-mix(in srgb, var(--sd-upcoming-accent) 7%, transparent); }
 .sd-upcoming__item button:focus-visible { outline: 2px solid var(--sd-upcoming-accent); outline-offset: -3px; }
 .sd-upcoming__icon { display: grid; place-items: center; inline-size: 30px; block-size: 30px; border: 1px solid color-mix(in srgb, var(--sd-upcoming-accent) 18%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--sp-surface) 88%, transparent); color: var(--sd-upcoming-accent); transition: transform 180ms ease; }

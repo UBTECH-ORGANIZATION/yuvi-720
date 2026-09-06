@@ -50,6 +50,12 @@ test('everything the learner decorated goes back', () => {
   assert.deepEqual(fresh.stations, DEFAULT_STATIONS)
 })
 
+test('a reset keeps completed design stations visible', () => {
+  const fresh = resetRoom(decorated({ introDone: true }))
+  assert.equal(fresh.stations.avatar.placed, true)
+  assert.equal(fresh.stations.room.placed, true)
+})
+
 test('resetting an untouched room is not a change to save', () => {
   // Otherwise Reset would arm the unsaved-work guard over nothing, and the exit
   // dialog would interrogate a learner who changed nothing.

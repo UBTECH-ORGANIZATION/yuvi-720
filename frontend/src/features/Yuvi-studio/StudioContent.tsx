@@ -195,6 +195,7 @@ export function StudioContent({
 
   const [introScene, setIntroScene] = useState<number | null>(null)
   const [introAvatarChanged, setIntroAvatarChanged] = useState(false)
+  const [introRoomItemAdded, setIntroRoomItemAdded] = useState(false)
   const [introCheckFailed, setIntroCheckFailed] = useState(false)
   const [introSaveFailed, setIntroSaveFailed] = useState(false)
   const tutorialArmed = useRef(false)
@@ -203,6 +204,7 @@ export function StudioContent({
     tutorialArmed.current = false
     setIntroScene(null)
     setIntroAvatarChanged(false)
+    setIntroRoomItemAdded(false)
     setIntroCheckFailed(false)
     setIntroSaveFailed(false)
   }, [user?.user_id])
@@ -220,6 +222,8 @@ export function StudioContent({
       setMode('roam')
       avatarRef.current?.focus('roam')
     } else if (introScene === 2) {
+      goToStation('room')
+    } else if (introScene === 3) {
       setActiveTab('colors')
       goToStation('avatar')
     } else {
@@ -311,9 +315,12 @@ export function StudioContent({
 
   const endIntro = async () => {
     setIntroSaveFailed(false)
-    const saved = await saveAll()
+    // Persist the final room snapshot once. The former save-then-complete
+    // sequence issued two writes for the same room and could surface a false
+    // save failure after the first write had already succeeded.
     const completed = await roomState.completeIntro()
-    if (!saved || !completed) {
+    const avatarSaved = dirty ? await save() : true
+    if (!completed || !avatarSaved) {
       setIntroSaveFailed(true)
       return
     }
@@ -332,14 +339,20 @@ export function StudioContent({
     if (introScene === 1) {
       if (!stations.room.placed || !stations.avatar.placed) { setIntroCheckFailed(true); return }
       setIntroCheckFailed(false)
-      setIntroAvatarChanged(false)
       setIntroScene(2)
       return
     }
     if (introScene === 2) {
+      if (!introRoomItemAdded) { setIntroCheckFailed(true); return }
+      setIntroCheckFailed(false)
+      setIntroAvatarChanged(false)
+      setIntroScene(3)
+      return
+    }
+    if (introScene === 3) {
       if (!introAvatarChanged) { setIntroCheckFailed(true); return }
       setIntroCheckFailed(false)
-      setIntroScene(3)
+      setIntroScene(4)
       return
     }
     void endIntro()
@@ -363,6 +376,7 @@ export function StudioContent({
       roomState.setSelectedUid(placing.uid)
     } else {
       roomState.place(placing.kind, x, z, placing.rot ?? 0)
+      if (introScene === 2) setIntroRoomItemAdded(true)
     }
     if (introScene === 1 && placing.station === 'room') {
       const avatar = roomState.room.stations.avatar
@@ -471,7 +485,7 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
-            footer={introScene === 1 ? undefined : footerFor('room')}
+            footer={introScene === 1 || introScene === 2 ? undefined : footerFor('room')}
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
             surpriseRewards={claimedRewards}
@@ -527,14 +541,14 @@ export function StudioContent({
                 )}
               />
             )}
-            footer={introScene === 2 ? undefined : footerFor('avatar')}
+            footer={introScene === 3 ? undefined : footerFor('avatar')}
           >
             {activeTab === 'colors' ? (
               <ColorsPanel
                 design={design}
                 onPick={(key, hex) => {
                   setColor(key, hex)
-                  if (introScene === 2) {
+                  if (introScene === 3) {
                     setIntroAvatarChanged(true)
                     setIntroCheckFailed(false)
                   }
@@ -629,7 +643,7 @@ export function StudioContent({
               stations={roomState.room.stations}
               roomStyle={roomStyle}
               placing={placing}
-              presenting={introScene !== null && introScene !== 3}
+              presenting={introScene !== null && introScene !== 4}
               presentingSide="left"
               onPlaceAt={handlePlaceAt}
               onItemMenu={!placing ? showPropMenu : undefined}
@@ -661,7 +675,9 @@ export function StudioContent({
                         ? 'YuviStudio.intro.station.avatar'
                         : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
                     : introScene === 2
-                      ? introAvatarChanged ? 'YuviStudio.intro.avatar.done' : introCheckFailed ? 'YuviStudio.intro.avatar.missing' : 'YuviStudio.intro.avatar.pick'
+                      ? introRoomItemAdded ? 'YuviStudio.intro.roomCatalog.done' : introCheckFailed ? 'YuviStudio.intro.roomCatalog.missing' : 'YuviStudio.intro.roomCatalog.pick'
+                      : introScene === 3
+                        ? introAvatarChanged ? 'YuviStudio.intro.avatar.done' : introCheckFailed ? 'YuviStudio.intro.avatar.missing' : 'YuviStudio.intro.avatar.pick'
                       : `YuviStudio.intro.scene${introScene}`,
               ),
               avatar: t('YuviStudio.zone.avatar'),
@@ -672,7 +688,9 @@ export function StudioContent({
                   ? t('YuviStudio.intro.next')
                   : introScene === 2
                     ? t('YuviStudio.intro.next')
-                  : t('YuviStudio.intro.finish'),
+                    : introScene === 3
+                      ? t('YuviStudio.intro.next')
+                      : t('YuviStudio.intro.finish'),
             }}
             onContinue={continueIntro}
           />
