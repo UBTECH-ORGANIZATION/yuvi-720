@@ -95,6 +95,58 @@ class DeletePermissionTest(unittest.IsolatedAsyncioTestCase):
                          "not_found")
 
 
+class EditPermissionTest(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.saved: list[dict] = []
+        self.record = _record(
+            author="learner",
+            meeting_stage="good",
+            goals=[{
+                "id": "goal_1", "title": "להתאמן", "next_steps": "עשר דקות",
+                "deadline": "2026-09-12", "progress_stage": "progressed",
+                "reward_value": 15, "deleted": False,
+            }],
+        )
+        self._patches = [
+            patch.object(mentoring, "_load_conversation",
+                         AsyncMock(side_effect=lambda lid, cid: self.record)),
+            patch.object(mentoring, "_save_conversation",
+                         AsyncMock(side_effect=lambda lid, rec: self.saved.append(rec))),
+            patch.object(mentoring, "_project_goals", AsyncMock(return_value=None)),
+        ]
+        for handle in self._patches:
+            handle.start()
+
+    async def asyncTearDown(self):
+        for handle in self._patches:
+            handle.stop()
+
+    async def test_a_learner_can_edit_their_conversation_summary(self):
+        updated = await mentoring.update_conversation(
+            "kid-a", "ment_1", {"notes": "עדכנתי את הסיכום", "meeting_stage": "thoughtful"},
+        )
+        self.assertEqual(updated["notes"], "עדכנתי את הסיכום")
+        self.assertEqual(updated["meeting_stage"], "thoughtful")
+        self.assertEqual(len(self.saved), 1)
+
+    async def test_a_learner_can_edit_a_goal_without_resetting_its_progress_or_reward(self):
+        updated = await mentoring.update_goal(
+            "kid-a", "ment_1", "goal_1",
+            {"title": "לתרגל", "next_steps": "חמש עשרה דקות", "deadline": "2026-09-14"},
+        )
+        goal = updated["goals"][0]
+        self.assertEqual(goal["title"], "לתרגל")
+        self.assertEqual(goal["progress_stage"], "progressed")
+        self.assertEqual(goal["reward_value"], 15)
+        mentoring._project_goals.assert_awaited_once_with("kid-a")
+
+    async def test_a_learner_cannot_edit_a_teacher_documented_conversation(self):
+        self.record["author"] = "teacher"
+        self.assertIsNone(await mentoring.update_conversation("kid-a", "ment_1", {"notes": "שינוי"}))
+        self.assertIsNone(await mentoring.update_goal("kid-a", "ment_1", "goal_1", {"title": "שינוי"}))
+        self.assertFalse(self.saved)
+
+
 class ProjectionSlotsTest(unittest.IsolatedAsyncioTestCase):
     """`brain.goals` is shared with the learner's own activeness goals.
 

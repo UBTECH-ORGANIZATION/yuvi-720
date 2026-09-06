@@ -9,7 +9,7 @@ import { useRewards } from '../../providers/RewardsProvider'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   createMentoring, deleteGoal, deleteConversation, listMentoring, updateGoalProgress, assistMentoring,
-  recommendGoal, setRecommendationStatus, requestGoalHelp,
+  recommendGoal, setRecommendationStatus, requestGoalHelp, updateConversation, updateGoal,
   type MentoringConversation, type MentoringGoal, type GoalProgressStage, type YuviQA, type GoalRecommendation,
 } from '../../services/mentoring'
 import {
@@ -101,6 +101,8 @@ function StudentGoalsPage() {
   const [error, setError] = useState(false)
   const [composerOpen, setComposerOpen] = useState(false)
   const [detail, setDetail] = useState<MentoringConversation | null>(null)
+  const [editTarget, setEditTarget] = useState<{ conversation: MentoringConversation; goal?: MentoringGoal } | null>(null)
+  const [freshRecommendation, setFreshRecommendation] = useState<GoalRecommendation | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [helpingId, setHelpingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ conversation: MentoringConversation; goal?: MentoringGoal } | null>(null)
@@ -236,6 +238,32 @@ function StudentGoalsPage() {
     }
   }
 
+  const saveEdit = async (input: { notes?: string; meeting_stage?: string; title?: string; next_steps?: string; deadline?: string }) => {
+    if (!editTarget?.conversation.id) return
+    const summaryChanged = !editTarget.goal && (
+      input.notes?.trim() !== editTarget.conversation.notes.trim()
+      || input.meeting_stage?.trim() !== editTarget.conversation.meeting_stage.trim()
+    )
+    const updated = editTarget.goal?.id
+      ? await updateGoal(editTarget.conversation.id, editTarget.goal.id, {
+          title: input.title ?? '', next_steps: input.next_steps ?? '', deadline: input.deadline ?? '',
+        })
+      : await updateConversation(editTarget.conversation.id, {
+          notes: input.notes ?? '', meeting_stage: input.meeting_stage ?? '',
+        })
+    setRows((currentRows) => currentRows?.map((row) => row.id === updated.id ? updated : row) ?? null)
+    setDetail(updated)
+    setEditTarget(null)
+    if (summaryChanged) {
+      try {
+        const recommendation = await recommendGoal({ language, notes: updated.notes, feeling: updated.meeting_stage })
+        if (recommendation?.title || recommendation?.next_steps) setFreshRecommendation(recommendation)
+      } catch {
+        // Saving the learner's edit must not depend on a recommendation being available.
+      }
+    }
+  }
+
   const groups = useMemo(() => buildDayGroups(rows || []), [rows])
   const settled = groups.filter((group) => group.settled)
   const live = groups.filter((group) => !group.settled)
@@ -330,6 +358,8 @@ function StudentGoalsPage() {
           conversation={detail}
           language={language}
           onClose={() => setDetail(null)}
+          onEdit={canDeleteConversation(detail) && detail.id ? () => setEditTarget({ conversation: detail }) : undefined}
+          onEditGoal={canDeleteConversation(detail) && detail.id ? (goal) => setEditTarget({ conversation: detail, goal }) : undefined}
           onDelete={canDeleteConversation(detail) && detail.id ? () => setDeleteTarget({ conversation: detail }) : undefined}
           onDeleteGoal={canDeleteConversation(detail) && detail.id ? (goal) => setDeleteTarget({ conversation: detail, goal }) : undefined}
         />
@@ -343,6 +373,8 @@ function StudentGoalsPage() {
           onConfirm={confirmDelete}
         />
       )}
+      {editTarget && <MentoringEditDialog target={editTarget} onCancel={() => setEditTarget(null)} onSave={saveEdit} />}
+      {freshRecommendation && <FreshRecommendationDialog recommendation={freshRecommendation} onClose={() => setFreshRecommendation(null)} />}
     </>
   )
 }
@@ -436,8 +468,9 @@ function GoalCard({ goal, conversation, language, updating, helping, flash, onSt
   )
 }
 
-function ConversationDetail({ conversation, language, onClose, onDelete, onDeleteGoal }: {
+function ConversationDetail({ conversation, language, onClose, onEdit, onEditGoal, onDelete, onDeleteGoal }: {
   conversation: MentoringConversation; language: string; onClose: () => void
+  onEdit?: () => void; onEditGoal?: (goal: MentoringGoal) => void
   onDelete?: () => void; onDeleteGoal?: (goal: MentoringGoal) => void
 }) {
   const { t } = useI18n()
@@ -448,6 +481,7 @@ function ConversationDetail({ conversation, language, onClose, onDelete, onDelet
         <button className="mt-icon-button" type="button" onClick={onClose} aria-label={t('mentoring.student.close')}><Icon name="close" size={21} /></button>
         <p className="mt-student__eyebrow">{formatDate(conversation.date, language)}</p>
         <h2 id="mt-detail-title">{t('mentoring.student.summary.title')}</h2>
+        {onEdit && <button className="mt-icon-button mt-detail__edit" type="button" onClick={onEdit} aria-label={t('mentoring.student.edit.conversationAction')}><Icon name="edit" size={17} /></button>}
         {conversation.teacher_name && <p className="mt-modal__teacher"><Icon name="teacher" size={17} />{conversation.teacher_name}</p>}
         <dl className="mt-modal__details">
           {conversation.meeting_stage && (
@@ -465,9 +499,10 @@ function ConversationDetail({ conversation, language, onClose, onDelete, onDelet
                 {goal.next_steps && goal.title && <span dir="auto">{goal.next_steps}</span>}
                 {goal.deadline && <small>{t('mentoring.student.active.deadline')}: {formatDate(goal.deadline, language)}</small>}
                 {onDeleteGoal && goal.id && (
-                  <button className="mt-icon-button mt-icon-button--sm" type="button" onClick={() => onDeleteGoal(goal)} aria-label={t('mentoring.student.delete.action')}>
-                    <Icon name="trash" size={15} />
-                  </button>
+                  <span className="mt-modal__goal-actions">
+                    {onEditGoal && <button className="mt-icon-button mt-icon-button--sm" type="button" onClick={() => onEditGoal(goal)} aria-label={t('mentoring.student.edit.goalAction')}><Icon name="edit" size={15} /></button>}
+                    <button className="mt-icon-button mt-icon-button--sm" type="button" onClick={() => onDeleteGoal(goal)} aria-label={t('mentoring.student.delete.action')}><Icon name="trash" size={15} /></button>
+                  </span>
                 )}
               </li>
             ))}
@@ -478,6 +513,70 @@ function ConversationDetail({ conversation, language, onClose, onDelete, onDelet
         {onDelete && (
           <button className="mt-btn mt-btn--danger" type="button" onClick={onDelete}><Icon name="trash" size={18} />{t('mentoring.student.delete.conversationAction')}</button>
         )}
+      </section>
+    </div>
+  )
+}
+
+function MentoringEditDialog({ target, onCancel, onSave }: {
+  target: { conversation: MentoringConversation; goal?: MentoringGoal }
+  onCancel: () => void
+  onSave: (input: { notes?: string; meeting_stage?: string; title?: string; next_steps?: string; deadline?: string }) => Promise<void>
+}) {
+  const { t } = useI18n()
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [notes, setNotes] = useState(target.conversation.notes)
+  const [feeling, setFeeling] = useState(target.conversation.meeting_stage)
+  const [title, setTitle] = useState(target.goal?.title ?? '')
+  const [nextSteps, setNextSteps] = useState(target.goal?.next_steps ?? '')
+  const [deadline, setDeadline] = useState(target.goal?.deadline ?? '')
+  const isGoal = Boolean(target.goal)
+  const save = async () => {
+    setBusy(true)
+    setFailed(false)
+    try {
+      await onSave(isGoal ? { title, next_steps: nextSteps, deadline } : { notes, meeting_stage: feeling })
+    } catch {
+      setFailed(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="mt-modal-backdrop">
+      <section className="mt-modal mt-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="mt-edit-title">
+        <h2 id="mt-edit-title">{t(isGoal ? 'mentoring.student.edit.goalTitle' : 'mentoring.student.edit.conversationTitle')}</h2>
+        {isGoal ? <>
+          <label className="mt-edit-dialog__field">{t('mentoring.student.composer.goal')}<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+          <label className="mt-edit-dialog__field">{t('mentoring.field.nextSteps')}<textarea value={nextSteps} onChange={(event) => setNextSteps(event.target.value)} /></label>
+          <label className="mt-edit-dialog__field">{t('mentoring.field.deadline')}<input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
+        </> : <>
+          <label className="mt-edit-dialog__field">{t('mentoring.student.conversation.feeling')}<input value={feeling} onChange={(event) => setFeeling(event.target.value)} /></label>
+          <label className="mt-edit-dialog__field">{t('mentoring.field.notes')}<textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+        </>}
+        {failed && <p className="mt-edit-dialog__error" role="alert">{t('mentoring.student.edit.error')}</p>}
+        <div className="mt-composer__actions">
+          <button className="mt-btn mt-btn--quiet" type="button" disabled={busy} onClick={onCancel}>{t('mentoring.student.edit.cancel')}</button>
+          <button className="mt-btn" type="button" disabled={busy} onClick={() => void save()}>{t('mentoring.student.edit.save')}</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function FreshRecommendationDialog({ recommendation, onClose }: { recommendation: GoalRecommendation; onClose: () => void }) {
+  const { t, language } = useI18n()
+  return (
+    <div className="mt-modal-backdrop">
+      <section className="mt-modal mt-edit-dialog mt-rec-dialog" role="dialog" aria-modal="true" aria-labelledby="mt-rec-title">
+        <span className="mt-yuvi-chat__ava" aria-hidden="true"><Icon name="spark" size={17} /></span>
+        <h2 id="mt-rec-title">{t('mentoring.student.edit.recommendationTitle')}</h2>
+        <p className="mt-rec-dialog__lead">{t('mentoring.student.edit.recommendationLead')}</p>
+        <strong dir="auto">{recommendation.title}</strong>
+        {recommendation.next_steps && <p dir="auto">{recommendation.next_steps}</p>}
+        {recommendation.deadline && <small>{t('mentoring.student.goal.due', { date: formatDate(recommendation.deadline, language) })}</small>}
+        <div className="mt-composer__actions"><button className="mt-btn" type="button" onClick={onClose}>{t('mentoring.student.edit.recommendationClose')}</button></div>
       </section>
     </div>
   )

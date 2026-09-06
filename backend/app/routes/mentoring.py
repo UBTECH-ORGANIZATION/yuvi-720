@@ -170,6 +170,33 @@ async def request_mentoring_goal_help(
     return JSONResponse(content=record)
 
 
+@router.put("/mentoring/{conversation_id}")
+async def update_mentoring_conversation(
+    conversation_id: str,
+    data: dict,
+    session=Depends(require_learner_session),
+):
+    """Edit a learner-authored conversation summary."""
+    record = await mentoring.update_conversation(session["sub"], conversation_id, data)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Mentoring conversation was not found")
+    return JSONResponse(content=record)
+
+
+@router.put("/mentoring/{conversation_id}/goals/{goal_id}")
+async def update_mentoring_goal(
+    conversation_id: str,
+    goal_id: str,
+    data: dict,
+    session=Depends(require_learner_session),
+):
+    """Edit a learner-authored mentoring goal."""
+    record = await mentoring.update_goal(session["sub"], conversation_id, goal_id, data)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    return JSONResponse(content=record)
+
+
 @router.delete("/mentoring/{conversation_id}/goals/{goal_id}")
 async def delete_mentoring_goal(
     conversation_id: str,
