@@ -642,15 +642,6 @@ export function LessonPage() {
               {reentryOpen && (
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
                   <div className="learning-reentry__card">
-                    {/* §6 also allows REVIEWING the finished component. The two
-                        buttons are the decisions; dismissing lands on the content
-                        itself, which shows the review on re-entry. */}
-                    <button
-                      className="learning-reentry__close"
-                      type="button"
-                      onClick={viewCompletedPerformance}
-                      aria-label={t('learning.lesson.reentry.view')}
-                    >×</button>
                     <div className="learning-reentry__icon"><Icon name="check" size={22} /></div>
                     <h2 id="learning-reentry-title">{t('learning.lesson.reentry.title')}</h2>
                     <p>{t('learning.lesson.reentry.body')}</p>
@@ -658,6 +649,9 @@ export function LessonPage() {
                       <button className="learning-primary-button" type="button" onClick={continueFromCompleted}>
                         {nextComponent ? t('learning.lesson.reentry.next') : t('learning.lesson.chooseNext')}
                         <Icon name="arrow" size={16} />
+                      </button>
+                      <button className="learning-secondary-button" type="button" onClick={viewCompletedPerformance}>
+                        {t('learning.lesson.reentry.view')}
                       </button>
                       <button className="learning-secondary-button" type="button" onClick={redoCompletedComponent}>
                         {t('learning.lesson.reentry.redo')}

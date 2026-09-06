@@ -296,25 +296,6 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   border-radius: 22px;
   box-shadow: 0 24px 60px rgba(28, 20, 84, .22);
 }
-/* Dismiss = "let me look at what I did" (§6 review). Quiet on purpose: the two
-   real decisions are the buttons below. */
-.learning-reentry__close {
-  position: absolute;
-  inset-block-start: 10px;
-  inset-inline-end: 12px;
-  inline-size: 30px;
-  block-size: 30px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--sp-muted, #6b7280);
-  font: 500 20px/1 var(--sp-font);
-  cursor: pointer;
-}
-.learning-reentry__close:hover { background: var(--sp-surface-2); color: var(--sp-ink-500); }
-.learning-reentry__close:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 .learning-reentry__icon {
   display: grid;
   place-items: center;
