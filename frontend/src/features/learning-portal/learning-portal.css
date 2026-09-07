@@ -973,15 +973,6 @@ html[dir='rtl'] .learning-component-arrow { transform: scaleX(-1); }
   font: 700 var(--sp-fs-sm)/1 var(--sp-font);
   cursor: pointer;
 }
-.learning-catalog-disclosure {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  margin-block-start: var(--sp-8);
-  color: var(--sp-ink-400);
-  font-size: var(--sp-fs-xs);
-}
 
 @media (max-width: 1020px) {
   .learning-unit-grid { grid-template-columns: 1fr; }
