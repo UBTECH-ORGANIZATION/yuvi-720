@@ -81,25 +81,25 @@ test('only the visible Yuvi podium, not its light pool, opens the station menu',
   assert.doesNotMatch(labRoom, /raycaster\.intersectObject\(platform, true\)/)
 })
 
-test('globe and mission furniture open hover menus with move and rotate only', () => {
+test('globe and World Capsule furniture open hover menus with move and rotate only', () => {
   assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
   assert.match(studio, /onRemove=\{menuStation \? undefined/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
-  assert.equal(he['YuviStudio.zone.mission'], 'חדרים של חברים')
+  assert.equal(he['YuviStudio.zone.mission'], 'קפסולת עולם')
 })
 
-test('the task station opens Friends rooms in the Studio side panel', () => {
+test('the World Capsule opens Friends rooms in the Studio side panel', () => {
   assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
   assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: 2\.1 \}/)
   assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[\s+\{ x: stations\.explore\.x, z: stations\.explore\.z, radius: STATION_RADIUS\.explore \},\s+\]/)
   assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
   assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
-  assert.match(studio, /\{mode === 'friends' && \([\s\S]{0,180}<StationPanel[\s\S]{0,220}YuviStudio\.community\.title/)
+  assert.match(studio, /\{mode === 'friends' && \([\s\S]{0,180}<StationPanel[\s\S]{0,220}YuviStudio\.capsule\.title/)
   assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
-  assert.equal(he['YuviStudio.community.title'], 'חדרים של חברים')
+  assert.equal(he['YuviStudio.capsule.title'], 'קפסולת עולם')
 })
 
 test('room styles share the General Room tab', () => {
