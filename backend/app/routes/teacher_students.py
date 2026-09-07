@@ -1531,8 +1531,19 @@ async def group_focus(
 
     lang = normalize_language(language)
     learners = []
-    for learner_id in await org.learners_in_group(group_id):
-        brain = await get_brain(learner_id)
+    learner_ids = await org.learners_in_group(group_id)
+    # The reads are independent, so the class is a few round trips, not one
+    # per child: thirty serial trips to Cosmos was most of this handler's
+    # time. Bounded the way the goals fan-out above is.
+    import asyncio as _asyncio
+    semaphore = _asyncio.Semaphore(8)
+
+    async def _read(learner_id: str) -> dict:
+        async with semaphore:
+            return await get_brain(learner_id)
+
+    brains = await _asyncio.gather(*(_read(learner_id) for learner_id in learner_ids))
+    for learner_id, brain in zip(learner_ids, brains):
         # `active_pin` is the shared judgement (#244): an expired pin stops
         # counting here in the same moment it stops steering the child.
         pinned = pinning.active_pin(brain)

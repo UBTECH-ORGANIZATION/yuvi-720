@@ -56,3 +56,22 @@ async def touch_chat(learner_id: str) -> None:
 async def forget_learner_groups(learner_id: str) -> None:
     """A roster edit: the cached learner→groups lookup must not outlive it."""
     await cache_store.drop(("learner", learner_id, 0, "groups", ""))
+
+
+async def touch_teacher(teacher_id: str) -> None:
+    """A staffing change: the teacher's resolved scope (which classes and
+    learners the assistant may see) re-reads."""
+    if not teacher_id or not cache_store.enabled():
+        return
+    await cache_store.bump("teacher", teacher_id)
+
+
+async def touch_enrollment(learner_id: str, group_id: str) -> None:
+    """A roster edit. The learner's cached group list must not outlive it,
+    the class they joined or left re-folds, and their own projections move
+    too — in that order, so the learner bump lands on the NEW groups."""
+    if not learner_id or not cache_store.enabled():
+        return
+    await forget_learner_groups(learner_id)
+    await touch_group(group_id)
+    await touch_learner(learner_id)

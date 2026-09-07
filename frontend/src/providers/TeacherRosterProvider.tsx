@@ -39,11 +39,14 @@ const TeacherRosterContext = createContext<TeacherRosterValue | null>(null)
 
 export function TeacherRosterProvider({ children }: { children: ReactNode }) {
   const { user, isTeacher } = useAuth()
+  // The id, not the object: a preference write replaces `user` and used to
+  // refetch the whole roster (TeacherScopeProvider documents the same rule).
+  const userId = user?.user_id ?? null
   const [students, setStudents] = useState<RosterEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!user || !isTeacher) {
+    if (!userId || !isTeacher) {
       setStudents([])
       setIsLoading(false)
       return
@@ -57,7 +60,7 @@ export function TeacherRosterProvider({ children }: { children: ReactNode }) {
       .catch(() => { if (active) setStudents([]) })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [user, isTeacher])
+  }, [userId, isTeacher])
 
   const names = useMemo(
     () => new Map(students.map((row) => [row.learner_id, row.display_name])),

@@ -617,11 +617,23 @@ async def record_path_choice(
     if collection is not None:
         try:
             await collection.update_one({"_id": event["_id"]}, {"$setOnInsert": event}, upsert=True)
+            await _touch_learner_projections(safe_id)
             return event
         except Exception as exc:
             print(f"⚠️ path choice write failed, using fallback: {exc}")
     _fallback_append(event)
+    await _touch_learner_projections(safe_id)
     return event
+
+
+async def _touch_learner_projections(learner_id: str) -> None:
+    """The catalog roadmap and the dashboard are cached per learner version;
+    anything that changes what they fold over calls this after the write."""
+    try:
+        from app.services import cache_bumps
+        await cache_bumps.touch_learner(learner_id)
+    except Exception as exc:  # the store fails open; so does the bump
+        print(f"⚠️ cache bump skipped for {learner_id}: {type(exc).__name__}")
 
 
 async def get_recent_events(
@@ -934,6 +946,11 @@ async def ingest_statement(
                 effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")
+        # Bumped after the writes, never only before them: a fold that changed
+        # nothing in the brain still stored an event the dashboard and the
+        # roadmap read directly, and a projection cached between a pre-write
+        # bump and the write itself would hold the old picture.
+        await _touch_learner_projections(event["learner_id"])
         try:
             await _record_content_support(event, effective_state)
         except Exception as exc:  # analytics must never break ingest
