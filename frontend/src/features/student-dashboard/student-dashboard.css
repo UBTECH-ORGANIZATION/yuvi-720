@@ -249,21 +249,17 @@ html.sd-snap { scroll-snap-type: y proximity; }
 html.sd-snap .sd-hero-card--split,
 html.sd-snap .sd-hero-card--subjects,
 html.sd-snap .sd-dashboard > .sd-grid { scroll-snap-align: start; }
-/* The goals card is the last stop, and the page ends too soon for it to reach
-   the top of the window on its own. The overshoot is deliberate: too much room
-   only leaves whitespace below the fold, while too little just clamps at the
-   bottom with the card still fully in view. */
-html.sd-snap .sd-dashboard { padding-block-end: max(36px, calc(100dvh - 700px)); }
-/* Proximity, never mandatory: what sits below the goals card is not a snap
+/* The goals card is the last stop, and the page ends right after it: with
+   proximity snapping the scroll clamps at the bottom with the card fully in
+   view. No whitespace is added below the fold to let it reach the top.
+   Proximity, never mandatory: what sits below the goals card is not a snap
    target and has to stay freely scrollable. And a card taller than the window
    would trap the scroll, so short viewports opt out entirely. */
 @media (max-height: 720px) {
   html.sd-snap { scroll-snap-type: none; }
-  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html.sd-snap { scroll-snap-type: none; }
-  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
 }
 [data-theme='dark'] .sd-hero-card {
   border-color: var(--sdd-card-border);

@@ -248,8 +248,19 @@ async def send_message(
             upsert=True,
         )
 
+    await _bump(thread)
     await _notify(sender, teacher_id, learner_id, recipient, message_id)
     return document
+
+
+# The thread is cached per conversation (see `list_thread`); every write to
+# it moves the version so the next read is fresh. Fails open like the store.
+async def _bump(thread: str) -> None:
+    try:
+        from app.services import cache_store
+        await cache_store.bump("dm", thread)
+    except Exception as exc:  # pragma: no cover - the store already fails open
+        print(f"⚠️ message cache bump skipped: {type(exc).__name__}")
 
 
 async def send_to_subgroup(
@@ -322,6 +333,7 @@ async def send_to_subgroup(
                 {"_id": record["_id"]},
                 {"$set": {"broadcast_id": broadcast, "subgroup_id": subgroup_id}},
             )
+            await _bump(conversation_id(teacher_id, learner_id))
 
     return {
         "broadcast_id": broadcast,
@@ -428,18 +440,37 @@ async def _notify(
 async def list_thread(
     teacher_id: str, learner_id: str, *, limit: int = 100,
 ) -> list[dict[str, Any]]:
-    """One pair's messages, oldest first — the order a chat is read in."""
+    """One pair's messages, oldest first — the order a chat is read in.
+
+    Cached per conversation on the shared store (five minutes, bumped by
+    every send and read receipt), so re-opening a chat after a navigation
+    is a cache hit rather than a query. Without a store it is the query."""
     collection = _collection(MESSAGES)
     if collection is None:
         return []
-    rows = await collection.find(
-        {"conversation_id": conversation_id(teacher_id, learner_id)}
-    ).sort("created_at", -1).limit(limit).to_list(length=limit)
-    return list(reversed(rows))
+    thread = conversation_id(teacher_id, learner_id)
+
+    async def _read() -> list[dict[str, Any]]:
+        rows = await collection.find(
+            {"conversation_id": thread}
+        ).sort("created_at", -1).limit(limit).to_list(length=limit)
+        return list(reversed(rows))
+
+    from app.services import cache_store
+    return await cache_store.remember("dm", thread, "thread", str(limit), 300, _read)
 
 
-async def mark_read(teacher_id: str, learner_id: str, *, reader: str) -> int:
-    """Everything the OTHER side sent is now read.
+#: `mark_read(subgroup_id=ALL)`: the whole thread. `None`: only the lines said
+#: to the child alone. A sub-group id: only that group's lines. The child's
+#: screen shows a group's lines as their own chat, so reading one chat must
+#: not receipt the other.
+ALL: Any = object()
+
+
+async def mark_read(
+    teacher_id: str, learner_id: str, *, reader: str, subgroup_id: Any = ALL,
+) -> int:
+    """Everything the OTHER side sent (in the scope) is now read.
 
     Returns how many rows changed, so a caller can tell "nothing to do" from
     "no store" without reading the thread back.
@@ -450,22 +481,25 @@ async def mark_read(teacher_id: str, learner_id: str, *, reader: str) -> int:
     if collection is None:
         return 0
     other = SENDER_LEARNER if reader == SENDER_TEACHER else SENDER_TEACHER
-    result = await collection.update_many(
-        {
-            "conversation_id": conversation_id(teacher_id, learner_id),
-            "sender": other,
-            "read_at": None,
-        },
-        {"$set": {"read_at": _now()}},
-    )
+    thread = conversation_id(teacher_id, learner_id)
+    query: dict[str, Any] = {"conversation_id": thread, "sender": other, "read_at": None}
+    if subgroup_id is None:
+        query["subgroup_id"] = {"$exists": False}
+    elif subgroup_id is not ALL:
+        query["subgroup_id"] = subgroup_id
+    result = await collection.update_many(query, {"$set": {"read_at": _now()}})
 
     conversations = _collection(CONVERSATIONS)
     if conversations is not None:
         field = "unread_teacher" if reader == SENDER_TEACHER else "unread_learner"
-        await conversations.update_one(
-            {"_id": conversation_id(teacher_id, learner_id)}, {"$set": {field: 0}})
+        if subgroup_id is ALL:
+            remaining = 0
+        else:
+            remaining = await collection.count_documents(
+                {"conversation_id": thread, "sender": other, "read_at": None})
+        await conversations.update_one({"_id": thread}, {"$set": {field: remaining}})
+    await _bump(thread)
     return getattr(result, "modified_count", 0) or 0
-
 
 async def unread_for_teacher(teacher_id: str) -> dict[str, int]:
     """Per-learner unread counts, for the thread list's badges."""
@@ -489,6 +523,25 @@ async def unread_for_learner(learner_id: str) -> dict[str, int]:
     return {row["teacher_id"]: int(row.get("unread_learner") or 0) for row in rows}
 
 
+async def unread_subgroups_for_learner(learner_id: str) -> dict[str, int]:
+    """Per-sub-group unread counts: the part of each teacher's count that was
+    said to a group. The child's screen shows those as their own chats, so
+    the badge has to split the same way."""
+    collection = _collection(MESSAGES)
+    if collection is None:
+        return {}
+    try:
+        rows = await collection.aggregate([
+            {"$match": {"learner_id": learner_id, "sender": SENDER_TEACHER,
+                        "read_at": None, "subgroup_id": {"$exists": True}}},
+            {"$group": {"_id": "$subgroup_id", "count": {"$sum": 1}}},
+        ]).to_list(length=200)
+    except Exception as exc:  # a badge must never break the page
+        print(f"⚠️ subgroup unread skipped: {type(exc).__name__}")
+        return {}
+    return {str(row["_id"]): int(row.get("count") or 0) for row in rows if row.get("_id")}
+
+
 async def ensure_indexes() -> None:
     messages = _collection(MESSAGES)
     conversations = _collection(CONVERSATIONS)
@@ -496,6 +549,7 @@ async def ensure_indexes() -> None:
         if messages is not None:
             await messages.create_index([("conversation_id", 1), ("created_at", -1)])
             await messages.create_index([("conversation_id", 1), ("sender", 1), ("read_at", 1)])
+            await messages.create_index([("learner_id", 1), ("sender", 1), ("read_at", 1)])
         if conversations is not None:
             await conversations.create_index([("teacher_id", 1), ("last_message_at", -1)])
             await conversations.create_index([("learner_id", 1), ("last_message_at", -1)])

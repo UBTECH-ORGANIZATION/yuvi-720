@@ -270,7 +270,7 @@ function StudentGoalsPage() {
   return (
     <>
       <LearnerAppBar />
-      <main className={`mt-wrap mt-student${groups.length > 0 ? '' : ' mt-student--sparse'}`}>
+      <main className="mt-wrap mt-student">
         <header className="mt-student__hero">
           <p className="mt-student__eyebrow">{t('mentoring.student.eyebrow')}</p>
           <h1>{t('mentoring.student.title')}</h1>

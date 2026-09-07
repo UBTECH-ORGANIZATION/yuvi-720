@@ -1,146 +1,91 @@
-.sd-connections-page { min-block-size: 100dvh; }
-.sd-connections { inline-size: min(1180px, calc(100% - 2 * var(--sp-gutter))); margin-inline: auto; padding-block: clamp(28px, 4vw, 52px) 140px; }
-.sd-connections__heading { display: flex; align-items: center; gap: 16px; margin-block-end: 24px; }
-.sd-connections__heading h1 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-2xl); line-height: var(--sp-lh-tight); }
-.sd-connections__heading p { margin: 7px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
-.sd-connections__icon { display: grid; place-items: center; inline-size: 52px; block-size: 52px; flex: none; border-radius: 17px; background: var(--sp-primary-100); color: var(--sp-primary-700); }
+/* The child's chat with their teachers.
+ *
+ * No hero, no card: the page is the chat. A rail of people on the reading-start
+ * side, the open thread filling the rest, both sitting straight on the page
+ * background the way every messenger this age group uses does. The page is a
+ * column — app bar, then the chat taking whatever height is left — so the
+ * thread scrolls inside itself and the composer never leaves the screen.
+ *
+ * Sides are PHYSICAL on purpose: my lines on the right, the teacher's on the
+ * left, in Hebrew and Arabic as much as in English. Logical properties would
+ * mirror them per language, and the ask was one shape everywhere. */
 
-.sd-chat-window { min-block-size: clamp(480px, 65dvh, 720px); overflow: hidden; border: 1px solid var(--sp-border); border-radius: 28px; background: color-mix(in srgb, var(--sp-surface), transparent 4%); box-shadow: var(--sp-shadow-md); }
-.sd-chat-window { display: grid; grid-template-columns: minmax(230px, .32fr) minmax(0, 1fr); }
-.sd-chat-window__teachers { padding: 20px 14px; border-inline-end: 1px solid var(--sp-border); background: color-mix(in srgb, var(--sp-bg-subtle), transparent 18%); }
-.sd-chat-window__teachers h2 { margin: 3px 8px 16px; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
-.sd-chat-window__teachers button { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 11px; inline-size: 100%; min-block-size: 66px; padding: 10px; border: 1px solid transparent; border-radius: 16px; background: transparent; color: var(--sp-ink-600); font: inherit; text-align: start; cursor: pointer; }
-.sd-chat-window__teachers button:hover, .sd-chat-window__teachers button.is-active { border-color: var(--sp-border); background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
-.sd-chat-window__teachers button:focus-visible, .sd-chat-thread__footer button:focus-visible, .sd-connections__action:focus-visible { outline: none; box-shadow: var(--sp-ring); }
-.sd-chat-window__teachers strong, .sd-chat-window__teachers small, .sd-chat-thread__header strong, .sd-chat-thread__header small { display: block; }
-.sd-chat-window__teachers strong, .sd-chat-thread__header strong { color: var(--sp-ink-800); font-size: var(--sp-fs-sm); }
-.sd-chat-window__teachers small, .sd-chat-thread__header small { margin-block-start: 4px; color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
-/* A circle, like every other person in the product. This was the one squircle,
-   and it made the same teacher look like a different kind of thing here than in
-   the app bar. (No badge coin: this is a teacher, who has no learner avatar.) */
-.sd-chat-window__avatar { display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 50%; background: var(--sp-gradient); color: #fff; font-weight: 800; }
-/* Four rows now, not three: header, thread, the child's own box, footer. */
-.sd-chat-thread { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-inline-size: 0; }
-.sd-chat-thread__header { display: flex; align-items: center; gap: 12px; min-block-size: 78px; padding: 14px 20px; border-block-end: 1px solid var(--sp-border); }
-.sd-chat-thread__body { display: grid; align-content: start; gap: 14px; padding: clamp(18px, 3vw, 30px); overflow-y: auto; background: radial-gradient(circle at 85% 15%, rgba(111, 91, 255, .07), transparent 32%); }
-.sd-chat-thread__body > .sp-state { align-self: center; }
-.sd-chat-summary { justify-self: start; max-inline-size: min(620px, 88%); padding: 16px 18px; border: 1px solid var(--sp-border); border-radius: 18px 18px 6px 18px; background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
-[dir='rtl'] .sd-chat-summary { border-radius: 18px 18px 18px 6px; }
-.sd-chat-summary span { color: var(--sp-primary-600); font-size: var(--sp-fs-xs); font-weight: 700; }
-.sd-chat-summary p { margin: 8px 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; }
-.sd-chat-summary small { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); line-height: 1.5; }
-/* ── messages, both directions ─────────────────────────────────────────────
-   Mirrored bubbles: the teacher's arrive on the reading-start side like the
-   summaries above them, the child's own sit opposite in the app's own colour.
-   Logical properties throughout, so the mirror is direction-correct in Hebrew
-   and Arabic without a second rule. */
-.sd-chat-bubble {
-  max-inline-size: min(560px, 84%);
-  padding: 12px 16px;
-  border-radius: 18px;
-  font-size: var(--sp-fs-sm);
-  line-height: 1.6;
-}
-.sd-chat-bubble p { margin: 0; }
+/* A fixed height, not a minimum: the thread scrolls inside itself only when
+   the page cannot grow, and the composer stays on screen for the same reason. */
+.sd-connections-page { display: flex; flex-direction: column; block-size: 100dvh; min-block-size: 0; overflow: hidden; }
 
-.sd-chat-bubble--them {
-  justify-self: start;
-  border: 1px solid var(--sp-border);
-  border-end-start-radius: 6px;
-  background: var(--sp-surface);
-  color: var(--sp-ink-700);
-  box-shadow: var(--sp-shadow-sm);
-}
-
-.sd-chat-bubble--me {
-  justify-self: end;
-  border-end-end-radius: 6px;
-  background: var(--sp-primary-600);
-  color: #fff;
-}
-
-/* ── the child's composer ──────────────────────────────────────────────────*/
-
-.sd-chat-compose {
-  display: grid;
-  gap: 6px;
-  padding: 12px 20px;
-  border-block-start: 1px solid var(--sp-border);
-  background: var(--sp-surface);
-}
-
-.sd-chat-compose__label { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
-
-.sd-chat-compose__row { display: flex; align-items: flex-end; gap: 10px; }
-
-.sd-chat-compose textarea {
+.sd-chat {
   flex: 1;
-  min-inline-size: 0;
-  /* Two lines by default and growable by hand. An answer to a teacher is often
-     longer than a chat line, and a single-line field that scrolls sideways is
-     where a child abandons the sentence halfway through. */
-  min-block-size: 52px;
-  max-block-size: 160px;
-  resize: vertical;
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  line-height: 1.5;
-  color: var(--sp-ink-800);
-  background: var(--sp-bg-subtle);
+  min-block-size: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  inline-size: min(1320px, 100%);
+  margin-inline: auto;
+  padding: 4px clamp(8px, 2vw, 24px) 12px;
+}
+
+/* ── rail ─────────────────────────────────────────────────────────────────── */
+
+.sd-chat__rail {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  padding-inline-end: 12px;
+  border-inline-end: 1px solid var(--sp-border);
+}
+.sd-chat__railHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 10px 10px; }
+.sd-chat__railHead h1 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-lg); line-height: var(--sp-lh-tight); }
+.sd-chat__railIcon { display: grid; place-items: center; inline-size: 34px; block-size: 34px; border-radius: 12px; background: var(--sp-primary-100); color: var(--sp-primary-700); }
+.sd-chat__railEmpty { margin: 8px 10px; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+/* Teachers or groups: one tab strip, then a stack of cards. The tab is what
+   says which kind a chat is, so the cards carry only names. */
+.sd-chat__tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin: 0 0 10px; padding: 4px; border-radius: 14px; background: color-mix(in srgb, var(--sp-surface), transparent 40%); }
+.sd-chat__tab {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-block-size: 36px; padding-inline: 10px; border: 0; border-radius: 11px;
+  background: transparent; color: var(--sp-ink-500); font: 600 var(--sp-fs-sm)/1 var(--sp-font); cursor: pointer;
+}
+.sd-chat__tab.is-active { background: var(--sp-surface); color: var(--sp-ink-900); box-shadow: var(--sp-shadow-sm); }
+.sd-chat__tab:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+/* Something unread on the tab you are not looking at. */
+.sd-chat__tabDot { inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--sp-ink-chat-alert, #d7263d); }
+.sd-chat__list { list-style: none; margin: 0; padding: 0 0 8px; display: grid; align-content: start; gap: 6px; overflow-y: auto; }
+.sd-chat__item {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  min-block-size: 68px;
+  padding: 10px;
   border: 1px solid var(--sp-border);
   border-radius: 16px;
-  padding: 10px 14px;
-}
-.sd-chat-compose textarea::placeholder { color: var(--sp-ink-300); }
-.sd-chat-compose textarea:focus-visible { outline: none; box-shadow: var(--sp-ring); }
-.sd-chat-compose textarea:disabled { opacity: .6; cursor: not-allowed; }
-
-.sd-chat-compose__send {
-  display: grid;
-  place-items: center;
-  inline-size: 46px;
-  block-size: 46px;
-  flex: none;
-  border: 0;
-  border-radius: 50%;
-  background: var(--sp-primary-600);
-  color: #fff;
+  background: color-mix(in srgb, var(--sp-surface), transparent 35%);
+  color: var(--sp-ink-600);
+  font: inherit;
+  text-align: start;
   cursor: pointer;
 }
-/* The send glyph points forward, which is leftward in Hebrew and Arabic. */
-[dir='rtl'] .sd-chat-compose__send .sp-icon { transform: scaleX(-1); }
-.sd-chat-compose__send:disabled { opacity: .45; cursor: not-allowed; }
-.sd-chat-compose__send:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat__item:hover { background: var(--sp-surface); }
+.sd-chat__item.is-active { border-color: var(--sp-primary-300, var(--sp-primary-600)); background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
+.sd-chat__item:focus-visible, .sd-chat__headAction:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat__itemText { display: grid; gap: 4px; min-inline-size: 0; }
+.sd-chat__itemText strong, .sd-chat__headText strong { color: var(--sp-ink-800); font-size: var(--sp-fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-chat__itemText small, .sd-chat__headText small { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-chat__item.has-unread strong { font-weight: var(--sp-fw-bold, 700); color: var(--sp-ink-900); }
 
-.sd-chat-compose__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
-/* Refused is not broken: the words were declined, and the draft is still in the
-   box. A red error would tell a child something went wrong with the app. */
-.sd-chat-compose__failed.is-refused { color: var(--sp-ink-600, var(--sp-ink-500)); }
+/* A circle, like every other person in the product. History (a teacher who
+   only lives in old summaries) is the same circle in the page's grey. */
+.sd-chat__avatar { display: grid; place-items: center; inline-size: 48px; block-size: 48px; flex: none; border-radius: 50%; background: var(--sp-gradient); color: #fff; font-weight: 800; }
+.sd-chat__avatar.is-history { background: var(--sp-ink-300); }
+.sd-chat__avatar.is-group { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+.sd-chat__head .sd-chat__avatar { inline-size: 44px; block-size: 44px; }
 
-.sd-chat-thread__footer { padding: 14px 20px; border-block-start: 1px solid var(--sp-border); background: var(--sp-surface); }
-.sd-chat-thread__footer button, .sd-connections__action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 44px; padding-inline: 18px; border: 0; border-radius: var(--sp-radius-pill); background: var(--sp-primary-600); color: #fff; font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer; }
-
-[data-theme='dark'] .sd-chat-thread__body { background: radial-gradient(circle at 85% 15%, rgba(159, 122, 254, .1), transparent 34%); }
-[data-theme='dark'] .sd-chat-window__teachers { background: rgba(12, 17, 42, .32); }
-
-@media (max-width: 899px) {
-  .sd-chat-window { grid-template-columns: 190px minmax(0, 1fr); }
-}
-@media (max-width: 599px) {
-  .sd-connections { inline-size: calc(100% - 20px); padding-block-start: 20px; }
-  .sd-connections__heading { align-items: flex-start; }
-  .sd-chat-window { min-block-size: 560px; border-radius: 22px; }
-  .sd-chat-window { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .sd-chat-window__teachers { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-inline-end: 0; border-block-end: 1px solid var(--sp-border); }
-  .sd-chat-window__teachers h2 { display: none; }
-  .sd-chat-window__teachers button { inline-size: auto; min-inline-size: 180px; }
-}
-/* ── unread (WhatsApp-style) ─────────────────────────────────────────────── */
-
-.sd-chat-window__unread {
-  min-inline-size: 18px;
-  block-size: 18px;
-  padding-inline: 5px;
+.sd-chat__unread {
+  min-inline-size: 20px;
+  block-size: 20px;
+  padding-inline: 6px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -150,13 +95,110 @@
   font-size: 11px;
   font-weight: var(--sp-fw-semibold);
   line-height: 1;
-  flex: none;
-  margin-inline-start: auto;
 }
 
-.sd-chat-window__teachers button.has-unread strong {
-  font-weight: var(--sp-fw-bold, 700);
+/* ── thread ───────────────────────────────────────────────────────────────── */
+
+.sd-chat__thread {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding-inline-start: 16px;
 }
+.sd-chat__head { display: flex; align-items: center; gap: 12px; min-block-size: 68px; padding: 8px 6px; border-block-end: 1px solid var(--sp-border); }
+.sd-chat__headText { display: grid; gap: 4px; min-inline-size: 0; flex: 1; }
+.sd-chat__headAction {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  min-block-size: 36px; padding-inline: 14px;
+  border: 1px solid var(--sp-border); border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface); color: var(--sp-primary-700);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer;
+}
+.sd-chat__headAction:hover { border-color: var(--sp-primary-300, var(--sp-border)); }
+
+.sd-chat__body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  /* The scrollbar lands on the left in Hebrew, right where the teacher's
+     lines sit; a wider gutter on both edges keeps the two apart. */
+  padding: 16px 18px 12px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.sd-chat__body > .sp-state { margin-block: auto; }
+.sd-chat__bodyWait { display: contents; }
+
+/* Day pills, the way every chat marks a new day. */
+.sd-day {
+  align-self: center;
+  margin: 10px 0 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sp-surface), transparent 20%);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+}
+
+/* Bubbles. Physical sides: mine on the right, theirs on the left — see the
+   note at the top of this file. */
+.sd-msg {
+  position: relative;
+  max-inline-size: min(560px, 82%);
+  padding: 9px 14px 6px;
+  border-radius: 18px;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+}
+.sd-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sd-msg time { display: block; margin-block-start: 3px; font-size: 11px; line-height: 1; opacity: .7; text-align: end; }
+.sd-msg + .sd-msg { margin-block-start: 2px; }
+
+.sd-msg--them {
+  margin-right: auto;
+  margin-left: 0;
+  border-bottom-left-radius: 6px;
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  box-shadow: var(--sp-shadow-sm);
+}
+.sd-msg--me {
+  margin-left: auto;
+  margin-right: 0;
+  border-bottom-right-radius: 6px;
+  background: var(--sp-primary-600);
+  color: #fff;
+}
+
+/* "Said to the whole group": a small line above the text, so the child knows
+   this was the class hearing it, not a note to them alone. */
+.sd-msg__tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-block-end: 3px;
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-semibold);
+}
+.sd-msg--me .sd-msg__tag { color: rgba(255, 255, 255, .85); }
+
+/* A shared summary of a mentoring talk: on the teacher's side, wider, with a
+   label — it is something the teacher wrote, but it is not a line of chat. */
+.sd-summary {
+  margin-right: auto;
+  margin-left: 0;
+  max-inline-size: min(640px, 92%);
+  padding: 12px 16px;
+  border: 1px solid var(--sp-border);
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  background: color-mix(in srgb, var(--sp-surface), var(--sp-primary-100) 35%);
+}
+.sd-summary__label { display: inline-flex; align-items: center; gap: 5px; color: var(--sp-primary-700); font-size: var(--sp-fs-xs); font-weight: 700; }
+.sd-summary p { margin: 6px 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; white-space: pre-wrap; }
+.sd-summary small { display: block; color: var(--sp-ink-500); font-size: var(--sp-fs-xs); line-height: 1.5; }
 
 /* Where the unread part of the thread begins. */
 .sd-chat-unreadBar {
@@ -168,11 +210,78 @@
   font-weight: var(--sp-fw-medium);
   color: var(--sp-danger-600);
 }
+.sd-chat-unreadBar::before, .sd-chat-unreadBar::after { content: ''; flex: 1; block-size: 1px; background: color-mix(in srgb, var(--sp-danger-600) 40%, transparent); }
 
-.sd-chat-unreadBar::before,
-.sd-chat-unreadBar::after {
-  content: '';
+/* ── skeletons ────────────────────────────────────────────────────────────── */
+
+.sd-chat__list.is-skeleton .sd-chat__item { cursor: default; }
+.sd-chat__list.is-skeleton .sd-chat__itemText { gap: 6px; }
+.sd-msg--skeleton { display: grid; gap: 6px; min-block-size: 40px; box-shadow: none; }
+.sd-msg--skeleton.sd-msg--me { background: color-mix(in srgb, var(--sp-primary-600), transparent 78%); }
+.sd-msg--skeleton.sd-msg--them { background: color-mix(in srgb, var(--sp-surface), transparent 30%); }
+.sd-chat__thread.is-skeleton .sd-chat__headText { gap: 6px; }
+.sd-chat__thread.is-skeleton .sd-chat-compose { border: 0; background: transparent; }
+
+/* ── the child's composer ─────────────────────────────────────────────────── */
+
+.sd-chat-compose { display: grid; gap: 4px; padding: 10px 6px 4px; border-block-start: 1px solid var(--sp-border); }
+.sd-chat-compose__label { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
+.sd-chat-compose__row { display: flex; align-items: flex-end; gap: 10px; }
+.sd-chat-compose textarea {
   flex: 1;
-  block-size: 1px;
-  background: color-mix(in srgb, var(--sp-danger-600) 40%, transparent);
+  min-inline-size: 0;
+  /* One line to start and growable by hand. An answer to a teacher is often
+     longer than a chat line, and a single-line field that scrolls sideways is
+     where a child abandons the sentence halfway through. */
+  min-block-size: 48px;
+  max-block-size: 160px;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+  color: var(--sp-ink-800);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: 22px;
+  padding: 12px 16px;
+}
+.sd-chat-compose textarea::placeholder { color: var(--sp-ink-300); }
+.sd-chat-compose textarea:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat-compose textarea:disabled { opacity: .6; cursor: not-allowed; }
+.sd-chat-compose__send { display: grid; place-items: center; inline-size: 46px; block-size: 46px; flex: none; border: 0; border-radius: 50%; background: var(--sp-primary-600); color: #fff; cursor: pointer; }
+/* The send glyph points forward, which is leftward in Hebrew and Arabic. */
+[dir='rtl'] .sd-chat-compose__send .sp-icon { transform: scaleX(-1); }
+.sd-chat-compose__send:disabled { opacity: .45; cursor: not-allowed; }
+.sd-chat-compose__send:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat-compose__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+/* Refused is not broken: the words were declined, and the draft is still in the
+   box. A red error would tell a child something went wrong with the app. */
+.sd-chat-compose__failed.is-refused { color: var(--sp-ink-600, var(--sp-ink-500)); }
+
+/* A group chat has no box: the answer belongs in the private chat. */
+.sd-chat__groupNote { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 10px 6px; border-block-start: 1px solid var(--sp-border); }
+.sd-chat__groupNote p { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
+.sd-chat__groupNote button { display: inline-flex; align-items: center; gap: 8px; min-block-size: 40px; padding-inline: 16px; border: 0; border-radius: var(--sp-radius-pill); background: var(--sp-primary-600); color: #fff; font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer; }
+.sd-chat__groupNote button:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+/* ── dark ─────────────────────────────────────────────────────────────────── */
+
+[data-theme='dark'] .sd-chat__item { background: rgba(255, 255, 255, .03); }
+[data-theme='dark'] .sd-chat__item:hover { background: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .sd-chat__item.is-active { background: rgba(255, 255, 255, .09); }
+[data-theme='dark'] .sd-msg--them, [data-theme='dark'] .sd-summary { background: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .sd-day { background: rgba(255, 255, 255, .06); }
+
+/* ── narrow ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .sd-chat { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); padding-inline: 8px; }
+  .sd-chat__rail { padding-inline-end: 0; border-inline-end: 0; border-block-end: 1px solid var(--sp-border); }
+  .sd-chat__railHead { padding-block: 8px 4px; }
+  .sd-chat__tabs { margin-block-end: 6px; }
+  .sd-chat__list { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; }
+  .sd-chat__item { inline-size: auto; min-inline-size: 200px; min-block-size: 60px; }
+  .sd-chat__thread { padding-inline-start: 0; }
+  .sd-chat__headAction span { display: none; }
+  .sd-msg { max-inline-size: 88%; }
 }
