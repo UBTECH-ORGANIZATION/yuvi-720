@@ -16,6 +16,10 @@ set -euo pipefail
 
 SUBSCRIPTION="${SUBSCRIPTION:-6bec2a17-6e23-437c-8093-6df5688fb1b5}"
 RG="${RG:-rg-yuvi-720}"
+# The app runs in North Europe. A neighbour (westeurope, swedencentral, uksouth)
+# costs a few milliseconds per cache read and is the answer when North Europe
+# has no Managed Redis capacity. The hostname carries the region, and the
+# production guard in app/core/cache.py matches the cache NAME, so any region works.
 LOCATION="${LOCATION:-northeurope}"
 WEBAPP="${WEBAPP:-ubi-yuvi-720}"
 PROD_CACHE="${PROD_CACHE:-redis-yuvi-720}"
@@ -40,6 +44,16 @@ az extension add --name redisenterprise --upgrade -y >/dev/null 2>&1 || true
 # service answers "The cluster is not yet running", and the cluster is left
 # in CreateFailed. So: cluster with --no-database, wait for it to run, then
 # the database with the database-level options (protocol, policy, port).
+# The reason a create failed, from the activity log (the resource itself only
+# says CreateFailed). InsufficientCapacity is the common one: Azure Managed
+# Redis is short in a region for a while — pick a neighbour with LOCATION=.
+failure_reason() {
+  az monitor activity-log list --resource-id \
+    "/subscriptions/$SUBSCRIPTION/resourceGroups/$RG/providers/Microsoft.Cache/redisEnterprise/$1" \
+    --offset 6h --query "[?status.value=='Failed'].properties.statusMessage | [0]" -o tsv 2>/dev/null \
+    | grep -o '"details":\[{"code":"[^"]*","message":"[^"]*"' | sed 's/"details":\[{"code":"//; s/","message":"/: /; s/"$//' || true
+}
+
 cluster_state() {
   az redisenterprise show -g "$RG" --cluster-name "$1" --query "[provisioningState, resourceState]" -o tsv 2>/dev/null | tr '\n\t' '  ' || true
 }
@@ -49,8 +63,10 @@ create() {
   state="$(cluster_state "$name")"
   case "$state" in
     *Failed*)
-      echo "!! $name is in a failed state ($state). Delete it and run again:"
+      echo "!! $name is in a failed state: $(failure_reason "$name")"
+      echo "   Delete it, then run again — in another region if the reason is capacity:"
       echo "   az redisenterprise delete -g $RG --cluster-name $name --yes"
+      echo "   LOCATION=westeurope ./infra/redis/provision.sh"
       exit 1 ;;
     "") ;;
     *) echo "· $name already exists ($state)"; return ;;
@@ -67,8 +83,10 @@ wait_cluster() {
     state="$(cluster_state "$name")"
     case "$state" in
       *Succeeded*Running*) echo "· $name cluster running"; return ;;
-      *Failed*) echo "!! $name failed while provisioning ($state). Delete it and run again:"
-                echo "   az redisenterprise delete -g $RG --cluster-name $name --yes"; exit 1 ;;
+      *Failed*) echo "!! $name failed while provisioning: $(failure_reason "$name")"
+                echo "   Delete it, then run again — in another region if the reason is capacity:"
+                echo "   az redisenterprise delete -g $RG --cluster-name $name --yes"
+                echo "   LOCATION=westeurope ./infra/redis/provision.sh"; exit 1 ;;
     esac
     sleep 20
   done
