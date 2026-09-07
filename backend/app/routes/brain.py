@@ -212,7 +212,9 @@ async def _build_dashboard(safe_id: str, lang: str) -> dict:
     ]
     if movement != ((brain.get("profile") or {}).get("activeness_drivers") or []):
         try:
-            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement})
+            # Derived from the brain and events that already bumped the cache;
+            # a bump here would evict the dashboard this read is about to cache.
+            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement}, touch=False)
         except Exception as exc:
             print(f"⚠️ activeness drivers not persisted: {exc}")
     from app.services.content_catalog import completed_component_ids
