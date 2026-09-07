@@ -11,6 +11,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
   teacher: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>,
   alert: <><path d="M12 4 2.5 20h19z" /><path d="M12 10v4m0 3h.01" /></>,
   check: <path d="M4 12.5 9 17.5 20 6.5" />,
+  thumbUp: <><path d="M7 10v11H4V10z" /><path d="M7 21h9.4a2 2 0 0 0 1.9-1.4l2.2-7A2 2 0 0 0 18.6 10H15V5.8a2.8 2.8 0 0 0-2.8-2.8L7 10z" /></>,
   arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   clock: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>,
   calendar: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M8 3v4m8-4v4M3.5 9.5h17M8 13h.01m4 0h.01m4 0h.01M8 16.5h.01m4 0h.01" /></>,

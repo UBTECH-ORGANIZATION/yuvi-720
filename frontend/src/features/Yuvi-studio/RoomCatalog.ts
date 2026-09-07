@@ -1271,6 +1271,85 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
 
 export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', 'nature', 'light', 'tech', 'wall']
 
+/** Curated portal furniture can be placed by system journeys but is not sold
+ *  through the learner catalogue until its destination interactions are ready. */
+export const PORTAL_FURNITURE_ITEMS: RoomItemSpec[] = [
+  {
+    id: 'worldCapsuleGate', category: 'tech', placement: 'floor', radius: 1.15, height: 3.1,
+    tintable: true, tint: '#61d9ff',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('metal', 0x6e7aa8)
+      const glow = kit.mat('emissive', tint)
+      group.add(at(kit.cyl(0.86, 0.94, 0.16, kit.mat('dark', 0x171b3d), 24), 0, 0.08, 0))
+      for (const sx of [-0.56, 0.56]) group.add(at(kit.cyl(0.09, 0.12, 2.45, shell, 12), sx, 1.28, 0))
+      group.add(at(kit.tor(0.64, 0.09, shell), 0, 2.46, 0).rotateX(Math.PI / 2))
+      group.add(at(kit.tor(0.53, 0.035, glow), 0, 1.48, 0.02).rotateX(Math.PI / 2))
+      group.add(at(kit.plane(0.92, 1.72, kit.sheer(tint, 0.3, true)), 0, 1.42, 0.025))
+      group.add(at(kit.halo(2.3, tint, 0.34), 0, 1.44, 0.05))
+      return group
+    },
+  },
+  {
+    id: 'portalCabinet', category: 'tech', placement: 'floor', radius: 0.85, height: 2.15,
+    tintable: true, tint: '#ff718a',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('dark', 0x191d40)
+      const trim = kit.mat('metal', 0x8897c8)
+      group.add(at(kit.rbox(1.22, 2.02, 0.48, 0.08, shell), 0, 1.01, 0))
+      for (const sx of [-0.42, 0.42]) group.add(at(kit.cyl(0.025, 0.025, 1.58, trim, 8), sx, 1.1, 0.26))
+      for (let index = 0; index < 3; index++) {
+        const y = 0.56 + index * 0.5
+        group.add(at(kit.rbox(0.88, 0.36, 0.05, 0.03, kit.mat('emissive', index === 1 ? tint : 0x4eeef0)), 0, y, 0.265))
+        group.add(at(kit.halo(0.7, index === 1 ? tint : 0x4eeef0, 0.25), 0, y, 0.29))
+      }
+      group.add(at(kit.rbox(1.3, 0.1, 0.55, 0.04, trim), 0, 0.06, 0))
+      return group
+    },
+  },
+  {
+    id: 'personalSignalTower', category: 'tech', placement: 'floor', radius: 0.7, height: 3.35,
+    tintable: true, tint: '#ffd166',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const tower = kit.mat('metal', 0x7d89b8)
+      group.add(at(kit.cyl(0.54, 0.68, 0.14, kit.mat('dark', 0x161a37), 20), 0, 0.07, 0))
+      group.add(at(kit.cyl(0.12, 0.16, 2.65, tower, 12), 0, 1.4, 0))
+      for (const y of [0.9, 1.55, 2.2]) {
+        const ring = at(kit.tor(0.32, 0.022, kit.mat('emissive', tint)), 0, y, 0)
+        ring.rotation.x = Math.PI / 2
+        group.add(ring)
+      }
+      group.add(at(kit.cone(0.22, 0.42, kit.mat('emissive', tint)), 0, 2.93, 0))
+      group.add(at(kit.halo(2.2, tint, 0.38), 0, 2.72, 0.04))
+      return group
+    },
+  },
+  {
+    id: 'holoNavigationConsole', category: 'tech', placement: 'floor', radius: 0.95, height: 1.55,
+    tintable: true, tint: '#a896ff',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const dark = kit.mat('dark', 0x171a38)
+      group.add(at(kit.rbox(1.36, 0.12, 0.78, 0.07, dark), 0, 0.72, 0))
+      for (const [sx, sz] of [[-0.53, -0.26], [0.53, -0.26], [-0.53, 0.26], [0.53, 0.26]]) {
+        group.add(at(kit.cyl(0.045, 0.065, 0.68, kit.mat('metal', 0x8794bd), 8), sx, 0.34, sz))
+      }
+      const map = at(kit.cyl(0.44, 0.44, 0.025, kit.sheer(tint, 0.62, true), 24), 0, 1.18, 0)
+      map.rotation.x = Math.PI / 2
+      group.add(map)
+      for (let index = 0; index < 3; index++) {
+        const orbit = at(kit.tor(0.34 + index * 0.09, 0.012, kit.mat('emissive', tint)), 0, 1.18, 0)
+        orbit.rotation.x = Math.PI / 2 + index * 0.32
+        group.add(orbit)
+      }
+      group.add(at(kit.halo(1.65, tint, 0.42), 0, 1.18, 0.04))
+      return group
+    },
+  },
+]
+
 /** Surprise props are resolvable by the renderer but never sold in the room menu. */
 export const WEEKLY_SURPRISE_COVERED = 'weekly_surprise_covered'
 export const WEEKLY_SURPRISE_READY = 'weekly_surprise_ready'
@@ -1414,7 +1493,7 @@ export const WEEKLY_SURPRISE_ITEMS: RoomItemSpec[] = [
   },
 ]
 
-const ALL_ROOM_ITEMS = [...ROOM_ITEMS, ...WEEKLY_SURPRISE_ITEMS]
+const ALL_ROOM_ITEMS = [...ROOM_ITEMS, ...WEEKLY_SURPRISE_ITEMS, ...PORTAL_FURNITURE_ITEMS]
 const BY_ID = new Map(ALL_ROOM_ITEMS.map((spec) => [spec.id, spec]))
 if (import.meta.env?.DEV && BY_ID.size !== ALL_ROOM_ITEMS.length) {
   // A reused id silently shadows the original prop and, once ids are gated,

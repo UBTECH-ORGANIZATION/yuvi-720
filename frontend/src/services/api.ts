@@ -127,6 +127,44 @@ export function updateLearnerState(updates: Partial<LearnerState>) {
   return apiPatch<LearnerState>('/api/learner-state', updates)
 }
 
+export interface CommunityRoom {
+  owner_id: string
+  display_name: string
+  room: unknown
+  yuvi_design: unknown
+  liked_by_me: boolean
+}
+
+export interface RoomSharing {
+  shared: boolean
+}
+
+export function getCommunityRooms(signal?: AbortSignal) {
+  return apiGet<CommunityRoom[]>('/api/community/rooms', signal ? { signal } : undefined)
+}
+
+export function getCommunityRoom(ownerId: string, signal?: AbortSignal) {
+  return apiGet<CommunityRoom>(`/api/community/rooms/${encodeURIComponent(ownerId)}`, signal ? { signal } : undefined)
+}
+
+export function getRoomSharing() {
+  return apiGet<RoomSharing>('/api/community/room-sharing')
+}
+
+export function updateRoomSharing(shared: boolean) {
+  return apiPatch<RoomSharing>('/api/community/room-sharing', { shared })
+}
+
+export function setRoomLike(ownerId: string) {
+  return apiPut<Pick<CommunityRoom, 'liked_by_me'>>(
+    `/api/community/rooms/${encodeURIComponent(ownerId)}/like`, {})
+}
+
+export function removeRoomLike(ownerId: string) {
+  return apiDelete<Pick<CommunityRoom, 'liked_by_me'>>(
+    `/api/community/rooms/${encodeURIComponent(ownerId)}/like`)
+}
+
 export function getBadges(lang = 'he', signal?: AbortSignal) {
   return apiGet<import('../features/badges/types').BadgeDTO[]>(
     `/api/badges?lang=${encodeURIComponent(lang)}`,

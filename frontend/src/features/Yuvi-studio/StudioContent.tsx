@@ -8,11 +8,11 @@ import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
 import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
-import type { YuviColors, YuviSlot } from './YuviDesign'
+import { normalizeDesign, type YuviColors, type YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
 import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
-import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
+import { MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { roomStandingSpot } from './YuviLabRoom'
 import { StationPanel } from './panel/StationPanel'
@@ -22,6 +22,10 @@ import { ContextBar } from './panel/ContextBar'
 import { PropMenu, type PropMenuState } from './panel/PropMenu'
 import { StudioHelp, type StudioHelpTopic } from './panel/StudioHelp'
 import { StudioWelcome } from './panel/StudioWelcome'
+import { FriendRoomVisitorPanel, FriendsRoomsPanel } from './community/FriendsRoomsPanel'
+import { getCommunityRoom, removeRoomLike, setRoomLike, type CommunityRoom } from '../../services/api'
+import { FriendTravelController } from './travel/FriendTravelController'
+import type { TravelPhase } from './travel/TravelStateMachine'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
@@ -42,11 +46,15 @@ const ROOM_STYLE_TABS: Array<{ id: Exclude<RoomTab, RoomItemCategory>; labelKey:
  * The studio is a room, not a form. Yuvi walks around it freely; standing on a
  * station is what opens that station's panel.
  */
-type StudioMode = 'roam' | 'avatar' | 'room'
+type StudioMode = 'roam' | 'avatar' | 'room' | 'friends'
 
 // Where Yuvi is sent when the learner closes a station panel — clear of every
 // station ring and of the three fixed lab props.
 const STEP_OFF: [number, number] = [0, 4.5]
+const FRIEND_ROOM_LANDING: [number, number] = [0, 0]
+// Just outside the mission station's 2.1m activation ring, so landing home
+// leaves Yuvi beside Friends' rooms without reopening the panel.
+const FRIENDS_STATION_RETURN: [number, number] = [5.6, -0.7]
 
 // Anything the learner can recolour uses the same friendly palette.
 const ITEM_TINTS = ['#7C6BFF', '#4eeef0', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0', '#4cc9f0', '#ff7a3d', '#f3ecdd', '#9a6b40']
@@ -83,6 +91,11 @@ export function StudioContent({
   const { t } = useI18n()
   const { user } = useAuth()
   const { isTouch } = useResponsive()
+  const {
+    avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
+    saving, dirty, isLocked, isPropLocked, requirementFor, equip, setColor, reset, save,
+    wallet, priceOf, buy, buying,
+  } = studio
   const thumbnails = useMemo(() => getThumbnails(), [])
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
@@ -101,6 +114,15 @@ export function StudioContent({
   // Walking is the default state of the studio; panels are something you step
   // into, and step out of.
   const [mode, setMode] = useState<StudioMode>('roam')
+  const [visitorRoom, setVisitorRoom] = useState<CommunityRoom | null>(null)
+  const [travelRoom, setTravelRoom] = useState<CommunityRoom | null>(null)
+  const [travelPhase, setTravelPhase] = useState<TravelPhase>('idle')
+  const travelControllerRef = useRef<FriendTravelController | null>(null)
+  const [visitLoading, setVisitLoading] = useState(false)
+  const [pendingVisitOwner, setPendingVisitOwner] = useState<string | null>(null)
+  const [visitFailed, setVisitFailed] = useState(false)
+  const [returning, setReturning] = useState(false)
+  const [likingRoom, setLikingRoom] = useState(false)
   // Walking the hall from behind Yuvi's eyes. It is a way of moving, not a
   // place to be, so every station the learner walks into hands the camera back.
   const [firstPerson, setFirstPerson] = useState(false)
@@ -142,6 +164,14 @@ export function StudioContent({
     }
     return userItems
   }, [roomState.items, movingUid, weeklySurprise, weeklyUid])
+  const visitorDesign = visitorRoom ? normalizeDesign(visitorRoom.yuvi_design) : null
+  const visitorRoomDesign = visitorRoom ? normalizeRoom(visitorRoom.room) : null
+  const activeDesign = design
+  const activeRoomItems = visitorRoomDesign?.items ?? visibleRoomItems
+  const activeStations = visitorRoomDesign?.stations ?? roomState.room.stations
+  const activeRoomStyle = visitorRoomDesign
+    ? { floor: visitorRoomDesign.floor, wall: visitorRoomDesign.wall, mood: visitorRoomDesign.mood }
+    : roomStyle
   const menuItem = propMenu ? roomState.items.find((item) => item.uid === propMenu.uid) ?? null : null
   // Stations are addressed through the same menu, under a reserved uid.
   const menuStation: StationId | null = propMenu?.uid.startsWith('station:')
@@ -176,6 +206,7 @@ export function StudioContent({
     propMenuCloseTimer.current = window.setTimeout(() => setPropMenu(null), 350)
   }
   useEffect(() => () => clearPropMenuClose(), [])
+  useEffect(() => () => travelControllerRef.current?.dispose(), [])
   useEffect(() => {
     if (!helpOpen) return
     const closeOutsideHelp = (event: PointerEvent) => {
@@ -187,12 +218,6 @@ export function StudioContent({
     document.addEventListener('pointerdown', closeOutsideHelp)
     return () => document.removeEventListener('pointerdown', closeOutsideHelp)
   }, [helpOpen])
-  const {
-    avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
-    saving, dirty, isLocked, isPropLocked, requirementFor, equip, setColor, reset, save,
-    wallet, priceOf, buy, buying,
-  } = studio
-
   const [introScene, setIntroScene] = useState<number | null>(null)
   const [introAvatarChanged, setIntroAvatarChanged] = useState(false)
   const [introRoomItemAdded, setIntroRoomItemAdded] = useState(false)
@@ -267,10 +292,17 @@ export function StudioContent({
   }
 
   /** Stepping onto a station opens it; stepping off closes it again. */
-  const handleZoneChange = (zone: 'avatar' | 'room' | null) => {
+  const handleZoneChange = (zone: 'avatar' | 'room' | 'mission' | null) => {
     if (requestedStationRef.current && zone !== requestedStationRef.current) return
     if (zone === requestedStationRef.current) requestedStationRef.current = null
     setPropMenu(null)
+    if (zone === 'mission') {
+      setPlacing(null)
+      setFirstPerson(false)
+      setMode('friends')
+      avatarRef.current?.focus('roam')
+      return
+    }
     if (zone === 'avatar') {
       setPlacing(null)
       setFirstPerson(false)
@@ -292,6 +324,75 @@ export function StudioContent({
     setPlacing(null)
     setPropMenu(null)
     avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
+  }
+  const startVisit = async (ownerId: string) => {
+    if (visitLoading || travelPhase !== 'idle') return
+    setVisitLoading(true)
+    setVisitFailed(false)
+    const controller = travelControllerRef.current ?? new FriendTravelController()
+    travelControllerRef.current = controller
+    let destination: CommunityRoom | null = null
+    const roomReady = getCommunityRoom(ownerId).then((room) => {
+      destination = room
+      setTravelRoom(room)
+    })
+    const handlers = {
+      onPhase: (phase: TravelPhase) => {
+        setTravelPhase(phase)
+      },
+      onWorldSwap: () => {
+        if (!destination) return
+        setVisitorRoom(destination)
+        if (avatarRef.current?.teleportTo) avatarRef.current.teleportTo(FRIEND_ROOM_LANDING[0], FRIEND_ROOM_LANDING[1])
+        else avatarRef.current?.walkTo(FRIEND_ROOM_LANDING[0], FRIEND_ROOM_LANDING[1])
+      },
+      onComplete: () => setTravelRoom(null),
+      onFailure: () => {
+        setTravelRoom(null)
+        setVisitFailed(true)
+      },
+    }
+    controller.play(handlers, roomReady)
+    try {
+      await roomReady
+    } catch { /* The controller finishes a brief visual cooldown before reporting failure. */ }
+    finally { setVisitLoading(false); setPendingVisitOwner(null) }
+  }
+  const returnToOwnRoom = () => {
+    if (!visitorRoom || travelPhase !== 'idle' || returning) return
+    setReturning(true)
+    const friendStation = activeStations.mission
+    avatarRef.current?.walkTo(friendStation.x, friendStation.z, 'mission', () => {
+      const controller = travelControllerRef.current ?? new FriendTravelController()
+      travelControllerRef.current = controller
+      const started = controller.play({
+        onPhase: setTravelPhase,
+        onWorldSwap: () => {
+          setVisitorRoom(null)
+          setMode('roam')
+          avatarRef.current?.focus('roam')
+          if (avatarRef.current?.teleportTo) avatarRef.current.teleportTo(FRIENDS_STATION_RETURN[0], FRIENDS_STATION_RETURN[1], 'mission')
+          else avatarRef.current?.walkTo(FRIENDS_STATION_RETURN[0], FRIENDS_STATION_RETURN[1], 'mission')
+        },
+        onComplete: () => { setTravelRoom(null); setReturning(false) },
+        onFailure: () => setReturning(false),
+      })
+      if (!started) setReturning(false)
+    })
+  }
+  useEffect(() => {
+    avatarRef.current?.setVisitorHost(visitorDesign)
+    avatarRef.current?.applyDesign(design, false)
+  }, [visitorDesign, design, avatarRef])
+  const toggleVisitorRoomLike = async () => {
+    if (!visitorRoom || likingRoom) return
+    setLikingRoom(true)
+    try {
+      const result = visitorRoom.liked_by_me
+        ? await removeRoomLike(visitorRoom.owner_id)
+        : await setRoomLike(visitorRoom.owner_id)
+      setVisitorRoom((current) => current ? { ...current, liked_by_me: result.liked_by_me } : null)
+    } finally { setLikingRoom(false) }
   }
   const goToStation = (station: 'avatar' | 'room') => {
     requestedStationRef.current = station
@@ -624,6 +725,21 @@ export function StudioContent({
             )}
           </StationPanel>
         )}
+        {mode === 'friends' && (
+          <StationPanel
+            title={t('YuviStudio.capsule.title')}
+            closeLabel={t('YuviStudio.station.leave')}
+            onClose={visitorRoom ? returnToOwnRoom : leaveStation}
+          >
+            {visitorRoom ? (
+              <FriendRoomVisitorPanel room={visitorRoom} pending={likingRoom || returning || travelPhase !== 'idle'}
+                onBack={returnToOwnRoom} onLike={() => void toggleVisitorRoomLike()} />
+            ) : (
+              <FriendsRoomsPanel onVisit={(ownerId) => void startVisit(ownerId)}
+                visitingOwnerId={pendingVisitOwner} visitFailed={visitFailed} />
+            )}
+          </StationPanel>
+        )}
 
       <section className="ys-stage">
         <div className="ys-stage__backdrop" aria-hidden />
@@ -631,31 +747,32 @@ export function StudioContent({
           {loaded && (
             <YuviAvatar3D
               ref={avatarRef}
-              initialDesign={design}
+              initialDesign={activeDesign}
               muted={muted}
               orbit
               stage
               roam
-              firstPerson={firstPerson && mode === 'roam'}
-              onZoneChange={handleZoneChange}
-              onStationIntentChange={(station) => { requestedStationRef.current = station }}
-              roomItems={visibleRoomItems}
-              stations={roomState.room.stations}
-              roomStyle={roomStyle}
-              placing={placing}
+              travelPhase={travelPhase}
+              firstPerson={!visitorRoom && firstPerson && mode === 'roam'}
+              onZoneChange={!visitorRoom ? handleZoneChange : undefined}
+              onStationIntentChange={!visitorRoom ? (station) => { requestedStationRef.current = station } : undefined}
+              roomItems={activeRoomItems}
+              stations={activeStations}
+              roomStyle={activeRoomStyle}
+              placing={visitorRoom ? null : placing}
               presenting={introScene !== null && introScene !== 4}
               presentingSide="left"
-              onPlaceAt={handlePlaceAt}
-              onItemMenu={!placing ? showPropMenu : undefined}
-              onItemMenuLeave={!placing ? () => { deferPropMenuClose(); setSurpriseNotice(false) } : undefined}
-              onNearRoomItem={(uid) => { if (uid === weeklyUid) setSurpriseNotice(true) }}
-              onRoomItemTap={(uid) => {
+              onPlaceAt={!visitorRoom ? handlePlaceAt : undefined}
+              onItemMenu={!visitorRoom && !placing ? showPropMenu : undefined}
+              onItemMenuLeave={!visitorRoom && !placing ? () => { deferPropMenuClose(); setSurpriseNotice(false) } : undefined}
+              onNearRoomItem={!visitorRoom ? (uid) => { if (uid === weeklyUid) setSurpriseNotice(true) } : undefined}
+              onRoomItemTap={!visitorRoom ? (uid) => {
                 if (uid !== weeklyUid) return false
                 if (weeklySurprise?.state === 'ready') void openWeeklySurprise()
                 else setSurpriseNotice(true)
                 return true
-              }}
-              lockRoam={mode !== 'roam' || introScene !== null}
+              } : undefined}
+              lockRoam={(!visitorRoom && mode !== 'roam') || introScene !== null || travelPhase !== 'idle'}
               label={t('YuviStudio.avatarAlt')}
             />
           )}

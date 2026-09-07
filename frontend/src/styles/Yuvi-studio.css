@@ -134,6 +134,55 @@
 
 .ys-empty { grid-column: 1 / -1; margin: 18px 0; text-align: center; font-size: 13px; color: var(--ys-ink-soft); }
 
+.ys-friends { display: flex; flex-direction: column; gap: 14px; }
+.ys-friends__intro, .ys-friends__sharing p { margin: 0; color: var(--ys-ink-soft); font-size: 13px; line-height: 1.55; }
+.ys-friends__tabs { display: flex; gap: 16px; border-block-end: 1px solid var(--ys-line); }
+.ys-friends__tabs button { border: 0; border-block-end: 2px solid transparent; padding: 4px 0 8px; background: transparent; color: var(--ys-ink-soft); cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; }
+.ys-friends__tabs button[aria-selected="true"] { border-color: var(--ys-accent); color: var(--ys-accent-ink); }
+.ys-friends__list { display: grid; gap: 8px; }
+.ys-friends__room { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-block-size: 68px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card); padding: 7px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; font: inherit; text-align: start; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
+.ys-friends__room:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--ys-accent) 46%, transparent); background: var(--ys-surface-hover); }
+.ys-friends__room:disabled { cursor: wait; opacity: .7; }
+.ys-friends__room span { color: var(--ys-accent-ink); font-size: 12px; font-weight: 750; }
+.ys-friends__yuvi-face { position: relative; display: block; inline-size: 54px; block-size: 52px; overflow: visible; border: 1px solid color-mix(in srgb, var(--yuvi-glow) 44%, #fff); border-radius: 48% 48% 43% 43%; background: linear-gradient(110deg, color-mix(in srgb, var(--yuvi-body) 76%, #fff), var(--yuvi-body)); box-shadow: inset 0 -8px 12px rgba(17, 30, 72, .14), 0 0 0 3px color-mix(in srgb, var(--yuvi-glow) 17%, transparent); }
+.ys-friends__yuvi-ear { position: absolute; z-index: -1; inset-block-start: 18px; inline-size: 8px; block-size: 18px; border: 1px solid color-mix(in srgb, var(--yuvi-glow) 38%, #fff); border-radius: 5px; background: var(--yuvi-body); }.ys-friends__yuvi-ear--start { inset-inline-start: -5px; }.ys-friends__yuvi-ear--end { inset-inline-end: -5px; }
+.ys-friends__yuvi-antenna { position: absolute; z-index: 4; inset-inline-start: 24px; inset-block-start: -6px; inline-size: 5px; block-size: 12px; border-radius: 99px; background: var(--yuvi-glow); box-shadow: 0 -2px 0 2px var(--yuvi-glow); }
+.ys-friends__yuvi-visor { position: absolute; z-index: 1; inset-inline: 5px; inset-block-start: 15px; block-size: 29px; border: 1px solid rgba(152, 173, 215, .44); border-radius: 12px 12px 15px 15px; background: linear-gradient(155deg, #2c2d50 0 15%, #0a0b1f 48%, #151631 100%); box-shadow: inset 0 2px rgba(255,255,255,.13); }
+.ys-friends__yuvi-eye { position: absolute; z-index: 2; inset-block-start: 26px; inline-size: 7px; block-size: 6px; border: 2px solid var(--yuvi-eyes); border-block-end: 0; border-radius: 50% 50% 0 0; box-shadow: 0 0 5px var(--yuvi-eyes); }
+.ys-friends__yuvi-eye--start { inset-inline-start: 15px; }.ys-friends__yuvi-eye--end { inset-inline-end: 15px; }
+.ys-friends__yuvi-smile { position: absolute; z-index: 2; inset-inline-start: 18px; inset-block-start: 35px; inline-size: 17px; block-size: 6px; border-block-end: 2px solid var(--yuvi-smile); border-radius: 0 0 50% 50%; box-shadow: 0 2px 5px color-mix(in srgb, var(--yuvi-smile) 60%, transparent); }
+.ys-friends__yuvi-accessory { display: none; position: absolute; z-index: 3; inset-inline: 8px; inset-block-start: 22px; block-size: 11px; border-radius: 6px; }
+.ys-friends__yuvi-face.is-face-shades .ys-friends__yuvi-accessory { display: block; background: linear-gradient(90deg, #16182d 0 44%, transparent 44% 56%, #16182d 56%); }
+.ys-friends__yuvi-face.is-face-hud .ys-friends__yuvi-accessory { display: block; border: 2px solid var(--yuvi-glow); background: rgba(55, 240, 255, .22); }
+.ys-friends__yuvi-face.is-face-warpaint .ys-friends__yuvi-accessory { display: block; background: linear-gradient(100deg, transparent 34%, #ff5d73 35% 47%, transparent 48% 58%, #ff5d73 59% 72%, transparent 73%); }
+.ys-friends__yuvi-face.is-face-heromask .ys-friends__yuvi-accessory { display: block; inset-inline: 11px; inset-block-start: 25px; block-size: 16px; background: #312e7a; clip-path: polygon(0 5%, 100% 5%, 84% 100%, 16% 100%); }
+.ys-friends__yuvi-face.is-face-explorerGoggles .ys-friends__yuvi-accessory { display: block; border: 2px solid #d78637; background: linear-gradient(90deg, rgba(113, 224, 255, .65) 0 44%, transparent 44% 56%, rgba(113, 224, 255, .65) 56%); }
+.ys-friends__yuvi-headgear { display: none; position: absolute; z-index: 5; inset-inline-start: 7px; inset-block-start: -4px; inline-size: 40px; block-size: 13px; border-radius: 50% 50% 4px 4px; }
+.ys-friends__yuvi-face.is-head-snapback .ys-friends__yuvi-headgear { display: block; background: #425b92; transform: rotate(-8deg); }.ys-friends__yuvi-face.is-head-beanie .ys-friends__yuvi-headgear, .ys-friends__yuvi-face.is-head-hood .ys-friends__yuvi-headgear { display: block; block-size: 21px; border-radius: 50% 50% 8px 8px; background: #39406e; }.ys-friends__yuvi-face.is-head-crown .ys-friends__yuvi-headgear { display: block; background: #f7cb48; clip-path: polygon(0 100%, 0 35%, 25% 67%, 50% 0, 75% 67%, 100% 35%, 100% 100%); }.ys-friends__yuvi-face.is-head-neoncrest .ys-friends__yuvi-headgear { display: block; background: var(--yuvi-glow); clip-path: polygon(10% 100%, 28% 22%, 44% 75%, 60% 0, 78% 72%, 92% 16%, 100% 100%); }
+.ys-friends__sharing { display: flex; flex-direction: column; gap: 18px; }
+.ys-friends__toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-size: 13px; font-weight: 750; }
+.ys-friends__toggle--top { padding: 11px 12px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card); background: var(--ys-surface); }
+.ys-friends__toggle input { position: absolute; opacity: 0; }
+.ys-friends__switch { inline-size: 42px; block-size: 24px; border-radius: 12px; background: #9da0ae; transition: background .18s ease; }
+.ys-friends__switch::after { content: ''; display: block; inline-size: 18px; block-size: 18px; margin: 3px; border-radius: 50%; background: #fff; transition: transform .18s ease; }
+.ys-friends__toggle input:checked + .ys-friends__switch { background: var(--ys-accent); }
+.ys-friends__toggle input:checked + .ys-friends__switch::after { transform: translateX(18px); }
+[dir="rtl"] .ys-friends__toggle input:checked + .ys-friends__switch::after { transform: translateX(-18px); }
+.ys-friends__guest { margin: 0; color: var(--ys-ink); font-size: 18px; font-weight: 800; }
+.ys-friends__like { display: flex; justify-content: center; }
+.ys-friends__like button { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border: 1px solid color-mix(in srgb, var(--ys-accent) 32%, var(--ys-line)); border-radius: 50%; background: var(--ys-panel-bg); color: var(--ys-accent-ink); cursor: pointer; }
+.ys-friends__like button[aria-pressed="true"] { border-color: var(--ys-accent); background: var(--ys-accent-soft); color: var(--ys-accent); }
+.ys-friends__like button:disabled, .ys-friends__toggle input:disabled + .ys-friends__switch { cursor: wait; opacity: .58; }
+.ys-friends-flight { position: absolute; z-index: 5; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; background: radial-gradient(ellipse at 50% 50%, rgba(225, 248, 255, .96) 0 3%, rgba(84, 116, 238, .78) 15%, rgba(35, 25, 114, .94) 43%, rgba(4, 7, 30, .98) 73%); animation: ys-friends-flight 1.2s cubic-bezier(.2, .72, .28, 1) both; }
+.ys-friends-flight::before { content: ''; position: absolute; inset: -20%; opacity: .82; background: conic-gradient(from 0deg at 50% 50%, transparent 0 7deg, rgba(81, 239, 255, .3) 11deg, transparent 16deg 38deg, rgba(191, 114, 255, .32) 44deg, transparent 50deg 72deg); animation: ys-friends-nebula 1.2s ease-in both; }
+.ys-friends-flight__stars { position: absolute; inset: -55%; display: block; background-image: radial-gradient(circle, #fff 0 1px, transparent 1.7px), radial-gradient(circle, rgba(112, 238, 255, .9) 0 1px, transparent 1.9px); background-position: 0 0, 29px 47px; background-size: 52px 63px, 89px 107px; animation: ys-friends-stars 1.2s cubic-bezier(.12, .65, .25, 1) both; }
+.ys-friends-flight__comet { position: absolute; inset-inline-start: -25%; inset-block-start: 48%; display: block; inline-size: 42%; block-size: 3px; border-radius: 999px; opacity: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), #fff); box-shadow: 0 0 16px #aaf7ff; transform: rotate(-18deg); animation: ys-friends-comet 1.2s ease-in both; }
+.ys-friends-flight.is-returning { transform: scaleX(-1); }
+@keyframes ys-friends-flight { 0%, 100% { opacity: 0; transform: scale(.82); } 12%, 84% { opacity: 1; transform: scale(1.04); } 48% { opacity: 1; transform: scale(1.12); } }
+@keyframes ys-friends-nebula { from { transform: rotate(-32deg) scale(.7); } to { transform: rotate(58deg) scale(1.45); } }
+@keyframes ys-friends-stars { from { opacity: .2; transform: scale(.28); } to { opacity: 1; transform: scale(1.7); } }
+@keyframes ys-friends-comet { 20% { opacity: 0; transform: translateX(0) rotate(-18deg); } 44%, 70% { opacity: 1; } 82% { opacity: 0; transform: translateX(340%) rotate(-18deg); } }
+
 .ys-note {
   margin: 0; padding: 9px 12px;
   border-radius: var(--ys-radius-ctl); font-size: 12.5px; font-weight: 600;
@@ -1091,6 +1140,8 @@
   .ys-panel { animation: none; }
   .ys-station:hover,
   .ys-card:hover:not(:disabled) { transform: none; }
+  .ys-friends-flight, .ys-friends-flight::after { animation-duration: .16s; }
+  .ys-friends__room:hover { transform: none; }
 }
 
 /* Below the tablet breakpoint the panel becomes a sheet over the bay: the room
