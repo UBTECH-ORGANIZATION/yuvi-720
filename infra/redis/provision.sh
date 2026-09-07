@@ -139,11 +139,12 @@ create() {
 }
 
 wait_ready() {
-  local name="$1" state=""
-  for _ in $(seq 1 120); do
+  local name="$1" state="" i
+  for i in $(seq 1 120); do
     state="$(state_of "$name")"
     case "$state" in
       Succeeded|*Succeeded*Running*) echo "· $name ready"; return ;;
+      *) printf '\r  waiting for %s … %s (%d min; a Standard cache takes 20–40, safe to Ctrl-C and rerun)' "$name" "${state:-accepted}" $((i / 3)) ;;
       *Failed*)
         echo "!! $name failed while provisioning: $(failure_reason "$name")"
         echo "   Delete it, then run again (LOCATION=<region> or CACHE_KIND=<kind> if the reason is capacity):"
