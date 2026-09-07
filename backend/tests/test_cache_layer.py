@@ -60,6 +60,8 @@ class WhichCache(unittest.TestCase):
         for region in ("northeurope", "westeurope", "swedencentral"):
             self.assertTrue(cache_config.is_production_host(f"redis-yuvi-720.{region}.redis.azure.net"))
             self.assertFalse(cache_config.is_production_host(f"redis-yuvi-720-dev.{region}.redis.azure.net"))
+        self.assertTrue(cache_config.is_production_host("redis-yuvi-720.redis.cache.windows.net"))
+        self.assertFalse(cache_config.is_production_host("redis-yuvi-720-dev.redis.cache.windows.net"))
         self.assertFalse(cache_config.is_production_host("localhost"))
         with _env(REDIS_PRODUCTION_HOSTS="cache.example.net"):
             self.assertTrue(cache_config.is_production_host("cache.example.net"))

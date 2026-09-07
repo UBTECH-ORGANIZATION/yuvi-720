@@ -39,12 +39,13 @@ REDIS = "redis"
 MEMORY = "memory"
 OFF = "off"
 
-#: The production cache, by NAME: Azure Managed Redis hostnames carry the
-#: region (`redis-yuvi-720.<region>.redis.azure.net`), and the region is
-#: whichever one had capacity on the day the cache was created. Matching the
-#: first label keeps the guard right after a move. `redis-yuvi-720-dev` is a
-#: different first label, so it never matches. REDIS_PRODUCTION_HOSTS lists
-#: full hostnames and overrides this.
+#: The production cache, by NAME. The hostname's tail depends on the kind
+#: and region (`redis-yuvi-720.redis.cache.windows.net` for Azure Cache for
+#: Redis, `redis-yuvi-720.<region>.redis.azure.net` for Managed Redis), and
+#: both may change without a code change here: matching the first label
+#: keeps the guard right after a move. `redis-yuvi-720-dev` is a different
+#: first label, so it never matches. REDIS_PRODUCTION_HOSTS lists full
+#: hostnames and overrides this.
 _PRODUCTION_CACHE_NAME = "redis-yuvi-720"
 
 _ESCAPE_HATCH = "SPARK_ALLOW_PRODUCTION_REDIS"
