@@ -364,7 +364,22 @@ def _needs_grounding(text: str, known: frozenset[str] = frozenset()) -> bool:
 
 
 async def _resolve_scope(teacher_id: str) -> tuple[frozenset[str], frozenset[str], bool]:
-    """Resolve what this teacher may see — ONCE, server-side, before the model runs."""
+    """Resolve what this teacher may see — ONCE, server-side, before the model runs.
+
+    Cached per teacher for fifteen minutes: the answer changes when an admin
+    edits a roster, and this used to walk every group on every message.
+    """
+    from app.services import cache_store
+
+    async def _lookup() -> dict:
+        group_ids, learner_ids, is_admin = await _resolve_scope_uncached(teacher_id)
+        return {"groups": sorted(group_ids), "learners": sorted(learner_ids), "admin": is_admin}
+
+    scope = await cache_store.remember("teacher", teacher_id, "scope", "", 900, _lookup)
+    return frozenset(scope["groups"]), frozenset(scope["learners"]), bool(scope["admin"])
+
+
+async def _resolve_scope_uncached(teacher_id: str) -> tuple[frozenset[str], frozenset[str], bool]:
     from app.brain import org
 
     # `groups_for_teacher` already resolves the admin cases — system admins get

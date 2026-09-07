@@ -46,6 +46,10 @@ const NotificationsContext = createContext<NotificationsValue | null>(null)
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  // Keyed on the id and the hats, never the object: a preference write
+  // replaces `user` and used to refetch the bell and reopen the stream.
+  const userId = user?.user_id ?? null
+  const isLearnerAccount = !!user?.roles?.includes('learner')
   const pathname = useRoute()
 
   /* The portal names the hat. `gal` is a learner AND a teacher: standing in the
@@ -68,7 +72,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(() => setNonce((value) => value + 1), [])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setNotifications([]); setUnread(0); setIsLoading(false)
       return
     }
@@ -82,10 +86,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .catch(() => {})
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [user, nonce, role])
+  }, [userId, nonce, role])
 
   useEffect(() => {
-    if (!user || role !== 'learner') return
+    if (!userId || role !== 'learner') return
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }
@@ -97,14 +101,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', refreshWhenVisible)
       window.clearInterval(interval)
     }
-  }, [user, role, refresh])
+  }, [userId, role, refresh])
 
   // Live arrivals. The learner's stream is the coach channel (which also carries
   // their `user:` topic); a teacher-only account has no such stream, so their
   // bell fills on load and on refresh — teacher-side notifications are not
   // time-critical the way an alert is.
   useEffect(() => {
-    if (!user?.roles?.includes('learner')) return
+    if (!isLearnerAccount) return
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
       if (frame.type !== 'notification') return
       const incoming = frame.notification as AppNotification
@@ -114,7 +118,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         current.some((row) => row._id === incoming._id) ? current : [incoming, ...current])
       setUnread((count) => count + 1)
     })
-  }, [user, role])
+  }, [isLearnerAccount, role])
 
   const markRead = useCallback(async (ids: string[]) => {
     setNotifications((current) => current.map((row) =>

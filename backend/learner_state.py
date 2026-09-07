@@ -120,8 +120,38 @@ def _public_state(document: Optional[dict[str, Any]], learner_id: str) -> dict[s
     return state
 
 
+_STATE_TTL = 300
+
+
+def _state_key(safe_id: str) -> tuple:
+    return ("lstate", safe_id, 0, "doc", "")
+
+
+async def _forget_state(safe_id: str) -> None:
+    try:
+        from app.services import cache_store
+        await cache_store.drop(_state_key(safe_id))
+    except Exception as exc:  # the write must never depend on the cache
+        print(f"⚠️ learner state cache drop failed: {type(exc).__name__}")
+
+
 async def get_learner_state(learner_id: Optional[str] = None) -> dict[str, Any]:
+    """Read through the cache: eight call sites read this document, one or
+    two of them on every navigation, and it changes only when the learner
+    saves something (which drops the cached copy)."""
     safe_id = normalize_learner_id(learner_id)
+    try:
+        from app.services import cache_store
+        return await cache_store.remember(
+            "lstate", safe_id, "doc", "", _STATE_TTL,
+            lambda: _read_learner_state(safe_id), versioned=False,
+        )
+    except Exception as exc:
+        print(f"⚠️ learner state cache read failed: {type(exc).__name__}")
+        return await _read_learner_state(safe_id)
+
+
+async def _read_learner_state(safe_id: str) -> dict[str, Any]:
     collection = _get_collection()
     if collection is not None:
         try:
@@ -156,6 +186,7 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     set_data["updated_at"] = now
 
     collection = _get_collection()
+    await _forget_state(safe_id)
     if collection is not None:
         try:
             await collection.update_one({"_id": safe_id}, {"$set": set_data}, upsert=True)
@@ -189,6 +220,7 @@ async def _grant_unlock(learner_id: Optional[str], field: str, asset_id: str) ->
     callers.
     """
     safe_id = normalize_learner_id(learner_id)
+    await _forget_state(safe_id)
     now = datetime.now(timezone.utc).isoformat()
 
     collection = _get_collection()
