@@ -348,6 +348,14 @@ it runs right after Phase 1, before the long tail of Phase 2 (see 3c).
   ids, never names. `content_review` stays out.
 - **Cost.** Two Balanced caches, on the order of tens of dollars a month
   together. Verify at creation.
+- **Network exposure.** Both caches start on their public endpoint with
+  TLS and key auth, which is exactly how the two Cosmos clusters are exposed
+  today (public access enabled, no private endpoints). The dev slot has no
+  VNet integration, so dev cannot do otherwise. Production is integrated
+  into `vnet-yuvi-lrs` with route-all for the LRS egress firewall, so a
+  private endpoint plus a `privatelink.*.redis.azure.net` DNS zone is
+  possible there; it touches the firewall's routing, so it is a deliberate
+  follow-up (`PUBLIC_ACCESS=Disabled` in the script), not a default.
 - **Swap semantics.** The string is sticky, so production always talks to
   the production cache. The version counters live in each cache, so a swap
   never mixes them.

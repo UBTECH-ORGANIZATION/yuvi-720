@@ -21,6 +21,14 @@ WEBAPP="${WEBAPP:-ubi-yuvi-720}"
 PROD_CACHE="${PROD_CACHE:-redis-yuvi-720}"
 DEV_CACHE="${DEV_CACHE:-redis-yuvi-720-dev}"
 PORT=10000
+# Public endpoint + TLS + key, the same exposure as the two Cosmos clusters today
+# (publicNetworkAccess Enabled, no private endpoints). The dev slot has no VNet
+# integration, so dev has no other option. Production IS integrated into
+# vnet-yuvi-lrs with route-all; when the LRS firewall design allows it, set
+# PUBLIC_ACCESS=Disabled and add a private endpoint + privatelink DNS zone for
+# redis-yuvi-720 (see the plan, §6). The API version requires the property
+# to be stated either way.
+PUBLIC_ACCESS="${PUBLIC_ACCESS:-Enabled}"
 ENV_FILE="$(cd "$(dirname "$0")/../.." && pwd)/backend/.env"
 ENV_ONLY="${1:-}"
 
@@ -35,7 +43,7 @@ create() {
   fi
   echo "· creating $name ($sku, high availability $ha)"
   az redisenterprise create -g "$RG" --cluster-name "$name" --sku "$sku" -l "$LOCATION" \
-    --public-network-access Enabled --eviction-policy AllKeysLRU --client-protocol Encrypted \
+    --public-network-access "$PUBLIC_ACCESS" --eviction-policy AllKeysLRU --client-protocol Encrypted \
     --clustering-policy EnterpriseCluster --minimum-tls-version 1.2 --high-availability "$ha" \
     --port "$PORT" --no-wait -o none
 }
