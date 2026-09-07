@@ -1,6 +1,8 @@
 # Redis for the two portals: what to cache, per slot, in what order
 
-Status: plan, 2026-09-07. Nothing here is built yet.
+Status: plan, 2026-09-07, sized for 10,000 users. The two caches exist in
+Azure (`redis-yuvi-720`, `redis-yuvi-720-dev`) and the slot settings are
+set; no application code reads them yet.
 
 The complaint: going back and forth between screens in the teacher portal and
 the student portal re-loads screens that were already loaded, and the chats
@@ -82,6 +84,90 @@ Redis does not fix the remount, the `pathname` dependency, the 5-second poll
 or the duplicate fetches. Those are frontend changes and they remove more
 load than any cache. They ship first.
 
+## 3b. At ten thousand users
+
+Assume 10,000 registered learners across roughly 350 classes of 30, about
+400 teachers, and a school-hours peak of 2,000 learners in a lesson at once
+with 150 teachers looking at a dashboard. Everything below follows from
+those numbers.
+
+**What breaks first is polling, not queries.** Two loops in the learner
+portal run per open lesson tab:
+
+| Loop | Today | At 2,000 concurrent lessons |
+|---|---|---|
+| Coach support state, every 2.5 s | brain read + five catalog lookups + an activity query | **800 requests a second**, each with a brain read |
+| Lesson catalog projection, every 5 s | the heaviest handler in the app, per learner over every unit | **400 requests a second** of the heaviest handler |
+
+No cache makes that acceptable; the learner already holds an SSE connection,
+so both loops become pushes from the event fold. This is the single change
+the design cannot do without.
+
+**One process cannot carry it.** 2,000 learner SSE streams plus 150 teacher
+streams on one uvicorn process is fine for I/O, but every cached projection
+that misses is CPU on the same event loop, and one instance is one failure
+domain. The target shape is **three P1v3 instances per slot** behind the
+existing Front Door, which is only possible once the bus, presence and
+cooldowns are in Redis. That moves the coordination phase ahead of the
+long tail of read caching.
+
+**Redis sizing.** Cache the learner-specific delta, never the whole payload:
+the catalog response is 209 KB per learner because it carries the provider
+units; those are global and cached once per language. The per-learner part
+(progress state per component, the resume pointer) is a few KB.
+
+| Item | Per key | Keys | Total |
+|---|---:|---:|---:|
+| learner catalog delta | 5 KB | 10,000 | 50 MB |
+| learner dashboard projection | 11 KB | 10,000 | 110 MB |
+| learner state document | 11 KB | 10,000 | 110 MB |
+| chat tail, 20 turns, both roles | 20 KB | 10,000 | 200 MB |
+| class snapshot + learnings + goals | 120 KB | 350 | 42 MB |
+| Kata units and snapshot, three languages | 2 MB | 3 | 6 MB |
+| presence, cooldowns, counters | 0.2 KB | 15,000 | 3 MB |
+
+About 520 MB with every key populated at once, which never happens because
+TTLs are minutes. Values are stored compressed (zlib, level 1; JSON of this
+shape shrinks 6 to 10 times), so the working set is well under 200 MB.
+Production is Balanced B1 (1 GB, replicated) with `allkeys-lru` as the
+safety net; it scales up in place to B3 without a redeploy if the numbers
+above turn out low. Dev is B0 (0.5 GB), no replication.
+
+**Cosmos.** With the caches in place, the steady-state read load on the
+production cluster is one brain read per learner event plus one class
+fan-out per class per two minutes, instead of one class fan-out per teacher
+screen and one brain read per unit per learner per five seconds. That is
+the difference between needing a bigger Cosmos tier at 10,000 users and
+not.
+
+**Connections.** Redis pool of 20 per instance × 3 instances = 60 client
+connections on a cache rated for thousands; SSE streams are terminated by
+each instance and fanned out from Redis pub/sub, so a learner and their
+teacher no longer need to land on the same instance.
+
+## 3c. The reduced list
+
+The full tables in section 4 are the inventory. At ten thousand users, only
+these nine changes move the needle; everything else is a long tail to do
+only when a measurement says so.
+
+| # | Change | Why it is on the short list |
+|---|---|---|
+| 1 | Support state and lesson completion become pushes over the existing learner SSE; delete both polls | 1,200 requests a second at peak, gone |
+| 2 | Drop `pathname` from the coach history effect; hoist the learner app bar above the route key | five requests and a spinner per navigation, gone |
+| 3 | One Redis per slot, wired like the database, fail-open | the plumbing everything below needs |
+| 4 | Version-bumped class cache for snapshot, learnings and goals | the three slowest teacher handlers; 350 classes × once per two minutes instead of per screen |
+| 5 | Version-bumped learner cache for the catalog delta, the dashboard projection and the learner state document | the three slowest learner handlers and the eight-call-site document |
+| 6 | Chat tails and working memory write-through | the panel opens from cache; every coach turn skips a Mongo read |
+| 7 | Bus, presence, cooldowns and the alert counter on Redis | unlocks three instances per slot |
+| 8 | Scale the slot to three instances; keep `WEB_CONCURRENCY=1` per container | one failure domain becomes three |
+| 9 | Kata units and snapshot in Redis with refresh-ahead | a deploy or swap no longer cold-starts the catalog |
+
+Dropped from the first pass: calendar, timetable, badge definitions, the
+questionnaire, my-teachers, mood, moments, engagement, the profile long
+tail, the pending count. Each is real but small at this scale, and each
+gets cheaper on its own once the class and learner versions exist.
+
 ## 4. The order of work
 
 ### Phase 0. Free wins on the client and the obvious backend fixes
@@ -102,8 +188,8 @@ No Redis. One or two days. Biggest visible effect on "back and forth".
 
 ### Phase 1. One Redis per slot, wired like the two databases
 
-One day of code plus the Azure resources. Nothing is cached yet; this is
-the plumbing and the guards.
+One day of code. The Azure resources exist and the slot settings are set
+(2026-09-07); nothing is cached until the code lands.
 
 **Resources.** Two caches in `rg-yuvi-720`, North Europe, the region the app
 runs in. Azure Managed Redis, Balanced tier, TLS only, access keys stored as
@@ -111,11 +197,14 @@ app settings the same way the Mongo strings are:
 
 | Slot | Resource | Size | Why |
 |---|---|---|---|
-| production | `redis-yuvi-720` | Balanced B1 (1 GB) | replicated, SLA; the projections for a whole school fit many times over |
-| dev | `redis-yuvi-720-dev` | Balanced B0 (0.5 GB) | cheapest tier; synthetic data |
+| production | `redis-yuvi-720` | Balanced B1 (1 GB), high availability on | replicated, SLA; sized in 3b, scales in place to B3 |
+| dev | `redis-yuvi-720-dev` | Balanced B0 (0.5 GB), no replication | cheapest tier; synthetic data |
 
 No `english` cache: that slot has no workflow and no traffic; it falls back
-to `SPARK_CACHE=memory`.
+to `SPARK_CACHE=memory`. Both caches: TLS only, port 10000, `allkeys-lru`,
+Enterprise clustering policy so a plain (non-cluster) client sees one
+endpoint, access-key auth for now. The local `backend/.env` points at the
+dev cache, as it points at the dev database.
 
 **Settings, mirroring `MONGODB_CONNECTION_STRING` exactly.**
 
@@ -123,7 +212,7 @@ to `SPARK_CACHE=memory`.
 |---|---|---|
 | `REDIS_CONNECTION_STRING` | yes | `rediss://…` for the slot's own cache. Sticky so a swap leaves the cache behind, as it leaves the database behind. |
 | `REDIS_PRODUCTION_HOSTS` | no | override for the production-host guard; defaults in code to the production cache host |
-| `SPARK_CACHE` | yes | `memory` = deliberate no-Redis path (CI, local, `english`). Matches `SPARK_STORAGE=json`. |
+| `SPARK_CACHE` | yes | `redis` on both slots and locally; `memory` = the deliberate no-Redis path (CI, `english`). Matches `SPARK_STORAGE=json`. |
 | `SPARK_ALLOW_PRODUCTION_REDIS` | no | one-off escape hatch with the same 🚨 banner as `SPARK_ALLOW_PRODUCTION_DB` |
 
 **Code.** `backend/app/core/cache.py` mirrors `core/database.py` function for
@@ -220,7 +309,8 @@ already Mongo-cached with fingerprints (explainer, goal suggestions, digests).
 ### Phase 3. Coordination on Redis
 
 Two to three days. Not about speed; this is what the architecture diagram
-asks for and what unblocks a second instance and `WEB_CONCURRENCY > 1`.
+asks for and what unblocks more than one instance. At ten thousand users
+it runs right after Phase 1, before the long tail of Phase 2 (see 3c).
 
 - `realtime._subscribers` → Redis pub/sub on the existing
   `learner:/user:/teacher:/group:` channel names. One file, no caller changes.
