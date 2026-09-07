@@ -35,28 +35,67 @@ ENV_ONLY="${1:-}"
 az account set -s "$SUBSCRIPTION"
 az extension add --name redisenterprise --upgrade -y >/dev/null 2>&1 || true
 
-create() {
-  local name="$1" sku="$2" ha="$3"
-  if az redisenterprise show -g "$RG" --cluster-name "$name" -o none 2>/dev/null; then
-    echo "· $name already exists"
-    return
-  fi
-  echo "· creating $name ($sku, high availability $ha)"
-  az redisenterprise create -g "$RG" --cluster-name "$name" --sku "$sku" -l "$LOCATION" \
-    --public-network-access "$PUBLIC_ACCESS" --eviction-policy AllKeysLRU --client-protocol Encrypted \
-    --clustering-policy EnterpriseCluster --minimum-tls-version 1.2 --high-availability "$ha" \
-    --port "$PORT" --no-wait -o none
+# Cluster first, database second. `az redisenterprise create` without
+# --no-database sends the database PUT straight after the cluster PUT, the
+# service answers "The cluster is not yet running", and the cluster is left
+# in CreateFailed. So: cluster with --no-database, wait for it to run, then
+# the database with the database-level options (protocol, policy, port).
+cluster_state() {
+  az redisenterprise show -g "$RG" --cluster-name "$1" --query "[provisioningState, resourceState]" -o tsv 2>/dev/null | tr '\n\t' '  ' || true
 }
 
-wait_ready() {
+create() {
+  local name="$1" sku="$2" ha="$3" state
+  state="$(cluster_state "$name")"
+  case "$state" in
+    *Failed*)
+      echo "!! $name is in a failed state ($state). Delete it and run again:"
+      echo "   az redisenterprise delete -g $RG --cluster-name $name --yes"
+      exit 1 ;;
+    "") ;;
+    *) echo "· $name already exists ($state)"; return ;;
+  esac
+  echo "· creating $name ($sku, high availability $ha)"
+  az redisenterprise create -g "$RG" --cluster-name "$name" --sku "$sku" -l "$LOCATION" \
+    --public-network-access "$PUBLIC_ACCESS" --minimum-tls-version 1.2 --high-availability "$ha" \
+    --no-database --no-wait -o none
+}
+
+wait_cluster() {
   local name="$1" state=""
   for _ in $(seq 1 90); do
-    state="$(az redisenterprise show -g "$RG" --cluster-name "$name" --query provisioningState -o tsv 2>/dev/null || true)"
-    dbstate="$(az redisenterprise database show -g "$RG" --cluster-name "$name" --query provisioningState -o tsv 2>/dev/null || true)"
-    if [ "$state" = "Succeeded" ] && [ "$dbstate" = "Succeeded" ]; then echo "· $name ready"; return; fi
+    state="$(cluster_state "$name")"
+    case "$state" in
+      *Succeeded*Running*) echo "· $name cluster running"; return ;;
+      *Failed*) echo "!! $name failed while provisioning ($state). Delete it and run again:"
+                echo "   az redisenterprise delete -g $RG --cluster-name $name --yes"; exit 1 ;;
+    esac
     sleep 20
   done
-  echo "!! $name is not ready after 30 minutes (state: $state / $dbstate)"; exit 1
+  echo "!! $name is not running after 30 minutes (state: $state)"; exit 1
+}
+
+create_database() {
+  local name="$1"
+  if az redisenterprise database show -g "$RG" --cluster-name "$name" -o none 2>/dev/null; then
+    echo "· $name database already exists"
+    return
+  fi
+  echo "· creating the $name database (TLS, port $PORT, allkeys-lru, enterprise clustering)"
+  az redisenterprise database create -g "$RG" --cluster-name "$name" \
+    --client-protocol Encrypted --clustering-policy EnterpriseCluster --eviction-policy AllKeysLRU \
+    --access-keys-auth Enabled --port "$PORT" --no-wait -o none
+}
+
+wait_database() {
+  local name="$1" state=""
+  for _ in $(seq 1 45); do
+    state="$(az redisenterprise database show -g "$RG" --cluster-name "$name" --query provisioningState -o tsv 2>/dev/null || true)"
+    if [ "$state" = "Succeeded" ]; then echo "· $name ready"; return; fi
+    if [ "$state" = "Failed" ]; then echo "!! $name database failed"; exit 1; fi
+    sleep 20
+  done
+  echo "!! $name database is not ready after 15 minutes (state: $state)"; exit 1
 }
 
 # rediss://:<key>@<host>:10000/0 — built in a subshell, passed straight to az, never echoed.
@@ -97,8 +136,10 @@ wire_env() {
 if [ "$ENV_ONLY" != "--env-only" ]; then
   create "$DEV_CACHE"  Balanced_B0 Disabled
   create "$PROD_CACHE" Balanced_B1 Enabled
-  wait_ready "$DEV_CACHE"
-  wait_ready "$PROD_CACHE"
+  wait_cluster "$DEV_CACHE";  create_database "$DEV_CACHE"
+  wait_cluster "$PROD_CACHE"; create_database "$PROD_CACHE"
+  wait_database "$DEV_CACHE"
+  wait_database "$PROD_CACHE"
 fi
 wire_slot "$DEV_CACHE"  dev
 wire_slot "$PROD_CACHE" production
