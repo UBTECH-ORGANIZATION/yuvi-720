@@ -144,11 +144,26 @@ async def update_goal_status(
 async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depends(current_user)):
     """Return the F4 dashboard DTO projected from the brain (real numbers).
 
+    Served from the cache under the learner's version: every brain write
+    (a fold on an answer, a goal, a pin) moves the version, so the projection
+    is recomputed exactly when its inputs changed and not on every mount,
+    focus and tab switch. Five minutes bounds whatever the version misses.
+    """
+    safe_id = await _authorized_id(actor, learner_id)
+    from app.services import cache_store
+    dashboard = await cache_store.remember(
+        "learner", safe_id, "dash", lang, 300, lambda: _build_dashboard(safe_id, lang),
+    )
+    return JSONResponse(content=dashboard)
+
+
+async def _build_dashboard(safe_id: str, lang: str) -> dict:
+    """The projection itself.
+
     If mapping scores exist but the profile hasn't been derived yet (e.g. a
     learner migrated from legacy state), seed it via the Onboarding agent so
     competencies/strengths render (same behavior as POST /generate-dashboard).
     """
-    safe_id = await _authorized_id(actor, learner_id)
     await kata_catalog.ensure_loaded()
     brain = await get_brain(safe_id)
     scores = (brain.get("profile") or {}).get("mapping_scores")
@@ -224,7 +239,7 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
             hero["illustration"] = None
     else:
         hero["illustration"] = None
-    return JSONResponse(content=dashboard)
+    return dashboard
 
 
 @router.get("/{learner_id}/context/coach")

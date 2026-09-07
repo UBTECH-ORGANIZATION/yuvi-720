@@ -111,6 +111,14 @@ def _instrument_clients() -> list[str]:
     except Exception:
         logger.debug("aiohttp instrumentation unavailable", exc_info=True)
 
+    try:  # the read cache — every GET/SET beside the Mongo and httpx spans
+        from opentelemetry.instrumentation.redis import RedisInstrumentor
+
+        RedisInstrumentor().instrument()
+        enabled.append("redis")
+    except Exception:
+        logger.debug("redis instrumentation unavailable", exc_info=True)
+
     return enabled
 
 

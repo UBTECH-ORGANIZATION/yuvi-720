@@ -18,6 +18,7 @@ from app.core.env import ensure_env_loaded
 ensure_env_loaded()
 
 from app.core import database
+from app.core import cache as cache_config
 from app.routes.auth import router as auth_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
@@ -233,6 +234,9 @@ def create_app() -> FastAPI:
     # not allowed to open, and say out loud which one it is.
     database.verify_configuration()
     database.announce()
+    # And the same for the cache: which Redis (or none, on purpose), said once.
+    cache_config.verify_configuration()
+    cache_config.announce()
 
     app = FastAPI(title="Yuvilab Spark", version="1.0.0", lifespan=lifespan)
 

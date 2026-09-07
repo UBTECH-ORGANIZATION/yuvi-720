@@ -32,6 +32,27 @@ cannot reach production data.
 **slot settings**, so a dev → production swap moves the image and leaves the
 database behind.
 
+## The two caches
+
+The read cache follows the clusters one for one (see
+[redis-cache-plan.md](redis-cache-plan.md) for what it holds and why):
+
+| | production | dev |
+|---|---|---|
+| Cache | `redis-yuvi-720` | `redis-yuvi-720-dev` |
+| Host | `redis-yuvi-720.northeurope.redis.azure.net` | `redis-yuvi-720-dev.northeurope.redis.azure.net` |
+| Tier | Azure Managed Redis, Balanced B1, replicated | Balanced B0 |
+| Setting | `REDIS_CONNECTION_STRING` (slot setting) | `REDIS_CONNECTION_STRING` (slot setting) |
+
+`SPARK_CACHE` says what to do without a string: `memory` is an in-process
+cache for a laptop, `off` is no cache at all (CI). Production refuses to boot
+without a string unless `SPARK_CACHE=off` says so on purpose, and a laptop may
+not open the production cache without `SPARK_ALLOW_PRODUCTION_REDIS=1` — the
+same guard as the database, in `backend/app/core/cache.py`. Keys carry the
+environment name (`spark:dev:v1:…`), so even a mispointed string cannot serve
+one slot the other's entries. `infra/redis/provision.sh` creates both caches
+and sets both slots.
+
 ## The guard
 
 [`backend/app/core/database.py`](../../backend/app/core/database.py) is the only
