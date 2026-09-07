@@ -36,6 +36,15 @@ describe('the goal screen is a timeline', () => {
     assert.match(view, /<p className="lt-horizon">\{t\('learning\.track\.horizon'\)\}<\/p>/)
   })
 
+  it('sits the units two to a row with a rule between neighbours', () => {
+    assert.match(view, /<div className="lt-units">/)
+    const wide = css.split('@media (min-width: 900px)')[1].split('}\n}')[0]
+    assert.match(wide, /\.lt-units \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/)
+    assert.match(wide, /\.lt-unit:nth-child\(odd\) \{[^}]*border-inline-end: var\(--lt-divider\)/)
+    assert.match(css, /\.lt-unit \{[^}]*border-block-end: var\(--lt-divider\)/)
+    assert.match(wide, /\.lt-unit:only-child \{ grid-column: 1 \/ -1;/)
+  })
+
   it('keeps the beacon still for people who asked for less motion', () => {
     const reduced = css.split('@media (prefers-reduced-motion: reduce)')[1].split('}\n}')[0]
     assert.match(reduced, /\.lt-stop\.is-current \.lt-stop__node::after \{ animation: none; \}/)

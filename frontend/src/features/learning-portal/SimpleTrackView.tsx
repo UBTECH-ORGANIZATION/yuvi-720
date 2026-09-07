@@ -165,51 +165,54 @@ export function SimpleTrackView({ subject, units, onOpenLesson }: SimpleTrackVie
             carries the state (done, here now, next, locked) and the rail
             between stops is coloured as far as the learner has come; the
             horizon — where the route is still the server's to decide — is
-            the last stop, drawn dashed. */}
-        {goal.units.map((entry) => (
-          <section className="lt-unit" key={entry.unit.id}>
-            {goal.units.length > 1 && <h2 dir="auto">{entry.unit.title}</h2>}
-            <ol className="lt-timeline">
-              {entry.lessons.map((lesson) => {
-                const state = lesson.component.progress_state
-                const locked = state === 'locked'
-                return (
-                  <li className={`lt-stop is-${state}`} key={lesson.nodeId}>
-                    <span className="lt-stop__node" aria-hidden="true">
-                      {locked ? <Icon name="lock" size={14} /> : state === 'completed' ? <Icon name="check" size={16} /> : lesson.ordinal ?? '·'}
-                    </span>
-                    <button
-                      className={`lt-lesson is-${state}`}
-                      type="button"
-                      disabled={locked}
-                      onClick={() => onOpenLesson(lesson)}
-                    >
-                      <span className="lt-lesson__copy">
-                        <b dir="auto">{lesson.component.title}</b>
-                        <small>{t(purposeKey(lesson.component))}</small>
+            the last stop, drawn dashed. Units sit two to a row, each in its
+            own cell, with a rule between neighbours. */}
+        <div className="lt-units">
+          {goal.units.map((entry) => (
+            <section className="lt-unit" key={entry.unit.id}>
+              {goal.units.length > 1 && <h2 dir="auto">{entry.unit.title}</h2>}
+              <ol className="lt-timeline">
+                {entry.lessons.map((lesson) => {
+                  const state = lesson.component.progress_state
+                  const locked = state === 'locked'
+                  return (
+                    <li className={`lt-stop is-${state}`} key={lesson.nodeId}>
+                      <span className="lt-stop__node" aria-hidden="true">
+                        {locked ? <Icon name="lock" size={14} /> : state === 'completed' ? <Icon name="check" size={16} /> : lesson.ordinal ?? '·'}
                       </span>
-                      <span className="lt-lesson__meta">
-                        {lesson.component.estimated_minutes != null && (
-                          <span><Icon name="clock" size={14} />{t('learning.component.minutes', { minutes: lesson.component.estimated_minutes })}</span>
+                      <button
+                        className={`lt-lesson is-${state}`}
+                        type="button"
+                        disabled={locked}
+                        onClick={() => onOpenLesson(lesson)}
+                      >
+                        <span className="lt-lesson__copy">
+                          <b dir="auto">{lesson.component.title}</b>
+                          <small>{t(purposeKey(lesson.component))}</small>
+                        </span>
+                        <span className="lt-lesson__meta">
+                          {lesson.component.estimated_minutes != null && (
+                            <span><Icon name="clock" size={14} />{t('learning.component.minutes', { minutes: lesson.component.estimated_minutes })}</span>
+                          )}
+                          <span className="lt-chip">{t(`learning.roadmap.state.${state}`)}</span>
+                        </span>
+                        {state === 'current' && (
+                          <span className="lt-lesson__go" aria-hidden="true"><Icon name="play" size={16} /></span>
                         )}
-                        <span className="lt-chip">{t(`learning.roadmap.state.${state}`)}</span>
-                      </span>
-                      {state === 'current' && (
-                        <span className="lt-lesson__go" aria-hidden="true"><Icon name="play" size={16} /></span>
-                      )}
-                    </button>
+                      </button>
+                    </li>
+                  )
+                })}
+                {entry.hasHorizon && (
+                  <li className="lt-stop lt-stop--horizon">
+                    <span className="lt-stop__node" aria-hidden="true"><Icon name="compass" size={14} /></span>
+                    <p className="lt-horizon">{t('learning.track.horizon')}</p>
                   </li>
-                )
-              })}
-              {entry.hasHorizon && (
-                <li className="lt-stop lt-stop--horizon">
-                  <span className="lt-stop__node" aria-hidden="true"><Icon name="compass" size={14} /></span>
-                  <p className="lt-horizon">{t('learning.track.horizon')}</p>
-                </li>
-              )}
-            </ol>
-          </section>
-        ))}
+                )}
+              </ol>
+            </section>
+          ))}
+        </div>
       </div>
     )
   }

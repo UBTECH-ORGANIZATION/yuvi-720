@@ -204,6 +204,31 @@
 .lt-goal.is-in_progress .lt-chip { background: var(--sp-primary-100); color: var(--sp-primary-700); }
 
 /* ── Lessons of one goal ──────────────────────────────────────────────── */
+/* The goal's units, two to a row on a wide screen. Dividers are the cells'
+   own borders: each unit closes with a rule across its bottom except in the
+   last row, so the rule runs the full width even when the row below holds a
+   single unit; the first column draws the rule between the columns. A lone
+   unit takes the whole row rather than half of it. */
+.lt-units {
+  --lt-divider: 1px solid var(--sp-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.lt-unit { min-inline-size: 0; padding-block: var(--sp-5); border-block-end: var(--lt-divider); }
+.lt-unit:first-child { padding-block-start: 0; }
+.lt-unit:last-child { padding-block-end: 0; border-block-end: 0; }
+
+@media (min-width: 900px) {
+  .lt-units { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lt-unit:nth-child(2) { padding-block-start: 0; }
+  .lt-unit:nth-child(odd) { padding-inline-end: var(--sp-6); border-inline-end: var(--lt-divider); }
+  .lt-unit:nth-child(even) { padding-inline-start: var(--sp-6); }
+  /* The odd unit that shares the last row with the last unit. */
+  .lt-unit:nth-last-child(2):nth-child(odd) { padding-block-end: 0; border-block-end: 0; }
+  .lt-unit:nth-child(odd):last-child { border-inline-end: 0; }
+  .lt-unit:only-child { grid-column: 1 / -1; padding-inline-end: 0; }
+}
+
 .lt-unit h2 {
   margin: 0;
   color: var(--sp-ink-700);
