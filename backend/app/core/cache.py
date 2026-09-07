@@ -39,11 +39,13 @@ REDIS = "redis"
 MEMORY = "memory"
 OFF = "off"
 
-#: Hosts that belong to the production cache. Overridable so the guard can be
-#: re-pointed without a code change if the cache is ever renamed.
-_DEFAULT_PRODUCTION_HOSTS = (
-    "redis-yuvi-720.northeurope.redis.azure.net",
-)
+#: The production cache, by NAME: Azure Managed Redis hostnames carry the
+#: region (`redis-yuvi-720.<region>.redis.azure.net`), and the region is
+#: whichever one had capacity on the day the cache was created. Matching the
+#: first label keeps the guard right after a move. `redis-yuvi-720-dev` is a
+#: different first label, so it never matches. REDIS_PRODUCTION_HOSTS lists
+#: full hostnames and overrides this.
+_PRODUCTION_CACHE_NAME = "redis-yuvi-720"
 
 _ESCAPE_HATCH = "SPARK_ALLOW_PRODUCTION_REDIS"
 _TRUTHY = {"1", "true", "yes", "on"}
@@ -74,9 +76,11 @@ def cache_mode() -> str:
 
 
 def production_hosts() -> tuple[str, ...]:
+    """Explicit production hostnames, when configured; empty means the guard
+    falls back to matching the production cache's name in any region."""
     configured = (os.environ.get("REDIS_PRODUCTION_HOSTS") or "").strip()
     if not configured:
-        return _DEFAULT_PRODUCTION_HOSTS
+        return ()
     return tuple(h.strip().lower() for h in configured.split(",") if h.strip())
 
 
@@ -98,7 +102,12 @@ def connection_host(uri: Optional[str] = None) -> Optional[str]:
 
 def is_production_host(host: Optional[str] = None) -> bool:
     resolved = host if host is not None else connection_host()
-    return bool(resolved) and resolved in production_hosts()
+    if not resolved:
+        return False
+    configured = production_hosts()
+    if configured:
+        return resolved in configured
+    return resolved.split(".", 1)[0] == _PRODUCTION_CACHE_NAME
 
 
 def key_prefix() -> str:

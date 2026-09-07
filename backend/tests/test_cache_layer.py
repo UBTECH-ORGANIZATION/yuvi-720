@@ -56,6 +56,15 @@ class WhichCache(unittest.TestCase):
                 cache_config.verify_configuration()
             self.assertNotIn("secret", str(caught.exception))
 
+    def test_the_production_cache_is_known_by_name_in_any_region(self):
+        for region in ("northeurope", "westeurope", "swedencentral"):
+            self.assertTrue(cache_config.is_production_host(f"redis-yuvi-720.{region}.redis.azure.net"))
+            self.assertFalse(cache_config.is_production_host(f"redis-yuvi-720-dev.{region}.redis.azure.net"))
+        self.assertFalse(cache_config.is_production_host("localhost"))
+        with _env(REDIS_PRODUCTION_HOSTS="cache.example.net"):
+            self.assertTrue(cache_config.is_production_host("cache.example.net"))
+            self.assertFalse(cache_config.is_production_host("redis-yuvi-720.westeurope.redis.azure.net"))
+
     def test_the_escape_hatch_is_loud_but_allowed(self):
         with _env(SPARK_ENVIRONMENT="local", SPARK_ALLOW_PRODUCTION_REDIS="1",
                   REDIS_CONNECTION_STRING="rediss://:secret@redis-yuvi-720.northeurope.redis.azure.net:10000/0"):

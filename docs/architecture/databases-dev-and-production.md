@@ -40,7 +40,7 @@ The read cache follows the clusters one for one (see
 | | production | dev |
 |---|---|---|
 | Cache | `redis-yuvi-720` | `redis-yuvi-720-dev` |
-| Host | `redis-yuvi-720.northeurope.redis.azure.net` | `redis-yuvi-720-dev.northeurope.redis.azure.net` |
+| Host | `redis-yuvi-720.<region>.redis.azure.net` | `redis-yuvi-720-dev.<region>.redis.azure.net` |
 | Tier | Azure Managed Redis, Balanced B1, replicated | Balanced B0 |
 | Setting | `REDIS_CONNECTION_STRING` (slot setting) | `REDIS_CONNECTION_STRING` (slot setting) |
 
