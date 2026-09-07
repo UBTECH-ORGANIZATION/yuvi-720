@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-01T12:23:35Z",
+  "generated_at": "2026-09-07T01:49:48Z",
   "shards": [
     {
       "subject": "math",
@@ -31,13 +31,7 @@
       "subject": "science",
       "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET",
       "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET.json",
-      "lomdot": 2
-    },
-    {
-      "subject": "science",
-      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE",
-      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE.json",
-      "lomdot": 4
+      "lomdot": 6
     },
     {
       "subject": "science",
@@ -48,21 +42,26 @@
   ],
   "backlog": {
     "browse": [
-      "CET.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00002",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00006",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006"
+      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006",
+      "methodica-science-mass-measure-02-01",
+      "methodica-science-mass-measure-02-02",
+      "methodica-science-mass-measure-02-06"
     ]
   },
   "stats": {
     "lomdot": 45,
-    "slides": 204,
-    "questions": 273,
-    "texts_generated": 0,
+    "slides": 188,
+    "questions": 255,
+    "texts_generated": 29,
     "texts_pending": 0,
-    "removed": []
+    "removed": [
+      "methodica-science-mass-measure-01-01",
+      "methodica-science-mass-measure-01-02",
+      "methodica-science-mass-measure-01-04",
+      "methodica-science-mass-measure-01-05"
+    ]
   }
 }
