@@ -211,13 +211,88 @@
   font-weight: var(--sp-fw-semibold);
 }
 
-.lt-lessons {
+/* ── The lessons of one goal: a timeline, not a list ─────────────────────
+   One spine, one stop per lesson. The node carries the state; the rail below
+   a finished stop is solid and coloured, the rail beyond is dashed — the route
+   is drawn as far as the learner has come, and sketched after that. The node
+   sits over the rail (z-index) so one rule draws the whole spine. */
+.lt-timeline {
+  --lt-node: 40px;
+  --lt-rail: 2px;
+  --lt-gutter: calc(var(--lt-node) + var(--sp-4));
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  margin: var(--sp-3) 0 0;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 0;
   padding: 0;
+  padding-inline-start: var(--lt-gutter);
   list-style: none;
+}
+
+.lt-stop { position: relative; }
+
+/* The rail: full height of the stop plus the gap to the next one, clipped to
+   start at the first node and end at the last. */
+.lt-stop::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--lt-gutter) + var(--lt-node) / 2 - var(--lt-rail) / 2);
+  inset-block: 0 calc(-1 * var(--sp-3));
+  inline-size: var(--lt-rail);
+  background: repeating-linear-gradient(to bottom, var(--sp-border-strong) 0 6px, transparent 6px 12px);
+}
+.lt-stop:first-child::before { inset-block-start: 50%; }
+.lt-stop:last-child::before { inset-block-end: 50%; }
+.lt-stop.is-completed::before { background: var(--sp-success-600); }
+
+.lt-stop__node {
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: calc(-1 * var(--lt-gutter));
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--lt-node);
+  block-size: var(--lt-node);
+  border-radius: 50%;
+  border: 2px solid var(--sp-border-strong);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-md);
+  font-weight: var(--sp-fw-bold);
+}
+.lt-stop.is-completed .lt-stop__node {
+  border-color: var(--sp-success-600);
+  background: var(--sp-success-100);
+  color: var(--sp-success-600);
+}
+.lt-stop.is-current .lt-stop__node {
+  border-color: transparent;
+  background: var(--sp-gradient);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--sp-primary-100);
+}
+/* The beacon: "you are here" without a word. */
+.lt-stop.is-current .lt-stop__node::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--sp-primary-500);
+  opacity: 0;
+  animation: lt-beacon 2.2s ease-out infinite;
+}
+.lt-stop.is-locked .lt-stop__node,
+.lt-stop--horizon .lt-stop__node {
+  border-style: dashed;
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-400);
+}
+@keyframes lt-beacon {
+  0% { transform: scale(.85); opacity: .9; }
+  100% { transform: scale(1.7); opacity: 0; }
 }
 
 .lt-lesson {
@@ -233,33 +308,23 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
-  transition: border-color var(--sp-dur) var(--sp-ease), background var(--sp-dur) var(--sp-ease);
+  transition: border-color var(--sp-dur) var(--sp-ease), background var(--sp-dur) var(--sp-ease), transform var(--sp-dur) var(--sp-ease);
 }
-.lt-lesson:hover:not(:disabled) { border-color: var(--sp-primary-500); background: var(--sp-surface); }
+.lt-lesson:hover:not(:disabled) { border-color: var(--sp-primary-500); background: var(--sp-surface); transform: translateX(calc(var(--lt-dir, 1) * -2px)); }
+[dir='rtl'] .lt-lesson { --lt-dir: -1; }
 .lt-lesson:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 .lt-lesson:disabled { cursor: not-allowed; opacity: .62; }
-.lt-lesson.is-current { border-color: var(--sp-primary-600); background: var(--sp-primary-050); }
-
-.lt-lesson__index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  inline-size: 28px;
-  block-size: 28px;
-  border-radius: 50%;
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border-strong);
-  color: var(--sp-ink-500);
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-bold);
+.lt-lesson.is-completed { background: var(--sp-surface); }
+.lt-lesson.is-current {
+  border-color: var(--sp-primary-600);
+  background: linear-gradient(120deg, var(--sp-primary-050), var(--sp-surface));
+  box-shadow: var(--sp-shadow-sm);
 }
-.lt-lesson.is-completed .lt-lesson__index { background: var(--sp-success-100); border-color: transparent; color: var(--sp-success-600); }
-.lt-lesson.is-current .lt-lesson__index { background: var(--sp-gradient); border-color: transparent; color: #fff; }
 
 .lt-lesson__copy { flex: 1 1 auto; min-inline-size: 0; display: flex; flex-direction: column; }
 .lt-lesson__copy b { color: var(--sp-ink-900); font-size: var(--sp-fs-md); font-weight: var(--sp-fw-semibold); }
 .lt-lesson__copy small { color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.lt-stop.is-completed .lt-lesson__copy b { color: var(--sp-ink-700); }
 
 .lt-lesson__meta {
   display: flex;
@@ -269,12 +334,30 @@
   color: var(--sp-ink-400);
   font-size: var(--sp-fs-sm);
 }
+.lt-lesson__meta > span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.lt-stop.is-completed .lt-chip { background: var(--sp-success-100); color: var(--sp-success-600); }
+.lt-stop.is-current .lt-chip { background: var(--sp-primary-100); color: var(--sp-primary-700); }
 
+/* The current stop's card ends in the same button the resume card has. */
+.lt-lesson__go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  background: var(--sp-gradient);
+  color: #fff;
+}
+[dir='rtl'] .lt-lesson__go > svg { transform: rotate(180deg); }
+
+/* The horizon is the last stop: no card, just the note beside a dashed node. */
 .lt-horizon {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  margin: var(--sp-3) 0 0;
+  min-block-size: var(--lt-node);
+  margin: 0;
   color: var(--sp-ink-400);
   font-size: var(--sp-fs-sm);
 }
@@ -284,8 +367,10 @@
   .lt-goals__grid { grid-template-columns: minmax(0, 1fr); }
   .lt-resume { flex-direction: column; align-items: stretch; }
   .lt-primary { justify-content: center; }
+  .lt-timeline { --lt-node: 32px; }
+  .lt-stop__node { font-size: var(--sp-fs-sm); }
   .lt-lesson { flex-wrap: wrap; }
-  .lt-lesson__meta { inline-size: 100%; padding-inline-start: 40px; }
+  .lt-lesson__meta { inline-size: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -293,6 +378,25 @@
   .lt-primary,
   .lt-goal,
   .lt-lesson { transition: none; }
+  .lt-stop.is-current .lt-stop__node::after { animation: none; }
   .lt-primary:hover,
-  .lt-goal:hover { transform: none; }
+  .lt-goal:hover,
+  .lt-lesson:hover { transform: none; }
 }
+
+/* ── Loading: the frame first, the content where it will land ─────────── */
+/* Component: features/learning-portal/TrackSkeleton.tsx. The real text stays
+   real; the sketched lines sit exactly where the catalog's answers go, so the
+   swap to data moves nothing. The resume card drops its primary tint until it
+   has a lesson to promise. */
+.lt-resume--loading {
+  border-color: var(--sp-border);
+  background: var(--sp-surface);
+  box-shadow: none;
+}
+/* `1lh` sketches sit on the real line boxes, so the card is exactly as tall
+   as the one that replaces it. */
+.lt-resume--loading h2 { display: block; }
+.lt-resume--loading .lt-resume__meta { min-block-size: 1lh; }
+.lt-goal--loading { cursor: default; pointer-events: none; }
+.learning-subject-filters--loading { min-block-size: 40px; }
