@@ -9,6 +9,7 @@ listener would.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import sys
@@ -100,11 +101,20 @@ class TheBusBridge(unittest.IsolatedAsyncioTestCase):
     async def _first_frame(self, gen):
         return await asyncio.wait_for(gen.__anext__(), timeout=1)
 
+    async def _attached(self, topic: str) -> None:
+        # the generator attaches its queue on its first step, which happens
+        # inside the task that awaits it — wait for that, not a fixed number
+        # of loop turns (CI runs enough other work to need more than two)
+        for _ in range(200):
+            if realtime.subscriber_count(topic):
+                return
+            await asyncio.sleep(0.005)
+        self.fail(f"no subscriber attached to {topic}")
+
     async def test_a_frame_from_another_instance_reaches_local_subscribers(self):
         stream = realtime.subscribe("teacher:t1", heartbeat=5)
-        await asyncio.sleep(0)  # let the generator attach
         task = asyncio.create_task(self._first_frame(stream))
-        await asyncio.sleep(0)
+        await self._attached("teacher:t1")
         delivered = realtime._bridge.on_message(json.dumps({"o": "other-instance", "t": "teacher:t1", "e": {"type": "alert", "seq": 7}}))
         self.assertEqual(delivered, 1)
         self.assertEqual(await task, {"type": "alert", "seq": 7})
@@ -112,10 +122,14 @@ class TheBusBridge(unittest.IsolatedAsyncioTestCase):
 
     async def test_an_instance_never_redelivers_its_own_frames(self):
         stream = realtime.subscribe("learner:moti", heartbeat=5)
-        await asyncio.sleep(0)
+        task = asyncio.create_task(self._first_frame(stream))
+        await self._attached("learner:moti")
         delivered = realtime._bridge.on_message(json.dumps({"o": realtime._ORIGIN, "t": "learner:moti", "e": {"type": "idle"}}))
         self.assertEqual(delivered, 0)
         self.assertEqual(realtime._bridge.on_message("not json"), 0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
         await stream.aclose()
 
     async def test_publish_relays_only_when_the_bridge_is_up(self):
