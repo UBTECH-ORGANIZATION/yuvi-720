@@ -203,6 +203,15 @@ app settings the same way the Mongo strings are:
 | production | `redis-yuvi-720` | Balanced B1 (1 GB), high availability on | replicated, SLA; sized in 3b, scales in place to B3 |
 | dev | `redis-yuvi-720-dev` | Balanced B0 (0.5 GB), no replication | cheapest tier; synthetic data |
 
+**Kind.** The provisioning script defaults to Azure Cache for Redis
+(Standard C1 production, Basic C0 dev, TLS on 6380): this subscription is a
+sponsorship offer and Azure Managed Redis answered `InsufficientCapacity`
+for every size in two regions within seconds, which is the offer having no
+allocation for that family, not the regions being full. The app speaks
+plain Redis either way; `CACHE_KIND=managed` switches the script back to
+the Balanced sizes above when the offer allows them. The classic tier's
+retirement is announced for 2028-09-30.
+
 No `english` cache: that slot has no workflow and no traffic; it falls back
 to `SPARK_CACHE=memory`. Both caches: TLS only, port 10000, `allkeys-lru`,
 Enterprise clustering policy so a plain (non-cluster) client sees one
