@@ -85,6 +85,17 @@ def _client_key(request: Request) -> str:
     return forwarded or (request.client.host if request.client else "unknown")
 
 
+async def _rate_limited(key: str) -> bool:
+    """Shared across instances when the store is Redis — a per-process window
+    would be N windows with N instances. The in-process one is the fallback
+    for a laptop without Redis and for CI."""
+    from app.services import cache_store
+    shared = await cache_store.rate_hit(f"support:{key}", _PUBLIC_WINDOW_SECONDS)
+    if shared is not None:
+        return shared > _PUBLIC_MAX_PER_WINDOW
+    return _public_rate_limited(key)
+
+
 def _public_rate_limited(key: str) -> bool:
     now = time.monotonic()
     hits = _public_hits.setdefault(key, deque())
@@ -194,7 +205,7 @@ async def submit_public_ticket(data: PublicTicketRequest, request: Request):
         # Bot filled the honeypot: accept silently without storing anything.
         return JSONResponse(content={"ok": True}, status_code=201, headers=_NO_STORE)
 
-    if _public_rate_limited(_client_key(request)):
+    if await _rate_limited(_client_key(request)):
         return JSONResponse(
             content={"error": "too_many_reports"}, status_code=429, headers=_NO_STORE
         )

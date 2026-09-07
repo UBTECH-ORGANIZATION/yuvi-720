@@ -924,7 +924,13 @@ async def ingest_statement(
         try:
             await _update_item_stats(event)
             fold_lock = _brain_fold_locks.setdefault(event["learner_id"], asyncio.Lock())
-            async with fold_lock:
+            # Two locks: the local one serialises folds inside this process,
+            # the shared one (a Redis lease, absent without Redis) serialises
+            # them across instances — Kata's relay lands statements on any
+            # instance, and two concurrent folds of one learner would
+            # interleave their reads and writes of current_state.
+            from app.services import cache_store
+            async with fold_lock, cache_store.lock(f"fold:{event['learner_id']}", ttl_ms=10_000, wait_s=5.0):
                 effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")

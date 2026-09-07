@@ -117,9 +117,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     relay_probe = asyncio.create_task(probe_relay_base_url())
     # Presence listens to the bus's connect/disconnect hooks. Not an index step,
     # but it has to happen before the first SSE connection either way.
-    from app.services import presence
+    from app.services import presence, realtime
 
     presence.install_hooks()
+    # The bus bridge: with Redis, frames published on one instance reach the
+    # subscribers on every other, which is what lets a slot run more than one.
+    try:
+        bridged = await realtime.start_bridge()
+        if bridged:
+            print("🔗 realtime bus bridged over Redis — multi-instance delivery on")
+    except Exception as exc:  # a missing bridge is single-instance delivery, never a failed boot
+        bridged = False
+        print(f"⚠️ realtime bridge not started: {type(exc).__name__}")
 
     # Index setup for every collection the teacher lane introduced.
     #
@@ -207,7 +216,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # their teacher's stream can land on different processes and simply never
     # meet. Warn loudly rather than let it look like a flaky feature.
     workers = os.environ.get("WEB_CONCURRENCY")
-    if workers and workers.isdigit() and int(workers) > 1:
+    if not bridged and workers and workers.isdigit() and int(workers) > 1:
         print(
             f"⚠️ WEB_CONCURRENCY={workers}: the realtime bus is in-process, so "
             "presence and teacher alerts will fragment across workers. Run a "
@@ -218,6 +227,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         async with content_catalog_mcp_lifespan():
             yield
     finally:
+        await realtime.stop_bridge()
         if sweeper:
             sweeper.cancel()
         relay_probe.cancel()

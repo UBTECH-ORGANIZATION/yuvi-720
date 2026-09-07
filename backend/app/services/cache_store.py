@@ -105,6 +105,12 @@ class MemoryBackend:
         self._data[key] = (time.monotonic() + ttl, str(value).encode())
         return value
 
+    async def setnx(self, key: str, value: bytes, ttl: int) -> bool:
+        if self._alive(key) is not None:
+            return False
+        self._data[key] = (time.monotonic() + ttl, value)
+        return True
+
     async def close(self) -> None:
         self._data.clear()
 
@@ -145,6 +151,9 @@ class RedisBackend:
         pipe.expire(key, ttl)
         value, _ = await pipe.execute()
         return int(value)
+
+    async def setnx(self, key: str, value: bytes, ttl: int) -> bool:
+        return bool(await self._client.set(key, value, nx=True, ex=ttl))
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -326,6 +335,102 @@ async def remember(
     value = await compute()
     await put(parts, value, ttl)
     return value
+
+
+# ── coordination: what lets a slot run more than one instance ─────────────
+
+
+class _Lock:
+    """A lease on `name`, shared across instances when the store is Redis.
+
+    Fails open: if the store cannot be reached the body runs unlocked, which
+    is exactly the situation before Redis existed. In memory mode an
+    asyncio.Lock per name gives the same shape to tests."""
+
+    _local: dict[str, asyncio.Lock] = {}
+
+    def __init__(self, name: str, ttl_ms: int, wait_s: float) -> None:
+        self._name = name
+        self._ttl_ms = ttl_ms
+        self._wait_s = wait_s
+        self._held = False
+        self._local_lock: Optional[asyncio.Lock] = None
+
+    async def __aenter__(self) -> "_Lock":
+        backend = _get_backend()
+        if backend is None:
+            return self
+        if isinstance(backend, MemoryBackend):
+            self._local_lock = self._local.setdefault(self._name, asyncio.Lock())
+            await self._local_lock.acquire()
+            self._held = True
+            return self
+        key = _k("lock", self._name)
+        deadline = time.monotonic() + self._wait_s
+        while True:
+            got = await _guarded(backend.setnx(key, b"1", max(1, self._ttl_ms // 1000)), None)
+            if got is None:  # the store is unreachable: run unlocked
+                return self
+            if got:
+                self._held = True
+                return self
+            if time.monotonic() >= deadline:
+                _note_error(TimeoutError(f"lock {self._name} not acquired in {self._wait_s}s"))
+                return self
+            await asyncio.sleep(0.02)
+
+    async def __aexit__(self, *_exc: Any) -> None:
+        if not self._held:
+            return
+        if self._local_lock is not None:
+            self._local_lock.release()
+            return
+        backend = _get_backend()
+        if backend is not None:
+            await _guarded(backend.delete(_k("lock", self._name)), None)
+
+
+def lock(name: str, *, ttl_ms: int = 10_000, wait_s: float = 5.0) -> _Lock:
+    """`async with cache_store.lock("fold:" + learner_id): ...`"""
+    return _Lock(name, ttl_ms, wait_s)
+
+
+async def counter_next(name: str, seed: int = 0) -> Optional[int]:
+    """The next value of a shared monotonic counter, seeded once from `seed`
+    when the store has never seen it. None when there is no store."""
+    backend = _get_backend()
+    if backend is None:
+        return None
+    key = _k("counter", name)
+    if seed:
+        await _guarded(backend.setnx(key, str(int(seed)).encode(), _MAX_TTL), None)
+    value = await _guarded(backend.incr(key, _MAX_TTL), None)
+    return int(value) if value else None
+
+
+async def counter_get(name: str) -> Optional[int]:
+    backend = _get_backend()
+    if backend is None:
+        return None
+    raw = await _guarded(backend.get(_k("counter", name)), None)
+    return int(raw) if raw else None
+
+
+async def rate_hit(name: str, window_s: int) -> Optional[int]:
+    """Count one hit in a fixed window shared across instances; returns the
+    count so far (None when there is no store, so callers fall back)."""
+    backend = _get_backend()
+    if backend is None:
+        return None
+    value = await _guarded(backend.incr(_k("rate", name), window_s), None)
+    return int(value) if value else None
+
+
+def raw_client() -> Any:
+    """The underlying Redis client when the store is Redis, else None. For the
+    bus bridge, which needs pub/sub rather than keys."""
+    backend = _get_backend()
+    return backend.raw if isinstance(backend, RedisBackend) else None
 
 
 def cached(
