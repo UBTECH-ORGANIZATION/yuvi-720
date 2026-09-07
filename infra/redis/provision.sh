@@ -118,8 +118,13 @@ create() {
     if [ "$role" = production ]; then sku=Standard; size=c1; else sku=Basic; size=c0; fi
     echo "· creating $name (Azure Cache for Redis $sku $size, $LOCATION)"
     cfg="$(mktemp)"; printf '{"maxmemory-policy":"allkeys-lru"}' > "$cfg"
+    # `az redis create` has no --no-wait and blocks until the cache is up —
+    # twenty to forty minutes for a Basic cache. Azure has accepted the
+    # request within seconds, so the CLI is sent to the background and
+    # wait_ready polls the resource like it does for the managed kind.
     az redis create -g "$RG" -n "$name" -l "$LOCATION" --sku "$sku" --vm-size "$size" \
-      --minimum-tls-version 1.2 --redis-configuration @"$cfg" -o none
+      --minimum-tls-version 1.2 --redis-configuration @"$cfg" -o none >/dev/null 2>&1 &
+    sleep 15   # long enough for the PUT to be accepted before the temp file goes
     rm -f "$cfg"
   else
     local sku ha
