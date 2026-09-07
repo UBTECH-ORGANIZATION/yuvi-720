@@ -1,8 +1,9 @@
 # Redis for the two portals: what to cache, per slot, in what order
 
-Status: plan, 2026-09-07, sized for 10,000 users. The two caches exist in
-Azure (`redis-yuvi-720`, `redis-yuvi-720-dev`) and the slot settings are
-set; no application code reads them yet.
+Status: plan, 2026-09-07, sized for 10,000 users. The two caches, the slot
+settings and the local `.env` entry are created by `infra/redis/provision.sh`
+(run it once, as an owner of the subscription); no application code reads
+them yet.
 
 The complaint: going back and forth between screens in the teacher portal and
 the student portal re-loads screens that were already loaded, and the chats
@@ -188,8 +189,10 @@ No Redis. One or two days. Biggest visible effect on "back and forth".
 
 ### Phase 1. One Redis per slot, wired like the two databases
 
-One day of code. The Azure resources exist and the slot settings are set
-(2026-09-07); nothing is cached until the code lands.
+One day of code. `infra/redis/provision.sh` creates the two caches, waits
+for them, sets both slots' sticky settings and appends the dev cache to
+`backend/.env`, without printing a key. Nothing is cached until the code
+lands.
 
 **Resources.** Two caches in `rg-yuvi-720`, North Europe, the region the app
 runs in. Azure Managed Redis, Balanced tier, TLS only, access keys stored as
