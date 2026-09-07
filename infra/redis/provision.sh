@@ -119,7 +119,7 @@ create() {
     echo "· creating $name (Azure Cache for Redis $sku $size, $LOCATION)"
     cfg="$(mktemp)"; printf '{"maxmemory-policy":"allkeys-lru"}' > "$cfg"
     az redis create -g "$RG" -n "$name" -l "$LOCATION" --sku "$sku" --vm-size "$size" \
-      --minimum-tls-version 1.2 --redis-configuration @"$cfg" --no-wait -o none
+      --minimum-tls-version 1.2 --redis-configuration @"$cfg" -o none
     rm -f "$cfg"
   else
     local sku ha
