@@ -143,7 +143,7 @@ wait_ready() {
   for i in $(seq 1 120); do
     state="$(state_of "$name")"
     case "$state" in
-      Succeeded|*Succeeded*Running*) echo "· $name ready"; return ;;
+      Succeeded|*Succeeded*Running*) printf '\n· %s ready\n' "$name"; return ;;
       *) printf '\r  waiting for %s … %s (%d min; a Standard cache takes 20–40, safe to Ctrl-C and rerun)' "$name" "${state:-accepted}" $((i / 3)) ;;
       *Failed*)
         echo "!! $name failed while provisioning: $(failure_reason "$name")"
