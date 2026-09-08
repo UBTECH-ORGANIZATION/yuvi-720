@@ -228,8 +228,13 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
         error_class = (result.error or "failed").split(":")[0][:60]
         errors_last = [{"message": str(a.contract_reason or ""), "errors": a.errors[:5]} for a in result.attempts[-2:]]
         await store.update_job(job_id, status="failed", finished_at=time.time(), usage_summary=usage_summary, error_class=error_class)
-        await store.update_status(game_id, "failed", errors_last=errors_last)
         game = await store.get_game(game_id) or {"_id": game_id, "learner_id": learner_id}
+        # A failed edit or fix leaves the game exactly as it was: the current
+        # version still plays, so the card stays "ready". Only a create with
+        # nothing to fall back to is a failed game.
+        has_version = int(game.get("current_version") or 0) > 0
+        await store.update_status(game_id, "ready" if has_version else "failed", errors_last=errors_last)
+        game = await store.get_game(game_id) or game
         await notify.notify_game("game_failed", game, int(game.get("current_version") or 0))
         log.warning("job %s failed: %s", job_id, result.error)
     return result

@@ -113,6 +113,20 @@ def test_failure_path_marks_failed_and_notifies(fakes, monkeypatch):
     assert fakes.notify.bells == [("game_failed", "g1", 0)]
 
 
+def test_failed_edit_keeps_the_game_ready(fakes, monkeypatch):
+    async def fake_run_job(spec, progress):
+        return _result(False)
+
+    fakes.store.games["g1"]["current_version"] = 1
+    fakes.store.games["g1"]["status"] = "ready"
+    fakes.store.jobs["j1"]["kind"] = "edit"
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    assert fakes.store.games["g1"]["status"] == "ready"
+    assert fakes.store.jobs["j1"]["status"] == "failed"
+    assert fakes.notify.bells == [("game_failed", "g1", 1)]
+
+
 def test_edit_job_loads_current_html(fakes, monkeypatch):
     fakes.store.games["g1"]["versions"] = [{"v": 1, "blob_path": "games/l1/g1/v1/index.html"}]
     fakes.store.games["g1"]["current_version"] = 1
