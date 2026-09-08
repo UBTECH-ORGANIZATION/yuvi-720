@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "subject": "math",
+  "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR",
+  "objective_title_he": "יחס",
+  "lomdot": [
+    {
+      "component_id": "methodica-math-ratio-02-01",
+      "title": "בואו נלמד משהו חדש",
+      "cognitive_level": "['process-thinking']",
+      "provider": "מתודיקה",
+      "kata_updated_at": "2026-09-06T05:13:31.191058Z",
+      "component_fingerprint": "922bd4173bdc7aba",
+      "extraction": {
+        "verdict": "frame_blocked",
+        "probed_at": "2026-09-08T01:43:34Z",
+        "player_host": "lomdot.education.gov.il",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נכיר את הרעיון של **יחס** וכיצד אפשר לבטא אותו בדרכים שונות. נלמד לזהות כשאותו דבר מוצג בכמה צורות, ונראה למה זה שימושי במצבים יומיומיים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "922bd4173bdc7aba",
+          "generated_at": "2026-09-08T01:44:55Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-02-01-001",
+          "title": "הוק: מי צריך את המטען קודם",
+          "content_type": "motivational",
+          "media_format": "text",
+          "role": "teaching",
+          "position": 1,
+          "fingerprint": "c8e853599ee14332",
+          "information_to_bot": "מטרת הפריט: פתיחה מוטיבציונית המציגה אותו נתון (רבע מהסוללה נותרה) בשלוש דרכי ביטוי שונות (25%, רבע, 0.25), כדי להראות שמדובר באותה כמות המבוטאת באופנים שונים. כיווני חשיבה: זיהוי ש-25%, רבע ו-0.25 הם אותו ערך בדיוק. טעויות נפוצות: הנחה שאחוז/שבר/עשרוני שונים מייצגים כמויות שונות. מידע נוסף: אין.",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן מתחילים מהנתון ומחפשים מה הוא אומר לנו, גם כשהוא כתוב בכמה דרכים שונות.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "c8e853599ee14332",
+              "generated_at": "2026-09-08T01:44:55Z",
+              "model": "mini"
+            }
+          },
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "אושר: 'לי יש רק 25% סוללה'. עדן: 'לי יש רק רבע סוללה'. גל: 'לי נשארו רק 0.25 מהסוללה'. מי מהם צריך להשתמש ראשון במטען?",
+              "answers": [
+                "אושר",
+                "עדן",
+                "גל",
+                "הם צריכים לעשות הגרלה"
+              ],
+              "fingerprint": "2111599fed1e0de1",
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על זיהוי כמויות שכתובות באופנים שונים. כדאי לעצור רגע, להשוות בין הייצוגים ולבדוק מה הם מתארים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2111599fed1e0de1",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה לבדוק אם כל אחד מהתיאורים מבטא את אותה כמות בדיוק, גם כשהכתיב נראה אחר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2111599fed1e0de1",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לזהות שייצוגים שונים יכולים לתאר אותה כמות. המפתח הוא להשוות בין האחוז, השבר והכתיב העשרוני, ולא להניח שצורה כתובה אחרת אומרת כמות אחרת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2111599fed1e0de1",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-02-01-002",
+          "title": "הקנייה: ייצוגי יחס ושמירה על יחס",
+          "content_type": "instruction",
+          "media_format": "text",
+          "role": "teaching",
+          "position": 2,
+          "fingerprint": "3745fbd96ef0c717",
+          "information_to_bot": "מטרת הפריט: הקניית הרעיון שניתן לבטא יחס בכמה דרכים (כתיב מילולי, כתיב מתמטי, שבר פשוט/עשרוני, אחוזים), הקניית יחס בין קבוצה חלקית לקבוצה השלמה, והקניית הכלל ששמירה על יחס דורשת כפל/חילוק של שני גורמי היחס באותו מספר (לא חיבור/חיסור). כיווני חשיבה: זיהוי שאותו יחס יכול להיכתב במספר צורות שקולות; הבחנה בין יחס חלק-לחלק ליחס חלק-לשלם; זיהוי שרק כפל/חילוק שומרים על יחס. טעויות נפוצות: היפוך סדר המספרים ביחס; מחשבה שחיבור/חיסור אותו מספר לשני הגורמים שומר על היחס. מידע נוסף: אין.",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "עכשיו עוברים להבין איך יחס יכול להופיע בכמה צורות, ואיך בודקים אם הוא נשמר.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "3745fbd96ef0c717",
+              "generated_at": "2026-09-08T01:44:55Z",
+              "model": "mini"
+            }
+          },
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "true-false",
+              "question_text": "במחסן באולם הספורט יש 8 כדורי רגל ו-12 כדורי סל. האם ההיגד נכון: 'היחס בין מספר כדורי הרגל לבין מספר כדורי הסל הוא 12:8'?",
+              "answers": [
+                "נכון",
+                "לא נכון"
+              ],
+              "fingerprint": "6cc3f189560f13fa",
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על **יחס** ועל בדיקה של התאמה בין מספרים. נסו לחשוב איך מייצגים את הקשר בין הגדלים, ולא רק את המספרים עצמם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6cc3f189560f13fa",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתמקד בקשר בין המספרים הנתונים, ולבדוק אם הסדר שלהם מתאים למה שנכתב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6cc3f189560f13fa",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של יחס בין שני גדלים ובדיקה אם הכתיב שלו מתאים למצב המתואר. כאן חשוב לשים לב לסדר המספרים ולחלקים שמרכיבים את היחס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6cc3f189560f13fa",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "fill-in",
+              "question_text": "בפלייליסט שאיתי יצר יש 9 שירי פופ ו-27 שירי רוק. מה היחס המצומצם בין מספר שירי הפופ לבין מספר השירים בפלייליסט כולו?",
+              "answers": [],
+              "fingerprint": "aaef6853005c0105",
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה שמבקשת לחשוב על יחס מצומצם ולפשט את הקשר בין שני הסוגים של השירים. נסו להשוות בין הכמויות ולראות מהו הייצוג הפשוט ביותר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "aaef6853005c0105",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל מהשוואה בין שני המספרים ולבדוק איך מצמצמים אותם יחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "aaef6853005c0105",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q3",
+              "question_type": "choice",
+              "question_text": "היחס בין רוחב גביע האליפות האמיתי לגובהו הוא 3:2. איתי הוסיף 4 ס\"מ לרוחב ולגובה כאחד. האם היחס (3:2) נשמר בגביע של איתי?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "5058d65d7fef7078",
+              "texts": {}
+            },
+            {
+              "question_id": "q4",
+              "question_type": "choice",
+              "question_text": "נועה הכפילה פי 3 את מידת הרוחב ואת מידת הגובה של הגביע האמיתי. האם היחס (3:2) נשמר בגביע של נועה?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "301eb47254a1703f",
+              "texts": {}
+            },
+            {
+              "question_id": "q5",
+              "question_type": "matching",
+              "question_text": "התאימו לכל פעולה (המבוצעת על שני גורמי היחס) האם היא שומרת על היחס:",
+              "answers": [
+                "{'source': ['כפל', 'חילוק', 'חיבור', 'חיסור'], 'target': ['שומר על היחס', 'לא שומר על היחס']}"
+              ],
+              "fingerprint": "67a50c1efd82fd3f",
+              "texts": {}
+            },
+            {
+              "question_id": "q6",
+              "question_type": "choice",
+              "question_text": "יובל בן 5 ואחותו ירדן בת 10. היחס בין גילם הוא 10:5 (מצומצם 2:1). האם בעוד 5 שנים היחס בין הגילים שלהם יישמר?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "58c4cd66bb0e9e4c",
+              "texts": {
+                "explanation": {
+                  "he": "כאן בודקים איך יחס יכול להישמר או להשתנות כשמסתכלים על זמן שעובר ועל שינוי של שני הגורמים יחד. כדאי להישען על הרעיון ש**שימור יחס** קשור לפעולה זהה על שני הגורמים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "58c4cd66bb0e9e4c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-02-01-003",
+          "title": "תרגול מונחה: ציפוי עוגה - אבקת סוכר ושמנת",
+          "content_type": "solved-exercise",
+          "media_format": "text",
+          "role": "teaching",
+          "position": 3,
+          "fingerprint": "1d47a2c5e1fde91f",
+          "information_to_bot": "מטרת הפריט: פתרון שלב-שלב יחד עם הדמות של תרגיל הבודק שלוש טענות על יחס בין משקל אבקת סוכר (25 גרם) למשקל שמנת (200 גרם) בציפוי עוגה - יחס חלק-לחלק, יחס חלק-לשלם, ושמירת יחס בפעולת חיבור. כיווני חשיבה: הבחנה בין יחס חלק-לחלק ליחס חלק-לשלם; זיהוי שחיבור אותו מספר לשני גורמי היחס אינו שומר עליו. טעויות נפוצות: בלבול בין קבוצה חלקית לקבוצה שלמה. מידע נוסף: מהלך מודרך לחלוטין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "להכנת ציפוי לעוגה מערבבים 25 גרם אבקת סוכר עם 200 גרם שמנת. א. טענה: היחס בין משקל אבקת הסוכר לבין משקל השמנת הוא 8:1. האם הטענה נכונה?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "0c1f132bd62ad825",
+              "texts": {
+                "question_intro": {
+                  "he": "בואו נבדוק יחס בין שני רכיבים ונחשוב אם הוא נשמר כשמשנים אותם יחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0c1f132bd62ad825",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה לבדוק קודם איך היחס בין שני הרכיבים נראה במצב ההתחלתי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0c1f132bd62ad825",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המטרה היא לזהות יחס בין שני גורמים ולבדוק אם פעולה זהה על שניהם שומרת עליו. כאן חשוב להבחין בין יחס של שני חלקים לבין שינוי שבו היחס נשאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0c1f132bd62ad825",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "choice",
+              "question_text": "ב. הטענה 'סעיף ב' מבטא את החלק שמהווה משקל אבקת הסוכר ממשקל הציפוי המוכן' - איזה סוג יחס זה מבטא?",
+              "answers": [
+                "יחס בין כמות חלקית לכמות השלמה",
+                "יחס בין כמות חלקית אחת לכמות חלקית שנייה"
+              ],
+              "fingerprint": "e7e135de4af37f60",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתמקדים בסוג היחס ובאופן שבו הוא קשור לחלק ולשלם. נסו לקבוע מה בדיוק מתואר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e7e135de4af37f60",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לחשוב אם מדובר בחלק מתוך השלם, או בהשוואה בין שני חלקים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e7e135de4af37f60",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הבחנה בין **יחס חלק-לשלם** לבין יחס בין שתי כמויות חלקיות. חשוב לשים לב למה בדיוק מתאר החלק שנבחר ביחס למכלול.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e7e135de4af37f60",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q3",
+              "question_type": "choice",
+              "question_text": "מהו משקל הציפוי כולו (אבקת סוכר + שמנת)?",
+              "answers": [
+                "220 גרם",
+                "225 גרם"
+              ],
+              "fingerprint": "2f8688358d9f258c",
+              "texts": {
+                "question_intro": {
+                  "he": "עכשיו צריך לחשב את הכמות הכוללת מתוך שני הרכיבים ולבחון את התוצאה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2f8688358d9f258c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל מהסכום של שני הרכיבים שמופיעים בשאלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2f8688358d9f258c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מחברים את שני הרכיבים כדי למצוא את **השלם**. זהו שלב בסיסי לפני שבודקים טענות על יחס או על חלק מתוך מכלול.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2f8688358d9f258c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q4",
+              "question_type": "choice",
+              "question_text": "ג. טענה: אם נגדיל את משקל אבקת הסוכר ומשקל השמנת ב-20 גרם כל אחד, היחס ביניהם לא ישתנה. איזו פעולה אנו עומדים לבצע על כל אחד מגורמי היחס?",
+              "answers": [
+                "חיבור",
+                "חיסור"
+              ],
+              "fingerprint": "c70820dceac4036c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים איזה סוג פעולה מתבצעת על שני גורמי היחס, ואיך זה משפיע על היחס ביניהם. נסו להשוות בין האפשרויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c70820dceac4036c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על הפעולה שמתבצעת על שני המספרים באותו אופן, ובדקו אם היא שומרת על היחס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c70820dceac4036c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לשים לב למה קורה ליחס כשמשנים את שני הגדלים באותה פעולה. כאן בודקים אם **אותו שינוי** בשני גורמי היחס משאיר את הקשר ביניהם כפי שהיה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c70820dceac4036c",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q5",
+              "question_type": "choice",
+              "question_text": "האם היחס נשמר בפעולות חיבור?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "a24bf83ea30fa756",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתמקדים בשמירה על יחס ובוחנים את דרך החשיבה על שינוי כמויות. נסו לבדוק מה קורה לקשר בין הגדלים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a24bf83ea30fa756",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לחשוב על מה קורה ליחס כשמשנים את שני הגדלים באותה דרך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a24bf83ea30fa756",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת האם יחס נשמר כשמבצעים את אותה פעולה על שני הגדלים. ההקשר כאן עוזר לבדוק אם הקשר ביניהם נשאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a24bf83ea30fa756",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q6",
+              "question_type": "choice",
+              "question_text": "ג. האם הטענה 'אם נגדיל את משקל אבקת הסוכר ומשקל השמנת ב-20 גרם כל אחד, היחס ביניהם לא ישתנה' נכונה?",
+              "answers": [
+                "כן",
+                "לא"
+              ],
+              "fingerprint": "f73aa03750dfe0e6",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים שינוי של שני גדלים יחד ואת ההשפעה שלו על היחס ביניהם. נסו להיעזר בהשוואה בין המצב המקורי למצב החדש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f73aa03750dfe0e6",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק אם אותו שינוי בשני הגדלים משפיע באותה צורה על הקשר ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f73aa03750dfe0e6",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים אם שינוי זהה בשני חלקי היחס משאיר את הקשר ביניהם כמו שהיה. המוקד הוא על שמירת היחס אחרי אותו שינוי בשני הגדלים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f73aa03750dfe0e6",
+                  "generated_at": "2026-09-08T01:44:55Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
