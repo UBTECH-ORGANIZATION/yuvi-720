@@ -1137,9 +1137,11 @@
 .ys-gamelab-empty .ys-btn { margin-block-start: 6px; display: inline-flex; align-items: center; gap: 6px; }
 
 .ys-gamelab-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+/* A poster: the thumbnail is the card's image, the text sits beside it and
+   the actions close the row. The tile stays at the reading start. */
 .ys-gamelab-card {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 9px 10px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card);
+  display: flex; gap: 12px; align-items: stretch;
+  padding: 8px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card);
   background: var(--ys-surface);
   transition: border-color .2s ease;
 }
@@ -1147,13 +1149,13 @@
 .ys-gamelab-card.is-failed { border-color: color-mix(in srgb, var(--ys-danger) 35%, var(--ys-line)); }
 .ys-gamelab-card__thumb { inline-size: 100%; block-size: 100%; object-fit: cover; border-radius: inherit; }
 .ys-gamelab-card__tile {
-  flex: none; inline-size: 44px; block-size: 44px; border-radius: 12px; overflow: hidden;
-  display: grid; place-items: center; font-size: 22px; line-height: 1;
+  flex: none; inline-size: 128px; min-block-size: 96px; border-radius: 12px; overflow: hidden;
+  display: grid; place-items: center; font-size: 34px; line-height: 1;
   background: linear-gradient(150deg, rgba(78, 238, 240, .22), rgba(111, 91, 255, .2));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ys-accent) 20%, transparent);
 }
-.ys-gamelab-card__main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 4px; }
-.ys-gamelab-card__title { margin: 0; font-size: 14px; font-weight: 800; color: var(--ys-ink); overflow-wrap: anywhere; }
+.ys-gamelab-card__main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 5px; padding-block: 2px; }
+.ys-gamelab-card__title { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.3; color: var(--ys-ink); overflow-wrap: anywhere; }
 .ys-gamelab-card__chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .ys-gamelab-chip {
   display: inline-flex; align-items: center; gap: 4px; max-inline-size: 100%;
@@ -1186,7 +1188,51 @@
 }
 @keyframes ys-gamelab-shimmer { to { transform: translateX(100%); } }
 
-.ys-gamelab-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 2px; }
+/* The building card: a slow light runs around the border, and the tile turns
+   into a workshop. Only the tile and the border move; the text stays put. */
+.ys-gamelab-card.is-building {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--ys-surface), var(--ys-surface)) padding-box,
+    linear-gradient(90deg, rgba(78, 238, 240, .9), rgba(111, 91, 255, .9), rgba(255, 79, 216, .7), rgba(78, 238, 240, .9)) border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: ys-gamelab-border 3.2s linear infinite;
+}
+@keyframes ys-gamelab-border { to { background-position: 0 0, 300% 0; } }
+.ys-gamelab-card.is-building .ys-gamelab-card__thumb { opacity: .35; filter: saturate(.4); }
+.ys-gamelab-card.is-building .ys-gamelab-card__tile { background: #0b0d1c; color: transparent; }
+.ys-gamelab-build { position: absolute; inset: 0; overflow: hidden; }
+.ys-gamelab-card__tile { position: relative; }
+.ys-gamelab-build__bars {
+  position: absolute; inset-inline: 14px; inset-block-end: 12px; block-size: 44px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 6px;
+}
+.ys-gamelab-build__bars i {
+  flex: 1; block-size: 30%; border-radius: 3px;
+  background: linear-gradient(180deg, #8ff0f6, #6f5bff);
+  box-shadow: 0 0 10px rgba(78, 238, 240, .5);
+  animation: ys-gamelab-bar 1.4s ease-in-out infinite;
+}
+@keyframes ys-gamelab-bar { 0%, 100% { block-size: 22%; opacity: .55; } 50% { block-size: 88%; opacity: 1; } }
+.ys-gamelab-build__scan {
+  position: absolute; inset-inline: 0; block-size: 2px;
+  background: linear-gradient(90deg, transparent, #8ff0f6, transparent);
+  box-shadow: 0 0 12px #8ff0f6;
+  animation: ys-gamelab-scan 2.4s ease-in-out infinite;
+}
+@keyframes ys-gamelab-scan { 0% { inset-block-start: 6%; } 50% { inset-block-start: 88%; } 100% { inset-block-start: 6%; } }
+.ys-gamelab-build__icon {
+  position: absolute; inset-block-start: 8px; inset-inline-start: 8px;
+  display: grid; place-items: center; inline-size: 26px; block-size: 26px; border-radius: 8px;
+  background: rgba(255, 255, 255, .12); color: #e6e9ff;
+  animation: ys-gamelab-wand 1.8s ease-in-out infinite;
+}
+@keyframes ys-gamelab-wand { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg) translateY(-1px); } }
+@media (prefers-reduced-motion: reduce) {
+  .ys-gamelab-card.is-building, .ys-gamelab-build__bars i, .ys-gamelab-build__scan, .ys-gamelab-build__icon { animation: none; }
+}
+
+.ys-gamelab-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: auto; }
 .ys-gamelab-card__actions .ys-btn { display: inline-flex; align-items: center; gap: 5px; min-block-size: 36px; }
 .ys-gamelab-danger { color: var(--ys-danger); }
 .ys-gamelab-danger-fill { background: var(--ys-danger); }

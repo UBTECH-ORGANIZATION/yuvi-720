@@ -194,6 +194,9 @@ function GameCard({
   const busy = isBusyStatus(game.status)
   const tone = statusTone(game.status)
   const playable = game.current_version > 0
+  // Only steps with words of their own; the code stream and tool pings stay quiet.
+  const stepKey = event && ['plan', 'build', 'validate', 'fix', 'judge'].includes(event) ? `games.step.${event}` : ''
+  const stepLabel = stepKey ? t(stepKey) : ''
 
   // Straight to the game page — never through the lesson screen.
   const play = () => navigate(gamePlayPath(game.game_id, 'studio'))
@@ -211,11 +214,23 @@ function GameCard({
   }
 
   return (
-    <li className={`ys-gamelab-card is-${tone}`}>
+    <li className={`ys-gamelab-card is-${tone}${busy ? ' is-building' : ''}`}>
       <div className="ys-gamelab-card__tile" aria-hidden>
         {game.has_thumb
           ? <img className="ys-gamelab-card__thumb" src={gameThumbUrl(game)} alt="" loading="lazy" />
           : genreIcon(game.genre)}
+        {/* While Yuvi builds, the tile becomes a small workshop: bars of code
+            rising and a scan line, over the last thumbnail when there is one.
+            The title and the rest of the card stay readable beside it. */}
+        {busy && (
+          <div className="ys-gamelab-build">
+            <span className="ys-gamelab-build__scan" />
+            <span className="ys-gamelab-build__bars">
+              {[0, 1, 2, 3, 4, 5].map((n) => <i key={n} style={{ animationDelay: `${n * 0.18}s` }} />)}
+            </span>
+            <span className="ys-gamelab-build__icon"><Icon name="wand" size={16} /></span>
+          </div>
+        )}
       </div>
       <div className="ys-gamelab-card__main">
         <h3 className="ys-gamelab-card__title">
@@ -233,7 +248,7 @@ function GameCard({
           <span className={`ys-gamelab-status is-${tone}`} role="status">
             {busy && <i className="ys-gamelab-status__shimmer" aria-hidden />}
             {t(`studio.gamelab.status.${game.status}`)}
-            {busy && event && <em><bdi dir="auto">{event}</bdi></em>}
+            {busy && stepLabel && <em><bdi dir="auto">{stepLabel}</bdi></em>}
           </span>
           <span className="ys-gamelab-card__stat">
             <Icon name="spark" size={12} />

@@ -3794,6 +3794,7 @@
   "games.step.build": "יובי כותב את המשחק…",
   "games.step.validate": "יובי בודק שהכול עובד…",
   "games.step.fix": "יובי מתקן…",
+  "games.step.judge": "יובי בודק שהמשחק באמת מלמד…",
   "games.player.exit": "יציאה מהמשחק",
   "games.player.panelOpen": "לדבר עם יובי על המשחק",
   "games.player.panelClose": "לסגור את הפאנל של יובי",
