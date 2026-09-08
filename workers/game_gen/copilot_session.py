@@ -182,6 +182,7 @@ class HeadlessCopilotSession:
         self._code_block_done = False
         self._code_chars = 0
         self._reasoning_started = False
+        self._tool_delta_chars = 0
         self._credit_exhausted = False
         self._tool_names: dict[str, str] = {}  # tool_call_id -> tool_name
         self._last_user_event_id: str | None = None
@@ -492,6 +493,7 @@ class HeadlessCopilotSession:
             # is how the kid watches the code being written.
             delta = _data_str(data, "input_delta")
             if delta:
+                self._tool_delta_chars += len(delta)
                 self._emit({"type": "tool_delta", "name": _data_str(data, "tool_name") or "", "text": delta})
 
         elif etype == "tool.execution_start":
@@ -500,8 +502,15 @@ class HeadlessCopilotSession:
             if name:
                 if call_id:
                     self._tool_names[call_id] = name
-                logger.info("[%s] tool start: %s", sid, name)
-                self._emit({"type": "tool", "name": name, "status": "start", "call_id": call_id or None})
+                logger.info("[%s] tool start: %s (streamed %d chars of input)", sid, name, self._tool_delta_chars)
+                self._tool_delta_chars = 0
+                # The full input travels with the start event: whatever the
+                # deltas did not carry, the player still gets to see.
+                arguments = getattr(data, "arguments", None)
+                self._emit({
+                    "type": "tool", "name": name, "status": "start", "call_id": call_id or None,
+                    "arguments": arguments if isinstance(arguments, dict) else None,
+                })
 
         elif etype == "tool.execution_complete":
             call_id = _data_str(data, "tool_call_id")

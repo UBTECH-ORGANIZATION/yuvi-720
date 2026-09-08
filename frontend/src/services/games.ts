@@ -124,9 +124,11 @@ export interface GameFrame {
   event?: string
   kind?: string
   detail?: string
-  /** `event: 'code'` — a slice of the game as Yuvi writes it, and the total so far. */
+  /** `event: 'code'` — a slice of the game as Yuvi writes it (decoded, not tool JSON),
+   *  the total so far, and `reset` when the chunk starts the complete hand-in over. */
   chunk?: string
   code_len?: number
+  reset?: boolean
   /** `event: 'thinking'` — how much the model has reasoned so far; `chunk` carries the words. */
   thinking_chars?: number
 }

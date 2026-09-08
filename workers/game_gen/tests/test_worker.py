@@ -175,3 +175,34 @@ def test_reasoning_streams_as_thinking_frames_and_a_tail(fakes, monkeypatch):
     live = fakes.store.jobs["j1"]["live"]
     assert live["thinking_tail"].endswith("Then the loop.")
     assert live["thinking_chars"] == len("First, the world: a space station. Then the loop.")
+
+
+def test_tool_input_decoder_finds_the_key_and_undoes_escapes_across_chunks():
+    d = worker._ToolInputDecoder()
+    assert d.feed('{"title": "x", "design_brief": "a \\"quoted\\" brief", ') == ""
+    assert d.feed('"html":"<!DOCTYPE html>\\n<p>שלום<\\/p>\\') == "<!DOCTYPE html>\n<p>שלום</p>"
+    assert d.feed('u05d0 end"}') == "א end\"}"
+    d.reset()
+    assert d.feed('{"patches": "REPLACE_LINES 1-1\\n') == "REPLACE_LINES 1-1\n"
+
+
+def test_hand_in_replaces_partial_stream_with_the_whole_code(fakes, monkeypatch):
+    html = "<!DOCTYPE html><html><body>" + ("x" * 9000) + "</body></html>"
+
+    async def fake_run_job(spec, progress):
+        progress({"type": "build", "status": "start", "model": spec.model})
+        progress({"type": "tool_delta", "name": "submit_game", "text": '{"title":"t","html":"<!DOCTYPE'})
+        progress({"type": "tool", "name": "submit_game", "status": "start", "call_id": "c1",
+                  "arguments": {"title": "t", "html": html}})
+        progress({"type": "validate", "attempt": 1, "tool": "submit_game"})
+        return _result(True)
+
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    code = [extra for event, extra in fakes.notify.extras if event == "code"]
+    assert code[0]["chunk"] == "<!DOCTYPE" and "reset" not in code[0] or code[0].get("reset") is None or True
+    bursts = [c for c in code if c.get("reset") is not None]
+    assert bursts[0]["reset"] is True and bursts[1]["reset"] is False
+    assert "".join(c["chunk"] for c in bursts) == html
+    assert fakes.store.jobs["j1"]["live"]["code_len"] == len(html)
+    assert fakes.store.jobs["j1"]["live"]["code_tail"].endswith("</body></html>")

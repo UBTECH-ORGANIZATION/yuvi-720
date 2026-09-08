@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import logging
 import os
 import signal
@@ -112,6 +113,67 @@ async def _load_current_html(job: dict[str, Any]) -> str:
     return (await html_store.get_html(entry["blob_path"])) or ""
 
 
+class _ToolInputDecoder:
+    """Turns the streamed JSON of a `submit_game` / `patch_game` call into the
+    plain code string: waits for the `"html":"` (or `"patches":"`) key, then
+    undoes JSON string escapes chunk by chunk, carrying a split escape over."""
+
+    KEYS = ('"html":"', '"html": "', '"patches":"', '"patches": "')
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.started = False
+        self.head = ""
+        self.carry = ""
+
+    def feed(self, text: str) -> str:
+        if not self.started:
+            self.head += text
+            for key in self.KEYS:
+                idx = self.head.find(key)
+                if idx >= 0:
+                    self.started = True
+                    rest = self.head[idx + len(key):]
+                    self.head = ""
+                    return self._unescape(rest)
+            self.head = self.head[-64:] if len(self.head) > 4096 else self.head
+            return ""
+        return self._unescape(text)
+
+    def _unescape(self, text: str) -> str:
+        text = self.carry + text
+        self.carry = ""
+        # A trailing backslash or a cut \uXXXX waits for the next chunk.
+        m = re.search(r"(\\u[0-9a-fA-F]{0,3}|\\)$", text)
+        if m:
+            self.carry = m.group(0)
+            text = text[: m.start()]
+        return _JSON_ESCAPE.sub(_unescape_one, text)
+
+
+_JSON_ESCAPE = re.compile(r"\\(u[0-9a-fA-F]{4}|.)", re.S)
+_SIMPLE_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "b": "\b", "f": "\f", '"': '"', "\\": "\\", "/": "/"}
+
+
+def _unescape_one(match: "re.Match[str]") -> str:
+    token = match.group(1)
+    if token.startswith("u"):
+        return chr(int(token[1:], 16))
+    return _SIMPLE_ESCAPES.get(token, match.group(0))
+
+
+def _code_from_arguments(arguments: Any) -> str:
+    if not isinstance(arguments, dict):
+        return ""
+    for key in ("html", "patches"):
+        value = arguments.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
 async def handle_job(job: dict[str, Any]) -> JobResult:
     """Run one job to completion and persist everything it produced."""
     store, html_store, notify = _backend()
@@ -130,6 +192,9 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     # The code stream is coalesced: deltas pile up and go out about once a
     # second as one frame, so a 1500-line game is ~100 frames, not 20,000.
     code = {"buf": "", "at": 0.0, "len": 0, "tail": ""}
+    # The tool input is JSON; the player only ever sees the decoded `html` /
+    # `patches` string, so the key is found here and escapes are undone here.
+    decoder = _ToolInputDecoder()
     live = {"phase": "thinking", "thinking_chars": 0, "thinking_tail": "", "code_len": 0, "code_tail": "", "updated_at": time.time()}
     # The reasoning streams too, coalesced like the code: a page shows the
     # kid what Yuvi is weighing, not just that it is thinking.
@@ -163,9 +228,27 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
         kind = event.get("type")
         if kind == "tool_delta":
             live["phase"] = "writing"
-            code["buf"] += str(event.get("text") or "")
+            code["buf"] += decoder.feed(str(event.get("text") or ""))
             flush_code()
             return
+        if kind == "tool" and event.get("status") == "start":
+            # Deltas are best-effort (they stop early on long inputs); the
+            # start event carries the whole input, so the player gets the
+            # complete code the moment Yuvi hands it in.
+            full = _code_from_arguments(event.get("arguments"))
+            if full and len(full) > code["len"] + len(code["buf"]):
+                code["buf"], code["len"], code["tail"] = "", 0, ""
+                first = True
+                for start in range(0, len(full), CODE_FRAME_MAX):
+                    chunk = full[start:start + CODE_FRAME_MAX]
+                    code["len"] += len(chunk)
+                    code["tail"] = (code["tail"] + chunk)[-LIVE_CODE_TAIL:]
+                    notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",
+                                            chunk=chunk, code_len=code["len"], reset=first)
+                    first = False
+            decoder.reset()
+        elif kind == "tool":
+            decoder.reset()
         if kind == "reasoning_delta":
             live["phase"] = "thinking"
             text = str(event.get("text") or "")

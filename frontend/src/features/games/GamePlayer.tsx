@@ -90,11 +90,6 @@ function unescapeJson(text: string): string {
 /** The code argument of the tool input so far — the model may put the title
  * and the design brief before it, and those are not code. Until the `html`
  * (or `patches`) key has arrived there is nothing to show yet. */
-function codeFromToolInput(raw: string): string {
-  const match = /"(?:html|patches)":\s*"/.exec(raw)
-  if (!match) return ''
-  return unescapeJson(raw.slice(match.index + match[0].length))
-}
 
 export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePlayerProps) {
   const backLabel = backTo === 'lesson' ? 'games.player.backLesson' : 'games.player.back'
@@ -188,7 +183,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       if (live.phase) setPhase(live.phase)
       setThinkingChars(live.thinking_chars ?? 0)
       if (live.thinking_tail) setThinkingText(live.thinking_tail)
-      if (live.code_tail) { rawRef.current = live.code_tail; setLiveCode(codeFromToolInput(live.code_tail)) }
+      if (live.code_tail) { rawRef.current = live.code_tail; setLiveCode(live.code_tail) }
       const started = typeof live.started_at === 'number' ? live.started_at * 1000
         : live.started_at ? Date.parse(String(live.started_at)) : NaN
       setStartedAt(Number.isFinite(started) ? started : Date.now())
@@ -228,7 +223,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.thinking_tail) setThinkingText((current) => (live.thinking_tail!.length > current.length ? live.thinking_tail! : current))
         if (live.code_tail && live.code_tail.length > rawRef.current.length) {
           rawRef.current = live.code_tail
-          setLiveCode(codeFromToolInput(live.code_tail))
+          setLiveCode(live.code_tail)
         }
       } catch { /* next tick */ }
     }
@@ -308,10 +303,11 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       const live = frame as GameFrame
       if (live.event === 'code' && live.chunk) {
         setPhase('writing')
-        let raw = rawRef.current + live.chunk
-        if (raw.length > LIVE_CODE_MAX) raw = raw.slice(raw.length - LIVE_CODE_MAX)
-        rawRef.current = raw
-        setLiveCode(codeFromToolInput(raw))
+        // The worker sends decoded code, and `reset` means "start over with
+        // the complete game" (the deltas were partial; the hand-in is whole).
+        const next = (live.reset ? '' : rawRef.current) + live.chunk
+        rawRef.current = next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
+        setLiveCode(rawRef.current)
         return
       }
       if (live.event === 'thinking') {
@@ -488,7 +484,12 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                 reasoning itself. The code takes over the moment it starts. */}
             {!liveCode && (
               <div className={`game-player__thinking is-${phase}`} dir="auto">
-                <span className="game-player__thinking-orb" aria-hidden="true" />
+                <span className="game-player__bot" aria-hidden="true">
+                  <i className="game-player__bot-ring" />
+                  <i className="game-player__bot-orbit"><b /></i>
+                  <i className="game-player__bot-orbit is-second"><b /></i>
+                  <span className="game-player__bot-face"><YuviHeadIcon /></span>
+                </span>
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
               </div>
             )}
