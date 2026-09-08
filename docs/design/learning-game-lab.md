@@ -177,6 +177,11 @@ Sequencing: 0 → 1 ∥ 3 → 2 → 4 → 5 → 6. Task 0 gates the model choice
 
 ---
 
+
+### Game page (revised 2026-09-08)
+
+`/games/play?game=<id>&from=studio|lesson|bell` is the one door to a game: a normal learner page (app bar, platform theme) with the game on the stage, a floating HUD (back "to Yuvi", title, status, fullscreen), and Yuvi's chat on the right in the companion's visual language. While a build runs the stage is a **build console** that streams the code as it is written (the worker forwards `assistant.tool_call_delta` of `submit_game` as coalesced `event:'code'` realtime frames, ~1/s) and the chat is disabled. The chat has two modes: **change** (an edit job; carries the runtime errors the frame reported) and **question** (`POST /api/games/{id}/ask`, mini tier, answered from the source without a rebuild). Cards show the validator's screenshot (`GET /api/games/{id}/thumb`).
+
 ## 4. Integration seams (file map)
 
 Room / station: `frontend/src/features/Yuvi-studio/RoomDesign.ts` (`StationId`, `DEFAULT_STATIONS`, `cloneRoom`, `normalizeRoom`, `sameRoom`), `YuviLabRoom.ts` (`LabRoomZoneId`, `ZONES`, `ZONE_PADS`, `STATION_RADIUS`, `pickStation`, `stationAnchor`, `setStations`, fixed props near line 676), `StudioContent.tsx` (`StudioMode`, `handleZoneChange`, `goToStation`, station buttons, panels), `panel/StationPanel.tsx`, `panel/SegmentedNav.tsx`, `styles/Yuvi-studio.css`.
