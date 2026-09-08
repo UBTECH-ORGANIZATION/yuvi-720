@@ -1113,3 +1113,205 @@
   from { transform: translateY(100%); }
   to { transform: none; }
 }
+
+/* ── Game Lab station ──────────────────────────────────────────────────────
+   The desk computer's panel: a list of the games the learner made, and the
+   three-step wizard that makes one. Same anatomy as the other stations —
+   sections, chips, pill buttons — with one new object, the game card. Logical
+   properties throughout: the panel reads right-to-left most of the time. */
+.ys-gamelab { gap: 12px; }
+.ys-gamelab-link {
+  border: none; background: none; padding: 0; cursor: pointer; font: inherit;
+  font-weight: 800; color: inherit; text-decoration: underline;
+}
+
+.ys-gamelab-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 26px 16px; text-align: center;
+  border: 1px dashed var(--ys-line); border-radius: var(--ys-radius-card);
+  background: var(--ys-sunken);
+}
+.ys-gamelab-empty__glyph { font-size: 34px; line-height: 1; }
+.ys-gamelab-empty strong { font-size: 15px; color: var(--ys-ink); }
+.ys-gamelab-empty p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ys-ink-soft); max-inline-size: 30ch; }
+.ys-gamelab-empty .ys-btn { margin-block-start: 6px; display: inline-flex; align-items: center; gap: 6px; }
+
+.ys-gamelab-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ys-gamelab-card {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card);
+  background: var(--ys-surface);
+  transition: border-color .2s ease;
+}
+.ys-gamelab-card.is-ready { border-color: color-mix(in srgb, #1c9e6a 30%, var(--ys-line)); }
+.ys-gamelab-card.is-failed { border-color: color-mix(in srgb, var(--ys-danger) 35%, var(--ys-line)); }
+.ys-gamelab-card__tile {
+  flex: none; inline-size: 56px; block-size: 56px; border-radius: 14px;
+  display: grid; place-items: center; font-size: 28px; line-height: 1;
+  background: linear-gradient(150deg, rgba(78, 238, 240, .22), rgba(111, 91, 255, .2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ys-accent) 20%, transparent);
+}
+.ys-gamelab-card__main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 7px; }
+.ys-gamelab-card__title { margin: 0; font-size: 14.5px; font-weight: 800; color: var(--ys-ink); overflow-wrap: anywhere; }
+.ys-gamelab-card__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.ys-gamelab-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-inline-size: 100%;
+  padding: 3px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  background: var(--ys-accent-soft); color: var(--ys-accent-ink);
+}
+.ys-gamelab-chip bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ys-gamelab-card__meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  font-size: 12px; color: var(--ys-ink-soft); font-variant-numeric: tabular-nums;
+}
+.ys-gamelab-card__stat { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Status pill. Busy states carry a slow shimmer — the one place in the panel
+   that moves on its own, because it stands for work the child cannot see. */
+.ys-gamelab-status {
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px; font-weight: 800; font-size: 11.5px;
+  background: var(--ys-sunken); color: var(--ys-ink-soft);
+}
+.ys-gamelab-status.is-ready { background: rgba(28, 158, 106, .14); color: #1c9e6a; }
+.ys-gamelab-status.is-failed { background: color-mix(in srgb, var(--ys-danger) 12%, transparent); color: var(--ys-danger); }
+.ys-gamelab-status.is-busy { background: rgba(78, 238, 240, .16); color: #0d7d8c; }
+.ys-gamelab-status em { font-style: normal; font-weight: 600; opacity: .8; }
+.ys-gamelab-status__shimmer {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, .45) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: ys-gamelab-shimmer 2.2s ease-in-out infinite;
+}
+@keyframes ys-gamelab-shimmer { to { transform: translateX(100%); } }
+
+.ys-gamelab-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 2px; }
+.ys-gamelab-card__actions .ys-btn { display: inline-flex; align-items: center; gap: 5px; min-block-size: 44px; }
+.ys-gamelab-danger { color: var(--ys-danger); }
+.ys-gamelab-danger-fill { background: var(--ys-danger); }
+.ys-gamelab-more { align-self: center; min-block-size: 44px; }
+
+/* Inline edit and inline delete: the card grows, nothing floats over it. */
+.ys-gamelab-edit, .ys-gamelab-confirm, .ys-gamelab-field { display: flex; flex-direction: column; gap: 6px; }
+.ys-gamelab-edit__actions, .ys-gamelab-confirm__actions { display: flex; gap: 6px; }
+.ys-gamelab-edit__actions .ys-btn, .ys-gamelab-confirm__actions .ys-btn { flex: 1; min-block-size: 44px; }
+.ys-gamelab-confirm { padding: 10px; border-radius: var(--ys-radius-ctl); background: color-mix(in srgb, var(--ys-danger) 8%, transparent); }
+.ys-gamelab-confirm > span { font-size: 13px; font-weight: 700; color: var(--ys-ink); }
+.ys-gamelab-textarea {
+  inline-size: 100%; box-sizing: border-box; resize: vertical; min-block-size: 72px;
+  padding: 10px 12px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-ctl);
+  background: var(--ys-panel-bg); color: var(--ys-ink); font: inherit; font-size: 13.5px; line-height: 1.45;
+}
+.ys-gamelab-textarea:focus-visible { outline: none; box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28)); border-color: var(--ys-accent); }
+.ys-gamelab-counter { align-self: flex-end; font-size: 11.5px; color: var(--ys-ink-soft); font-variant-numeric: tabular-nums; }
+
+/* Wizard progress: three numbered steps, the current one lit. */
+.ys-gamelab-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.ys-gamelab-steps li {
+  display: flex; align-items: center; gap: 7px; min-inline-size: 0;
+  padding: 8px 10px; border-radius: var(--ys-radius-ctl);
+  font-size: 12px; font-weight: 700; color: var(--ys-ink-soft);
+  background: var(--ys-sunken);
+}
+.ys-gamelab-steps li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ys-gamelab-steps li.is-current { color: var(--ys-accent-ink); background: var(--ys-accent-soft); }
+.ys-gamelab-steps li.is-done { color: #1c9e6a; }
+.ys-gamelab-steps__n {
+  flex: none; inline-size: 20px; block-size: 20px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 11px;
+  background: var(--ys-panel-bg); box-shadow: 0 0 0 1px var(--ys-line);
+}
+.ys-gamelab-steps li.is-current .ys-gamelab-steps__n { background: var(--ys-accent); color: #fff; box-shadow: none; }
+.ys-gamelab-steps li.is-done .ys-gamelab-steps__n { background: #1c9e6a; color: #fff; box-shadow: none; }
+
+/* Pickers: one tall row per objective or component, whole row tappable. */
+.ys-gamelab-group { display: flex; flex-direction: column; gap: 6px; }
+.ys-gamelab-picks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ys-gamelab-pick {
+  inline-size: 100%; min-block-size: 44px; text-align: start; cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 12px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card);
+  background: var(--ys-surface); color: var(--ys-ink); font: inherit;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.ys-gamelab-pick:hover:not(:disabled) { background: var(--ys-surface-hover); border-color: color-mix(in srgb, var(--ys-accent) 40%, transparent); transform: translateY(-1px); }
+.ys-gamelab-pick:active:not(:disabled) { transform: translateY(1px); }
+.ys-gamelab-pick:disabled { cursor: default; opacity: .62; }
+.ys-gamelab-pick__title { font-size: 13.5px; font-weight: 800; }
+.ys-gamelab-pick__sub { font-size: 12px; color: var(--ys-ink-soft); }
+.ys-gamelab-pick__purpose {
+  font-size: 12px; line-height: 1.4; color: var(--ys-ink-soft);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ys-gamelab-pick__foot { display: flex; flex-wrap: wrap; gap: 5px; margin-block-start: 3px; }
+.ys-gamelab-badge {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; background: rgba(28, 158, 106, .14); color: #1c9e6a;
+  align-self: flex-start;
+}
+.ys-gamelab-badge--soft { background: var(--ys-sunken); color: var(--ys-ink-soft); }
+
+.ys-gamelab-chosen {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border-radius: var(--ys-radius-ctl);
+  background: var(--ys-accent-soft);
+}
+.ys-gamelab-chosen__lines { display: flex; flex-direction: column; min-inline-size: 0; font-size: 12px; color: var(--ys-ink-soft); }
+.ys-gamelab-chosen__lines span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ys-gamelab-chosen__lines .is-last { font-size: 13px; font-weight: 800; color: var(--ys-accent-ink); }
+.ys-gamelab-chosen .ys-chip { flex: none; min-block-size: 36px; }
+
+.ys-gamelab-genre { display: inline-flex; align-items: center; gap: 6px; min-block-size: 40px; }
+.ys-gamelab-genre span { font-size: 16px; line-height: 1; }
+
+.ys-gamelab-switch {
+  display: flex; align-items: center; gap: 12px; text-align: start; cursor: pointer;
+  padding: 10px 12px; min-block-size: 44px;
+  border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card);
+  background: var(--ys-surface); color: var(--ys-ink); font: inherit;
+}
+.ys-gamelab-switch__track {
+  flex: none; inline-size: 40px; block-size: 24px; border-radius: 999px; position: relative;
+  background: var(--ys-line); transition: background .2s ease;
+}
+.ys-gamelab-switch__knob {
+  position: absolute; inset-block-start: 3px; inset-inline-start: 3px;
+  inline-size: 18px; block-size: 18px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  transition: transform .2s cubic-bezier(.2, .8, .3, 1);
+}
+.ys-gamelab-switch.is-on .ys-gamelab-switch__track { background: var(--ys-accent); }
+.ys-gamelab-switch.is-on .ys-gamelab-switch__knob { transform: translateX(16px); }
+[dir='rtl'] .ys-gamelab-switch.is-on .ys-gamelab-switch__knob { transform: translateX(-16px); }
+.ys-gamelab-switch__text { display: flex; flex-direction: column; gap: 2px; }
+.ys-gamelab-switch__text strong { font-size: 13.5px; }
+.ys-gamelab-switch__text small { font-size: 12px; color: var(--ys-ink-soft); }
+
+.ys-gamelab-hint, .ys-gamelab-rule {
+  margin: 0; display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; line-height: 1.45; color: var(--ys-ink-soft);
+}
+.ys-gamelab-rule { font-weight: 700; color: var(--ys-ink); }
+.ys-gamelab-create { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-block-size: 46px; }
+
+.ys-gamelab-pick:focus-visible, .ys-gamelab-switch:focus-visible, .ys-gamelab-link:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
+}
+
+[data-theme='dark'] .ys-gamelab-card__tile {
+  background: linear-gradient(150deg, rgba(78, 238, 240, .18), rgba(139, 120, 255, .22));
+}
+[data-theme='dark'] .ys-gamelab-status.is-busy { color: #8ff0f6; }
+[data-theme='dark'] .ys-gamelab-status.is-ready, [data-theme='dark'] .ys-gamelab-badge { color: #6fe0b0; }
+[data-theme='dark'] .ys-gamelab-status__shimmer {
+  background: linear-gradient(90deg, transparent 20%, rgba(143, 240, 246, .3) 50%, transparent 80%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-gamelab-status__shimmer { animation: none; opacity: 0; }
+  .ys-gamelab-pick, .ys-gamelab-switch__knob, .ys-gamelab-switch__track { transition: none; }
+}

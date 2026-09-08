@@ -16,6 +16,7 @@ import {
 } from 'react'
 import { useRoute } from '../app/router'
 import { subscribe } from '../services/realtime'
+import { playNotificationChime } from '../services/notificationChime'
 import {
   dismissAllNotifications, dismissNotifications, listNotifications,
   markAllNotificationsRead, markNotificationsRead,
@@ -117,6 +118,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setNotifications((current) =>
         current.some((row) => row._id === incoming._id) ? current : [incoming, ...current])
       setUnread((count) => count + 1)
+      // A game finishing is the one arrival worth a sound: the learner asked
+      // for it minutes ago and has moved on to something else. Only here —
+      // every other kind stays silent, as it always has.
+      if (typeof incoming.kind === 'string' && incoming.kind.startsWith('game_')) playNotificationChime()
     })
   }, [isLearnerAccount, role])
 

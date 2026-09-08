@@ -9,3 +9,9 @@ backend/.env
 .DS_Store
 /tmp/
 node_modules/
+**/.venv/
+**/node_modules/
+workers/game_gen/runs/
+workers/game_gen/fixtures/
+backend/.runtime/
+frontend/dist/

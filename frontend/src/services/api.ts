@@ -7,7 +7,7 @@
    A 401 is broadcast as a window event rather than handled here: the transport
    must not know about routing. AuthProvider listens and clears the session. */
 
-import { trackApiCall } from './telemetry'
+import { trackApiCall } from './telemetry.ts'
 
 export const UNAUTHORIZED_EVENT = 'spark:unauthorized'
 

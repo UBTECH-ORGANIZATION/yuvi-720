@@ -1,0 +1,14 @@
+# The subset of backend/requirements.txt the worker imports (app.services.games,
+# ai_usage, notifications, realtime, kata_catalog, brain.repository, core.database).
+# Manim / RDKit / FastAPI / OpenTelemetry stay out: they need compilers and are
+# never imported on the worker path.
+motor
+certifi
+tzdata
+httpx
+redis>=5,<8
+python-dotenv
+PyJWT>=2.9.0,<3.0
+azure-storage-blob>=12.20,<13
+azure-identity>=1.17,<2
+azure-servicebus>=7.13

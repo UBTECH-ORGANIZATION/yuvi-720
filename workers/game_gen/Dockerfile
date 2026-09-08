@@ -12,19 +12,20 @@ ENV PYTHONUNBUFFERED=1 \
 # recipe and assertion as the main Dockerfile — a game screenshot with tofu is a
 # bug, not a warning).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl fonts-noto-core \
+        ca-certificates curl fontconfig fonts-noto-core \
     && rm -rf /var/lib/apt/lists/* \
-    && fc-list | grep -qi "NotoSansHebrew" \
-    && fc-list | grep -qi "NotoSansArabic" \
+    && ls /usr/share/fonts/truetype/noto/ | grep -qi "NotoSansHebrew" \
+    && ls /usr/share/fonts/truetype/noto/ | grep -qi "NotoSansArabic" \
     || (echo "RTL fonts missing from the image" && exit 1)
 
 WORKDIR /app
-COPY workers/game_gen/requirements.txt workers/game_gen/requirements.txt
-COPY backend/requirements.txt backend/requirements.txt
-RUN pip install -r workers/game_gen/requirements.txt -r backend/requirements.txt \
+COPY workers/game_gen/requirements.txt workers/game_gen/requirements-backend.txt workers/game_gen/
+RUN pip install -r workers/game_gen/requirements.txt -r workers/game_gen/requirements-backend.txt \
     && python -m playwright install --with-deps chromium
 
+# backend/app plus the root modules it imports (learner_state & co.); no server.py.
 COPY backend/app backend/app
+COPY backend/learner_state.py backend/mock_data.py backend/questionnaire_locales.py backend/
 COPY workers/game_gen workers/game_gen
 
 # Non-root: the Copilot CLI keeps session state under $HOME/.copilot.

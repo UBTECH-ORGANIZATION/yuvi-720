@@ -46,10 +46,17 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Build and push (ACR task — no local Docker daemon needed)
         run: |
+          # Stage a slim context: the Dockerfile only needs the worker package and
+          # backend/app; uploading the whole repo (venvs, node_modules, runs) is slow.
+          ctx="$(mktemp -d)"
+          mkdir -p "$ctx/backend" "$ctx/workers"
+          rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'runs' --exclude 'fixtures' --exclude 'tests' workers/game_gen "$ctx/workers/"
+          rsync -a --exclude '__pycache__' backend/app "$ctx/backend/"
+          cp backend/learner_state.py backend/mock_data.py backend/questionnaire_locales.py "$ctx/backend/"
           az acr build --registry "$ACR_NAME" \
             --image "game-gen:${{ steps.meta.outputs.tag }}" \
             --image "game-gen:dev" \
-            --file workers/game_gen/Dockerfile .
+            --file workers/game_gen/Dockerfile "$ctx"
 
   deploy-dev:
     needs: build
