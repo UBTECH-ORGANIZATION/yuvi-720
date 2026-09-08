@@ -1,0 +1,198 @@
+# Learning Game Lab — AI-created learning games for the learner
+
+Status: PLAN (2026-09-08). Owner: gal@yuvilab.ai. ADO: PBI under epic #225 Student Portal.
+
+Decisions taken with Gal on 2026-09-08:
+
+- Generation = **full HTML codegen as in vibe-coding-kids** (one self-contained HTML per game), not a spec-only runtime.
+- AI path = **GitHub Copilot SDK with `claude-opus-5`**, reusing the vibe-coding-kids session wrapper.
+- Worker lives **in this repo** as an Azure Container App fed by an Azure Service Bus queue. Token events land in Yuvi's own `ai_usage_events`.
+
+---
+
+## 1. Product
+
+### 1.1 The prop: a computer in the kid's room ("Game Lab")
+
+- A fixed station in the lab room next to `explore` / `mission`: a desk computer with a glowing Yuvi logo above the screen (emissive cyan, low-poly, per the world art direction). Screen idles with a subtle "code rain"; when a game is generating the logo pulses; when one is ready it flashes once.
+- Walking onto its pad opens a side panel exactly like the avatar / room stations (`StationPanel` + `SegmentedNav`). Station id `gamelab`. Right-click / long-press also opens it (existing `PropMenu` path).
+
+### 1.2 The panel
+
+Tabs: **My games** | **Create**.
+
+**My games** (history): cards newest-first — thumbnail, title, learning objective chip, component chip, status (queued / building step / ready / failed / editing), version count, tokens spent shown as Yuvi "sparks" (kid-facing budget). Actions: Play, Edit, Duplicate-as-new-prompt, Delete. Same list mechanics as the companion conversation history (cursor pagination, inline confirm delete).
+
+**Create** wizard, three steps, all mandatory:
+
+1. **Learning objective** — picker over the learner's own path (units grouped by MoE objective; objectives with visited or on-path components first, then the rest of the subject catalog).
+2. **Learning component** — the component inside that objective (title, purpose, difficulty, question count). This is the "learning context": the game is built around this component's questions and `informationToBot`.
+3. **The game** — genre chips (shooter, runner, platformer, puzzle, boss-quiz, tower-defense, "surprise me"), a free-text vibe line, optional "deep thinking". Yuvi may ask up to two short clarifying questions (ported from vibe's understand phase, capped) and then shows the build card with live steps.
+
+Hard rule shown in the UI and enforced in the pipeline: **every game is a learning game**. Fun mechanics are welcome, but progress in the game must be gated by answering this component's questions.
+
+### 1.3 In the lesson page
+
+`CompanionChat` in task mode gains a third tab: **Chat | Path | Games**.
+
+- Lists games created for the current component, then for the same objective. Each card: play, edit, status.
+- "Create a game for this" shortcut deep-links to the studio station with objective + component preselected.
+- **Play** opens a full-screen overlay (`GamePlayer`) that fills the lesson chrome (same precedent as `isActiveTaskRoute`): the game iframe, a slim top bar (title, sparks, exit), and a collapsible right-side **Yuvi edit panel** — a chat where the kid says what to change, plus a "something is broken" button. Runtime errors captured from the iframe surface as "Yuvi noticed a bug — fix it?".
+
+### 1.4 Notifications and sound
+
+- Bell kinds: `game_ready`, `game_failed`, `game_edit_ready`, `game_fix_ready`. Action route opens the player.
+- A short synthesized chime (`notificationChime.ts`, WebAudio, no media file, respects reduced-motion/mute) plays when a `game_*` notification arrives live. First bell sound in the app: also used for teacher-message arrivals later if wanted.
+- The studio prop reacts to the same realtime frame (logo flash).
+
+### 1.5 Out of scope for v1
+
+Teacher-authored games (already exist as teacher tasks), sharing games between learners, publishing outside the app, 3D games, multiplayer.
+
+---
+
+## 2. Architecture
+
+```
+Learner (React)                         Yuvi backend (App Service)                  Azure
+──────────────                          ──────────────────────────                  ─────
+Studio station / Games tab  ──POST /api/games──▶  games.store (Mongo)              Service Bus Standard
+                                                  enqueue(job)  ─────────────────▶  queue: game-jobs (sessions = game_id)
+GamePlayer (iframe srcdoc)  ◀──GET html────────  Blob (HTML, thumbs)                       │ KEDA azure-servicebus
+  YuviLearn bridge ──POST /check──▶ server-side grading, learner_signals                   ▼
+  error reporter  ──POST /report-bug──▶ enqueue(fix)                              Container App: ca-yuvi-game-gen
+SSE user:{id}  ◀── realtime (Redis bridge) ◀───────────────────────────────────── worker: Copilot SDK (claude-opus-5)
+Bell + chime   ◀── notifications                                                  + Playwright validator + patch engine
+                                                                                  writes ai_usage_events, game doc, blob
+```
+
+### 2.1 Data
+
+Collections (Mongo, via `_get_collection_named`):
+
+- `learner_games` — `_id: game_id`, `learner_id`, `objective_id`, `unit_id`, `component_id`, `path_node_id`, `title`, `genre`, `prompt`, `language`, `status` (`queued|planning|building|validating|fixing|ready|failed`), `current_version`, `versions[] {v, blob_path, sha256, created_at, source: create|edit|fix, summary}`, `thumb_blob_path`, `errors_last[]`, `sparks_spent`, `created_at`, `updated_at`, `deleted_at`.
+- `learner_game_jobs` — `_id: job_id`, `game_id`, `learner_id`, `kind` (`create|edit|fix`), `payload` (instruction, error report, clarifications), `status`, `attempts`, `worker_replica`, `started_at`, `finished_at`, `error_class`, `usage_summary` (tokens in/out/cache, cost snapshot).
+- `learner_game_answers` — one row per graded answer: `game_id`, `learner_id`, `question_id`, `item_id`, `component_id`, `correct`, `latency_ms`, `at`. Feeds learner_signals / helped-attribution later.
+
+HTML never goes into Mongo (vibe rule). Blob layout: `games/{learner_id}/{game_id}/v{n}/index.html`, `thumb.png`.
+
+### 2.2 API (Yuvi backend, `backend/app/routes/games.py`)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/games?component=&objective=&cursor=` | learner's games, scoped by session |
+| POST | `/api/games` | `{objective_id, unit_id, component_id, genre, prompt, deep_thinking}` → creates game + `create` job |
+| GET | `/api/games/{id}` | status, versions, errors |
+| GET | `/api/games/{id}/html?v=` | authenticated; returns HTML with the runtime harness injected at serve time |
+| POST | `/api/games/{id}/edit` | `{instruction}` → `edit` job |
+| POST | `/api/games/{id}/report-bug` | `{errors[], note}` → `fix` job (auto path capped at 2 per version) |
+| POST | `/api/games/{id}/check` | `{question_id, answer}` → server grades from Kata snapshot, writes `learner_game_answers`, returns `{correct, feedback?}` |
+| POST | `/api/games/{id}/revert` | `{v}` |
+| DELETE | `/api/games/{id}` | soft delete |
+| GET | `/api/games/objectives` | picker data: objectives → components for the learner's subject/path |
+
+Daily caps (config): 3 creates, 10 edits, per learner; teachers/admin can raise per group later.
+
+### 2.3 Job envelope and queue
+
+Service Bus **Standard**, queue `game-jobs`, sessions enabled, `sessionId = game_id` (edits/fixes on one game never interleave), `maxDeliveryCount = 3`, lock duration 5 min with a renew loop, DLQ consumed by the same worker to mark `failed` + notify. Body ≤ 4 KB: `{job_id, game_id, learner_id, kind, payload_ref}`; big payloads (current HTML, error dumps) travel via Blob refs.
+
+Local dev: `GAME_JOBS_MODE=inline` runs the worker pipeline in-process inside the backend (same code, no Service Bus), mirroring vibe's `_should_use_service_bus`. Production: `servicebus`.
+
+### 2.4 Worker (Container App `ca-yuvi-game-gen`)
+
+- Code: `workers/game_gen/` in this repo, Python 3.11, imports `backend/app` for `ai_usage`, `notifications`, `realtime`, `kata_client` snapshot readers.
+- Image: `workers/game_gen/Dockerfile` — python slim + Copilot CLI binary (official backend-services Dockerfile pattern) + Playwright Chromium + Noto fonts (Hebrew/Arabic).
+- Scaling: KEDA `azure-servicebus` rule, `messageCount: "1"` (one Opus build per replica), `minReplicas 0`, `maxReplicas 10` (parallelism knob), CPU 1 / 2 GiB, `activeRevisionsMode single`, managed identity with *Service Bus Data Receiver* + Blob Contributor. Cold start from zero ≈ 30–60 s; the UI shows "in queue".
+- Deploy: `.github/workflows/deploy-game-gen.yml` (ACR `yuvi720acr`, RG `rg-yuvi-720`), Bicep `infra/game-gen/main.bicep` (Container Apps env, app, Service Bus namespace + queue, role assignments).
+
+### 2.5 Pipeline (per job)
+
+1. **Context pack** (built at enqueue time on the Yuvi side, stored with the job): component title, objective, sub-topic, subject, grade band, `informationToBot` (≤1800 chars), up to 12 questions as `{question_id, item_id, type, text, answers[]}` — **without correct answers**, learner language, device hints (touch/keyboard). Learner name and PII never enter the prompt.
+2. **Plan prepass** (mini tier, `gpt-5.4-mini` via existing APIM gateway, ≤2k tokens): genre → mechanics → where questions gate progress → asset plan. Output is a short plan text handed to the builder (vibe's "thinking prepass" pattern; keeps Opus at `reasoning_effort=low`).
+3. **Build** — Copilot SDK session, model `claude-opus-5`, `reasoning_effort` low (medium if "deep thinking"), `available_tools=["ask_user"]` disabled for headless, `infinite_sessions` off. System message = vibe `BUILDER_SYSTEM_MESSAGE` (identity customize) + **Learning contract** + **Runtime harness API** + language rule. Output: one ```html``` file.
+4. **Deterministic post-processing** — vibe `code_utils._validate_and_fix_code` (viewport/charset/doctype, arc radius guard, audio fallback, module scripts) + `libraries.normalize_cdn_urls` against the curated CDN list (Phaser 4.2.x, Kaplay, PixiJS 8, Matter, Howler, nipplejs, canvas-confetti…).
+5. **Validate** — Playwright headless (SwiftShader): load, no `pageerror` for 4 s, click Start (multilingual button heuristics), 3.5 s more, canvas non-blank, ≥ 60 rAF ticks, then **learning-contract assertions** via the harness state `window.__yuvi`: at least one `learn.ask` within 20 s of play, `learn.answer` advances the game, score reflects correctness. Structured errors go back for up to **2 repair rounds** (patch mode); then fail. Research (self-repair 2026) shows gains concentrate in the first two rounds.
+6. **Learning judge** — mini model, ~500 tokens, scores "learning is integral, not decorative" 0–5 and "age-appropriate". < 3 → one revision round with the judge notes; still < 3 → fail with reason.
+7. **Persist** — upload HTML + Playwright thumbnail to Blob, bump version, write job usage summary, `notify()` + `realtime.publish(user:{learner_id}, {type:'game', ...})`.
+
+Edit jobs run steps 3–7 with the current HTML sent **line-numbered** and vibe's patch DSL (`REPLACE_LINES / INSERT_AFTER / DELETE_LINES`, all-or-nothing, brace-balance guard); >5000 lines forces full rewrite. Fix jobs add the captured error list, last `__yuvi` snapshot and the "you already tried X" memory of the last 5 attempts.
+
+### 2.6 Runtime harness (injected at serve time, never generated)
+
+Saves tokens and makes behaviour uniform. Prepended to every served HTML:
+
+- `YuviLearn` bridge: `await YuviLearn.next()` → next question `{id, text, answers[]}`; `await YuviLearn.answer(id, answer)` → `{correct, feedback}` via `postMessage` to the parent, which calls `/api/games/{id}/check` (**grading is server-side; correct answers never ship to the client**); `YuviLearn.progress()`; `YuviLearn.done()`.
+- `YuviStorage` (postMessage-backed KV; `localStorage` shimmed in-memory, as in vibe).
+- Error reporter (`error`, `unhandledrejection`, `console.error`, heartbeat) → parent, deduped, with a per-render nonce.
+- Fit-to-frame scaler (vibe `gameFrame.ts`), viewport meta, `visualViewport` handling for tablets, pointer-lock passthrough.
+- `window.__yuvi` state used by the validator and the bug loop.
+
+The builder prompt documents only this API surface; the model never writes storage, scaling or error code.
+
+### 2.7 Sandbox and content safety
+
+- `<iframe sandbox="allow-scripts allow-pointer-lock" srcdoc=…>` — no `allow-same-origin`; the game gets an opaque origin. CSP on the served document: `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src data: blob:; media-src data: blob:; connect-src 'none'`.
+- Prompts pass the existing `content_filter` before enqueue; the judge step re-checks age-appropriateness; violence in "shooter" games is limited to cartoon targets (rule in the builder prompt).
+- HTML served only to its owner (or a teacher scoped to the learner) — never a public URL.
+
+### 2.8 Responsiveness and RTL
+
+Chromebooks, tablets, phones: `100vw × 100vh` canvas with the fit-to-frame scaler as a safety net; touch controls required when `touch` hint is set (nipplejs / on-screen buttons); keyboard hints otherwise. Hebrew/Arabic: `dir` on text elements only, never on `<html>/<body>` (breaks arrow keys); question and feedback text rendered in DOM overlays, not canvas text (Phaser RTL bugs); fonts Heebo/Rubik.
+
+### 2.9 Token tracking and cost
+
+Follows `.github/instructions/ai-usage-tracking.instructions.md`:
+
+- One `ai_usage_events` row per provider attempt, from exact Copilot SDK `assistant.usage` events (input, output, cache read, cache write, model). Never estimated.
+- `UsageContext(actor_id=learner_id, actor_type="learner", endpoint="internal:game_generate", feature="feature_7_learning_games", operation=…, source="game_gen_worker", session_id=game_id, exchange_id=job_id)` with operations `game.plan`, `game.build`, `game.patch`, `game.fix`, `game.judge`.
+- New `ai_usage_pricing` rows: provider `github_copilot`, deployment `claude-opus-5`, $5 in / $0.50 cached / $25 out per 1M (Copilot bills Claude at provider list price since 2026-06 usage-based billing); `gpt-5.4-mini` already priced.
+- Admin dashboard gets `feature_7_learning_games` for free through the existing feature grouping.
+- Kid-facing "sparks" = cost bucketed, shown on the card; daily caps above.
+- Expected cost (from vibe's production data, Opus 4.x): create ≈ 20–40k output + 25k input tokens ≈ $0.7–1.3 incl. one repair; edit ≈ $0.15–0.4. Ten parallel builds ≈ 10 × 1 vCPU for 3–10 min; container cost is negligible next to tokens.
+
+### 2.10 Why not the alternatives (recorded for the record)
+
+- Spec-only JSON runtime is ~10× cheaper and schema-safe, but Gal chose full codegen for creative freedom; the harness + validator + judge keep the cost and failure modes bounded.
+- Direct Anthropic API would give structured outputs and cleaner telemetry at the same list price; Copilot SDK was chosen to reuse vibe's proven wrapper and existing seats. Keep a thin provider interface in the worker so this can flip later.
+- Reusing the vibe-coding-kids deployment as the service was rejected: cross-repo coupling and token events outside Yuvi's ledger.
+
+---
+
+## 3. Delivery plan (ADO child tasks)
+
+| # | Task | Exit criteria |
+|---|---|---|
+| 0 | **Spike: Copilot SDK + Opus 5 headless in a Container App** | `listModels()` shows `claude-opus-5` with the service token; 5 sample games built from a Kata component through the learning contract; median tokens/cost/time recorded; Playwright runs in the image. |
+| 1 | **Backend core** | `learner_games` / jobs store, routes, Blob storage, context pack builder, Service Bus enqueue with inline fallback, notification kinds, realtime frames, pricing rows, daily caps, tests. |
+| 2 | **Worker + infra** | Ported vibe modules under `workers/game_gen/`, learning contract prompt, harness, validator with contract assertions, repair loop, judge, DLQ consumer, Dockerfile, Bicep, deploy workflow, KEDA scaling verified with 10 parallel jobs. |
+| 3 | **Studio Game Lab station** | Prop + station wiring (`StationId`, zones, pads, anchors), panel with history + create wizard, live build card, prop reacts to realtime frames. |
+| 4 | **Lesson page Games tab + player** | Third tab, full-screen `GamePlayer`, YuviLearn bridge with server-side grading, edit chat panel, bug capture + auto-fix, bell chime, locales he/en/ar. |
+| 5 | **Learning telemetry + teacher visibility** | `learner_game_answers` into learner signals / helped-attribution; teacher profile shows student-made games; admin report feature filter. |
+| 6 | **Hardening** | Load test, cost report vs. estimate, content-safety review, a11y/RTL pass on Chromebook + tablet, docs update. |
+
+Sequencing: 0 → 1 ∥ 3 → 2 → 4 → 5 → 6. Task 0 gates the model choice; if `claude-opus-5` is unavailable through Copilot for the org, fall back to the provider interface with Anthropic direct before building task 2.
+
+---
+
+## 4. Integration seams (file map)
+
+Room / station: `frontend/src/features/Yuvi-studio/RoomDesign.ts` (`StationId`, `DEFAULT_STATIONS`, `cloneRoom`, `normalizeRoom`, `sameRoom`), `YuviLabRoom.ts` (`LabRoomZoneId`, `ZONES`, `ZONE_PADS`, `STATION_RADIUS`, `pickStation`, `stationAnchor`, `setStations`, fixed props near line 676), `StudioContent.tsx` (`StudioMode`, `handleZoneChange`, `goToStation`, station buttons, panels), `panel/StationPanel.tsx`, `panel/SegmentedNav.tsx`, `styles/Yuvi-studio.css`.
+
+Lesson page: `frontend/src/components/CompanionChat.tsx` (`taskView`, tablist, tab panels, composer gate, fullscreen restriction), `companion.css`, `features/learning-lesson/LessonPage.tsx`, `app/App.tsx` (`isActiveTaskRoute`), `features/learning-create/app.ts` (srcdoc precedent).
+
+Backend: `backend/app/services/notifications.py` (`KINDS`, `notify`), `services/realtime.py` (`publish`, Redis bridge), `services/ai_usage.py` (`UsageContext`, `record_usage`), `services/llm.py` (mini tier for plan/judge), `services/kata_client.py` (`questions_by_item`, `information_to_bot`), `services/tasks/generate.py` (registry pattern for inline mode), `routes/learning_content.py` (Hebrew lomda prompt to fold into the learning contract), `brain/repository.py` (`_get_collection_named`), `auth/dependencies.py` (`require_learner`, `assert_can_read_learner`).
+
+Frontend services: `services/notifications.ts` (`NotificationKind`), `providers/NotificationsProvider.tsx` (live frames), `services/celebrationAudio.ts` (chime sibling), `services/realtime.ts`.
+
+vibe-coding-kids modules to port (paths under `src/backend/`): `agent/session.py` (Copilot wrapper, usage accumulation, truncate-last-exchange), `agent/config.py` (CLI resolution, provider, language rule), `agent/game_prompts.py` (builder system message), `agent/html_utils.py`, `agent/code_utils.py`, `agent/libraries.py`, `agent/patch_engine.py`, `html_validator.py`, `src/frontend/src/utils/gameFrame.ts`, `src/teacher-portal/backend/task_service_bus.py` (receive loop, lock renewal, DLQ).
+
+---
+
+## 5. Risks
+
+- Copilot model catalogue is org-policy gated and had a regression hiding Claude models (Aug 2026). Mitigation: task 0 + provider interface.
+- Single service-account seat absorbs all spend; Copilot credits are prepaid. Mitigation: daily caps, admin report, alert on daily cost.
+- Opus builds take minutes; kids leave the page. Mitigation: everything is asynchronous, bell + chime, studio prop feedback, build survives navigation.
+- Client-side game code can be inspected by the kid; correct answers are never in it (server grading).
+- Playwright + Copilot CLI in one image is heavy (~1.5 GB). Acceptable for a scale-to-zero worker.
