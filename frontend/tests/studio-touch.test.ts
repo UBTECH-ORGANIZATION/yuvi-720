@@ -92,12 +92,12 @@ test('globe and World Capsule furniture open hover menus with move and rotate on
 
 test('the World Capsule opens Friends rooms in the Studio side panel', () => {
   assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
-  assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: 2\.1 \}/)
+  assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
   assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[\s+\{ x: stations\.explore\.x, z: stations\.explore\.z, radius: STATION_RADIUS\.explore \},\s+\]/)
   assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
   assert.match(studio, /if \(zone === 'mission' && worldPickerIntentRef\.current\) return[\s\S]{0,120}if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
-  assert.match(studio, /\{mode === 'friends' && \([\s\S]{0,180}<StationPanel[\s\S]{0,220}YuviStudio\.capsule\.title/)
+  assert.match(studio, /\{mode === 'friends' && !visitorRoom && \(\s+<StationPanel\s+title=\{t\('YuviStudio\.capsule\.title'\)\}/)
   assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
   assert.equal(he['YuviStudio.capsule.title'], 'קפסולת עולם')
 })

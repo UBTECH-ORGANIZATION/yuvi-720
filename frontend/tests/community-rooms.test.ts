@@ -13,7 +13,7 @@ const roomLike = readFileSync(join(SRC, 'features/Yuvi-studio/community/RoomLike
 test('a community room visit uses the Studio stage without editing hooks', () => {
   assert.match(studio, /const activeDesign = design/)
   assert.match(studio, /avatarRef\.current\?\.setVisitorHost\(visitorDesign\)/)
-  assert.match(studio, /onZoneChange=\{!visitorRoom \? handleZoneChange : undefined\}/)
+  assert.match(studio, /onZoneChange=\{visitorRoom \? handleVisitorZoneChange : handleZoneChange\}/)
   assert.match(studio, /onPlaceAt=\{!visitorRoom \? handlePlaceAt : undefined\}/)
   assert.match(studio, /onItemMenu=\{!visitorRoom && !placing \? showPropMenu : undefined\}/)
   assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\)/)
@@ -34,15 +34,14 @@ test('Friends rooms use a named circular avatar button without a visible visit l
 })
 
 test('Friends room journeys use the cinematic state machine, swap once, and land on each world', () => {
-  assert.match(studio, /const FRIEND_ROOM_LANDING: \[number, number\] = \[0, 0\]/)
   assert.match(studio, /new FriendTravelController\(\)/)
   assert.match(studio, /controller\.play\(\{[\s\S]{0,500}onWorldSwap/)
-  assert.match(studio, /setVisitorRoom\(destination\)[\s\S]{0,120}teleportTo\(FRIEND_ROOM_LANDING/)
-  assert.match(studio, /const FRIENDS_STATION_RETURN: \[number, number\] = \[5\.6, -0\.7\]/)
-  assert.match(studio, /avatarRef\.current\?\.walkTo\(friendStation\.x, friendStation\.z, 'mission', \(\) => \{/)
+  assert.match(studio, /setVisitorRoom\(destination\)[\s\S]{0,160}teleportToMissionPortal\(destination\.owner_id\)/)
+  assert.match(studio, /avatarRef\.current\?\.walkToMissionPortal\(\(\) => \{[\s\S]{0,100}controller\.play\(handlers, roomReady\)/)
   assert.match(studio, /const \[returning, setReturning\] = useState\(false\)/)
   assert.match(studio, /if \(!visitorRoom \|\| travelPhase !== 'idle' \|\| returning\) return/)
-  assert.match(studio, /setVisitorRoom\(null\)[\s\S]{0,200}teleportTo\(FRIENDS_STATION_RETURN/)
+  assert.match(studio, /setVisitorRoom\(null\)[\s\S]{0,200}teleportToMissionPortal\(homeRoomId\)/)
+  assert.match(studio, /const handleVisitorZoneChange[\s\S]{0,180}zone === 'mission'[\s\S]{0,100}returnToOwnRoom\(\)/)
   assert.match(studio, /travelPhase=\{travelPhase\}/)
   assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\)[\s\S]{0,100}travelPhase !== 'idle'/)
 })
