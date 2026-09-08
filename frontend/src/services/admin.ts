@@ -263,3 +263,70 @@ export function createUser(payload: {
 export function importRoster(roster: unknown, commit = false): Promise<ImportResult> {
   return adminPost('/api/admin/org/import', { roster, commit })
 }
+
+// ── Learning Game Lab: cost and daily caps ───────────────────────────────────
+
+/** Where a learner's daily caps come from: their own override, the admin-set
+ *  defaults, or the deployment env. */
+export type GameCapSource = 'learner' | 'admin' | 'env'
+
+export interface GameCaps {
+  create_per_day: number
+  edit_per_day: number
+  source: GameCapSource
+}
+
+export interface GameUsageRow {
+  learner_id: string
+  display_name: string | null
+  username: string | null
+  games: number
+  games_deleted: number
+  jobs: number
+  jobs_failed: number
+  cost_usd: number
+  cost_today_usd: number
+  sparks: number
+  creates_today: number
+  edits_today: number
+  last_activity: string | null
+  caps: GameCaps
+  note: string
+}
+
+export interface GameUsageReport {
+  defaults: GameCaps
+  env: { create_per_day: number; edit_per_day: number }
+  totals: {
+    learners: number
+    games: number
+    jobs: number
+    jobs_failed: number
+    cost_usd: number
+    cost_today_usd: number
+    creates_today: number
+  }
+  learners: GameUsageRow[]
+}
+
+export interface GameCapsBody {
+  create_per_day: number
+  edit_per_day: number
+  note?: string
+}
+
+export function getGamesUsage(): Promise<GameUsageReport> {
+  return apiGet('/api/admin/games/usage')
+}
+
+export function setGameCapDefaults(body: GameCapsBody): Promise<GameCaps> {
+  return adminPost('/api/admin/games/limits/defaults', body)
+}
+
+export function setLearnerGameCaps(learnerId: string, body: GameCapsBody): Promise<GameCaps> {
+  return adminPost(`/api/admin/games/limits/${encodeURIComponent(learnerId)}`, body)
+}
+
+export function resetLearnerGameCaps(learnerId: string): Promise<GameCaps> {
+  return adminPost(`/api/admin/games/limits/${encodeURIComponent(learnerId)}/reset`, {})
+}

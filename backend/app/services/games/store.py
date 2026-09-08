@@ -47,9 +47,13 @@ log = logging.getLogger(__name__)
 GAMES = "learner_games"
 JOBS = "learner_game_jobs"
 ANSWERS = "learner_game_answers"
+#: Per-learner daily caps set by an admin; the row ``__defaults__`` holds the
+#: system-wide defaults that override the env values (see ``budget.py``).
+LIMITS = "learner_game_limits"
+LIMITS_DEFAULTS_ID = "__defaults__"
 
 _FALLBACK_FILE = Path(__file__).resolve().parents[3] / ".runtime" / "games.json"
-_FALLBACK_KEYS = {GAMES: "games", JOBS: "jobs", ANSWERS: "answers"}
+_FALLBACK_KEYS = {GAMES: "games", JOBS: "jobs", ANSWERS: "answers", LIMITS: "limits"}
 
 #: queued → planning → building → validating → (fixing) → ready | failed.
 #: The worker owns every transition after `queued`; the app only ever writes
@@ -174,6 +178,25 @@ async def _count(collection: str, query: dict[str, Any]) -> int:
             log.warning("game count failed on %s: %s", collection, type(exc).__name__)
     return len([row for row in _read_fallback().get(_FALLBACK_KEYS[collection], [])
                 if _matches(row, query)])
+
+
+async def _delete_one(collection: str, document_id: str) -> bool:
+    handle = _get_collection_named(collection)
+    if handle is not None:
+        try:
+            result = await handle.delete_one({"_id": document_id})
+            return bool(result.deleted_count)
+        except Exception as exc:  # pragma: no cover
+            log.warning("game delete failed on %s: %s", collection, type(exc).__name__)
+    data = _read_fallback()
+    key = _FALLBACK_KEYS[collection]
+    rows = data.get(key) or []
+    kept = [row for row in rows if row.get("_id") != document_id]
+    if len(kept) == len(rows):
+        return False
+    data[key] = kept
+    _write_fallback(data)
+    return True
 
 
 async def _find_one(collection: str, document_id: str) -> Optional[dict[str, Any]]:
@@ -512,6 +535,47 @@ async def list_answers(game_id: str, learner_id: str) -> list[dict[str, Any]]:
     rows = await _find(ANSWERS, {"game_id": game_id, "learner_id": learner_id})
     rows.sort(key=lambda row: int(row.get("seq") or 0))
     return rows
+
+
+# ── learner_game_limits ──────────────────────────────────────────────────────
+
+async def get_limits(learner_id: str) -> Optional[dict[str, Any]]:
+    """The admin-set daily caps for one learner, or None when they run on the
+    defaults. ``LIMITS_DEFAULTS_ID`` reads the system-wide defaults row."""
+    return await _find_one(LIMITS, learner_id)
+
+
+async def list_limits() -> list[dict[str, Any]]:
+    return await _find(LIMITS, {})
+
+
+async def set_limits(
+    learner_id: str, *, create_per_day: int, edit_per_day: int,
+    updated_by: str, note: str = "",
+) -> dict[str, Any]:
+    if create_per_day < 0 or edit_per_day < 0:
+        raise GameStoreError("bad_cap")
+    return await _upsert(LIMITS, {
+        "_id": learner_id,
+        "create_per_day": int(create_per_day),
+        "edit_per_day": int(edit_per_day),
+        "note": (note or "")[:200],
+        "updated_by": updated_by,
+        "updated_at": _now(),
+    })
+
+
+async def clear_limits(learner_id: str) -> bool:
+    return await _delete_one(LIMITS, learner_id)
+
+
+async def list_all_games(limit: int = 5000) -> list[dict[str, Any]]:
+    """Every game of every learner, for the admin cost report."""
+    return await _find(GAMES, {}, sort=("created_at", -1), limit=limit)
+
+
+async def list_all_jobs(limit: int = 10000) -> list[dict[str, Any]]:
+    return await _find(JOBS, {}, sort=("created_at", -1), limit=limit)
 
 
 # ── indexes ──────────────────────────────────────────────────────────────────

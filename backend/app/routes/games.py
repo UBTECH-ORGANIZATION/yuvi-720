@@ -13,8 +13,9 @@ Three things this module is careful about:
 projects components down to id/title/question_count; and the served HTML gets
 the harness WITHOUT an answer key, so grading is ``POST /check`` only.
 
-**Caps are enforced before anything is written.** ``GAMES_DAILY_CREATE_CAP``
-(3) and ``GAMES_DAILY_EDIT_CAP`` (10) per learner per UTC day, and at most two
+**Caps are enforced before anything is written.** Creates and edits per
+learner per UTC day come from ``budget.effective_caps`` (an admin override, the
+admin defaults, or the ``GAMES_DAILY_*_CAP`` env values), and at most two
 fix jobs per version — a broken game that two repair rounds could not fix is
 not going to be fixed by a third (§2.5).
 
@@ -40,7 +41,7 @@ from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current
 from app.services import content_filter, events, kata_catalog
 from app.services.llm import call_llm
 from app.services.ai_usage import UsageContext
-from app.services.games import grading, html_store, jobs, store
+from app.services.games import budget, grading, html_store, jobs, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
 log = logging.getLogger(__name__)
@@ -60,16 +61,7 @@ _GAME_CSP = (
 
 _WORKERS_DIR = Path(__file__).resolve().parents[3] / "workers"
 
-_DEFAULT_CREATE_CAP = 3
-_DEFAULT_EDIT_CAP = 10
 _FIX_JOBS_PER_VERSION = 2
-
-
-def _cap(name: str, default: int) -> int:
-    try:
-        return max(0, int(os.environ.get(name) or default))
-    except ValueError:
-        return default
 
 
 def _harness_module():
@@ -330,7 +322,7 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
     if component.get("unit_id") and component["unit_id"] != data.unit_id:
         raise HTTPException(status_code=422, detail="unit_mismatch")
 
-    cap = _cap("GAMES_DAILY_CREATE_CAP", _DEFAULT_CREATE_CAP)
+    cap = (await budget.effective_caps(learner_id))["create_per_day"]
     if await store.count_created_today(learner_id) >= cap:
         raise HTTPException(status_code=429, detail="daily_create_cap")
 
@@ -494,7 +486,7 @@ async def edit_game(game_id: str, data: EditRequest, learner_id: str = Depends(r
     if game.get("status") != "ready" or not store.version_entry(game):
         raise HTTPException(status_code=409, detail="game_busy")
     _refuse_if_flagged(data.instruction)
-    cap = _cap("GAMES_DAILY_EDIT_CAP", _DEFAULT_EDIT_CAP)
+    cap = (await budget.effective_caps(learner_id))["edit_per_day"]
     if await store.count_jobs_today(learner_id, "edit") >= cap:
         raise HTTPException(status_code=429, detail="daily_edit_cap")
     errors = [dict(error) for error in data.errors][:20]

@@ -23,6 +23,7 @@ from app.routes.auth import router as auth_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
+from app.routes.admin_games import router as admin_games_router
 from app.routes.admin_org import router as admin_org_router
 from app.routes.teacher import router as teacher_router
 from app.routes.teacher_students import router as teacher_students_router
@@ -304,6 +305,7 @@ def create_app() -> FastAPI:
     app.include_router(me_router)
     app.include_router(teacher_assistant_router)
     app.include_router(admin_org_router)
+    app.include_router(admin_games_router)
     app.include_router(mentoring_router)
     app.include_router(rewards_router)
     app.include_router(profile_router)
