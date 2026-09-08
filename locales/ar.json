@@ -1310,6 +1310,8 @@
   "YuviStudio.unsaved": "هناك تغييرات لم تُحفظ",
   "YuviStudio.allSaved": "كل شيء محفوظ",
   "YuviStudio.save": "حفظ",
+  "YuviStudio.loading.label": "يوفي يجهز الاستوديو",
+  "YuviStudio.loading.status": "يوفي يفتح بوابة الاستوديو",
   "YuviStudio.reset.avatar": "إعادة يوفي",
   "YuviStudio.reset.avatar.title": "إعادة يوفي؟",
   "YuviStudio.reset.avatar.body": "سيعود يوفي إلى شكله الأول، بدون القطع والألوان التي اخترتموها. الغرفة لن تتغيّر. يمكنكم التراجع: لن يُحفظ ذلك إلا بعد الضغط على حفظ.",

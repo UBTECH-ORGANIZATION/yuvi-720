@@ -26,6 +26,28 @@
   box-sizing: border-box;
   color: var(--ys-ink);
 }
+.ys-loading {
+  position: fixed; inset: 0; z-index: 100;
+  overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 42%, #19276c 0%, #0a1030 42%, #040612 100%);
+  opacity: 1; transition: opacity .62s ease-out; pointer-events: auto;
+}
+.ys-loading.is-leaving { opacity: 0; pointer-events: none; }
+.ys-loading__canvas { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+.ys-loading__canvas canvas { display: block; inline-size: 100%; block-size: 100%; }
+.ys-loading__yuvi { position: absolute; z-index: 1; left: 50%; inset-block-start: 50%; inline-size: clamp(92px, 12vw, 156px); block-size: clamp(138px, 19vw, 234px); transform: translate(-50%, -50%); pointer-events: none; }
+.ys-loading__yuvi .Yuvi-avatar-canvas { overflow: visible; }
+.ys-loading::before, .ys-loading::after { content: ''; position: absolute; inline-size: 56vmax; block-size: 1px; background: rgba(141, 246, 255, .22); transform: rotate(-26deg); }
+.ys-loading::before { inset-inline-start: -16vmax; inset-block-start: 25%; }
+.ys-loading::after { inset-inline-end: -16vmax; inset-block-end: 21%; transform: rotate(27deg); background: rgba(255, 118, 181, .2); }
+.ys-loading__copy { position: relative; z-index: 3; align-self: end; margin-block-end: clamp(2.5rem, 9vh, 6rem); text-align: center; color: #f6f7ff; font-size: 1rem; font-weight: 700; text-shadow: 0 2px 16px #050817; }
+.ys-loading__copy p { margin: 0 0 .65rem; }
+.ys-loading__copy span { display: inline-flex; gap: .38rem; }
+.ys-loading__copy i { inline-size: .38rem; block-size: .38rem; border-radius: 50%; background: #77f4ff; animation: ys-loading-pulse .95s ease-in-out infinite alternate; }
+.ys-loading__copy i:nth-child(2) { animation-delay: .16s; background: #d88dff; }
+.ys-loading__copy i:nth-child(3) { animation-delay: .32s; background: #ff8abc; }
+@keyframes ys-loading-pulse { to { transform: translateY(-.35rem) scale(1.18); opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .ys-loading { transition-duration: .2s; } .ys-loading__copy i { animation: none; } }
 /* Grid body sits below the shared navbar. */
 .ys-body {
   display: grid;

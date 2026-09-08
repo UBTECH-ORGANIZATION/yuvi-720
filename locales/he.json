@@ -1310,6 +1310,8 @@
   "YuviStudio.unsaved": "יש שינויים שלא נשמרו",
   "YuviStudio.allSaved": "הכול שמור",
   "YuviStudio.save": "שמירה",
+  "YuviStudio.loading.label": "יובי מכין את הסטודיו",
+  "YuviStudio.loading.status": "יובי פותח את השער לסטודיו",
   "YuviStudio.reset.avatar": "איפוס יובי",
   "YuviStudio.reset.avatar.title": "לאפס את יובי?",
   "YuviStudio.reset.avatar.body": "יובי יחזור למראה ההתחלתי שלו, בלי הפריטים והצבעים שבחרתם. החדר לא ישתנה. אפשר להתחרט: זה נשמר רק אחרי שלוחצים שמירה.",

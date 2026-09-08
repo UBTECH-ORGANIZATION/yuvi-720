@@ -49,6 +49,8 @@ export interface YuviAvatarHandle {
 interface Props {
   initialDesign: YuviDesign
   label: string
+  /** Fires after the renderer has completed its first frame. */
+  onReady?: () => void
   muted?: boolean
   /** When true, the chest "Y" badge is a hover-pop button that fires onYClick. */
   interactiveY?: boolean
@@ -152,10 +154,11 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, roomLayoutId = 'lab', stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
+  { initialDesign, label, onReady, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, roomLayoutId = 'lab', stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
+  const onReadyRef = useRef(onReady)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<YuviAvatarHandle | null>(null)
   const mutedRef = useRef(muted)
@@ -195,6 +198,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const onRoomItemTapRef = useRef(onRoomItemTap)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
+  useEffect(() => { onReadyRef.current = onReady }, [onReady])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
   useEffect(() => { onAvatarClickRef.current = onAvatarClick }, [onAvatarClick])
   useEffect(() => { thinkingRef.current = thinking }, [thinking])
@@ -1332,6 +1336,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     window.addEventListener('resize', resize)
 
     let frame = 0
+    let firstFrameRendered = false
       let nearbyRoomItem: string | null = null
     let viewportVisible = true
     let contextAvailable = true
@@ -1832,6 +1837,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       travelFX?.update(t, dt)
       if (travelFX) travelFX.render(renderer)
       else renderer.render(scene, camera)
+      if (!firstFrameRendered) {
+        firstFrameRendered = true
+        onReadyRef.current?.()
+      }
       requestFrame()
     }
     const renderObserver = typeof IntersectionObserver !== 'undefined'

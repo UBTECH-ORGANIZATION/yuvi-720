@@ -1310,6 +1310,8 @@
   "YuviStudio.unsaved": "Unsaved changes",
   "YuviStudio.allSaved": "All saved",
   "YuviStudio.save": "Save",
+  "YuviStudio.loading.label": "Yuvi is preparing the studio",
+  "YuviStudio.loading.status": "Yuvi is opening the Studio gateway",
   "YuviStudio.reset.avatar": "Reset Yuvi",
   "YuviStudio.reset.avatar.title": "Reset Yuvi?",
   "YuviStudio.reset.avatar.body": "Yuvi goes back to how he first looked, without the items and colours you picked. Your room stays exactly as it is. You can change your mind — nothing is kept until you press Save.",

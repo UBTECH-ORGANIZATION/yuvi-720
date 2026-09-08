@@ -22,6 +22,7 @@ import { ContextBar } from './panel/ContextBar'
 import { PropMenu, type PropMenuState } from './panel/PropMenu'
 import { StudioHelp, type StudioHelpTopic } from './panel/StudioHelp'
 import { StudioWelcome } from './panel/StudioWelcome'
+import { StudioLoadingExperience } from './StudioLoadingExperience'
 import { FriendRoomVisitorPanel, FriendsRoomsPanel } from './community/FriendsRoomsPanel'
 import { getCommunityRoom, removeRoomLike, setRoomLike, type CommunityRoom } from '../../services/api'
 import { FriendTravelController } from './travel/FriendTravelController'
@@ -138,6 +139,8 @@ export function StudioContent({
   const [colorPicker, setColorPicker] = useState<{ uid: string; kind: string } | null>(null)
   const [surpriseNotice, setSurpriseNotice] = useState(false)
   const roomState = useRoomDesign(true, user?.user_id)
+  const [stageRendered, setStageRendered] = useState(false)
+  const [showLoadingExperience, setShowLoadingExperience] = useState(true)
   const [worldPickerOpen, setWorldPickerOpen] = useState(false)
   const [worldSwitching, setWorldSwitching] = useState(false)
   const [worldSwitchFailed, setWorldSwitchFailed] = useState(false)
@@ -822,6 +825,7 @@ export function StudioContent({
               ref={avatarRef}
               initialDesign={activeDesign}
               muted={muted}
+              onReady={() => setStageRendered(true)}
               orbit
               stage
               roam
@@ -1086,6 +1090,13 @@ export function StudioContent({
           </>
         )}
       </section>
+      {showLoadingExperience && (
+        <StudioLoadingExperience
+          design={activeDesign}
+          ready={loaded && roomState.loaded && stageRendered}
+          onExited={() => setShowLoadingExperience(false)}
+        />
+      )}
       </div>
       {propMenu && (menuItem || menuStation) && (
         <PropMenu

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const SRC = fileURLToPath(new URL('../src/', import.meta.url))
 const studio = readFileSync(join(SRC, 'features/Yuvi-studio/StudioContent.tsx'), 'utf8')
 const panel = readFileSync(join(SRC, 'features/Yuvi-studio/community/FriendsRoomsPanel.tsx'), 'utf8')
+const loader = readFileSync(join(SRC, 'features/Yuvi-studio/StudioLoadingExperience.tsx'), 'utf8')
 
 test('a community room visit uses the Studio stage without editing hooks', () => {
   assert.match(studio, /const activeDesign = design/)
@@ -51,4 +52,19 @@ test('personal world changes use the same capsule transition and save only at wo
   assert.match(studio, /const chooseWorld = async \(layoutId: 'lab' \| 'dome' \| 'triangularObservatory'\) => \{[\s\S]{0,280}travelPhase !== 'idle'/)
   assert.match(studio, /controller\.play\(\{[\s\S]{0,500}void roomState\.setActiveLayout\(layoutId\)/)
   assert.match(studio, /onFailure: \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(true\)/)
+})
+
+test('Studio opens through a cinematic loader after data and the first WebGL frame are ready', () => {
+  assert.match(studio, /const \[stageRendered, setStageRendered\] = useState\(false\)/)
+  assert.match(studio, /onReady=\{\(\) => setStageRendered\(true\)\}/)
+  assert.match(studio, /ready=\{loaded && roomState\.loaded && stageRendered\}/)
+  assert.match(studio, /<StudioLoadingExperience[\s\S]{0,120}design=\{activeDesign\}/)
+  assert.match(loader, /new THREE\.WebGLRenderer/)
+  assert.match(loader, /<YuviAvatar3D key=\{designKey\(design\)\} initialDesign=\{design\} label="" performanceMode="low"/)
+  assert.doesNotMatch(loader, /new THREE\.SphereGeometry\(0\.46/)
+  assert.match(loader, /portal\.scale\.setScalar\(0\.5\)/)
+  assert.match(loader, /\}, \[design\]\)/)
+  assert.match(loader, /new THREE\.Points/)
+  assert.match(loader, /new THREE\.TorusGeometry/)
+  assert.match(loader, /prefers-reduced-motion: reduce/)
 })
