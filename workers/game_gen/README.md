@@ -34,6 +34,15 @@ game_gen/.venv/bin/python -m game_gen.spike --genre shooter --component 0 --cred
 game_gen/.venv/bin/python -m game_gen.spike --matrix                # 5 runs across genres
 ```
 
+### The worker (consumes jobs the backend enqueues)
+
+```bash
+cd workers && game_gen/.venv/bin/pip install -r ../backend/requirements.txt   # backend services are imported directly
+cd workers && PYTHONPATH=.:../backend game_gen/.venv/bin/python -m game_gen.worker
+# GAME_JOBS_MODE=mongo (default): polls learner_game_jobs; GAME_WORKER_ONCE=1 drains and exits
+# GAME_JOBS_MODE=servicebus: receives pointer messages from the game-jobs queue (task #548)
+```
+
 Auth: with no `COPILOT_GITHUB_TOKEN` the SDK uses the logged-in Copilot CLI
 (`copilot` / `gh auth`). In Azure the worker gets a service-account token.
 

@@ -32,8 +32,33 @@ from .context_pack import AnswerKey, ContextPack
 from .copilot_session import HeadlessCopilotSession, TurnUsage
 from .harness import build_harness, inject_harness
 from .patch_engine import FULL_REWRITE_LINE_THRESHOLD, apply_patches, number_lines
-from .usage import UsageTotals, estimate_cost_usd
+from .usage import UsageTotals, estimate_cost_usd, record_to_ledger
 from .validator import ValidationResult, validate_html
+
+
+async def _ledger(spec: "JobSpec", operation: str, timer: Any, model: str, usage: Any, error: Optional[str]) -> None:
+    """One `ai_usage_events` row per provider turn (no-op standalone)."""
+    if spec.usage_context is None:
+        return
+    try:
+        await record_to_ledger(
+            context=spec.usage_context.for_operation(operation),
+            timer=timer,
+            model=model,
+            usage=usage,
+            status="failed" if error else "completed",
+            error=RuntimeError(error) if error else None,
+        )
+    except Exception:  # metering must never break a build
+        log.exception("ledger write failed")
+
+
+def _timer() -> Any:
+    try:
+        from app.services.ai_usage import UsageTimer  # type: ignore
+        return UsageTimer.start()
+    except Exception:
+        return None
 
 log = logging.getLogger("game_gen.pipeline")
 
@@ -64,6 +89,8 @@ class JobSpec:
     max_ai_credits: Optional[float] = None
     judge: bool = True
     run_judge_model: str = JUDGE_MODEL
+    # Yuvi UsageContext (or None when running standalone); one ledger row per turn.
+    usage_context: Optional[Any] = None
 
 
 @dataclass
@@ -231,8 +258,10 @@ async def _run_judge(spec: JobSpec, html: str, totals: UsageTotals, progress: Pr
     try:
         await session.start()
         progress({"type": "judge", "status": "start"})
+        timer = _timer()
         turn = await session.send(prompts.judge_prompt(spec.pack, html))
         totals.add("game.judge", turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, "game.judge", timer, spec.run_judge_model, turn.usage, turn.error)
         m = re.search(r"\{.*\}", turn.text or "", re.DOTALL)
         if not m:
             return {"error": "no_json", "raw": (turn.text or "")[:300]}
@@ -286,8 +315,11 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
     try:
         await session.start()
         progress({"type": "build", "status": "start", "model": spec.model})
+        operation = {"create": "game.build", "edit": "game.patch", "fix": "game.fix"}.get(spec.kind, "game.build")
+        timer = _timer()
         turn = await session.send(prompt)
-        totals.add(f"game.{'build' if spec.kind == 'create' else 'patch'}", turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
         if turn.error:
             error = turn.error
     except Exception as exc:

@@ -61,11 +61,13 @@ LEARNING CONTRACT (non-negotiable — a game that breaks it is rejected)
      const p = await YuviLearn.progress();  // {asked, answered, correct, total}
      await YuviLearn.done({score});         // when the run ends
    Never invent questions, never hard-code answers, never grade yourself — `answer()` decides.
-3. Ask the FIRST question within the first ~15 seconds of play (e.g. the first gate, checkpoint, wave end, boss phase). Then keep a rhythm: roughly one question per 20-40 seconds of play, until `next()` returns null; then a victory/summary screen with `progress()`.
+3. Ask the FIRST question within 10 seconds of pressing Start — open with a short warm-up gate (e.g. "answer to power up your ship", "unlock the first door") BEFORE the first wave/level, then keep a rhythm: one question every 20-40 seconds of play (wave end, checkpoint, boss phase), until `next()` returns null; then a victory/summary screen with `progress()`.
 4. A correct answer rewards (power-up, heal, speed, points); a wrong answer costs something small AND shows `correctAnswer` with one friendly sentence, then play continues. Never punish harshly; never lock the kid out.
 5. Render the question in a DOM overlay: the question text + one button per answer (shuffle order each time). Pause the action while the overlay is open. Buttons ≥ 44px tall, big readable font.
 6. Use `YuviLearn.total` to size the game (waves/levels ≈ number of questions). If `total` is 0, show a friendly "no questions yet" message instead of a game.
-7. Content stays age-appropriate: cartoon targets, no blood, no real-world weapons, no scary imagery. Positive tone.
+7. THEME THE MECHANICS ON THE TOPIC, not just the questions: the objects, enemies, pickups, HUD labels, level names and win condition come from LEARNING_CONTEXT (for "mass": crates with kg labels, a balance scale, gross/net/tare as game concepts; for "coordinates": the play field IS a grid with axes and targets at (x, y)). A kid should absorb the vocabulary just by playing between questions. Reviewers reject games whose core loop could belong to any topic.
+8. Content stays age-appropriate: cartoon targets, no blood, no real-world weapons, no scary imagery. Positive tone.
+9. Make it feel finished: title screen, HUD (score, lives, progress "3/12"), 3+ distinct waves or levels, particles or screen shake on hits, short WebAudio blips, a victory screen. Aim for roughly 300-600 lines — polished, not minimal.
 """.strip()
 
 HARNESS_API = """
@@ -149,7 +151,7 @@ Deliver with `patch_game` (or `submit_game` for a rewrite)."""
 
 JUDGE_SYSTEM = """You are a strict reviewer of educational games for grades 7-9. You receive the LEARNING_CONTEXT (a learning component with its questions) and the game's HTML source. Score, as JSON only:
 {"learning_integral": 0-5, "age_appropriate": 0-5, "uses_questions_via_bridge": true|false, "notes": "one or two short sentences"}
-learning_integral: 5 = the questions gate real progress and the mechanics reinforce the topic; 3 = questions appear but feel bolted on; 0 = no learning.
+learning_integral: 5 = the questions gate progress AND the mechanics/objects/HUD are themed on the topic so the kid meets its vocabulary while playing; 3 = questions gate progress but the core loop could belong to any topic; 0 = no learning. Note: by design a wrong answer costs something and play continues (kids are never locked out) — do not penalise that; penalise questions that can be skipped or ignored.
 Return ONLY the JSON object."""
 
 
