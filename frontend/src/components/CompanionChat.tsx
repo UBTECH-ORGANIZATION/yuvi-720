@@ -250,6 +250,11 @@ export function CompanionChat() {
   // routed navigation would remount the lesson div (keyed on the full route).
   const [gameOpenRequest, setGameOpenRequest] = useState<GameOpenRequest | null>(null)
   const gameRequestSeq = useRef(0)
+  // The tab unmounts when the learner switches views, so it cannot remember
+  // which request it already opened; the request is cleared here once served.
+  const gameRequestHandled = useCallback((seq: number) => {
+    setGameOpenRequest((current) => (current && current.seq === seq ? null : current))
+  }, [])
   const lessonParams = useMemo(() => {
     const params = new URLSearchParams(window.location.search)
     return { unitId: params.get('unit'), componentId: params.get('component') }
@@ -1304,6 +1309,7 @@ export function CompanionChat() {
                   unitId={lessonParams.unitId}
                   objectiveId={lessonRoadmap?.unit.objective_id ?? null}
                   openRequest={gameOpenRequest}
+                  onRequestHandled={gameRequestHandled}
                 />
               ) : taskView === 'chat' && <div
                 className="sp-companion__body"

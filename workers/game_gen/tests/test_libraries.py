@@ -6,9 +6,25 @@ from game_gen.libraries import (
 )
 
 
-def test_no_3d_libraries():
-    assert "three" not in AVAILABLE_LIBRARIES
+def test_three_is_the_only_3d_library():
+    assert AVAILABLE_LIBRARIES["three"]["cdn"].endswith("three.module.min.js")
     assert "babylon" not in AVAILABLE_LIBRARIES
+
+
+def test_three_classic_script_is_merged_into_a_module():
+    src = ('<html><head><script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script></head>'
+           "<body><script>const scene = new THREE.Scene();</script></body></html>")
+    out = normalize_cdn_urls(src)
+    assert 'src="https://cdn.jsdelivr.net/npm/three' not in out
+    assert "<script type=\"module\">" in out
+    assert "import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.min.js'" in out
+    assert "new THREE.Scene()" in out
+
+
+def test_three_classic_script_without_inline_usage_gets_a_global():
+    src = '<html><head><script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script></head><body></body></html>'
+    out = normalize_cdn_urls(src)
+    assert "window.THREE = THREE;" in out
 
 
 def test_phaser_versions_present():
@@ -49,4 +65,4 @@ def test_prompt_block_lists_every_cdn():
     for info in AVAILABLE_LIBRARIES.values():
         if info["cdn"]:
             assert info["cdn"] in block
-    assert "three" not in block.lower()
+    assert "three.module.min.js" in block

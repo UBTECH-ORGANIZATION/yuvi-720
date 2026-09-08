@@ -209,3 +209,32 @@
   setTimeout(schedule, 300);
   setTimeout(schedule, 800);
 })();
+
+/*
+ * Late resize kicks. Some generated games size their canvas once at start,
+ * before the iframe has its final box (the host lays the panel out with a
+ * transition), and only re-measure on `resize` — which never fires unless
+ * the window changes, so the game sat blank until something (dev tools)
+ * resized it. The frame now gets a `resize` a few times after load and
+ * whenever its own box changes.
+ */
+(function () {
+  if (window.__yuvilabResizeKick) return;
+  window.__yuvilabResizeKick = true;
+  var kick = function () {
+    try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+  };
+  var delays = [120, 400, 1000, 2000];
+  for (var i = 0; i < delays.length; i++) setTimeout(kick, delays[i]);
+  window.addEventListener('load', function () { setTimeout(kick, 60); });
+  if (window.ResizeObserver) {
+    var pending = 0;
+    var ro = new ResizeObserver(function () {
+      if (pending) return;
+      pending = requestAnimationFrame(function () { pending = 0; kick(); });
+    });
+    var start = function () { if (document.documentElement) ro.observe(document.documentElement); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+  }
+})();

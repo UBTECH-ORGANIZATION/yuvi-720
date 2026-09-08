@@ -93,8 +93,12 @@ class CreateGameRequest(BaseModel):
     objective_id: str = Field(min_length=1, max_length=160)
     unit_id: str = Field(min_length=1, max_length=160)
     component_id: str = Field(min_length=1, max_length=160)
-    genre: str = Field(min_length=1, max_length=32)
-    vibe: str = Field(default="", max_length=400)
+    # The kid's brief is the design input. `inspirations` are optional flavour
+    # chips (context for the designer, never a constraint); `genre` stays for
+    # the card's tile and defaults to "open" — Yuvi picks the form.
+    genre: str = Field(default="open", min_length=1, max_length=32)
+    inspirations: list[str] = Field(default_factory=list, max_length=6)
+    vibe: str = Field(default="", max_length=600)
     clarifications: dict[str, str] = Field(default_factory=dict)
     device: Device = "keyboard"
     language: Language = "he"
@@ -103,6 +107,9 @@ class CreateGameRequest(BaseModel):
 
 class EditRequest(BaseModel):
     instruction: str = Field(min_length=1, max_length=600)
+    # The player's single chat: what the kid wrote, plus whatever runtime
+    # errors the frame reported meanwhile, so one message fixes and changes.
+    errors: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
 
 
 class BugReport(BaseModel):
@@ -200,6 +207,7 @@ def _public_game(game: dict[str, Any], *, lang: str = "he",
         "has_thumb": bool(game.get("thumb_blob_path")),
         "errors_last": list(game.get("errors_last") or [])[:5],
         "sparks_spent": int(game.get("sparks_spent") or 0),
+        "description": str(game.get("description") or ""),
         "created_at": game.get("created_at"),
         "updated_at": game.get("updated_at"),
         "last_job": _public_job(last_job),
@@ -257,7 +265,10 @@ async def picker_objectives(
     for subject in kata_catalog.subjects():
         if subject in HIDDEN_SUBJECTS:
             continue
-        objectives_out: list[dict[str, Any]] = []
+        # The catalog splits one MOE objective into several ids with the same
+        # title (e.g. COMPL / PLOT / WRITE); the kid sees one card, and each
+        # component carries the objective id it really belongs to.
+        merged: dict[tuple[str, str], dict[str, Any]] = {}
         for objective in kata_catalog.objectives_for(subject):
             oid = str(objective.get("id") or "")
             components_out: list[dict[str, Any]] = []
@@ -268,6 +279,7 @@ async def picker_objectives(
                 cid = str(component.get("id") or "")
                 components_out.append({
                     "id": cid,
+                    "objective_id": oid,
                     "unit_id": component.get("unit_id"),
                     "unit_title": kata_catalog.unit_title(component.get("unit_id"), lang),
                     "title": kata_catalog.component_title(cid, lang) or component.get("title") or "",
@@ -279,14 +291,18 @@ async def picker_objectives(
                 })
             if not components_out:
                 continue
-            components_out.sort(key=lambda row: not row["visited"])
-            objectives_out.append({
-                "id": oid,
-                "title": kata_catalog.objective_title(oid, lang) or objective.get("title") or "",
-                "topic_title": objective.get("topic_title") or "",
-                "visited": oid in visited_objectives or any(row["visited"] for row in components_out),
-                "components": components_out,
-            })
+            title = kata_catalog.objective_title(oid, lang) or objective.get("title") or ""
+            topic = str(objective.get("topic_title") or "")
+            row = merged.get((topic, title))
+            if row is None:
+                row = merged[(topic, title)] = {
+                    "id": oid, "title": title, "topic_title": topic, "visited": False, "components": [],
+                }
+            row["components"].extend(components_out)
+            row["visited"] = row["visited"] or oid in visited_objectives or any(c["visited"] for c in components_out)
+        objectives_out = list(merged.values())
+        for row in objectives_out:
+            row["components"].sort(key=lambda c: not c["visited"])
         if not objectives_out:
             continue
         objectives_out.sort(key=lambda row: not row["visited"])
@@ -298,6 +314,7 @@ async def picker_objectives(
 async def create_game(data: CreateGameRequest, learner_id: str = Depends(require_learner)):
     if data.genre not in jobs.GENRES:
         raise HTTPException(status_code=422, detail="bad_genre")
+    inspirations = [chip for chip in data.inspirations if chip in jobs.INSPIRATIONS][:6]
     _refuse_if_flagged(" ".join([data.vibe, *data.clarifications.values()]))
 
     await kata_catalog.ensure_loaded()
@@ -320,7 +337,7 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
     )
     try:
         job = await jobs.enqueue(
-            game, "create", genre=data.genre, vibe=data.vibe,
+            game, "create", genre=data.genre, vibe=data.vibe, inspirations=inspirations,
             clarifications=data.clarifications, language=data.language,
             device=data.device, deep_thinking=data.deep_thinking,
         )
@@ -396,9 +413,12 @@ async def edit_game(game_id: str, data: EditRequest, learner_id: str = Depends(r
     cap = _cap("GAMES_DAILY_EDIT_CAP", _DEFAULT_EDIT_CAP)
     if await store.count_jobs_today(learner_id, "edit") >= cap:
         raise HTTPException(status_code=429, detail="daily_edit_cap")
+    errors = [dict(error) for error in data.errors][:20]
+    if errors:
+        game = await store.update_status(game_id, "ready", errors_last=errors) or game
     try:
         job = await jobs.enqueue(game, "edit", instruction=data.instruction,
-                                 version=int(game.get("current_version") or 0))
+                                 runtime_errors=errors, version=int(game.get("current_version") or 0))
     except jobs.EnqueueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
     return JSONResponse(content={"job_id": job["_id"], "status": "queued"}, headers=_NO_STORE)

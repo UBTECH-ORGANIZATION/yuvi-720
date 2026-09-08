@@ -50,7 +50,10 @@ _DEFAULT_QUEUE = "game-jobs"
 FEATURE = "feature_7_learning_games"
 
 #: The genres the Create wizard offers. "surprise" lets the model choose.
-GENRES = ("shooter", "runner", "platformer", "puzzle", "boss-quiz", "tower-defense", "surprise")
+# `genre` is the card's tile; "open" (the default) means Yuvi picked the form.
+GENRES = ("open", "shooter", "runner", "platformer", "puzzle", "boss", "tower", "boss-quiz", "tower-defense", "surprise")
+# Flavour chips the kid may tick on the brief step — context for the designer, never a constraint.
+INSPIRATIONS = ("shooter", "runner", "platformer", "puzzle", "boss", "tower", "3d", "story", "world", "surprise")
 
 
 class EnqueueError(Exception):
@@ -125,6 +128,7 @@ def _history(game: dict[str, Any]) -> list[str]:
 async def enqueue(
     game: dict[str, Any], kind: str, *, genre: Optional[str] = None,
     vibe: Optional[str] = None, clarifications: Optional[dict[str, str]] = None,
+    inspirations: Optional[list[str]] = None,
     language: Optional[str] = None, device: Optional[str] = None,
     instruction: str = "", runtime_errors: Optional[list[dict[str, Any]]] = None,
     deep_thinking: bool = False, version: Optional[int] = None,
@@ -147,12 +151,13 @@ async def enqueue(
         "genre": genre or game.get("genre") or "surprise",
         "vibe": (vibe if vibe is not None else game.get("prompt")) or "",
         "clarifications": dict(clarifications or {}),
+        "inspirations": list(inspirations or [])[:6],
         "language": language or game.get("language") or "he",
         "device": device or game.get("device") or "keyboard",
         "instruction": (instruction or "")[:1200],
         "runtime_errors": list(runtime_errors or [])[:20],
         "history": _history(game),
-        "reasoning_effort": "medium" if deep_thinking else "low",
+        "reasoning_effort": "xhigh" if deep_thinking else "high",
         "feature": FEATURE,
         "context": context,
     }

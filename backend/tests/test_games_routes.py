@@ -65,7 +65,7 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertEqual(payload["vibe"], "space cats")
         self.assertEqual(payload["device"], "touch")
         self.assertEqual(payload["language"], "he")
-        self.assertEqual(payload["reasoning_effort"], "low")
+        self.assertEqual(payload["reasoning_effort"], "high")
         self.assertEqual(payload["feature"], "feature_7_learning_games")
         for key in ("clarifications", "instruction", "runtime_errors", "history"):
             self.assertIn(key, payload)
@@ -93,7 +93,7 @@ class GamesRoutesTest(unittest.TestCase):
     def test_deep_thinking_raises_reasoning_effort(self):
         created = self._create(deep_thinking=True)
         job = self._run(store.get_job(created["job_id"]))
-        self.assertEqual(job["payload"]["reasoning_effort"], "medium")
+        self.assertEqual(job["payload"]["reasoning_effort"], "xhigh")
 
     # ── reads never leak ─────────────────────────────────────────────────────
 
@@ -329,7 +329,7 @@ class GamesRoutesTest(unittest.TestCase):
 
         fake_sb.ServiceBusMessage = ServiceBusMessage
         fake_sb_aio.ServiceBusClient = types.SimpleNamespace(from_connection_string=lambda _c: _Client())
-        with patch.dict("os.environ", {"GAME_JOBS_MODE": "servicebus",
+        with patch.dict("os.environ", {"GAME_JOBS_MODE": "servicebus", "GAME_JOBS_QUEUE": "game-jobs",
                                        "GAME_JOBS_SERVICEBUS_CONNECTION_STRING": "Endpoint=sb://x"}), \
              patch.dict(sys.modules, {"azure.servicebus": fake_sb, "azure.servicebus.aio": fake_sb_aio}):
             created = self._create()

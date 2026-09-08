@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
 import {
-  GAME_GENRES, createGame, deleteGame, editGame, getPicker, listGames,
-  type GameGenre, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject,
+  GAME_INSPIRATIONS, createGame, deleteGame, getPicker, listGames,
+  type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject,
 } from '../../../services/games'
 import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
@@ -158,7 +158,6 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
               key={game.game_id}
               game={game}
               event={activity.frames[game.game_id]?.value.event}
-              onChanged={replace}
               onDeleted={() => remove(game.game_id)}
             />
           ))}
@@ -179,29 +178,22 @@ function upsertGameAtEnd(list: LearnerGame[], game: LearnerGame): LearnerGame[] 
   return list.some((row) => row.game_id === game.game_id) ? list : [...list, game]
 }
 
+/** A game on the shelf: its name, objective, state and cost. Changing and
+ * fixing happen inside the player, so the card only plays or deletes. */
 function GameCard({
-  game, event, onChanged, onDeleted,
+  game, event, onDeleted,
 }: {
   game: LearnerGame
   event: string | undefined
-  onChanged: (game: LearnerGame) => void
   onDeleted: () => void
 }) {
   const { t } = useI18n()
-  const [editing, setEditing] = useState(false)
-  const [instruction, setInstruction] = useState('')
-  const [editBusy, setEditBusy] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
-  const editRef = useRef<HTMLTextAreaElement | null>(null)
 
   const busy = isBusyStatus(game.status)
   const tone = statusTone(game.status)
   const playable = game.current_version > 0
-  const versions = Math.max(game.versions.length, game.current_version)
-
-  useEffect(() => { if (editing) editRef.current?.focus() }, [editing])
 
   const play = () => {
     // The lesson page owns the player. A listener that opens it in place
@@ -211,25 +203,6 @@ function GameCard({
     if (!unhandled) return
     const q = new URLSearchParams({ unit: game.unit_id, component: game.component_id, game: game.game_id })
     navigate(`/learning/lesson?${q.toString()}`)
-  }
-
-  const submitEdit = async (form: FormEvent) => {
-    form.preventDefault()
-    const text = instruction.trim()
-    if (!text || editBusy) return
-    setEditBusy(true)
-    setEditError(null)
-    try {
-      await editGame(game.game_id, text)
-      onChanged({ ...game, status: 'queued' })
-      setEditing(false)
-      setInstruction('')
-    } catch (error) {
-      const status = (error as { status?: number }).status
-      setEditError(t(status === 429 ? 'studio.gamelab.error.editCap' : status === 409 ? 'studio.gamelab.error.busy' : 'studio.gamelab.error.edit'))
-    } finally {
-      setEditBusy(false)
-    }
   }
 
   const confirmRemove = async () => {
@@ -258,12 +231,6 @@ function GameCard({
               <bdi dir="auto">{game.objective_title}</bdi>
             </span>
           )}
-          {game.component_title && (
-            <span className="ys-gamelab-chip" title={t('studio.gamelab.chip.component')}>
-              <Icon name="book" size={12} />
-              <bdi dir="auto">{game.component_title}</bdi>
-            </span>
-          )}
         </div>
         <div className="ys-gamelab-card__meta">
           <span className={`ys-gamelab-status is-${tone}`} role="status">
@@ -271,20 +238,16 @@ function GameCard({
             {t(`studio.gamelab.status.${game.status}`)}
             {busy && event && <em><bdi dir="auto">{event}</bdi></em>}
           </span>
-          <span className="ys-gamelab-card__stat">{t('studio.gamelab.versions', { count: versions })}</span>
           <span className="ys-gamelab-card__stat">
             <Icon name="spark" size={12} />
             {game.sparks_spent} {t('rewards.currency')}
           </span>
         </div>
-        {!confirmDelete && !editing && (
+        {!confirmDelete && (
           <div className="ys-gamelab-card__actions">
             <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={play} disabled={!playable}>
               <Icon name="play" size={14} />
               {t('studio.gamelab.action.play')}
-            </button>
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setEditing(true)} disabled={busy || !playable}>
-              {t('studio.gamelab.action.edit')}
             </button>
             <button
               type="button"
@@ -296,30 +259,6 @@ function GameCard({
               <Icon name="trash" size={15} />
             </button>
           </div>
-        )}
-        {editing && (
-          <form className="ys-gamelab-edit" onSubmit={(form) => void submitEdit(form)}>
-            <label className="ys-subhead" htmlFor={`ys-gamelab-edit-${game.game_id}`}>{t('studio.gamelab.edit.label')}</label>
-            <textarea
-              id={`ys-gamelab-edit-${game.game_id}`}
-              ref={editRef}
-              className="ys-gamelab-textarea"
-              rows={3}
-              maxLength={VIBE_MAX}
-              value={instruction}
-              placeholder={t('studio.gamelab.edit.placeholder')}
-              onChange={(change) => setInstruction(change.target.value)}
-            />
-            {editError && <p className="ys-note" role="alert">{editError}</p>}
-            <div className="ys-gamelab-edit__actions">
-              <button type="submit" className="ys-btn ys-btn--primary ys-btn--sm" disabled={!instruction.trim() || editBusy}>
-                {t(editBusy ? 'studio.gamelab.edit.sending' : 'studio.gamelab.edit.send')}
-              </button>
-              <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => { setEditing(false); setEditError(null) }} disabled={editBusy}>
-                {t('studio.gamelab.cancel')}
-              </button>
-            </div>
-          </form>
         )}
         {confirmDelete && (
           <div className="ys-gamelab-confirm" role="alertdialog" aria-label={t('studio.gamelab.delete.confirm')}>
@@ -350,10 +289,11 @@ function CreateWizard({
 }) {
   const { t } = useI18n()
   const [subjects, setSubjects] = useState<PickerSubject[] | null>(null)
+  const [subject, setSubject] = useState<string | null>(null)
   const [pickerError, setPickerError] = useState(false)
   const [objective, setObjective] = useState<PickerObjective | null>(null)
   const [component, setComponent] = useState<PickerComponent | null>(null)
-  const [genre, setGenre] = useState<GameGenre | null>(null)
+  const [inspirations, setInspirations] = useState<GameInspiration[]>([])
   const [vibe, setVibe] = useState('')
   const [deep, setDeep] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -382,17 +322,24 @@ function CreateWizard({
   }, [subjects, preselect])
 
   const step = !objective ? 1 : !component ? 2 : 3
+  const shownSubject = subjects?.find((row) => row.subject === subject) ?? subjects?.[0] ?? null
+
+  const toggleInspiration = (chip: GameInspiration) => {
+    setInspirations((current) => current.includes(chip) ? current.filter((c) => c !== chip) : [...current, chip])
+  }
 
   const create = async () => {
-    if (!objective || !component || !genre || creating) return
+    if (!objective || !component || creating) return
     setCreating(true)
     setCreateError(null)
     try {
       const game = await createGame({
-        objective_id: objective.id,
+        // A picker card may merge several catalog objectives with one title;
+        // the component knows which one it belongs to.
+        objective_id: component.objective_id || objective.id,
         unit_id: component.unit_id,
         component_id: component.id,
-        genre,
+        inspirations,
         vibe: vibe.trim(),
         device: isTouch ? 'touch' : 'keyboard',
         deep_thinking: deep,
@@ -425,22 +372,35 @@ function CreateWizard({
           {pickerError && <p className="ys-note" role="alert">{t('studio.gamelab.error.picker')}</p>}
           {!subjects && !pickerError && <p className="ys-empty">{t('studio.gamelab.loading')}</p>}
           {subjects && subjects.length === 0 && <p className="ys-empty">{t('studio.gamelab.pick.none')}</p>}
-          {subjects?.map((subject) => (
-            <div key={subject.subject} className="ys-gamelab-group">
-              <h3 className="ys-subhead">{subjectLabel(subject.subject, t)}</h3>
-              <ul className="ys-gamelab-picks">
-                {orderObjectives(subject.objectives).map((row) => (
-                  <li key={row.id}>
-                    <button type="button" className="ys-gamelab-pick" onClick={() => { setObjective(row); setComponent(null) }}>
-                      <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
-                      {row.topic_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.topic_title}</bdi></span>}
-                      {row.visited && <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          {subjects && subjects.length > 1 && (
+            <div className="ys-gamelab-subjects" role="tablist" aria-label={t('studio.gamelab.pick.subject')}>
+              {subjects.map((row) => (
+                <button
+                  key={row.subject}
+                  type="button"
+                  role="tab"
+                  aria-selected={row.subject === shownSubject?.subject}
+                  className={`ys-chip${row.subject === shownSubject?.subject ? ' is-active' : ''}`}
+                  onClick={() => setSubject(row.subject)}
+                >
+                  {subjectLabel(row.subject, t)}
+                </button>
+              ))}
             </div>
-          ))}
+          )}
+          {shownSubject && (
+            <ul className="ys-gamelab-picks">
+              {orderObjectives(shownSubject.objectives).map((row) => (
+                <li key={row.id}>
+                  <button type="button" className="ys-gamelab-pick" onClick={() => { setObjective(row); setComponent(null) }}>
+                    <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
+                    {row.topic_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.topic_title}</bdi></span>}
+                    {row.visited && <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 
@@ -482,34 +442,37 @@ function CreateWizard({
             backLabel={t('studio.gamelab.back.component')}
             lines={[objective.title, component.title]}
           />
-          <h2 className="ys-section__title">{t('studio.gamelab.pick.genre')}</h2>
-          <div className="ys-chips" role="group" aria-label={t('studio.gamelab.pick.genre')}>
-            {GAME_GENRES.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className={`ys-chip ys-gamelab-genre${genre === id ? ' is-active' : ''}`}
-                aria-pressed={genre === id}
-                onClick={() => setGenre(id)}
-              >
-                <span aria-hidden>{genreIcon(id)}</span>
-                {t(`studio.gamelab.genre.${id}`)}
-              </button>
-            ))}
-          </div>
-
+          <h2 className="ys-section__title">{t('studio.gamelab.pick.brief')}</h2>
+          <p className="ys-gamelab-lead">{t('studio.gamelab.brief.lead')}</p>
           <div className="ys-gamelab-field">
-            <label className="ys-subhead" htmlFor="ys-gamelab-vibe">{t('studio.gamelab.vibe.label')}</label>
             <textarea
               id="ys-gamelab-vibe"
-              className="ys-gamelab-textarea"
-              rows={3}
+              className="ys-gamelab-textarea ys-gamelab-textarea--brief"
+              rows={5}
               maxLength={VIBE_MAX}
               value={vibe}
-              placeholder={t('studio.gamelab.vibe.placeholder')}
+              aria-label={t('studio.gamelab.pick.brief')}
+              placeholder={t('studio.gamelab.brief.placeholder')}
               onChange={(change) => setVibe(change.target.value.slice(0, VIBE_MAX))}
             />
             <span className="ys-gamelab-counter" aria-live="polite">{vibe.length}/{VIBE_MAX}</span>
+          </div>
+
+          {/* Flavour only: Yuvi owns genre, engine and form. */}
+          <p className="ys-subhead">{t('studio.gamelab.inspire.label')}</p>
+          <div className="ys-chips" role="group" aria-label={t('studio.gamelab.inspire.label')}>
+            {GAME_INSPIRATIONS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`ys-chip ys-gamelab-genre${inspirations.includes(id) ? ' is-active' : ''}`}
+                aria-pressed={inspirations.includes(id)}
+                onClick={() => toggleInspiration(id)}
+              >
+                <span aria-hidden>{genreIcon(id)}</span>
+                {t(`studio.gamelab.inspire.${id}`)}
+              </button>
+            ))}
           </div>
 
           <button
@@ -536,7 +499,7 @@ function CreateWizard({
           </p>
 
           {createError && <p className="ys-note" role="alert">{createError}</p>}
-          <button type="button" className="ys-btn ys-btn--primary ys-gamelab-create" onClick={() => void create()} disabled={!genre || creating}>
+          <button type="button" className="ys-btn ys-btn--primary ys-gamelab-create" onClick={() => void create()} disabled={creating}>
             <Icon name="wand" size={16} />
             {t(creating ? 'studio.gamelab.creating' : 'studio.gamelab.create')}
           </button>

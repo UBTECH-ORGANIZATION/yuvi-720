@@ -20,6 +20,7 @@ export type GameLabTab = 'mine' | 'create'
 
 /** One glyph per genre — a tile placeholder until games carry a thumbnail. */
 export const GENRE_ICONS: Record<GameGenre, string> = {
+  open: '🎮',
   shooter: '🚀',
   runner: '🏃',
   platformer: '🪜',
@@ -29,12 +30,14 @@ export const GENRE_ICONS: Record<GameGenre, string> = {
   surprise: '🎲',
 }
 
+const INSPIRATION_ICONS: Record<string, string> = { '3d': '🧊', story: '📖', world: '🗺️' }
+
 export function genreIcon(genre: string): string {
-  return GENRE_ICONS[genre as GameGenre] ?? '🎮'
+  return GENRE_ICONS[genre as GameGenre] ?? INSPIRATION_ICONS[genre] ?? '🎮'
 }
 
-/** The free-text "vibe" line is a hint, not a design document. */
-export const VIBE_MAX = 300
+/** The kid's brief: the one real design input, so it gets room. */
+export const VIBE_MAX = 600
 
 export type StatusTone = 'busy' | 'ready' | 'failed'
 

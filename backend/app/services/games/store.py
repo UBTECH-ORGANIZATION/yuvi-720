@@ -337,7 +337,7 @@ async def update_status(
 async def add_version(
     game_id: str, *, blob_path: str, sha256: str, source: str, summary: str = "",
     title: Optional[str] = None, thumb_blob_path: Optional[str] = None,
-    sparks: int = 0,
+    sparks: int = 0, design_brief: Optional[str] = None,
 ) -> dict[str, Any]:
     """Append a built version and make it current. The game becomes `ready`
     and its error list is cleared — whatever was broken, this build replaced it.
@@ -371,6 +371,8 @@ async def add_version(
         fields["title"] = str(title)[:80]
     if thumb_blob_path:
         fields["thumb_blob_path"] = thumb_blob_path
+    if design_brief:  # Yuvi's own words about the game, shown in the player
+        fields["description"] = str(design_brief)[:600]
     await update_game(game_id, **fields)
     return entry
 

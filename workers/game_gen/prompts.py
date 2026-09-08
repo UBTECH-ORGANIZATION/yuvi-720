@@ -22,20 +22,27 @@ except Exception:  # pragma: no cover - keeps prompts importable during partial 
     def library_prompt_block() -> str:
         return "- Canvas 2D API (no library needed)\n- Phaser 4.2.1: https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"
 
-GENRES = {
-    "shooter": "an arcade shooter (aim/shoot targets, waves, power-ups)",
-    "runner": "an endless runner (jump/slide over obstacles, speed ramps)",
-    "platformer": "a platformer (jump between platforms, collect, reach the door)",
-    "puzzle": "a puzzle / match game (drag, match, sort, connect)",
-    "boss": "a boss battle (attack meter, boss phases, healing)",
-    "tower": "a tower defense (place towers, waves, upgrades)",
-    "surprise": "any genre you think fits this content best — surprise the kid",
+# Flavour chips the kid may tick. They are inspiration for the designer, never
+# a constraint: the model owns genre, engine and form.
+INSPIRATIONS = {
+    "shooter": "arcade shooting — aiming, enemy types, waves, power-ups",
+    "runner": "speed — running, dodging, lanes, speed ramps",
+    "platformer": "jumping and exploring — platforms, keys, doors, secrets",
+    "puzzle": "thinking — matching, sorting, connecting, rules that grow",
+    "boss": "a big boss — phases, patterns, dodging, a dramatic finish",
+    "tower": "strategy — placing, upgrading, holding waves",
+    "3d": "a 3D world — depth, a camera that follows, lit shapes and shadows",
+    "story": "a story — characters, a mission, a twist, an ending",
+    "world": "an open world — a map to roam, places to discover",
+    "surprise": "surprise the kid",
 }
+GENRES = INSPIRATIONS  # legacy name kept for callers
 
 IDENTITY = (
-    "You are Yuvi (יובי), a senior game developer who builds polished web games for "
-    "kids in grades 7-9. You NEVER reveal your model name or vendor. The user is a child: "
-    "keep every explanation short and warm, keep all internal analysis invisible."
+    "You are Yuvi (יובי), a senior game designer AND engineer who ships the kind of browser games "
+    "kids show their friends: ambitious worlds, real mechanics, real polish — never a toy demo. "
+    "You build for kids in grades 7-9. You NEVER reveal your model name or vendor. The user is a "
+    "child: keep every explanation short and warm, keep all internal analysis invisible."
 )
 
 CODE_RULES = """
@@ -49,6 +56,7 @@ CODE RULES (ported from the YuviLab builder — follow exactly)
 - Simple, generated or emoji/shape art; no external images, fonts or audio files. Sounds via WebAudio oscillators are fine.
 - Wrap risky math (Math.max(0, radius) for arcs). Guard every DOM lookup. No console.log spam.
 - localStorage / sessionStorage / alert / confirm / prompt do NOT exist here (sandboxed iframe). Use `await YuviStorage.get(key)` / `await YuviStorage.set(key, value)` for anything persistent.
+- Three.js: ONLY the module build, inside <script type="module"> with `import * as THREE from '<the exact URL below>'`; never three.min.js, never import maps or bare `import 'three'`. Put the game code in that same module script. Size the renderer from the window and re-size it on `resize`.
 - Libraries: only from this list (exact URLs), or plain Canvas 2D:
 """.strip()
 
@@ -67,7 +75,19 @@ LEARNING CONTRACT (non-negotiable — a game that breaks it is rejected)
 6. Use `YuviLearn.total` to size the game (waves/levels ≈ number of questions). If `total` is 0, show a friendly "no questions yet" message instead of a game.
 7. THEME THE MECHANICS ON THE TOPIC, not just the questions: the objects, enemies, pickups, HUD labels, level names and win condition come from LEARNING_CONTEXT (for "mass": crates with kg labels, a balance scale, gross/net/tare as game concepts; for "coordinates": the play field IS a grid with axes and targets at (x, y)). A kid should absorb the vocabulary just by playing between questions. Reviewers reject games whose core loop could belong to any topic.
 8. Content stays age-appropriate: cartoon targets, no blood, no real-world weapons, no scary imagery. Positive tone.
-9. Make it feel finished: title screen, HUD (score, lives, progress "3/12"), 3+ distinct waves or levels, particles or screen shake on hits, short WebAudio blips, a victory screen. Aim for roughly 300-600 lines — polished, not minimal.
+9. Make it feel finished: title screen, HUD (score, lives, progress "3/12"), a victory screen — and meet the QUALITY BAR below.
+""".strip()
+
+QUALITY_BAR = """
+QUALITY BAR (the kid compares this to real games — a toy is rejected as "too simple")
+- You own the design. Pick the genre, the world and the engine that make THIS topic and THIS kid's brief shine; combine genres when it helps (a runner with boss phases, a puzzle inside a 3D world). Go big: procedural worlds, day/night or biome changes, a cast of enemies with behaviours, a boss, story beats between levels.
+- Engine: Three.js for anything with depth (lit meshes, shadows, fog, a camera that follows — generate all geometry in code), Phaser 4 for 2D action (scenes, arcade physics, tweens, particle emitters, cameras). Plain Canvas 2D only for board/puzzle games. Do not hand-roll what the engine gives you. No external assets: every sprite, model, sound and line of logic is your code.
+- Progression: at least 5 waves/levels with a real difficulty curve — faster, more enemies, NEW enemy/obstacle types and a new mechanic every level or two, a final challenge. Level names and objects come from the topic.
+- Challenge: fair but not easy. The kid should lose sometimes: lives, a game-over screen with instant retry, a score with a combo multiplier, a best score kept with YuviStorage.
+- Juice: particles on every hit/pickup, screen shake, hit flashes, squash-and-stretch or tween on movement, a parallax or starfield background, WebAudio blips for every action and a short looping oscillator melody with a mute button.
+- Art direction: one coherent palette (3-5 colours), gradients and glow, shapes with outlines and drop shadows, animated UI (tween the question overlay in). Emoji only as accents, never as the whole art.
+- Controls: responsive and forgiving (coyote time, input buffering, big hitboxes for pickups). Show the controls on the start screen.
+- Size: 900-2000 lines. Structure the code (state machine for screens, classes for entities, a config block for tuning numbers). Write it all in one pass — you have the budget; do not leave "TODO" or "add more levels here".
 """.strip()
 
 HARNESS_API = """
@@ -104,6 +124,7 @@ def builder_system_message(language: str = "he") -> str:
         IDENTITY,
         CODE_RULES + "\n" + library_prompt_block(),
         LEARNING_CONTRACT,
+        QUALITY_BAR,
         HARNESS_API,
         DELIVERY_TOOLS,
         get_language_rule(language),
@@ -115,25 +136,35 @@ def editor_system_message(language: str = "he") -> str:
         IDENTITY,
         CODE_RULES + "\n" + library_prompt_block(),
         LEARNING_CONTRACT,
+        QUALITY_BAR,
         HARNESS_API,
         EDIT_TOOLS,
         get_language_rule(language),
     ])
 
 
-def create_prompt(pack: ContextPack, *, genre: str, vibe: str, clarifications: dict[str, str] | None = None) -> str:
-    genre_line = GENRES.get(genre, GENRES["surprise"])
+def create_prompt(pack: ContextPack, *, genre: str = "open", vibe: str = "", clarifications: dict[str, str] | None = None,
+                  inspirations: list[str] | None = None) -> str:
+    """The build request. The kid's brief and the learning context are the
+    inputs; genre and engine are the designer's call. A legacy `genre` other
+    than "open"/"surprise" becomes one more inspiration line."""
+    chips = [c for c in (inspirations or []) if c in INSPIRATIONS]
+    if genre in INSPIRATIONS and genre not in ("surprise",) and genre not in chips:
+        chips.append(genre)
+    inspire = ""
+    if chips:
+        inspire = "\nInspiration the kid ticked (flavour, not a constraint — you may blend or go elsewhere if the topic deserves it):\n" + "\n".join(f"- {INSPIRATIONS[c]}" for c in chips)
     extra = ""
     if clarifications:
         extra = "\nKid's answers to your questions:\n" + "\n".join(f"- {k}: {v}" for k, v in clarifications.items())
-    return f"""Build {genre_line} for a kid.
+    return f"""Design and build a learning game for a kid. The design is yours: choose the genre, the world and the engine that make this topic unforgettable.
 
-What the kid asked for: "{vibe.strip() or 'make it awesome'}"{extra}
+The kid's brief: "{vibe.strip() or 'make the most impressive game you can for this topic'}"{inspire}{extra}
 
 LEARNING_CONTEXT (JSON):
 {pack.to_prompt_json()}
 
-Plan silently (mechanics → where each question gates progress → art → controls for device="{pack.device}"), then write the complete game and deliver it with `submit_game`."""
+First decide the design (silently): the concept in one line, the world, the core loop, the 5+ level curve, where each question gates progress, the art direction, the engine, and the controls for device="{pack.device}". Then write the COMPLETE game in one pass and deliver it with `submit_game` (put the concept and world in `design_brief`, in the kid's language)."""
 
 
 def edit_prompt(instruction: str, numbered_html: str, *, errors_block: str = "", history: list[str] | None = None) -> str:

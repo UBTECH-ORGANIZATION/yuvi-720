@@ -22,7 +22,7 @@ import {
   getGame, isBusy, isGameFrame, listGames,
   type GameFrame, type LearnerGame,
 } from '../../services/games'
-import { GamePlayer, type PlayerPanel } from './GamePlayer'
+import { GamePlayer } from './GamePlayer'
 
 export interface GameOpenRequest {
   gameId: string
@@ -35,11 +35,8 @@ interface GamesTabProps {
   objectiveId: string | null
   unitId: string | null
   openRequest: GameOpenRequest | null
-}
-
-interface Playing {
-  game: LearnerGame
-  panel: PlayerPanel | null
+  /** Called once a request has opened the player, so it is not replayed. */
+  onRequestHandled?: (seq: number) => void
 }
 
 function toneOf(game: LearnerGame): StatusTone {
@@ -48,13 +45,13 @@ function toneOf(game: LearnerGame): StatusTone {
   return 'steady'
 }
 
-export function GamesTab({ componentId, objectiveId, unitId, openRequest }: GamesTabProps) {
+export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequestHandled }: GamesTabProps) {
   const { t } = useI18n()
   const [games, setGames] = useState<LearnerGame[]>([])
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [reload, setReload] = useState(0)
-  const [playing, setPlaying] = useState<Playing | null>(null)
+  const [playing, setPlaying] = useState<LearnerGame | null>(null)
   const handledRequest = useRef<number>(0)
 
   useEffect(() => {
@@ -111,12 +108,17 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest }: Game
     if (!openRequest || openRequest.seq === handledRequest.current) return
     let active = true
     const known = games.find((game) => game.game_id === openRequest.gameId)
-    if (known) { handledRequest.current = openRequest.seq; setPlaying({ game: known, panel: null }); return }
+    if (known) { handledRequest.current = openRequest.seq; setPlaying(known); onRequestHandled?.(openRequest.seq); return }
     // The request is marked handled only once the fetch lands: StrictMode
     // runs this effect twice, and marking it up front would let the first
     // run's cleanup discard the game while the second run sees "done".
     getGame(openRequest.gameId)
-      .then((game) => { if (active) { handledRequest.current = openRequest.seq; setPlaying({ game, panel: null }) } })
+      .then((game) => {
+        if (!active) return
+        handledRequest.current = openRequest.seq
+        setPlaying(game)
+        onRequestHandled?.(openRequest.seq)
+      })
       .catch(() => { /* a game that is not theirs, or gone — the list stands */ })
     return () => { active = false }
     // `games` is read once at request time on purpose: a later list refresh
@@ -143,28 +145,15 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest }: Game
           </span>
         </div>
         <p className="sp-companion__game-meta">
-          <span>{t('games.card.version', { v: game.current_version })}</span>
           <span><Icon name="spark" size={12} aria-hidden="true" />{t('games.card.sparks', { count: game.sparks_spent })}</span>
           {game.component_id !== componentId && <span dir="auto">{game.component_title}</span>}
         </p>
+        {/* Changing and fixing live in the player: the card only opens it. */}
         {ready && (
           <div className="sp-companion__game-actions">
-            <button type="button" className="sp-companion__game-btn is-primary" onClick={() => setPlaying({ game, panel: null })}>
+            <button type="button" className="sp-companion__game-btn is-primary" onClick={() => setPlaying(game)}>
               <Icon name="play" size={15} />
               <span>{t('games.card.play')}</span>
-            </button>
-            <button type="button" className="sp-companion__game-btn" onClick={() => setPlaying({ game, panel: 'edit' })}>
-              <Icon name="wand" size={15} />
-              <span>{t('games.card.edit')}</span>
-            </button>
-            <button
-              type="button"
-              className="sp-companion__game-btn is-quiet"
-              onClick={() => setPlaying({ game, panel: 'bug' })}
-              aria-label={t('games.card.bug')}
-              data-tooltip={t('games.card.bug')}
-            >
-              <Icon name="alert" size={15} />
             </button>
           </div>
         )}
@@ -210,9 +199,8 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest }: Game
 
       {playing && (
         <GamePlayer
-          key={playing.game.game_id}
-          game={playing.game}
-          initialPanel={playing.panel}
+          key={playing.game_id}
+          game={playing}
           onClose={closePlayer}
           onGameChange={patchGame}
         />

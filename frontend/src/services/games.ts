@@ -13,8 +13,10 @@
 import { apiDelete, apiGet, apiPost } from './api.ts'
 
 export type GameStatus = 'queued' | 'planning' | 'building' | 'validating' | 'fixing' | 'ready' | 'failed'
-export type GameGenre = 'shooter' | 'runner' | 'platformer' | 'puzzle' | 'boss' | 'tower' | 'surprise'
-export const GAME_GENRES: GameGenre[] = ['shooter', 'runner', 'platformer', 'puzzle', 'boss', 'tower', 'surprise']
+export type GameGenre = 'open' | 'shooter' | 'runner' | 'platformer' | 'puzzle' | 'boss' | 'tower' | 'surprise'
+/** Flavour chips on the create step: inspiration for Yuvi, never a constraint. */
+export type GameInspiration = 'shooter' | 'runner' | 'platformer' | 'puzzle' | 'boss' | 'tower' | '3d' | 'story' | 'world'
+export const GAME_INSPIRATIONS: GameInspiration[] = ['3d', 'shooter', 'runner', 'platformer', 'boss', 'puzzle', 'tower', 'story', 'world']
 
 export interface GameVersion {
   v: number
@@ -42,6 +44,8 @@ export interface LearnerGame {
   objective_title: string
   component_title: string
   title: string
+  /** Yuvi's design brief for the game, in the kid's language (may be empty). */
+  description?: string
   genre: GameGenre | string
   prompt: string
   language: string
@@ -64,6 +68,8 @@ export interface GameListPage {
 
 export interface PickerComponent {
   id: string
+  /** The objective this component really belongs to (a picker card may merge several). */
+  objective_id: string
   unit_id: string
   unit_title: string
   title: string
@@ -91,7 +97,9 @@ export interface CreateGameInput {
   objective_id: string
   unit_id: string
   component_id: string
-  genre: GameGenre
+  /** Optional: defaults to "open" — Yuvi picks the form. */
+  genre?: GameGenre
+  inspirations?: GameInspiration[]
   vibe: string
   clarifications?: Record<string, string>
   device?: 'keyboard' | 'touch'
@@ -144,8 +152,9 @@ export function createGame(input: CreateGameInput) {
   return apiPost<LearnerGame>('/api/games', input)
 }
 
-export function editGame(gameId: string, instruction: string) {
-  return apiPost<{ job_id: string; status: string }>(`/api/games/${encodeURIComponent(gameId)}/edit`, { instruction })
+/** One message from the player's chat: the change, plus any errors the frame caught. */
+export function editGame(gameId: string, instruction: string, errors: RuntimeErrorReport[] = []) {
+  return apiPost<{ job_id: string; status: string }>(`/api/games/${encodeURIComponent(gameId)}/edit`, { instruction, errors })
 }
 
 export function reportBug(gameId: string, errors: RuntimeErrorReport[], note = '') {

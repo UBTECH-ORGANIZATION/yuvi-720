@@ -1,8 +1,9 @@
 """Curated CDN libraries for generated games.
 
-Ported from vibe-coding-kids ``src/backend/agent/libraries.py``.  This worker
-targets 2D games only, so Three.js / Babylon.js (and the Three.js
-module-merge fix) were dropped; Phaser 4.2.1 was added next to Phaser 3.90.0.
+Ported from vibe-coding-kids ``src/backend/agent/libraries.py``.  Phaser 4.2.1
+sits next to Phaser 3.90.0, and Three.js (module build) is allowed for games
+that want a 3D feel; ``_fix_threejs_non_module`` (also from vibe) rescues the
+common mistake of loading it as a classic script and using a global ``THREE``.
 ``normalize_cdn_urls`` rewrites hallucinated versions to the verified URLs,
 picking the Phaser entry whose major version matches the URL the model wrote.
 """
@@ -31,6 +32,14 @@ AVAILABLE_LIBRARIES: dict[str, dict] = {
         "npm_packages": ["phaser"],
         "major": 4,
         "use": "Phaser 4 (same API family as Phaser 3, newer renderer)",
+    },
+    "three": {
+        "name": "Three.js",
+        "cdn": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.min.js",
+        "fallback": "https://unpkg.com/three@0.183.2/build/three.module.min.js",
+        "npm_packages": ["three"],
+        "script_attrs": 'type="module"',
+        "use": "3D worlds and games (ES module: `import * as THREE from '<url>'` inside <script type=\"module\">)",
     },
     "kaplay": {
         "name": "Kaplay",
@@ -221,7 +230,52 @@ def normalize_cdn_urls(code: str) -> str:
             return full.replace(url, verified)
         return full
 
-    return _IMPORT_RE.sub(_replace_import_url, code)
+    code = _IMPORT_RE.sub(_replace_import_url, code)
+    return _fix_threejs_non_module(code)
+
+
+def _fix_threejs_non_module(code: str) -> str:
+    """Rescue Three.js loaded as a classic ``<script src>`` with a global ``THREE``.
+
+    Three.js r150+ ships ES modules only: a plain ``<script src=three.min.js>``
+    exposes no global, and after the URL rewrite above it would be a deferred
+    module the classic game script cannot see. The tag is removed and the
+    import merged into the first inline script that uses ``THREE``, which
+    becomes a module; without such a script a standalone module sets
+    ``window.THREE`` before ``</head>``.
+    """
+    three_cdn = AVAILABLE_LIBRARIES["three"]["cdn"]
+    three_src_re = re.compile(
+        r"""<script\b(?![^>]*type\s*=\s*["']module["'])[^>]*\bsrc\s*=\s*["']"""
+        r"""([^"']*(?:three|THREE)[^"']*\.js[^"']*)["'][^>]*>\s*</script>""",
+        re.IGNORECASE,
+    )
+    m = three_src_re.search(code)
+    if not m:
+        return code
+    code = code[: m.start()] + code[m.end():]
+    inline_re = re.compile(
+        r"""(<script\b(?![^>]*\bsrc\s*=)(?![^>]*type\s*=\s*["']module["'])[^>]*>)(.*?)(</script>)""",
+        re.IGNORECASE | re.DOTALL,
+    )
+    converted = False
+
+    def _to_module(match: re.Match[str]) -> str:
+        nonlocal converted
+        if converted or not re.search(r"\bTHREE\b", match.group(2)):
+            return match.group(0)
+        converted = True
+        log.info("Three.js fix: merged the CDN import into the game script as an ES module")
+        return f"<script type=\"module\">\nimport * as THREE from '{three_cdn}';\n{match.group(2)}{match.group(3)}"
+
+    code = inline_re.sub(_to_module, code)
+    if not converted:
+        fallback = (f"<script type=\"module\">\nimport * as THREE from '{three_cdn}';\n"
+                    "window.THREE = THREE;\n</script>\n")
+        pos = code.find("</head>")
+        code = code[:pos] + fallback + code[pos:] if pos >= 0 else fallback + code
+        log.info("Three.js fix: added a standalone module import")
+    return code
 
 
 def _head(url: str, timeout: float) -> int:

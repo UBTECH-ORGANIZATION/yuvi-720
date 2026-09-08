@@ -80,12 +80,13 @@ class JobSpec:
     genre: str = "surprise"
     vibe: str = ""
     clarifications: dict[str, str] = field(default_factory=dict)
+    inspirations: list[str] = field(default_factory=list)  # flavour chips, context only
     instruction: str = ""            # edit / fix
     current_html: str = ""           # edit / fix
     runtime_errors: list[dict[str, Any]] = field(default_factory=list)  # fix
     history: list[str] = field(default_factory=list)
     model: str = DEFAULT_MODEL
-    reasoning_effort: str = "low"
+    reasoning_effort: str = "high"
     max_ai_credits: Optional[float] = None
     judge: bool = True
     run_judge_model: str = JUDGE_MODEL
@@ -117,12 +118,14 @@ class JobResult:
     elapsed_s: float
     error: Optional[str] = None
     model: str = DEFAULT_MODEL
+    design_brief: str = ""
 
 
 class SubmitParams(BaseModel):
     html: str = Field(description="The COMPLETE HTML document of the game, <!DOCTYPE html> to </html>.")
     title: str = Field(description="Short game title in the kid's language (max 40 chars).")
     learning_summary: str = Field(description="One sentence: how the questions gate progress in this game.")
+    design_brief: str = Field(default="", description="3-5 lines in the kid's language: the concept, the world, the core loop, how it grows. Shown to the kid.")
 
 
 class PatchParams(BaseModel):
@@ -139,6 +142,7 @@ class _State:
         self.accepted_html: Optional[str] = None
         self.accepted_title: str = ""
         self.accepted_summary: str = ""
+        self.accepted_brief: str = ""
         self.screenshot: Optional[bytes] = None
         self.current_html: str = spec.current_html
         self.nonce = "validate"
@@ -174,7 +178,7 @@ async def _validate_candidate(state: _State, html: str) -> ValidationResult:
 
 
 def _make_tools(state: _State, progress: ProgressFn) -> list[Any]:
-    async def _handle(html: str, title: str, summary: str, tool_name: str) -> ToolResult:
+    async def _handle(html: str, title: str, summary: str, tool_name: str, brief: str = "") -> ToolResult:
         started = time.perf_counter()
         idx = len(state.attempts) + 1
         if idx > MAX_SUBMISSIONS:
@@ -193,6 +197,8 @@ def _make_tools(state: _State, progress: ProgressFn) -> list[Any]:
             state.accepted_html = validate_and_fix_code(html)
             state.accepted_title = title.strip()[:60]
             state.accepted_summary = summary.strip()[:300]
+            if brief.strip():
+                state.accepted_brief = brief.strip()[:600]
             state.screenshot = result.screenshot_png
             return ToolResult(text_result_for_llm=_format_result_for_llm(result, 0), result_type="success")
         return ToolResult(
@@ -206,7 +212,7 @@ def _make_tools(state: _State, progress: ProgressFn) -> list[Any]:
         if "</html>" not in html.lower() or "<script" not in html.lower():
             state.attempts.append(Attempt(len(state.attempts) + 1, "submit_game", False, [{"message": "incomplete html"}], False, "incomplete", 0.0))
             return ToolResult(text_result_for_llm="The HTML is incomplete (needs <!DOCTYPE html> … <script> … </html>). Send the FULL file.", result_type="failure", error="incomplete_html")
-        return await _handle(html, params.title, params.learning_summary, "submit_game")
+        return await _handle(html, params.title, params.learning_summary, "submit_game", params.design_brief)
 
     async def patch_game(params: PatchParams, _inv: ToolInvocation) -> ToolResult:
         if not state.current_html:
@@ -287,7 +293,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
 
     if spec.kind == "create":
         system = prompts.builder_system_message(language)
-        prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications)
+        prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications, inspirations=spec.inspirations)
     else:
         system = prompts.editor_system_message(language)
         if len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD:
@@ -296,7 +302,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         prompt = prompts.edit_prompt(
             spec.instruction or "fix the errors",
             numbered,
-            errors_block=_errors_block(spec.runtime_errors) if spec.kind == "fix" else "",
+            errors_block=_errors_block(spec.runtime_errors) if spec.runtime_errors else "",
             history=spec.history,
         )
 
@@ -309,7 +315,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         on_progress=progress,
         tools=tools,
         max_ai_credits=spec.max_ai_credits,
-        timeout_s=1200,
+        timeout_s=1800,
     )
     error: Optional[str] = None
     try:
@@ -343,6 +349,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         html=state.accepted_html,
         title=state.accepted_title,
         summary=state.accepted_summary,
+        design_brief=state.accepted_brief,
         attempts=state.attempts,
         usage=totals,
         judge=judge,

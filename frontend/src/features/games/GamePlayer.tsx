@@ -1,9 +1,11 @@
-/* The full-screen game overlay.
+/* The full-screen game page.
  *
- * Three things on the screen: a slim bar (which game, which lesson, what it
- * cost, how to leave), the game itself in a sandboxed iframe, and Yuvi's edit
- * panel — a small chat where the learner says what should change, a "something
- * is broken" button, and the live status of whatever job that started.
+ * It is its own place, not a platform screen: a fixed arcade look that
+ * ignores the app theme, no app bar, the game filling the stage, a floating
+ * HUD for leaving and status, and Yuvi's console on the right — one chat
+ * where the learner says what should change OR what is broken, in the same
+ * words. Runtime errors the frame reported ride along with the message, so
+ * "the ship is stuck" and "make the ship faster" are the same kind of ask.
  *
  * The iframe is `srcdoc`, never `src`: without `allow-same-origin` the page
  * has an opaque origin and could not fetch itself with the session cookie, so
@@ -29,6 +31,7 @@ import {
   type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport,
 } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
+import yuviMarkUrl from '../../assets/yuvi-favicon.png'
 import './games.css'
 
 /** Errors kept for a bug report — the backend reads at most this many too. */
@@ -39,8 +42,6 @@ const AUTO_FIX_WINDOW_MS = 3000
 const TOAST_MS = 3200
 /** The cheer at the end, and the banner that goes with it. */
 const CHEER_MS = 1800
-
-export type PlayerPanel = 'edit' | 'bug'
 
 interface PlayerJob {
   id: string
@@ -56,8 +57,6 @@ interface PlayerJob {
 interface GamePlayerProps {
   game: LearnerGame
   onClose: () => void
-  /** Open with the side panel showing this form. */
-  initialPanel?: PlayerPanel | null
   /** The list behind the overlay keeps its card current. */
   onGameChange?: (next: Partial<LearnerGame> & { game_id: string }) => void
 }
@@ -72,7 +71,7 @@ function statusOf(error: unknown): number {
   return (error as { status?: number } | null)?.status ?? 0
 }
 
-export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }: GamePlayerProps) {
+export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
   const { t, direction } = useI18n()
   const { isCompact } = useResponsive()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -87,10 +86,8 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
   const [loadNonce, setLoadNonce] = useState(0)
   const nonce = useMemo(() => (html ? parseNonce(html) : null), [html])
 
-  const [panelOpen, setPanelOpen] = useState(() => !isCompact || initialPanel !== null)
-  const [panel, setPanel] = useState<PlayerPanel>(initialPanel ?? 'edit')
+  const [panelOpen, setPanelOpen] = useState(() => !isCompact)
   const [draft, setDraft] = useState('')
-  const [bugNote, setBugNote] = useState('')
   const [sending, setSending] = useState(false)
   const [jobs, setJobs] = useState<PlayerJob[]>([])
   const [notice, setNotice] = useState<string | null>(null)
@@ -134,13 +131,15 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
   }, [version, html])
 
   // ── The bridge ─────────────────────────────────────────────────────────
+  const caughtErrors = (): RuntimeErrorReport[] => errorsRef.current.map((error) => ({
+    message: error.message,
+    ...(error.stack ? { stack: error.stack } : {}),
+    ...(error.filename ? { filename: error.filename } : {}),
+    ...(error.line != null ? { line: error.line } : {}),
+  }))
+
   const submitBug = useCallback(async (note: string, auto: boolean) => {
-    const errors: RuntimeErrorReport[] = errorsRef.current.map((error) => ({
-      message: error.message,
-      ...(error.stack ? { stack: error.stack } : {}),
-      ...(error.filename ? { filename: error.filename } : {}),
-      ...(error.line != null ? { line: error.line } : {}),
-    }))
+    const errors = caughtErrors()
     const job: PlayerJob = {
       id: nextJobId(), kind: 'fix', auto, status: 'queued',
       text: auto ? t('games.bug.auto') : (note.trim() || t('games.bug.sent')),
@@ -222,17 +221,20 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
     })
   }, [game.game_id, version, onGameChange, showToast, t])
 
-  // ── Edit chat ──────────────────────────────────────────────────────────
-  const submitEdit = async () => {
+  // ── The one chat ───────────────────────────────────────────────────────
+  // Words go as an edit that carries the caught errors; no words with errors
+  // caught is a plain fix request.
+  const submit = async () => {
     const text = draft.trim()
-    if (!text || sending) return
+    if (sending) return
+    if (!text) { if (errorCount > 0) await submitBug('', false); return }
     const job: PlayerJob = { id: nextJobId(), kind: 'edit', text, status: 'queued' }
     setJobs((current) => [...current, job])
     setDraft('')
     setNotice(null)
     setSending(true)
     try {
-      await editGame(game.game_id, text)
+      await editGame(game.game_id, text, caughtErrors())
       setStatus('building')
       onGameChange?.({ game_id: game.game_id, status: 'building' })
     } catch (error) {
@@ -290,12 +292,6 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [leaveConfirm, requestClose])
 
-  useEffect(() => {
-    if (panelOpen && panel === 'edit' && initialPanel) draftRef.current?.focus()
-    // Only on the first paint of the panel the caller asked for.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const busy = status !== 'ready' && status !== 'failed'
   const jobLine = (job: PlayerJob) => {
     if (job.status === 'capped') return job.kind === 'fix' ? t('games.bug.capReached') : t('games.edit.capReached')
@@ -310,7 +306,10 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
   }
 
   const panelToggleLabel = panelOpen ? t('games.player.panelClose') : t('games.player.panelOpen')
+  const canSend = !busy && !sending && (draft.trim().length > 0 || errorCount > 0)
 
+  // The grid is laid out LTR on purpose so the console is on the physical
+  // right in every language; the HUD and the console set their own direction.
   return createPortal(
     <div
       ref={rootRef}
@@ -319,51 +318,8 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
       aria-modal="true"
       aria-label={game.title}
       tabIndex={-1}
-      dir={direction}
+      dir="ltr"
     >
-      <header className="game-player__bar">
-        <button
-          type="button"
-          className="game-player__exit"
-          onClick={requestClose}
-          aria-label={t('games.player.exit')}
-          data-tooltip={t('games.player.exit')}
-        >
-          <Icon name="close" size={18} />
-        </button>
-        <div className="game-player__id">
-          <strong className="game-player__title" dir="auto">{game.title}</strong>
-          <span className="game-player__chip" dir="auto">
-            <Icon name="book" size={13} aria-hidden="true" />
-            {game.component_title}
-          </span>
-        </div>
-        <div className="game-player__meta">
-          <span className="game-player__chip" title={t('games.card.sparks', { count: sparks })}>
-            <Icon name="spark" size={13} aria-hidden="true" />
-            {sparks}
-          </span>
-          <span className="game-player__chip">{t('games.card.version', { v: version })}</span>
-          {busy && (
-            <span className="game-player__chip is-busy" role="status">
-              <span className="game-player__pulse" aria-hidden="true" />
-              {t(`games.status.${status}`)}
-            </span>
-          )}
-          <button
-            type="button"
-            className={`game-player__panel-toggle${panelOpen ? ' is-active' : ''}`}
-            onClick={() => setPanelOpen((value) => !value)}
-            aria-expanded={panelOpen}
-            aria-controls="game-player-panel"
-            aria-label={panelToggleLabel}
-            data-tooltip={panelToggleLabel}
-          >
-            <Icon name="wand" size={18} />
-          </button>
-        </div>
-      </header>
-
       <div className="game-player__stage">
         {status === 'ready' && html ? (
           <iframe
@@ -375,12 +331,12 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
             srcDoc={html}
           />
         ) : status === 'failed' ? (
-          <div className="game-player__state" role="alert">
+          <div className="game-player__state" role="alert" dir={direction}>
             <Icon name="alert" size={30} />
             <p>{t('games.player.failed')}</p>
           </div>
         ) : loadError ? (
-          <div className="game-player__state" role="alert">
+          <div className="game-player__state" role="alert" dir={direction}>
             <Icon name="alert" size={30} />
             <p>{t('games.player.loadError')}</p>
             <button type="button" className="game-player__btn" onClick={() => setLoadNonce((value) => value + 1)}>
@@ -388,14 +344,44 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
             </button>
           </div>
         ) : (
-          <div className="game-player__state" role="status" aria-live="polite">
+          <div className="game-player__state" role="status" aria-live="polite" dir={direction}>
             <span className="game-player__spinner" aria-hidden="true" />
             <p>{busy ? t(`games.status.${status}`) : t('games.player.loading')}</p>
           </div>
         )}
 
+        <div className="game-player__hud" dir={direction}>
+          <button
+            type="button"
+            className="game-player__hud-btn game-player__exit"
+            onClick={requestClose}
+            aria-label={t('games.player.exit')}
+            data-tooltip={t('games.player.exit')}
+          >
+            <Icon name="close" size={18} />
+          </button>
+          <span className="game-player__hud-title" dir="auto">{game.title}</span>
+          {busy && (
+            <span className="game-player__hud-status" role="status">
+              <span className="game-player__pulse" aria-hidden="true" />
+              {t(`games.status.${status}`)}
+            </span>
+          )}
+          <button
+            type="button"
+            className={`game-player__hud-btn game-player__panel-toggle${panelOpen ? ' is-active' : ''}`}
+            onClick={() => setPanelOpen((value) => !value)}
+            aria-expanded={panelOpen}
+            aria-controls="game-player-panel"
+            aria-label={panelToggleLabel}
+            data-tooltip={panelToggleLabel}
+          >
+            <img src={yuviMarkUrl} alt="" width={22} height={22} />
+          </button>
+        </div>
+
         {finished && (
-          <div className="game-player__done" role="status">
+          <div className="game-player__done" role="status" dir={direction}>
             <Icon name="spark" size={22} aria-hidden="true" />
             <strong>{t('games.player.done')}</strong>
             <span>{t('games.player.doneScore', { correct: finished.correct, total: total || finished.answered })}</span>
@@ -404,7 +390,7 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
         )}
 
         {toast && (
-          <div className="game-player__toast" role="status">
+          <div className="game-player__toast" role="status" dir={direction}>
             <Icon name="check" size={15} aria-hidden="true" />
             {toast}
           </div>
@@ -416,35 +402,30 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
         className="game-player__panel"
         aria-label={t('games.player.chat.label')}
         hidden={!panelOpen}
+        dir={direction}
       >
-        <div className="game-player__panel-tabs" role="tablist" aria-label={t('games.player.chat.label')}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'edit'}
-            className={panel === 'edit' ? 'is-active' : ''}
-            onClick={() => setPanel('edit')}
-          >
-            <Icon name="wand" size={15} />
-            <span>{t('games.edit.title')}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'bug'}
-            className={panel === 'bug' ? 'is-active' : ''}
-            onClick={() => setPanel('bug')}
-          >
-            <Icon name="alert" size={15} />
-            <span>{t('games.bug.button')}</span>
-            {errorCount > 0 && <em className="game-player__count" aria-hidden="true">{errorCount}</em>}
-          </button>
-        </div>
+        <header className="game-player__console-head">
+          <span className="game-player__console-avatar" aria-hidden="true">
+            <img src={yuviMarkUrl} alt="" width={30} height={30} />
+          </span>
+          <div className="game-player__console-id">
+            <strong dir="auto">{t('games.chat.title')}</strong>
+            <span className="game-player__console-meta">
+              <Icon name="spark" size={12} aria-hidden="true" />
+              {t('games.card.sparks', { count: sparks })}
+            </span>
+          </div>
+        </header>
 
         <div className="game-player__thread" role="log" aria-live="polite" aria-relevant="additions text">
+          {game.description && (
+            <p className="game-player__bubble game-player__bubble--yuvi game-player__brief" dir="auto">
+              {game.description}
+            </p>
+          )}
           {jobs.length === 0 && (
-            <p className="game-player__hint" dir="auto">
-              {panel === 'bug' ? t('games.bug.title') : t('games.edit.placeholder')}
+            <p className="game-player__bubble game-player__bubble--yuvi game-player__hint" dir="auto">
+              {t('games.chat.hint')}
             </p>
           )}
           {jobs.map((job) => (
@@ -462,63 +443,45 @@ export function GamePlayer({ game, onClose, initialPanel = null, onGameChange }:
           {notice && <p className="game-player__notice" role="status" dir="auto">{notice}</p>}
         </div>
 
-        {panel === 'edit' ? (
-          <form
-            className="game-player__composer"
-            onSubmit={(event) => { event.preventDefault(); void submitEdit() }}
-          >
+        <form
+          className="game-player__composer"
+          onSubmit={(event) => { event.preventDefault(); void submit() }}
+        >
+          {errorCount > 0 && (
+            <small className="game-player__caught" dir="auto">
+              <Icon name="alert" size={12} aria-hidden="true" />
+              {t('games.chat.errorsAttached', { count: errorCount })}
+            </small>
+          )}
+          <div className="game-player__composer-row">
             <textarea
               ref={draftRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder={t('games.edit.placeholder')}
-              aria-label={t('games.edit.placeholder')}
+              placeholder={t('games.chat.placeholder')}
+              aria-label={t('games.chat.placeholder')}
               rows={2}
               dir={draft.trim() ? 'auto' : direction}
               disabled={busy}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void submitEdit() }
+                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void submit() }
               }}
             />
             <button
               type="submit"
               className="game-player__btn game-player__btn--send"
-              disabled={busy || sending || !draft.trim()}
-              aria-label={t('games.edit.send')}
-              data-tooltip={t('games.edit.send')}
+              disabled={!canSend}
+              aria-label={draft.trim() ? t('games.edit.send') : t('games.chat.fixOnly')}
+              data-tooltip={draft.trim() ? t('games.edit.send') : t('games.chat.fixOnly')}
             >
               <Icon name="send" size={17} />
             </button>
-          </form>
-        ) : (
-          <form
-            className="game-player__composer game-player__composer--bug"
-            onSubmit={(event) => { event.preventDefault(); void submitBug(bugNote, false); setBugNote('') }}
-          >
-            <textarea
-              value={bugNote}
-              onChange={(event) => setBugNote(event.target.value)}
-              placeholder={t('games.bug.placeholder')}
-              aria-label={t('games.bug.placeholder')}
-              rows={2}
-              dir={bugNote.trim() ? 'auto' : direction}
-              disabled={busy}
-            />
-            <div className="game-player__composer-row">
-              <small className="game-player__caught">
-                {errorCount > 0 ? t('games.bug.errorsCaught', { count: errorCount }) : ''}
-              </small>
-              <button type="submit" className="game-player__btn" disabled={busy || sending}>
-                <Icon name="alert" size={15} aria-hidden="true" />
-                {t('games.bug.send')}
-              </button>
-            </div>
-          </form>
-        )}
+          </div>
+        </form>
       </aside>
 
       {leaveConfirm && (
-        <div className="game-player__confirm" role="alertdialog" aria-label={t('games.player.leaveTitle')}>
+        <div className="game-player__confirm" role="alertdialog" aria-label={t('games.player.leaveTitle')} dir={direction}>
           <div className="game-player__confirm-card">
             <p className="game-player__confirm-title">{t('games.player.leaveTitle')}</p>
             <p className="game-player__confirm-body">{t('games.player.leaveBody')}</p>

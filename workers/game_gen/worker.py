@@ -78,12 +78,13 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         genre=str(payload.get("genre") or "surprise"),
         vibe=str(payload.get("vibe") or ""),
         clarifications=dict(payload.get("clarifications") or {}),
+        inspirations=[str(x) for x in (payload.get("inspirations") or [])][:6],
         instruction=str(payload.get("instruction") or ""),
         current_html=str(payload.get("current_html") or ""),
         runtime_errors=list(payload.get("runtime_errors") or []),
         history=list(payload.get("history") or []),
         model=str(payload.get("model") or os.environ.get("COPILOT_MODEL") or "claude-opus-5"),
-        reasoning_effort=str(payload.get("reasoning_effort") or "low"),
+        reasoning_effort=str(payload.get("reasoning_effort") or "high"),
         max_ai_credits=float(os.environ["GAME_MAX_AI_CREDITS"]) if os.environ.get("GAME_MAX_AI_CREDITS") else None,
         usage_context=usage_context(
             actor_id=str(job["learner_id"]), game_id=str(job["game_id"]), job_id=str(job["_id"]), operation="game.build",
@@ -146,6 +147,7 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             game_id, blob_path=stored["blob_path"], sha256=stored["sha256"], source=kind,
             summary=result.summary, title=result.title or None, thumb_blob_path=thumb_path,
             sparks=int(round(result.usage.cost_usd * SPARKS_PER_USD)),
+            design_brief=result.design_brief or None,
         )
         await store.update_job(job_id, status="done", finished_at=time.time(), usage_summary=usage_summary, error_class=None)
         game = await store.get_game(game_id) or game
