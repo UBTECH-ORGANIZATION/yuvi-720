@@ -388,7 +388,7 @@ def test_tools_passed_through_and_terminal_tool_ends_turn_without_text() -> None
         assert res.stop_reason == "idle" and res.error is None
         tool_events = [e for e in events if e["type"] == "tool"]
         assert tool_events == [
-            {"type": "tool", "name": "submit_game", "status": "start", "call_id": "c1"},
+            {"type": "tool", "name": "submit_game", "status": "start", "call_id": "c1", "arguments": {"html": "<html/>"}},
             {"type": "tool", "name": "submit_game", "status": "done", "call_id": "c1", "success": True},
         ]
         assert s._tool_names == {}
