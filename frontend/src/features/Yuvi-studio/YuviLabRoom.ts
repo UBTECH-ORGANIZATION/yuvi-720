@@ -19,6 +19,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
+import yuviMarkUrl from '../../assets/yuvi-favicon.png'
 import { DEFAULT_STATIONS, STATION_IDS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
 export type LabRoomQuality = 'high' | 'low'
 
@@ -43,7 +44,8 @@ export interface LabRoomBounds {
 export type LabRoomZoneId = 'avatar' | 'room' | 'gamelab'
 
 /**
- * What the Game Lab desk is doing. `building` pulses the floating logo while a
+ * What the Game Lab desk is doing. `building` pulses the mark on the desk
+ * monitor while a
  * game is being generated; `ready` is a one-shot flash and then the desk
  * settles back into whichever base state it is next given.
  */
@@ -812,7 +814,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   addBox(gamelab, coolStripMat, [0.56, 0.004, 0.012], [0, 0.852, 0.04])
   addRounded(gamelab, brushedMat, [0.09, 0.03, 0.13], [0.44, 0.835, 0.12], 0.015)
 
-  // Screen: idle code rain — bars, not glyphs, so it never needs translating.
+  // Screen: the Yuvi mark (the same PNG as the avatar's chest badge) over a
+  // quiet code rain — bars, not glyphs, so it never needs translating.
   const rain = (() => {
     const W = 256, H = 160
     const { canvas, ctx } = canvasOf(W, H)
@@ -828,7 +831,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     // reads as a single repeating wipe.
     const speed = Array.from({ length: COLS }, (_, i) => 22 + ((i * 7919) % 23))
     const offset = Array.from({ length: COLS }, (_, i) => (i * 104729) % H)
-    const paint = (t: number, energy: number, wash: number) => {
+    const mark = new Image()
+    mark.src = yuviMarkUrl
+    mark.onload = () => { markReady = true }
+    let markReady = false
+    const paint = (t: number, energy: number, wash: number, pulse: number) => {
       ctx.fillStyle = 'rgba(6,9,30,1)'
       ctx.fillRect(0, 0, W, H)
       for (let c = 0; c < COLS; c++) {
@@ -836,10 +843,24 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
         for (let k = 0; k < 9; k++) {
           const y = head - k * 9
           if (y < 0 || y > H) continue
-          const a = (1 - k / 9) * (0.22 + energy * 0.5)
+          const a = (1 - k / 9) * (0.14 + energy * 0.4)
           ctx.fillStyle = k === 0 ? `rgba(210,250,255,${0.55 + energy * 0.45})` : `rgba(78,238,240,${a})`
           ctx.fillRect(c * colW + 3, y, colW - 6, 5)
         }
+      }
+      // The mark: centred, breathing while a game builds, with a soft cyan
+      // halo behind it so it reads as lit from within, not pasted on.
+      if (markReady) {
+        const size = 104 * (1 + pulse * 0.08 + wash * 0.1)
+        const cx = W / 2, cy = H / 2
+        const halo = ctx.createRadialGradient(cx, cy, size * 0.15, cx, cy, size * 0.7)
+        halo.addColorStop(0, `rgba(120,245,255,${0.22 + pulse * 0.25})`)
+        halo.addColorStop(1, 'rgba(120,245,255,0)')
+        ctx.fillStyle = halo
+        ctx.fillRect(0, 0, W, H)
+        ctx.globalAlpha = 0.96
+        ctx.drawImage(mark, cx - size / 2, cy - size / 2, size, size)
+        ctx.globalAlpha = 1
       }
       if (wash > 0) {
         ctx.fillStyle = `rgba(150,245,255,${wash * 0.75})`
@@ -857,7 +878,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       }
       texture.needsUpdate = true
     }
-    paint(0, 0, 0)
+    paint(0, 0, 0, 0)
     return { material, paint }
   })()
   const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), rain.material)
@@ -872,36 +893,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   screenGlow.position.set(0, 1.38, -0.14)
   gamelab.add(screenGlow)
 
-  // The floating mark: a cyan ring around a low-poly "Y", with a halo behind.
-  const logo = new THREE.Group()
-  logo.position.set(0, 2.08, -0.2)
-  gamelab.add(logo)
-  const logoMat = track(new THREE.MeshBasicMaterial({
-    color: CYAN, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending,
-    depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-  }))
-  const logoRing = new THREE.Mesh(track(new THREE.TorusGeometry(0.24, 0.028, 8, 28)), logoMat)
-  logo.add(logoRing)
-  const yArm = track(new THREE.BoxGeometry(0.04, 0.17, 0.04))
-  for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(yArm, logoMat)
-    arm.position.set(side * 0.055, 0.065, 0)
-    arm.rotation.z = side * -0.62
-    logo.add(arm)
-  }
-  const yStem = new THREE.Mesh(track(new THREE.BoxGeometry(0.04, 0.16, 0.04)), logoMat)
-  yStem.position.y = -0.085
-  logo.add(yStem)
-  const haloMat = track(new THREE.MeshBasicMaterial({
-    map: radialTexture('rgba(120,245,255,0.8)', 'rgba(120,245,255,0)'),
-    transparent: true, opacity: 0.3, depthWrite: false,
-    blending: THREE.AdditiveBlending, toneMapped: false,
-  }))
-  const halo = new THREE.Mesh(track(new THREE.PlaneGeometry(1.1, 1.1)), haloMat)
-  halo.position.z = -0.03
-  logo.add(halo)
-  const logoLight = rich ? new THREE.PointLight(CYAN, 1.6, 4.5, 2) : null
-  if (logoLight) { logoLight.position.set(0, 2.1, 0.1); gamelab.add(logoLight) }
+  // The mark lives on the monitor (painted into the screen texture, above);
+  // a point light in front of the screen carries its pulse into the room.
+  const screenLight = rich ? new THREE.PointLight(CYAN, 1.2, 4.5, 2) : null
+  if (screenLight) { screenLight.position.set(0, 1.45, 0.3); gamelab.add(screenLight) }
 
   let gameLabMode: 'idle' | 'building' = 'idle'
   let gameLabFlashAt = -10
@@ -917,23 +912,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     // Flash: a bright bloom that decays over about a second.
     const flash = Math.max(0, 1 - (t - gameLabFlashAt) / 1.1)
     const pulse = building ? Math.sin(t * 4.2) * 0.5 + 0.5 : 0
-    logoMat.opacity = 0.7 + pulse * 0.3 + flash * 0.3
-    haloMat.opacity = 0.28 + pulse * 0.45 + flash * 0.9
-    const haloScale = 1 + (reduceMotion ? 0 : pulse * 0.18) + flash * 1.1
-    halo.scale.setScalar(haloScale)
-    if (logoLight) logoLight.intensity = 1.6 + pulse * 2.4 + flash * 6
-    if (!reduceMotion) {
-      logo.position.y = 2.08 + Math.sin(t * 1.3) * 0.045
-      logo.rotation.y = building ? t * 1.6 : Math.sin(t * 0.7) * 0.35
-      const s = 1 + pulse * 0.1 + flash * 0.12
-      logoRing.scale.setScalar(s)
-    }
+    if (screenLight) screenLight.intensity = 1.2 + pulse * 2.2 + flash * 6
     screenGlowMat.opacity = 0.4 + pulse * 0.3 + flash * 0.5
+    screenGlow.scale.setScalar(1 + (reduceMotion ? 0 : pulse * 0.1) + flash * 0.6)
     // The rain repaints at 10 fps (static on weak machines), never per frame.
     const fps = rich ? 10 : 3
     if (t - gameLabLastPaint >= 1 / fps) {
       gameLabLastPaint = t
-      rain.paint(t, building ? 1 : 0, flash)
+      rain.paint(t, building ? 1 : 0, flash, reduceMotion ? (building ? 0.5 : 0) : pulse)
     }
   })
 

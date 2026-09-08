@@ -133,12 +133,7 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
 
   return (
     <section className="ys-section ys-gamelab">
-      <div className="ys-section__head">
-        <h2 className="ys-section__title">{t('studio.gamelab.tab.mine')}</h2>
-        {games.length > 0 && (
-          <span className="ys-section__count">{t('studio.gamelab.count', { count: games.length })}</span>
-        )}
-      </div>
+      {/* No heading here: the tab strip above already names this view. */}
       {loadError && (
         <p className="ys-note" role="alert">
           {t('studio.gamelab.error.load')}{' '}
