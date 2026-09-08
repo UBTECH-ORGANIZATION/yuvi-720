@@ -10,13 +10,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
-import { navigate } from '../../app/router'
+import { navigate, useRoute } from '../../app/router'
 import { getGame, type LearnerGame } from '../../services/games'
 import { GamePlayer } from './GamePlayer'
 import './games.css'
 
-function readParams() {
-  const params = new URLSearchParams(window.location.search)
+function readParams(route: string) {
+  const params = new URLSearchParams(route.split('?')[1] ?? '')
   return {
     gameId: params.get('game') ?? '',
     from: params.get('from') ?? '',
@@ -27,11 +27,17 @@ function readParams() {
 
 export function GamePage() {
   const { t } = useI18n()
-  const params = useMemo(readParams, [])
+  // The route, not a one-time read: the bell can open another game while a
+  // game page is already up (same pathname, new query), and that must be a
+  // fresh page for the new game, never the old one with a new title.
+  const route = useRoute()
+  const params = useMemo(() => readParams(route), [route])
   const [game, setGame] = useState<LearnerGame | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
+    setGame(null)
+    setFailed(false)
     if (!params.gameId) { setFailed(true); return }
     let active = true
     getGame(params.gameId)
@@ -57,7 +63,7 @@ export function GamePage() {
     <div className="game-page">
       <LearnerAppBar />
       {game ? (
-        <GamePlayer game={game} onBack={back} backTo={backTo} />
+        <GamePlayer key={game.game_id} game={game} onBack={back} backTo={backTo} />
       ) : (
         <main className="game-page__state" role={failed ? 'alert' : 'status'}>
           {failed ? (
