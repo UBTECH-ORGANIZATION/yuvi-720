@@ -63,6 +63,9 @@ def _timer() -> Any:
 log = logging.getLogger("game_gen.pipeline")
 
 MAX_SUBMISSIONS = 3
+#: A turn that produced this much output and no tool call hit the model's
+#: per-turn output cap (32k on claude-opus-5 via Copilot) — the game did not fit.
+OUTPUT_CAP_HINT_TOKENS = 30_000
 DEFAULT_MODEL = "claude-opus-5"
 JUDGE_MODEL = "gpt-5.4-mini"
 JUDGE_MIN_SCORE = 3
@@ -330,6 +333,17 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
         if turn.error:
             error = turn.error
+        elif not state.attempts and turn.usage.output_tokens >= OUTPUT_CAP_HINT_TOKENS:
+            # No tool call landed and the turn burned the output budget: the
+            # game was too long to fit one call. One more try, smaller.
+            progress({"type": "build", "status": "shrink", "output_tokens": turn.usage.output_tokens})
+            log.warning("no submission after %d output tokens — asking for a smaller game", turn.usage.output_tokens)
+            timer = _timer()
+            turn = await session.send(prompts.SHRINK_PROMPT)
+            totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+            await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+            if turn.error:
+                error = turn.error
     except Exception as exc:
         log.exception("build session failed")
         error = f"session_error: {exc}"[:300]

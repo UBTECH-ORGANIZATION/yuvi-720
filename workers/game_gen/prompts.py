@@ -87,7 +87,7 @@ QUALITY BAR (the kid compares this to real games — a toy is rejected as "too s
 - Juice: particles on every hit/pickup, screen shake, hit flashes, squash-and-stretch or tween on movement, a parallax or starfield background, WebAudio blips for every action and a short looping oscillator melody with a mute button.
 - Art direction: one coherent palette (3-5 colours), gradients and glow, shapes with outlines and drop shadows, animated UI (tween the question overlay in). Emoji only as accents, never as the whole art.
 - Controls: responsive and forgiving (coyote time, input buffering, big hitboxes for pickups). Show the controls on the start screen.
-- Size: 900-2000 lines. Structure the code (state machine for screens, classes for entities, a config block for tuning numbers). Write it all in one pass — you have the budget; do not leave "TODO" or "add more levels here".
+- Size: 700-1200 lines, hard ceiling 1400. The WHOLE game must fit in ONE `submit_game` call — a call cut off by the output limit is a failed build, so spend lines on mechanics and levels, not on comments or repeated boilerplate. Structure the code (state machine for screens, classes for entities, a config block for tuning numbers). Write it all in one pass; do not leave "TODO" or "add more levels here".
 """.strip()
 
 HARNESS_API = """
@@ -192,3 +192,8 @@ Return ONLY the JSON object."""
 def judge_prompt(pack: ContextPack, html: str, *, max_chars: int = 60_000) -> str:
     src = html if len(html) <= max_chars else html[:max_chars] + "\n<!-- truncated -->"
     return f"LEARNING_CONTEXT:\n{pack.to_prompt_json()}\n\nGAME SOURCE:\n{src}"
+
+
+#: Sent once when a build turn ends with no tool call after burning the output
+#: budget: the game did not fit a single call.
+SHRINK_PROMPT = """Your submit_game call was cut off by the output limit, so nothing was delivered. Deliver the game NOW in a single submit_game call that fits: at most 900 lines, no comments beyond one-liners, no repeated boilerplate. Keep the 5 levels and the questions; simplify visuals and effects before cutting mechanics. Do not explain — call the tool."""

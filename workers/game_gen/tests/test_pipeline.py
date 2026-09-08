@@ -110,3 +110,26 @@ def test_edit_uses_patch_tool():
     assert "<title>edited</title>" in result.html
     names = [t.name for t in FakeSession.instances[0].kw["tools"]]
     assert names == ["submit_game", "patch_game"]
+
+
+@pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
+def test_output_cap_without_a_submission_gets_one_shrink_retry(monkeypatch):
+    """A turn that burns the output budget with no tool call means the game did
+    not fit one call: the pipeline asks once for a smaller game."""
+    class CappedSession(FakeSession):
+        prompts_seen = []
+
+        async def send(self, prompt):
+            CappedSession.prompts_seen.append(prompt)
+            if len(CappedSession.prompts_seen) == 1:
+                return TurnResult(text="", usage=TurnUsage(input_tokens=1000, output_tokens=32000, model="fake"),
+                                  model="fake", elapsed_s=0.1, stop_reason="idle")
+            return await super().send(prompt)
+
+    monkeypatch.setattr(pipeline, "HeadlessCopilotSession", CappedSession)
+    FakeSession.script = [("submit_game", {"html": TINY_GAME, "title": "משחק", "learning_summary": "שאלות בשער"})]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok, result.error
+    assert len(CappedSession.prompts_seen) == 2
+    assert CappedSession.prompts_seen[1] == pipeline.prompts.SHRINK_PROMPT
+    assert result.usage.output_tokens == 32500
