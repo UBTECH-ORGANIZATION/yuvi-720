@@ -14,9 +14,9 @@ child.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.auth.dependencies import current_user
 from app.auth.repository import get_user_by_id
@@ -42,27 +42,51 @@ async def my_teachers(response: Response, session=Depends(current_user)) -> dict
     group_ids = await org.groups_for_learner(learner_id)
 
     teachers: dict[str, dict[str, Any]] = {}
+    names: dict[str, Any] = {}
+
+    async def display_name(user_id: str) -> Any:
+        if user_id not in names:
+            names[user_id] = ((await get_user_by_id(user_id)) or {}).get("display_name")
+        return names[user_id]
+
     for group_id in group_ids:
         group = await org_repository.get_group(group_id) or {}
+        # The named slices of this class that include me, with who else is in
+        # them — a group chat is named by its members, the way every chat this
+        # age group knows names one. A teacher writes to a sub-group as one
+        # act, so the child should see which group a line was said to.
+        subgroups = []
+        for row in await org_repository.list_subgroups(group_id=group_id):
+            members = list(row.get("learner_ids") or [])
+            if learner_id not in members:
+                continue
+            subgroups.append({
+                "subgroup_id": row["_id"], "name": row.get("name"), "group_id": group_id,
+                "members": [
+                    {"learner_id": member, "display_name": await display_name(member)}
+                    for member in members
+                ],
+            })
         for link in await org_repository.list_teacher_links(group_id=group_id):
             teacher_id = link["teacher_id"]
             entry = teachers.setdefault(teacher_id, {
                 "teacher_id": teacher_id,
                 "display_name": None,
                 "groups": [],
+                "subgroups": [],
             })
             entry["groups"].append({
                 "group_id": group_id,
                 "name": group.get("name"),
                 "subject": group.get("subject"),
             })
+            entry["subgroups"].extend(subgroups)
 
     for teacher_id, entry in teachers.items():
-        document = await get_user_by_id(teacher_id)
         # Fall back to the id rather than dropping the row: a teacher whose user
         # document is missing still holds read access, and hiding that would
         # make this pane quietly wrong in exactly the way it used to be.
-        entry["display_name"] = (document or {}).get("display_name") or teacher_id
+        entry["display_name"] = (await display_name(teacher_id)) or teacher_id
 
     ordered = sorted(teachers.values(), key=lambda row: str(row["display_name"]))
     return {"teachers": ordered}
@@ -149,16 +173,30 @@ async def my_messages(
         raise HTTPException(status_code=exc.status_code, detail=exc.code)
 
     rows = await direct_messages.list_thread(teacher_id, learner_id)
-    return {"messages": [
-        {
+    # A line a teacher said to a whole sub-group lands in each member's own
+    # thread stamped with the group; the name is resolved once per group.
+    names: dict[str, Any] = {}
+
+    async def subgroup_name(subgroup_id: str) -> Any:
+        if subgroup_id not in names:
+            row = await org_repository.get_subgroup(subgroup_id)
+            names[subgroup_id] = (row or {}).get("name")
+        return names[subgroup_id]
+
+    messages: list[dict[str, Any]] = []
+    for row in rows:
+        item: dict[str, Any] = {
             "id": row["_id"],
             "sender": row.get("sender"),
             "text": row.get("text") or "",
             "created_at": row.get("created_at"),
             "read_at": row.get("read_at"),
         }
-        for row in rows
-    ]}
+        if row.get("subgroup_id"):
+            item["subgroup_id"] = row["subgroup_id"]
+            item["subgroup_name"] = await subgroup_name(row["subgroup_id"])
+        messages.append(item)
+    return {"messages": messages}
 
 
 @router.post("/messages/{teacher_id}")
@@ -201,8 +239,13 @@ async def send_my_message(
 async def mark_my_messages_read(
     response: Response,
     teacher_id: str = Path(max_length=120),
+    scope: str = Query("all", pattern="^(all|private)$"),
+    subgroup: Optional[str] = Query(None, max_length=120),
     session=Depends(current_user),
 ) -> dict[str, Any]:
+    """`?subgroup=<id>` receipts one group's lines, `?scope=private` the lines
+    said to the child alone, nothing (or `scope=all`) the whole thread — the
+    child reads a group as its own chat, so one open must not receipt both."""
     response.headers.update(_NO_STORE)
     from app.services import direct_messages
 
@@ -212,8 +255,9 @@ async def mark_my_messages_read(
             teacher_id, learner_id, sender=direct_messages.SENDER_LEARNER)
     except direct_messages.DirectMessageError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code)
+    target: Any = subgroup if subgroup else (None if scope == "private" else direct_messages.ALL)
     changed = await direct_messages.mark_read(
-        teacher_id, learner_id, reader=direct_messages.SENDER_LEARNER)
+        teacher_id, learner_id, reader=direct_messages.SENDER_LEARNER, subgroup_id=target)
     return {"read": changed}
 
 
@@ -228,4 +272,5 @@ async def my_messages_unread(response: Response, session=Depends(current_user)):
     from app.services import direct_messages
 
     unread = await direct_messages.unread_for_learner(session["sub"])
-    return {"unread": unread, "total": sum(unread.values())}
+    subgroups = await direct_messages.unread_subgroups_for_learner(session["sub"])
+    return {"unread": unread, "total": sum(unread.values()), "subgroups": subgroups}

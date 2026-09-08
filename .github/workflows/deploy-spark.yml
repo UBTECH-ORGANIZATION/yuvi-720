@@ -100,6 +100,26 @@ jobs:
               ;;
           esac
 
+      - name: Refuse to deploy Dev against the production cache
+        run: |
+          # Same contract as the database: REDIS_CONNECTION_STRING is a slot
+          # setting, so it cannot drift through a swap, but a hand edit would
+          # be silent. Check the host, never print the string.
+          dev_cache="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --query "[?name=='REDIS_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          dev_cache_host="$(sed -E 's|.*@([^/?,:]+).*|\1|' <<< "$dev_cache")"
+          echo "Dev slot cache host: ${dev_cache_host:-none}"
+          case "$dev_cache_host" in
+            redis-yuvi-720.*)
+              echo "The Dev slot is pointed at the production cache. Point it at redis-yuvi-720-dev."
+              exit 1
+              ;;
+          esac
+
       - name: Stamp the release on the Dev slot
         run: |
           # Deliberately NOT a slot setting: it has to travel with the image
@@ -139,6 +159,8 @@ jobs:
             LRS_SUPPLIER_DOMAIN
             APPLICATIONINSIGHTS_CONNECTION_STRING
             SPARK_ENVIRONMENT
+            REDIS_CONNECTION_STRING
+            SPARK_CACHE
           )
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do
@@ -223,6 +245,18 @@ jobs:
           fi
           if [[ "$production_environment" != "production" ]]; then
             echo "SPARK_ENVIRONMENT on the production slot must be 'production'."
+            exit 1
+          fi
+          # And its cache: the swap must not move that either.
+          production_cache="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='REDIS_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          production_cache_host="$(sed -E 's|.*@([^/?,:]+).*|\1|' <<< "$production_cache")"
+          echo "Production cache host: ${production_cache_host:-none}"
+          if [[ "$production_cache_host" != redis-yuvi-720.* ]]; then
+            echo "Production is not pointed at the production cache (redis-yuvi-720); refusing to swap."
             exit 1
           fi
 

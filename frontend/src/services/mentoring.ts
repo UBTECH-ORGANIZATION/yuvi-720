@@ -29,6 +29,9 @@ export interface MentoringConversation {
   learner_id?: string
   date: string
   teacher_name: string
+  /** The teacher's id — the reliable join to a chat. Older records carry
+   *  only `teacher_name`, sometimes in another script than the roster. */
+  teacher_id?: string | null
   learner_name: string
   meeting_stage: string
   notes: string

@@ -121,7 +121,8 @@ jobs:
           for setting_name in \
             FRONTEND_URL \
             PUBLIC_APP_URL \
-            SECRET_KEY; do
+            SECRET_KEY \
+            REDIS_CONNECTION_STRING; do
             if ! grep -qx "$setting_name" <<< "$configured_settings"; then
               echo "::warning::$setting_name is not set on Production — required only by refs that use it."
             fi
@@ -141,6 +142,18 @@ jobs:
           echo "Production database host: $production_host"
           if [[ "$production_host" != "yuvi720.mongocluster.cosmos.azure.com" ]]; then
             echo "Production is not pointed at the production cluster; refusing to deploy."
+            exit 1
+          fi
+          # The cache, when set, must be production's own. Absent is allowed
+          # here (an old ref may predate it); the runtime guard decides.
+          production_cache="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='REDIS_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          production_cache_host="$(sed -E 's|.*@([^/?,:]+).*|\1|' <<< "$production_cache")"
+          if [[ -n "$production_cache" && "$production_cache_host" != redis-yuvi-720.* ]]; then
+            echo "Production cache host is $production_cache_host, not redis-yuvi-720; refusing to deploy."
             exit 1
           fi
 

@@ -24,7 +24,14 @@ async def _reconcile_learner_deadlines(recipient_id: str, role: Optional[str]) -
     if role != notifications.ROLE_LEARNER:
         return
     try:
-        from app.services import student_calendar
+        from app.services import cache_store, student_calendar
+        # A read used to pay for a tasks scan and a brain read every time.
+        # With a shared store the reconcile runs once per ten minutes per
+        # learner across every instance; a reminder window is a day wide, so
+        # nothing is missed. Without a store (tests, memory) it runs as before.
+        hits = await cache_store.rate_hit(f"deadline:{recipient_id}", 600)
+        if hits is not None and hits > 1:
+            return
         await student_calendar.reconcile_due_reminders(recipient_id)
     except Exception as exc:
         print(f"⚠️ deadline reminder reconciliation skipped: {type(exc).__name__}")

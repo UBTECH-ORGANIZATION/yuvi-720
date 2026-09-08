@@ -125,6 +125,10 @@ async def latest_seq(teacher_id: str) -> int:
     reconnect.
     """
     await _seed_seq(teacher_id)
+    from app.services import cache_store
+    shared = await cache_store.counter_get(f"alerts:{teacher_id}")
+    if shared is not None and shared > _seq[teacher_id]:
+        _seq[teacher_id] = shared
     return _seq[teacher_id]
 
 
@@ -149,8 +153,18 @@ async def _seed_seq(teacher_id: str) -> None:
 
 
 async def _next_seq(teacher_id: str) -> int:
-    """The next sequence number for this teacher. Monotonic, never reused."""
+    """The next sequence number for this teacher. Monotonic, never reused.
+
+    A shared INCR when the store is Redis: the in-process read-modify-write
+    below would hand two instances the same number, and `?since=` replay
+    would then skip or repeat an alert. Seeded from storage on first sight so
+    the counter never falls behind what was already issued."""
     await _seed_seq(teacher_id)
+    from app.services import cache_store
+    shared = await cache_store.counter_next(f"alerts:{teacher_id}", seed=_seq[teacher_id])
+    if shared is not None:
+        _seq[teacher_id] = shared if shared > _seq[teacher_id] else _seq[teacher_id] + 1
+        return _seq[teacher_id]
     _seq[teacher_id] += 1
     return _seq[teacher_id]
 

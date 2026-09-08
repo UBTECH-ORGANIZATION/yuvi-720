@@ -24,17 +24,18 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
-  EmptyState, ErrorState, Icon, Skeleton, SkeletonRows,
+  EmptyState, Icon, Skeleton, SkeletonRows,
 } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { takeMessageSeed } from './messageSeed'
+import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
 import {
-  createTeacherInsight, getGroupSnapshot, getStudentGoals, getStudentKudos,
+  createTeacherInsight, getStudentGoals, getStudentKudos,
   listTeacherInsights, sendKudos, type Subgroup,
 } from '../../../services/teacher'
 import {
@@ -62,7 +63,7 @@ interface ThreadEvent {
 type ExtraLane = 'kudos' | 'note'
 
 export function TeacherMessagesPage() {
-  const { t, language } = useI18n()
+  const { t } = useI18n()
   /* The provider's list — the rail's sub-group THREADS are addresses, not the
      scope narrowing, so `sub:` selection stays this page's own. */
   const {
@@ -70,8 +71,12 @@ export function TeacherMessagesPage() {
   } = useTeacherScope()
   const live = useTeacherLive()
 
-  const [students, setStudents] = useState<{ learner_id: string; display_name: string | null }[] | null>(null)
-  const [error, setError] = useState(false)
+  /* The rail is this class's slice of the roster the shell already holds;
+     the class snapshot used to be fetched here for the same names. */
+  const { students: roster, isLoading: rosterLoading } = useTeacherRoster()
+  const students = useMemo(
+    () => (rosterLoading ? null : roster.filter((row) => row.group_id === groupId)),
+    [roster, rosterLoading, groupId])
   /* One selection across two kinds of correspondent. A sub-group is prefixed so
      an id can never be mistaken for a learner's — the rail holds both. */
   const [selected, setSelected] = useState<string | null>(null)
@@ -119,34 +124,25 @@ export function TeacherMessagesPage() {
   }, [groupId])
 
   useEffect(() => {
-    if (!groupId) return
-    let active = true
-    setStudents(null)
-    getGroupSnapshot(groupId, language)
-      .then((snapshot) => {
-        if (!active) return
-        const rows = snapshot.students ?? []
-        setStudents(rows)
-        setSelected((current) => {
-          // The child the teacher came here to write to wins over both the
-          // previous selection and the first row of the rail; a `?student=`
-          // deep link (a toast, the bell) is the same intent said by address.
-          if (seed && rows.some((row) => row.learner_id === seed.learnerId)) {
-            return seed.learnerId
-          }
-          if (urlStudent && rows.some((row) => row.learner_id === urlStudent)) {
-            return urlStudent
-          }
-          return current && rows.some((row) => row.learner_id === current)
-            ? current
-            : rows[0]?.learner_id ?? null
-        })
-      })
-      .catch(() => { if (active) setError(true) })
-    return () => { active = false }
-  }, [groupId, language, seed])
+    if (!groupId || students === null) return
+    const rows = students
+    setSelected((current) => {
+      // The child the teacher came here to write to wins over both the
+      // previous selection and the first row of the rail; a `?student=`
+      // deep link (a toast, the bell) is the same intent said by address.
+      if (seed && rows.some((row) => row.learner_id === seed.learnerId)) {
+        return seed.learnerId
+      }
+      if (urlStudent && rows.some((row) => row.learner_id === urlStudent)) {
+        return urlStudent
+      }
+      return current && rows.some((row) => row.learner_id === current)
+        ? current
+        : rows[0]?.learner_id ?? null
+    })
+  }, [groupId, students, seed])
 
-  if (scopeLoading || (students === null && !error)) {
+  if (scopeLoading || students === null) {
     return (
       <div className="tch-messages" aria-busy="true">
         {/* Real header, skeleton rail and thread — the two-column frame is the
@@ -177,7 +173,6 @@ export function TeacherMessagesPage() {
       </div>
     )
   }
-  if (error) return <ErrorState title={t('tch.error')} />
   if (!groupId || !students?.length) return <EmptyState title={t('tch.noGroups')} />
 
   const nameOf = (learnerId: string) =>

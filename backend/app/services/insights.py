@@ -988,6 +988,23 @@ async def group_insights(
     if cached is not None:
         return cached
 
+    # Behind the 60 s in-process copy, the shared one: keyed by the class's
+    # cache version (moved by every member's brain write), so a second
+    # instance, a redeploy or a swap no longer pays the fan-out again.
+    from app.services import cache_store
+    payload = await cache_store.remember(
+        "grp", group_id, "snapshot", f"{language}:{window_days}", 120,
+        lambda: _compute_group_insights(group_id, language, window_days),
+    )
+    teacher_bands.cache_put(cache_key, payload)
+    return payload
+
+
+async def _compute_group_insights(
+    group_id: str, language: str, window_days: int,
+) -> dict[str, Any]:
+    from app.services import teacher_bands
+
     group = await get_group(group_id)
     learner_ids = await learners_in_group(group_id)
     # Fan out, don't queue: this used to await one learner at a time, so a
@@ -1079,5 +1096,4 @@ async def group_insights(
             for s in needing_attention
         ],
     }
-    teacher_bands.cache_put(cache_key, payload)
     return payload

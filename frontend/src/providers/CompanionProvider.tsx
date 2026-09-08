@@ -885,7 +885,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, pathname, selectConversation])
+    // NOT keyed on the route. This provider lives above the keyed route
+    // element precisely so the conversation survives navigation, and having
+    // `pathname` here re-ran the whole load — two requests, an emptied panel
+    // and a spinner — on every screen change, for a thread that had not
+    // changed. What legitimately re-keys the history is already in the list:
+    // the mode, the lesson epoch, and a lesson becoming ready.
+  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, selectConversation])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
@@ -1428,7 +1434,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (document.hidden) return
       void syncSupportState(controller.signal)
     }
-    const timer = window.setInterval(tick, 2500)
+    // A reconciler, not the signal: the server pushes `screen_change` the
+    // moment the fold moves the pointer, and this tick only catches what a
+    // dropped frame missed. At 2.5 s it was 800 brain reads a second across
+    // two thousand open lessons; ten seconds keeps the safety net and drops
+    // the cost by three quarters.
+    const timer = window.setInterval(tick, 10_000)
     const onVisible = () => { if (!document.hidden) tick() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {

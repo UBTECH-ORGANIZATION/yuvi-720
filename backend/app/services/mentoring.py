@@ -212,8 +212,19 @@ _PERSISTED_FIELDS = (
 )
 
 
+async def _touch(learner_id: object) -> None:
+    """A goal changed: the learner's version moves, and so does every class
+    they are in — the class goals screen is a fold over its members."""
+    try:
+        from app.services import cache_bumps
+        await cache_bumps.touch_learner(normalize_learner_id(str(learner_id or "")))
+    except Exception as exc:
+        print(f"⚠️ goal cache bump failed: {type(exc).__name__}")
+
+
 async def _save_conversation(lid: str, record: dict[str, Any]) -> None:
     """Persist a mutated conversation (goals / soft-delete flags / notes)."""
+    await _touch(lid)
     updated_at = datetime.now(timezone.utc).isoformat()
     collection = _get_collection_named("mentoring_conversations")
     if collection is not None:
@@ -279,6 +290,7 @@ async def create_conversation(data: dict[str, Any]) -> dict[str, Any]:
     discussed); any goals agreed in the talk are a list, each with its own
     title / next step / deadline / progress.
     """
+    await _touch(data.get('learner_id'))
     learner_id = normalize_learner_id(data.get("learner_id"))
     goals_in = data.get("goals")
     if isinstance(goals_in, list) and goals_in:
@@ -430,6 +442,7 @@ def _may_delete(record: dict[str, Any], *, actor: str, teacher_id: str) -> bool:
 
 async def delete_goal(learner_id: str, conversation_id: str, goal_id: str) -> str:
     """Soft-delete a single learner-authored goal. Returns deleted|not_found|forbidden."""
+    await _touch(learner_id)
     lid = normalize_learner_id(learner_id)
     record = await _load_conversation(lid, conversation_id)
     if record is None or record.get("deleted"):
@@ -476,6 +489,7 @@ async def delete_conversation(
 
     Returns "deleted", "not_found", or "forbidden".
     """
+    await _touch(learner_id)
     lid = normalize_learner_id(learner_id)
     record = await _load_conversation(lid, conversation_id)
     if record is None or record.get("deleted"):
@@ -678,6 +692,7 @@ def _write_rec_fallback(rows: list[dict[str, Any]]) -> None:
 
 async def save_goal_recommendation(learner_id: str, rec: dict[str, Any]) -> dict[str, Any]:
     """Persist one Yuvi goal recommendation (status ``suggested``) and return it."""
+    await _touch(learner_id)
     lid = normalize_learner_id(learner_id)
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -712,6 +727,7 @@ async def update_recommendation_status(
     learner_id: str, rec_id: str, status: str
 ) -> Optional[dict[str, Any]]:
     """Mark a recommendation ``accepted`` or ``dismissed`` (kept either way)."""
+    await _touch(learner_id)
     if status not in _REC_STATUSES:
         return None
     lid = normalize_learner_id(learner_id)
