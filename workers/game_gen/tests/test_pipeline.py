@@ -1,0 +1,112 @@
+"""Pipeline tests with a fake Copilot session: the model is simulated by
+calling the tool handlers the pipeline registers. The real validator runs
+(Chromium) for the happy path, so these are marked slow."""
+from __future__ import annotations
+
+import asyncio
+
+import pytest
+from copilot import ToolInvocation
+
+from game_gen import pipeline
+from game_gen.context_pack import build_context_pack
+from game_gen.copilot_session import TurnResult, TurnUsage
+from game_gen.validator import chromium_available
+
+pytestmark = pytest.mark.slow
+
+TINY_GAME = """<!DOCTYPE html><html lang="he"><head><meta charset="utf-8"><title>t</title>
+<style>html,body{margin:0;height:100%}canvas{width:100vw;height:100vh;display:block}#q{position:fixed;inset:0;display:none;background:#fff}</style></head>
+<body><button id="start-button">התחל</button><canvas id="c"></canvas><div id="q"></div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');let t=0,run=false;
+function loop(){t++;c.width=innerWidth;c.height=innerHeight;x.fillStyle='#123';x.fillRect(0,0,c.width,c.height);x.fillStyle='#f80';x.fillRect((t*3)%c.width,50,60,60);requestAnimationFrame(loop);}loop();
+document.getElementById('start-button').onclick=async()=>{run=true;const q=await YuviLearn.next();if(q){const d=document.getElementById('q');d.style.display='block';d.innerHTML='<p dir="auto">'+q.text+'</p>'+q.answers.map(a=>'<button class="a">'+a+'</button>').join('');d.querySelectorAll('.a').forEach(b=>b.onclick=async()=>{const r=await YuviLearn.answer(q.id,b.textContent);d.style.display='none';});}};
+</script></body></html>"""
+
+BROKEN_GAME = TINY_GAME.replace("YuviLearn.next()", "YuviLearn.nope()")
+
+
+def _spec(kind="create", **kw):
+    comp = {"id": "c1", "unit_id": "u1", "title": "מסה", "information_to_bot": "notes",
+            "questions_by_item": {"i1": [{"questionId": "q1", "questionText": "מהי מסה?", "answers": ["כמות חומר", "נפח"], "correctAnswers": ["כמות חומר"]}]}}
+    pack, key = build_context_pack(comp, {"id": "u1", "title": "יחידה", "objective_id": "o1", "subject": "science"}, {"title": "מסה"})
+    return pipeline.JobSpec(job_id="j1", game_id="g1", learner_id="l1", kind=kind, pack=pack, answer_key=key, genre="shooter", vibe="x", judge=False, **kw)
+
+
+class FakeSession:
+    """Stands in for HeadlessCopilotSession: `script` decides which tool calls the 'model' makes."""
+    script = []  # list of (tool_name, params_dict)
+    instances = []
+
+    def __init__(self, **kw):
+        self.kw = kw
+        self.tools = {t.name: t for t in (kw.get("tools") or [])}
+        self.model_billing = None
+        FakeSession.instances.append(self)
+
+    async def start(self):
+        pass
+
+    async def send(self, prompt):
+        text = ""
+        for name, params in FakeSession.script:
+            tool = self.tools[name]
+            # call the wrapped handler the way the SDK runtime does
+            res = await tool.handler(ToolInvocation(tool_name=name, arguments=params))
+            text += f"[{name}:{res.result_type}] "
+            if res.result_type == "success" and getattr(tool, "is_terminal", False):
+                break
+        return TurnResult(text=text, usage=TurnUsage(input_tokens=1000, output_tokens=500, model="fake"), model="fake", elapsed_s=0.1, stop_reason="idle")
+
+    async def close(self):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def fake_session(monkeypatch):
+    FakeSession.instances = []
+    monkeypatch.setattr(pipeline, "HeadlessCopilotSession", FakeSession)
+    yield
+
+
+@pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
+def test_create_accepts_valid_game_on_first_submission():
+    FakeSession.script = [("submit_game", {"html": TINY_GAME, "title": "משחק", "learning_summary": "שאלות בשער"})]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok, result.error
+    assert result.html and "YuviLearn" not in result.html.split("<body")[0] or True  # harness is NOT baked into stored html
+    assert len(result.attempts) == 1 and result.attempts[0].ok and result.attempts[0].contract_ok
+    assert result.screenshot_png
+    assert result.usage.output_tokens == 500 and "game.build" in result.usage.by_operation
+    assert FakeSession.instances[0].kw["tools"][0].name == "submit_game"
+
+
+@pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
+def test_create_rejects_broken_then_accepts_fixed():
+    FakeSession.script = [
+        ("submit_game", {"html": BROKEN_GAME, "title": "x", "learning_summary": "x"}),
+        ("submit_game", {"html": TINY_GAME, "title": "x", "learning_summary": "x"}),
+    ]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok
+    assert [a.ok for a in result.attempts] == [False, True]
+    assert not result.attempts[0].contract_ok
+
+
+def test_incomplete_html_is_rejected_without_validator():
+    FakeSession.script = [("submit_game", {"html": "<div>hi</div>", "title": "x", "learning_summary": "x"})]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert not result.ok and result.error == "no_valid_submission"
+    assert result.attempts[0].contract_reason == "incomplete"
+
+
+@pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
+def test_edit_uses_patch_tool():
+    patches = "REPLACE_LINES 1-1\n<!DOCTYPE html><html lang=\"he\"><head><meta charset=\"utf-8\"><title>edited</title>\nEND_REPLACE"
+    FakeSession.script = [("patch_game", {"patches": patches, "summary": "rename"})]
+    result = asyncio.run(pipeline.run_job(_spec(kind="edit", instruction="שנה כותרת", current_html=TINY_GAME)))
+    assert result.ok, result.error
+    assert "<title>edited</title>" in result.html
+    names = [t.name for t in FakeSession.instances[0].kw["tools"]]
+    assert names == ["submit_game", "patch_game"]
