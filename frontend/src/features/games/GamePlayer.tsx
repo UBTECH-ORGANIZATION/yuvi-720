@@ -74,13 +74,21 @@ function statusOf(error: unknown): number {
 }
 
 /** The streamed tool input is JSON text; undo the escapes so it reads as code. */
-function unescapeChunk(chunk: string): string {
-  return chunk
-    .replace(/^\{"(?:html|patches)":\s*"/, '')
+function unescapeJson(text: string): string {
+  return text
     .replace(/\\n/g, '\n')
     .replace(/\\t/g, '\t')
     .replace(/\\"/g, '"')
     .replace(/\\\\/g, '\\')
+}
+
+/** The code argument of the tool input so far — the model may put the title
+ * and the design brief before it, and those are not code. Until the `html`
+ * (or `patches`) key has arrived there is nothing to show yet. */
+function codeFromToolInput(raw: string): string {
+  const match = /"(?:html|patches)":\s*"/.exec(raw)
+  if (!match) return ''
+  return unescapeJson(raw.slice(match.index + match[0].length))
 }
 
 export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
@@ -109,6 +117,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
   const [total, setTotal] = useState(0)
   const [errorCount, setErrorCount] = useState(0)
   const [liveCode, setLiveCode] = useState('')
+  const rawRef = useRef('')
   const [liveStep, setLiveStep] = useState<string>('')
   const [thinkingChars, setThinkingChars] = useState(0)
   const [phase, setPhase] = useState<'thinking' | 'writing' | 'validating' | 'judging'>('thinking')
@@ -166,7 +175,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
       if (!active || !live.active) return
       if (live.phase) setPhase(live.phase)
       setThinkingChars(live.thinking_chars ?? 0)
-      if (live.code_tail) setLiveCode(unescapeChunk(live.code_tail))
+      if (live.code_tail) { rawRef.current = live.code_tail; setLiveCode(codeFromToolInput(live.code_tail)) }
       const started = typeof live.started_at === 'number' ? live.started_at * 1000
         : live.started_at ? Date.parse(String(live.started_at)) : NaN
       setStartedAt(Number.isFinite(started) ? started : Date.now())
@@ -203,9 +212,9 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
         }
         if (live.phase) setPhase(live.phase)
         if (typeof live.thinking_chars === 'number') setThinkingChars((current) => Math.max(current, live.thinking_chars ?? 0))
-        if (live.code_tail) {
-          const tail = unescapeChunk(live.code_tail)
-          setLiveCode((current) => (tail.length > current.length ? tail : current))
+        if (live.code_tail && live.code_tail.length > rawRef.current.length) {
+          rawRef.current = live.code_tail
+          setLiveCode(codeFromToolInput(live.code_tail))
         }
       } catch { /* next tick */ }
     }
@@ -285,10 +294,10 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
       const live = frame as GameFrame
       if (live.event === 'code' && live.chunk) {
         setPhase('writing')
-        setLiveCode((current) => {
-          const next = current + unescapeChunk(live.chunk ?? '')
-          return next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
-        })
+        let raw = rawRef.current + live.chunk
+        if (raw.length > LIVE_CODE_MAX) raw = raw.slice(raw.length - LIVE_CODE_MAX)
+        rawRef.current = raw
+        setLiveCode(codeFromToolInput(raw))
         return
       }
       if (live.event === 'thinking') {
@@ -305,6 +314,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
           row.status === 'queued' || row.status === 'running' ? { ...row, status: 'done' } : row))
         setVersion(live.v)
         setLiveCode('')
+        rawRef.current = ''
         setNotice(null)
         showToast(t('games.player.updated'))
         // The brief, the thumbnail and what it cost live on the game row.
@@ -356,6 +366,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
       await editGame(game.game_id, text, caughtErrors())
       setStatus('building')
       setLiveCode('')
+      rawRef.current = ''
       setThinkingChars(0)
       setPhase('thinking')
       setStartedAt(Date.now())
@@ -441,7 +452,11 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
               <div className={`game-player__thinking is-${phase}`} dir="auto">
                 <span className="game-player__thinking-orb" aria-hidden="true" />
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
-                <span>{phase === 'thinking' && thinkingWords > 0 ? t('games.build.thoughtWords', { count: thinkingWords }) : t('games.build.waiting')}</span>
+                <span>
+                  {phase === 'writing' ? t('games.build.writingBrief')
+                    : phase === 'thinking' && thinkingWords > 0 ? t('games.build.thoughtWords', { count: thinkingWords })
+                    : t('games.build.waiting')}
+                </span>
               </div>
             )}
             <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')} hidden={!liveCode}>

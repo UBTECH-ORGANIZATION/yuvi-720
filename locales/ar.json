@@ -3827,6 +3827,7 @@
   "games.build.phase.validating": "يوفي يشغّل اللعبة ويفحصها",
   "games.build.phase.judging": "يوفي يتحقق من أن اللعبة تعلّم فعلاً",
   "games.build.thoughtWords": "نحو {count} كلمة من التفكير حتى الآن. سيظهر الكود هنا حالما يبدأ يوفي بالكتابة",
+  "games.build.writingBrief": "يوفي يكتب وصف اللعبة… الكود يأتي بعده مباشرة",
   "games.chat.building": "يوفي مشغول بالبناء. تعود الدردشة عندما تجهز اللعبة",
   "games.chat.mode.label": "نوع الرسالة",
   "games.chat.mode.change": "تغيير",

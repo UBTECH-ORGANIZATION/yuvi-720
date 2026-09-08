@@ -188,7 +188,19 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
                 {k: v for k, v in event.items() if k not in {"type", "text"}}, ensure_ascii=False)[:300])
 
     await store.update_status(game_id, "building" if kind == "create" else "fixing")
-    result = await run_job(spec, progress)
+
+    async def snapshot_clock() -> None:
+        # Flushes only happen while chunks arrive; the clock keeps the row's
+        # snapshot fresh through pauses, so a page opened mid-build catches up.
+        while True:
+            await asyncio.sleep(LIVE_SNAPSHOT_INTERVAL_S)
+            snapshot(force=True)
+
+    clock = asyncio.create_task(snapshot_clock())
+    try:
+        result = await run_job(spec, progress)
+    finally:
+        clock.cancel()
     # A late "validating" write must never overwrite the "ready"/"failed" below.
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)

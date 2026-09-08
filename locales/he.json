@@ -3827,6 +3827,7 @@
   "games.build.phase.validating": "יובי מריץ ובודק את המשחק",
   "games.build.phase.judging": "יובי בודק שהמשחק באמת מלמד",
   "games.build.thoughtWords": "כבר כ־{count} מילות מחשבה. הקוד יופיע כאן ברגע שיובי יתחיל לכתוב",
+  "games.build.writingBrief": "יובי כותב את תיאור המשחק… הקוד מגיע מיד אחריו",
   "games.chat.building": "יובי עסוק בבנייה. הצ'אט יחזור כשהמשחק יהיה מוכן",
   "games.chat.mode.label": "סוג ההודעה",
   "games.chat.mode.change": "שינוי",
