@@ -12647,7 +12647,7 @@
       "component_fingerprint": "c60173ee0e3e19c3",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-07T08:23:37Z",
+        "probed_at": "2026-09-08T01:43:03Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -13630,7 +13630,7 @@
       "component_fingerprint": "336ab91432ea340a",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-07T08:23:46Z",
+        "probed_at": "2026-09-08T01:43:12Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0

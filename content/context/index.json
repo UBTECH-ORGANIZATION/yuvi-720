@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-07T08:26:24Z",
+  "generated_at": "2026-09-08T01:45:36Z",
   "shards": [
     {
       "subject": "math",
@@ -20,6 +20,18 @@
       "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE",
       "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE.json",
       "lomdot": 9
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR.json",
+      "lomdot": 1
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG.json",
+      "lomdot": 1
     },
     {
       "subject": "other",
@@ -45,17 +57,21 @@
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006",
+      "methodica-math-ratio-01-01",
+      "methodica-math-ratio-02-01",
       "methodica-science-mass-measure-02-01",
       "methodica-science-mass-measure-02-02",
+      "methodica-science-mass-measure-02-04",
+      "methodica-science-mass-measure-02-05",
       "methodica-science-mass-measure-02-06"
     ]
   },
   "stats": {
-    "lomdot": 45,
-    "slides": 188,
-    "questions": 255,
-    "texts_generated": 28,
-    "texts_pending": 1,
+    "lomdot": 47,
+    "slides": 195,
+    "questions": 278,
+    "texts_generated": 62,
+    "texts_pending": 44,
     "removed": [
       "methodica-science-mass-measure-01-01",
       "methodica-science-mass-measure-01-02",
