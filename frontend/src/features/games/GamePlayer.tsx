@@ -64,6 +64,8 @@ interface PlayerJob {
 interface GamePlayerProps {
   game: LearnerGame
   onBack: () => void
+  /** Where "back" lands, so the button can say so: the studio shelf or the lesson. */
+  backTo?: 'studio' | 'lesson'
 }
 
 let jobSeq = 0
@@ -91,7 +93,8 @@ function codeFromToolInput(raw: string): string {
   return unescapeJson(raw.slice(match.index + match[0].length))
 }
 
-export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
+export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePlayerProps) {
+  const backLabel = backTo === 'lesson' ? 'games.player.backLesson' : 'games.player.back'
   const { t, direction } = useI18n()
   const stageRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLIFrameElement>(null)
@@ -495,7 +498,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
         <div className="game-player__hud">
           <button type="button" className="game-player__back" onClick={requestBack}>
             <Icon name="chevronLeft" size={16} />
-            <span>{t('games.player.back')}</span>
+            <span>{t(backLabel)}</span>
           </button>
           <span className="game-player__hud-title" dir="auto">{game.title}</span>
           {busy && (
@@ -521,7 +524,7 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
             <Icon name="spark" size={22} aria-hidden="true" />
             <strong>{t('games.player.done')}</strong>
             <span>{t('games.player.doneScore', { correct: finished.correct, total: total || finished.answered })}</span>
-            <button type="button" className="sp-btn sp-btn--primary" onClick={onBack}>{t('games.player.back')}</button>
+            <button type="button" className="sp-btn sp-btn--primary" onClick={onBack}>{t(backLabel)}</button>
           </div>
         )}
 

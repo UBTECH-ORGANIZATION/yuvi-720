@@ -42,8 +42,9 @@ export function GamePage() {
 
   // Back goes where the kid came from. The lesson keeps its unit/component so
   // it reopens on the same screen; anything else lands on the studio shelf.
+  const backTo = params.from === 'lesson' && params.unit ? 'lesson' : 'studio'
   const back = () => {
-    if (params.from === 'lesson' && params.unit) {
+    if (backTo === 'lesson') {
       const q = new URLSearchParams({ unit: params.unit })
       if (params.component) q.set('component', params.component)
       navigate(`/learning/lesson?${q.toString()}`)
@@ -56,14 +57,14 @@ export function GamePage() {
     <div className="game-page">
       <LearnerAppBar />
       {game ? (
-        <GamePlayer game={game} onBack={back} />
+        <GamePlayer game={game} onBack={back} backTo={backTo} />
       ) : (
         <main className="game-page__state" role={failed ? 'alert' : 'status'}>
           {failed ? (
             <>
               <Icon name="alert" size={28} />
               <p>{t('games.player.loadError')}</p>
-              <button type="button" className="sp-btn" onClick={back}>{t('games.player.back')}</button>
+              <button type="button" className="sp-btn" onClick={back}>{t(backTo === 'lesson' ? 'games.player.backLesson' : 'games.player.back')}</button>
             </>
           ) : (
             <p>{t('games.player.loading')}</p>
