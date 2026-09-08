@@ -115,6 +115,12 @@ async def _screen(payload: dict, held: set[str]) -> dict:
     return payload
 
 
+async def _screen_layout(payload: dict, room_unlocks: list[str]) -> dict:
+    with patch.object(route, "get_learner_state", AsyncMock(return_value={"room_unlocks": room_unlocks})):
+        await route._screen_room_layout(LEARNER, payload)
+    return payload
+
+
 def _design(**equipped) -> dict:
     slots = {"headTop": None, "face": None, "back": None, "handR": None, "body": None}
     return {**DESIGN, "equipped": {**slots, **equipped}}
@@ -153,6 +159,18 @@ class YuviWearsOnlyWhatWasEarned(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(design["equipped"]["body"], "jacket")
         self.assertEqual(design["variant"], "girl")
         self.assertEqual(design["colors"], DESIGN["colors"])
+
+
+class RoomLayoutsRequireTheirUnlock(unittest.IsolatedAsyncioTestCase):
+    async def test_forged_observatory_selection_returns_to_lab(self) -> None:
+        payload = {"room": {"activeLayoutId": "triangularObservatory"}}
+        screened = await _screen_layout(payload, room_unlocks=[])
+        self.assertEqual(screened["room"]["activeLayoutId"], "lab")
+
+    async def test_purchased_observatory_selection_is_preserved(self) -> None:
+        payload = {"room": {"activeLayoutId": "triangularObservatory"}}
+        screened = await _screen_layout(payload, room_unlocks=["layout:triangularObservatory"])
+        self.assertEqual(screened["room"]["activeLayoutId"], "triangularObservatory")
 
     async def test_the_old_field_is_not_a_way_around_the_screen(self) -> None:
         """A design written to `avatar` is still served back as the design (see

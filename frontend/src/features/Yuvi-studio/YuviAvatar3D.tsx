@@ -12,6 +12,7 @@ import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
 import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
 import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
+import { pointInLayout, projectPointIntoLayout, roomLayout, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 
 /** Camera framings the studio can request when the learner switches category. */
 export type YuviFocus = 'full' | 'head' | 'face' | 'body' | 'hand' | 'back' | 'roam' | 'room'
@@ -103,6 +104,8 @@ interface Props {
   onStationIntentChange?: (zone: LabRoomZoneId | null) => void
   /** The learner's placed props. A new array identity re-syncs the room. */
   roomItems?: RoomItem[]
+  /** Selected shell for the learner's single shared room design. */
+  roomLayoutId?: RoomLayoutId
   /** Where the two walk-in stations stand. A new identity re-syncs them. */
   stations?: RoomStations | null
   /** Floor, wall and lighting mood chosen by the learner. */
@@ -114,8 +117,8 @@ interface Props {
   /** While a station panel is open, the floor is a build surface only — a stray
    *  tap must not walk Yuvi off the station and close the panel under the learner. */
   lockRoam?: boolean
-  /** Fires when the learner clicks the floor while placing. */
-  onPlaceAt?: (x: number, z: number, valid: boolean) => void
+  /** Fires when the learner places a prop on the floor or a room wall. */
+  onPlaceAt?: (x: number, z: number, valid: boolean, wall?: { wallId: string; offset: number }) => void
   /** Hovering a placed prop opens its in-world menu. */
   onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
   /** The pointer has left the room canvas, so its menu may close. */
@@ -149,7 +152,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, roomLayoutId = 'lab', stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -305,6 +308,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         quality: roomQuality,
         reduceMotion,
         deckY: -0.92,
+        layoutId: roomLayoutId,
         accent: initialDesign.colors.glow,
       })
       // The room brings its own key light from the ceiling, so the free-floating
@@ -325,6 +329,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       scene.fog = new THREE.FogExp2(0x05071a, 0.023)
     }
     const roomBounds = room?.bounds ?? null
+    const activeLayout = roomLayout(roomLayoutId)
 
     // Only solid shell parts cast into the room's single shadow map — glowing
     // visor sheens and additive light planes would smear it.
@@ -460,8 +465,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         point.x = circle.x + (dx / distance) * minimum
         point.y = circle.z + (dz / distance) * minimum
       }
-      point.x = THREE.MathUtils.clamp(point.x, walkLimits.minX, walkLimits.maxX)
-      point.y = THREE.MathUtils.clamp(point.y, walkLimits.minZ, walkLimits.maxZ)
+      const projected = projectPointIntoLayout(activeLayout, { x: point.x, z: point.y }, BODY_RADIUS)
+      point.set(projected.x, projected.z)
     }
 
     const walkTo = (x: number, z: number, station: LabRoomZoneId | null = null, onArrival?: () => void) => {
@@ -492,6 +497,30 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       return { x: floorHit.x, z: floorHit.z }
     }
 
+    const pickWall = (event: { clientX: number; clientY: number }): { wallId: string; offset: number } | null => {
+      if (!pickFloor(event)) return null
+      const hit = new THREE.Vector3()
+      let closest: { wallId: string; offset: number; distance: number } | null = null
+      for (const wall of activeLayout.walls) {
+        // The Lab's south edge is the open camera side, not a physical wall.
+        if (activeLayout.id === 'lab' && wall.id === 'south') continue
+        const dx = wall.to.x - wall.from.x
+        const dz = wall.to.z - wall.from.z
+        const lengthSquared = dx * dx + dz * dz
+        if (!lengthSquared) continue
+        const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+          new THREE.Vector3(dz, 0, -dx).normalize(),
+          new THREE.Vector3(wall.from.x, 0, wall.from.z),
+        )
+        if (!raycaster.ray.intersectPlane(plane, hit) || hit.y < (roomBounds?.floorY ?? -1.05) || hit.y > 5.5) continue
+        const offset = ((hit.x - wall.from.x) * dx + (hit.z - wall.from.z) * dz) / lengthSquared
+        if (offset < 0 || offset > 1) continue
+        const candidate = { wallId: wall.id, offset, distance: raycaster.ray.origin.distanceTo(hit) }
+        if (!closest || candidate.distance < closest.distance) closest = candidate
+      }
+      return closest
+    }
+
     /** Footprint of a prop as it is actually built, not as it is catalogued. */
     const propRadius = (kind: string) => (roomItemSpec(kind)?.radius ?? 0.5) * PROP_SCALE
     /** What a carried thing needs clear around it — a prop, or a whole station. */
@@ -503,8 +532,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
      * circles are hard: nothing in the room may ever intersect anything else.
      */
     const canBuildAt = (x: number, z: number, radius: number, station?: StationId, rot = 0) => {
-      if (x < walkLimits.minX || x > walkLimits.maxX) return false
-      if (z < walkLimits.minZ || z > walkLimits.maxZ) return false
+      if (!pointInLayout(activeLayout, { x, z }, radius)) return false
       // While the walkthrough is pointing at a patch of floor, that patch is the
       // only legal answer — the ghost turns red everywhere else.
       const target = placeTargetRef.current
@@ -513,8 +541,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // learner has to stand to use it — is inside the room too.
       if (station === 'room') {
         const stand = roomStandingSpot({ x, z, rot })
-        if (stand.x < walkLimits.minX || stand.x > walkLimits.maxX) return false
-        if (stand.z < walkLimits.minZ || stand.z > walkLimits.maxZ) return false
+        if (!pointInLayout(activeLayout, stand, BODY_RADIUS)) return false
       }
       for (const circle of room?.noBuildZones(station) ?? []) {
         if (Math.hypot(x - circle.x, z - circle.z) < circle.radius + radius) return false
@@ -1154,6 +1181,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (!spot) return
       const placingNow = placingRef.current
       if (placingNow) {
+        if (!placingNow.station && roomItemSpec(placingNow.kind)?.placement === 'wall') {
+          const wall = pickWall(event)
+          if (!wall) return
+          const transform = wallAnchorTransform(activeLayout, { ...wall, height: 0 })
+          onPlaceAtRef.current?.(transform.x, transform.z, true, wall)
+          return
+        }
         const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station, placingNow.rot ?? 0)
         onPlaceAtRef.current?.(spot.x, spot.z, valid)
       } else if (!lockRoamRef.current) {
@@ -1183,6 +1217,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (!placingNow) { room.setGhost(null); return }
       const spot = pickFloor(event)
       if (!spot) return
+      if (!placingNow.station && roomItemSpec(placingNow.kind)?.placement === 'wall') {
+        const wall = pickWall(event)
+        if (!wall) return
+        const transform = wallAnchorTransform(activeLayout, { ...wall, height: 0 })
+        room.setGhost(placingNow.kind, transform.x, transform.z, transform.rot, true, placingNow.tint, (roomBounds?.floorY ?? -1.05) + transform.height)
+        return
+      }
       const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station, placingNow.rot ?? 0)
       room.setGhost(placingNow.kind, spot.x, spot.z, placingNow.rot ?? 0, valid, placingNow.tint)
     }

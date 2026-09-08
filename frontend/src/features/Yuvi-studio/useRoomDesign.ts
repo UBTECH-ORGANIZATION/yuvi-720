@@ -4,9 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom,
-  type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallStyleId,
+  type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallAnchor, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
+import { reconcileItemsForLayout, reconcileStationsForLayout, roomLayout, wallAnchorAt, type RoomLayoutId } from './RoomLayouts.ts'
+
+const ROOM_PROP_SCALE = 1.75
 
 /**
  * The learner's own room: what they placed, where, and how the space is lit.
@@ -43,13 +46,13 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const full = room.items.length >= MAX_ROOM_ITEMS
 
   /** Drop a new prop on the floor and select it, so it can be adjusted at once. */
-  const place = (kind: string, x: number, z: number, rot = 0) => {
+  const place = (kind: string, x: number, z: number, rot = 0, wallAnchor?: WallAnchor) => {
     const spec = roomItemSpec(kind)
     if (!spec || full) return null
     const uid = newItemUid()
     setRoom((prev) => ({
       ...prev,
-      items: [...prev.items, { uid, kind, x, z, rot, tint: spec.tintable ? spec.tint : undefined }],
+      items: [...prev.items, { uid, kind, x, z, rot, ...(spec.placement === 'wall' ? { wallAnchor: wallAnchor ?? wallAnchorAt(roomLayout(prev.activeLayoutId), { x, z }) } : {}), tint: spec.tintable ? spec.tint : undefined }],
     }))
     setSelectedUid(uid)
     return uid
@@ -62,7 +65,16 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     }))
   }
 
-  const move = (uid: string, x: number, z: number) => patchItem(uid, { x, z })
+  const move = (uid: string, x: number, z: number, wallAnchor?: WallAnchor) => {
+    const item = roomRef.current.items.find((entry) => entry.uid === uid)
+    patchItem(uid, {
+      x,
+      z,
+      ...(item && roomItemSpec(item.kind)?.placement === 'wall'
+        ? { wallAnchor: wallAnchor ? { ...wallAnchor, height: item.wallAnchor?.height ?? wallAnchor.height } : wallAnchorAt(roomLayout(roomRef.current.activeLayoutId), { x, z }, item.wallAnchor?.height ?? 0) }
+        : {}),
+    })
+  }
   const rotate = (uid: string, delta: number) => {
     setRoom((prev) => ({
       ...prev,
@@ -75,7 +87,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     setSelectedUid((prev) => (prev === uid ? null : prev))
   }
   const clear = () => {
-    setRoom((prev) => ({ ...prev, items: [] }))
+    setRoom((prev) => ({ ...prev, items: [], storedItems: [] }))
     setSelectedUid(null)
   }
 
@@ -93,6 +105,41 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
+
+  /**
+   * One room travels through different shells. Legal placements stay untouched;
+   * only props that cannot fit the target layout are repositioned or stored.
+   */
+  const setActiveLayout = async (activeLayoutId: RoomLayoutId) => {
+    const current = cloneRoom(roomRef.current)
+    if (current.activeLayoutId === activeLayoutId) return { ok: true, relocatedUids: [] as string[], hiddenItems: [] as RoomItem[] }
+    const reconciliation = reconcileItemsForLayout(roomLayout(activeLayoutId), current.items, current.storedItems, {
+      radiusFor: (item) => (roomItemSpec(item.kind)?.radius ?? 0.5) * ROOM_PROP_SCALE,
+      isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
+      sourceLayout: roomLayout(current.activeLayoutId),
+    })
+    const stationReconciliation = reconcileStationsForLayout(roomLayout(activeLayoutId), current.stations, reconciliation.items, {
+      radiusFor: () => 1.6,
+      itemRadiusFor: (item) => (roomItemSpec(item.kind)?.radius ?? 0.5) * ROOM_PROP_SCALE,
+      isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
+    })
+    const next = {
+      ...current,
+      activeLayoutId,
+      items: reconciliation.items,
+      storedItems: reconciliation.storedItems,
+      stations: stationReconciliation.stations,
+    }
+    roomRef.current = next
+    setRoom(next)
+    const ok = await save(next)
+    if (!ok) {
+      roomRef.current = current
+      setRoom(current)
+    }
+    return { ok, relocatedUids: reconciliation.relocatedUids, hiddenItems: reconciliation.hiddenItems }
+  }
+
   /** Stations are furniture too: the learner decides where their room's doors are. */
   const moveStation = (id: StationId, x: number, z: number, rot?: number) => {
     setRoom((prev) => ({
@@ -162,7 +209,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear, materializeWeeklyReward,
-    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
+    setFloor, setWall, setMood, setActiveLayout, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

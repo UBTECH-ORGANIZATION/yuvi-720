@@ -144,6 +144,16 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     ]
 
 
+async def _screen_room_layout(learner_id: str, data: dict) -> None:
+    """Keep locked room shells server-owned, like locked furniture."""
+    room = data.get("room")
+    if not isinstance(room, dict) or room.get("activeLayoutId") != "triangularObservatory":
+        return
+    state = await get_learner_state(learner_id)
+    if "layout:triangularObservatory" not in (state.get("room_unlocks") or []):
+        room["activeLayoutId"] = "lab"
+
+
 async def _screen_equipped(learner_id: str, data: dict) -> None:
     """Take off any Yuvi cosmetic the learner has not earned, slot by slot.
 
@@ -186,6 +196,7 @@ async def patch_learner_state(data: dict, session=Depends(require_learner_sessio
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
     await _screen_room_items(learner_id, data)
+    await _screen_room_layout(learner_id, data)
     await _screen_equipped(learner_id, data)
     # A badge chosen as the profile picture must actually be earned — the picker
     # only offers earned coins, so this rejects tampering, not normal use.

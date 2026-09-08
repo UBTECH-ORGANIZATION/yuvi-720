@@ -20,6 +20,7 @@ CATALOG: dict[str, dict[str, Any]] = {
     "lightsaber": {"price": 70, "slot": "handR", "tier": 2},
     "heroarmor": {"price": 120, "slot": "body", "tier": 3},
     "dragonwings": {"price": 120, "slot": "back", "tier": 3},
+    "layout:triangularObservatory": {"price": 1500, "slot": "room", "tier": 4, "unlock": "room", "completed_components": 10},
 }
 
 
@@ -29,7 +30,11 @@ def price_of(asset_id: str) -> int | None:
     return int(entry["price"]) if entry else None
 
 
-def catalog_for_client(owned: list[str] | None = None) -> list[dict[str, Any]]:
+def entry_for(asset_id: str) -> dict[str, Any] | None:
+    return CATALOG.get(asset_id)
+
+
+def catalog_for_client(owned: list[str] | None = None, completed_components: int | None = None) -> list[dict[str, Any]]:
     """Shop rows for the studio UI. Labels are localized client-side by id."""
     owned_set = set(owned or [])
     return [
@@ -39,6 +44,8 @@ def catalog_for_client(owned: list[str] | None = None) -> list[dict[str, Any]]:
             "slot": entry["slot"],
             "tier": entry["tier"],
             "owned": asset_id in owned_set,
+            **({"completedComponents": entry["completed_components"]} if "completed_components" in entry else {}),
+            **({"completedComponentsCurrent": completed_components} if "completed_components" in entry and completed_components is not None else {}),
         }
         for asset_id, entry in sorted(CATALOG.items(), key=lambda kv: (kv[1]["tier"], kv[0]))
     ]

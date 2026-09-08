@@ -75,7 +75,7 @@ class RoomCommunityTest(unittest.TestCase):
         await admin_org.save_group("root", {"id": "g1", "school_id": "s1", "name": "Class"})
         for learner_id in ("viewer", "owner"):
             await admin_org.enroll_learner("root", learner_id, "g1")
-        room = {"floor": "wood", "wall": "warm", "mood": "sunset", "items": []}
+        room = {"activeLayoutId": "dome", "floor": "wood", "wall": "warm", "mood": "sunset", "items": []}
         await learner_state.update_learner_state("owner", {"room": room, "yuvi_design": {"variant": "one"}})
 
     def _client(self, learner_id: str) -> TestClient:
@@ -92,6 +92,7 @@ class RoomCommunityTest(unittest.TestCase):
         self.assertEqual(set(cards[0]), {"owner_id", "display_name", "room", "yuvi_design", "liked_by_me"})
         self.assertNotIn("learner_id", cards[0])
         self.assertFalse(cards[0]["liked_by_me"])
+        self.assertEqual(cards[0]["room"]["activeLayoutId"], "dome")
 
     def test_gallery_resolves_live_peer_scope_once(self):
         run(room_community.set_sharing("owner", True))

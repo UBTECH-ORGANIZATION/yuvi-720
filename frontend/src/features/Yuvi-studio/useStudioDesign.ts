@@ -74,6 +74,12 @@ export function useStudioDesign(autoLoad = true) {
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
   /** True when this room prop has to be earned and has not been. */
   const isPropLocked = (kind: string) => kind in requirements && !propUnlocks.has(kind)
+  const isRoomUnlocked = (id: string) => propUnlocks.has(id)
+  const componentProgressFor = (assetId: string) => {
+    const item = shop[assetId]
+    if (item?.completedComponents === undefined || item.completedComponentsCurrent === undefined) return null
+    return { completed: item.completedComponentsCurrent, required: item.completedComponents }
+  }
   /** Locale key naming what earns an item, for the lock tooltip. */
   const requirementFor = (id: string): string | undefined => requirements[id]
   /** Sparks price for a locked item, or null when it can only be earned. */
@@ -91,7 +97,8 @@ export function useStudioDesign(autoLoad = true) {
       const result = await purchaseAsset(assetId)
       setWallet(result.wallet)
       if (result.ok) {
-        setUnlockedIds((prev) => new Set(prev).add(assetId))
+        if (shop[assetId]?.slot === 'room') setPropUnlocks((prev) => new Set(prev).add(assetId))
+        else setUnlockedIds((prev) => new Set(prev).add(assetId))
       }
       return result
     } catch {
@@ -140,7 +147,7 @@ export function useStudioDesign(autoLoad = true) {
   return {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
     muted, setMuted, justSaved, saving, dirty,
-    isLocked, isPropLocked, requirementFor, streak,
+    isLocked, isPropLocked, isRoomUnlocked, componentProgressFor, requirementFor, streak,
     equip, setColor, reset, save, load,
     wallet, priceOf, canAfford, buy, buying,
   }

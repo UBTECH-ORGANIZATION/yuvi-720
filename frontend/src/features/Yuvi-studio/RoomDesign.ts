@@ -5,9 +5,17 @@
 // record with no three.js types in it, so the same layout can be rendered by
 // the studio, a thumbnail, or a future shared space.
 
+import { isRoomLayoutId, type RoomLayoutId } from './RoomLayouts.ts'
+
 export type RoomStyleId = 'lab' | 'wood' | 'carpet' | 'meadow' | 'court'
 export type WallStyleId = 'lab' | 'warm' | 'sky' | 'forest' | 'space'
 export type MoodId = 'studio' | 'sunset' | 'night' | 'party'
+
+export interface WallAnchor {
+  wallId: string
+  offset: number
+  height: number
+}
 
 export interface RoomItem {
   /** Stable per-instance id, so two identical plants can be moved apart. */
@@ -18,6 +26,8 @@ export interface RoomItem {
   z: number
   /** Y rotation in radians. */
   rot: number
+  /** Wall identity and position for wall-mounted props. */
+  wallAnchor?: WallAnchor
   /** Optional per-instance tint for tintable props. */
   tint?: string
 }
@@ -41,10 +51,14 @@ export type RoomStations = Record<StationId, RoomStation>
 
 export interface RoomDesign {
   version: number
+  /** The shell currently rendering the learner's one shared room design. */
+  activeLayoutId: RoomLayoutId
   floor: RoomStyleId
   wall: WallStyleId
   mood: MoodId
   items: RoomItem[]
+  /** Temporarily hidden props that cannot currently be placed in the active room shell. */
+  storedItems: RoomItem[]
   stations: RoomStations
   /** The learner has seen the studio's opening orientation. */
   introDone: boolean
@@ -74,23 +88,31 @@ export const DEFAULT_STATIONS: RoomStations = {
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
-  version: 1,
+  version: 2,
+  activeLayoutId: 'lab',
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
   items: [],
+  storedItems: [],
   stations: DEFAULT_STATIONS,
   introDone: false,
   tutorialDone: false,
 }
 
 export function cloneRoom(room: RoomDesign): RoomDesign {
+  const cloneItem = (item: RoomItem): RoomItem => ({
+    ...item,
+    ...(item.wallAnchor ? { wallAnchor: { ...item.wallAnchor } } : {}),
+  })
   return {
     version: room.version,
+    activeLayoutId: room.activeLayoutId,
     floor: room.floor,
     wall: room.wall,
     mood: room.mood,
-    items: room.items.map((item) => ({ ...item })),
+    items: room.items.map(cloneItem),
+    storedItems: room.storedItems.map(cloneItem),
     stations: {
       avatar: { ...room.stations.avatar },
       room: { ...room.stations.room },
@@ -129,11 +151,20 @@ export function newItemUid(): string {
 const isFinitePoint = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
+function isWallAnchor(value: unknown): value is WallAnchor {
+  if (!value || typeof value !== 'object') return false
+  const anchor = value as Record<string, unknown>
+  return typeof anchor.wallId === 'string' && anchor.wallId.length > 0
+    && isFinitePoint(anchor.offset) && isFinitePoint(anchor.height)
+}
+
 /** Coerce whatever came back from the API into a safe, complete room. */
 export function normalizeRoom(raw: unknown): RoomDesign {
   const base = cloneRoom(DEFAULT_ROOM)
   if (!raw || typeof raw !== 'object') return base
   const record = raw as Record<string, unknown>
+
+  if (isRoomLayoutId(record.activeLayoutId)) base.activeLayoutId = record.activeLayoutId
 
   if (ROOM_STYLES.includes(record.floor as RoomStyleId)) base.floor = record.floor as RoomStyleId
   if (WALL_STYLES.includes(record.wall as WallStyleId)) base.wall = record.wall as WallStyleId
@@ -146,12 +177,34 @@ export function normalizeRoom(raw: unknown): RoomDesign {
       const item = entry as Record<string, unknown>
       if (typeof item.kind !== 'string') continue
       if (!isFinitePoint(item.x) || !isFinitePoint(item.z)) continue
+      const wallAnchor = isWallAnchor(item.wallAnchor) ? item.wallAnchor : undefined
       base.items.push({
         uid: typeof item.uid === 'string' && item.uid ? item.uid : newItemUid(),
         kind: item.kind,
         x: item.x,
         z: item.z,
         rot: isFinitePoint(item.rot) ? item.rot : 0,
+        ...(wallAnchor ? { wallAnchor } : {}),
+        tint: typeof item.tint === 'string' ? item.tint : undefined,
+      })
+    }
+  }
+
+  if (Array.isArray(record.storedItems)) {
+    for (const entry of record.storedItems) {
+      if (base.storedItems.length >= MAX_ROOM_ITEMS) break
+      if (!entry || typeof entry !== 'object') continue
+      const item = entry as Record<string, unknown>
+      if (typeof item.kind !== 'string') continue
+      if (!isFinitePoint(item.x) || !isFinitePoint(item.z)) continue
+      const wallAnchor = isWallAnchor(item.wallAnchor) ? item.wallAnchor : undefined
+      base.storedItems.push({
+        uid: typeof item.uid === 'string' && item.uid ? item.uid : newItemUid(),
+        kind: item.kind,
+        x: item.x,
+        z: item.z,
+        rot: isFinitePoint(item.rot) ? item.rot : 0,
+        ...(wallAnchor ? { wallAnchor } : {}),
         tint: typeof item.tint === 'string' ? item.tint : undefined,
       })
     }
@@ -199,7 +252,16 @@ export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
     const x = a.items[i]
     const y = b.items[i]
     if (x.uid !== y.uid || x.kind !== y.kind || x.tint !== y.tint) return false
+    if (x.wallAnchor?.wallId !== y.wallAnchor?.wallId || x.wallAnchor?.offset !== y.wallAnchor?.offset || x.wallAnchor?.height !== y.wallAnchor?.height) return false
     // Sub-millimetre drift is not a change the learner made.
+    if (Math.abs(x.x - y.x) > 0.001 || Math.abs(x.z - y.z) > 0.001 || Math.abs(x.rot - y.rot) > 0.001) return false
+  }
+  if (a.storedItems.length !== b.storedItems.length) return false
+  for (let i = 0; i < a.storedItems.length; i++) {
+    const x = a.storedItems[i]
+    const y = b.storedItems[i]
+    if (x.uid !== y.uid || x.kind !== y.kind || x.tint !== y.tint) return false
+    if (x.wallAnchor?.wallId !== y.wallAnchor?.wallId || x.wallAnchor?.offset !== y.wallAnchor?.offset || x.wallAnchor?.height !== y.wallAnchor?.height) return false
     if (Math.abs(x.x - y.x) > 0.001 || Math.abs(x.z - y.z) > 0.001 || Math.abs(x.rot - y.rot) > 0.001) return false
   }
   return true

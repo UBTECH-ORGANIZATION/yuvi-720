@@ -20,11 +20,14 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
 import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
+import { roomLayout, wallAnchorAt, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 export type LabRoomQuality = 'high' | 'low'
 
 export interface LabRoomOptions {
   quality?: LabRoomQuality
   reduceMotion?: boolean
+  /** The selected shell; Lab remains the existing visual shell until alternates are built. */
+  layoutId?: RoomLayoutId
   /** World Y of the platform deck — whatever stands in the room stands here. */
   deckY?: number
   /** Initial LED / hologram accent (usually the learner's glow colour). */
@@ -83,7 +86,7 @@ export interface LabRoom {
   /** Reconcile the learner's placed props with the scene (moves are cheap). */
   setUserItems: (items: RoomItem[]) => void
   /** Hologram preview of the prop about to be dropped. `null` hides it. */
-  setGhost: (kind: string | null, x?: number, z?: number, rot?: number, valid?: boolean, tint?: string) => void
+  setGhost: (kind: string | null, x?: number, z?: number, rot?: number, valid?: boolean, tint?: string, y?: number) => void
   /** Lit patch of floor the walkthrough points at. `aim` adds a facing arrow. */
   setTarget: (spot: { x: number; z: number; radius: number; aim?: number } | null) => void
   /** Floor, wall and lighting mood. */
@@ -160,6 +163,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const rich = quality === 'high'
   const reduceMotion = options.reduceMotion ?? false
   const deckY = options.deckY ?? -0.92
+  const layoutId = options.layoutId ?? 'lab'
   const accent = new THREE.Color(options.accent ?? VIOLET)
 
   // Room box. The side walls converge to the edges of a 30° frame right at the
@@ -267,6 +271,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const wallMat = track(new THREE.MeshStandardMaterial({
     map: wallTexture, color: 0x0e1230, roughness: 0.88, metalness: 0.18, envMapIntensity: 0.14,
   }))
+  const legacyShell: THREE.Object3D[] = []
 
   const addWall = (w: number, h: number, position: [number, number, number], rotY: number) => {
     const geo = track(new THREE.PlaneGeometry(w, h))
@@ -275,6 +280,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     mesh.rotation.y = rotY
     mesh.receiveShadow = rich
     group.add(mesh)
+    legacyShell.push(mesh)
     return mesh
   }
   // The back wall is built as four segments around a panoramic opening rather
@@ -325,6 +331,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   floor.rotation.x = -Math.PI / 2
   floor.position.set(0, FLOOR_Y, MID_Z)
   group.add(floor)
+  legacyShell.push(floor)
 
   // Shadow reception moves to its own catcher, since the painted deck cannot
   // receive one. This is what puts real contact shadows under Yuvi's platform.
@@ -334,6 +341,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     shadowCatcher.position.set(0, FLOOR_Y + 0.002, MID_Z)
     shadowCatcher.receiveShadow = true
     group.add(shadowCatcher)
+    legacyShell.push(shadowCatcher)
   }
 
   // Inlaid floor grid, brightest around the platform and gone by the walls.
@@ -361,6 +369,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   grid.rotation.x = -Math.PI / 2
   grid.position.set(0, FLOOR_Y + 0.004, MID_Z)
   group.add(grid)
+  legacyShell.push(grid)
 
   const ceilGeo = track(new THREE.PlaneGeometry(HALF_X * 2, DEPTH))
   // Low env intensity, like the walls: a default probe reflection turns the
@@ -372,6 +381,74 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   ceiling.rotation.x = Math.PI / 2
   ceiling.position.set(0, CEIL_Y, MID_Z)
   group.add(ceiling)
+  legacyShell.push(ceiling)
+
+  if (layoutId !== 'lab') {
+    legacyShell.forEach((mesh) => { mesh.visible = false })
+    const shellMaterial = track(new THREE.MeshStandardMaterial({
+      color: layoutId === 'dome' ? 0x111a3b : 0x17122c,
+      roughness: 0.78,
+      metalness: 0.24,
+      side: THREE.BackSide,
+      envMapIntensity: 0.16,
+    }))
+    const shellFloorMaterial = track(new THREE.MeshStandardMaterial({
+      color: layoutId === 'dome' ? 0x08152a : 0x100c21,
+      roughness: 0.54,
+      metalness: 0.3,
+      envMapIntensity: 0.22,
+    }))
+    const shellGlowMaterial = track(new THREE.MeshBasicMaterial({
+      color: layoutId === 'dome' ? 0x4eeef0 : 0xf0b94e,
+      transparent: true,
+      opacity: 0.32,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    }))
+    const footprint = layoutId === 'dome'
+      ? Array.from({ length: 16 }, (_, index) => {
+          const angle = (index / 16) * Math.PI * 2
+          return new THREE.Vector2(Math.sin(angle) * 13, Math.cos(angle) * 13)
+        })
+      : [new THREE.Vector2(0, -13), new THREE.Vector2(13, 13), new THREE.Vector2(-13, 13)]
+    const shape = new THREE.Shape(footprint)
+    const shellFloor = new THREE.Mesh(track(new THREE.ShapeGeometry(shape)), shellFloorMaterial)
+    shellFloor.rotation.x = -Math.PI / 2
+    shellFloor.position.y = FLOOR_Y + 0.006
+    shellFloor.receiveShadow = rich
+    group.add(shellFloor)
+    const outline = new THREE.LineLoop(
+      track(new THREE.BufferGeometry().setFromPoints(footprint.map((point) => new THREE.Vector3(point.x, FLOOR_Y + 0.035, point.y)))),
+      shellGlowMaterial,
+    )
+    group.add(outline)
+
+    if (layoutId === 'dome') {
+      const domeWalls = new THREE.Mesh(track(new THREE.CylinderGeometry(13, 13, 6.7, 32, 1, true)), shellMaterial)
+      domeWalls.position.y = FLOOR_Y + 3.35
+      group.add(domeWalls)
+      const domeRoof = new THREE.Mesh(track(new THREE.SphereGeometry(13, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2)), shellMaterial)
+      domeRoof.scale.y = 0.52
+      domeRoof.position.y = FLOOR_Y
+      group.add(domeRoof)
+    } else {
+      const apex = new THREE.Vector3(0, FLOOR_Y + 9.2, 12.8)
+      const left = new THREE.Vector3(-13, FLOOR_Y, 13)
+      const right = new THREE.Vector3(13, FLOOR_Y, 13)
+      const front = new THREE.Vector3(0, FLOOR_Y, -13)
+      const face = (points: THREE.Vector3[]) => {
+        const geometry = track(new THREE.BufferGeometry().setFromPoints(points))
+        geometry.setIndex([0, 1, 2])
+        geometry.computeVertexNormals()
+        const mesh = new THREE.Mesh(geometry, shellMaterial)
+        group.add(mesh)
+      }
+      face([front, left, apex])
+      face([front, apex, right])
+      face([left, right, apex])
+    }
+  }
 
   // ── Lit zones ────────────────────────────────────────────────────────────
   // Everything below is emissive geometry, not lights: it reads as architecture
@@ -1726,11 +1803,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     const color = new THREE.Color(tint ?? spec.tint ?? '#ffffff')
     const object = new THREE.Group()
     object.add(spec.build(itemKit, color))
-    // Nothing here is in the shadow map, so every prop gets a contact blob.
-    const blob = itemKit.plane(spec.radius * 2.5, spec.radius * 2.5, propShadowMat)
-    blob.rotation.x = -Math.PI / 2
-    blob.position.y = 0.008
-    object.add(blob)
+    // Wall-mounted props should not leave a floor shadow below their anchor.
+    if (spec.placement !== 'wall') {
+      const blob = itemKit.plane(spec.radius * 2.5, spec.radius * 2.5, propShadowMat)
+      blob.rotation.x = -Math.PI / 2
+      blob.position.y = 0.008
+      object.add(blob)
+    }
     object.scale.setScalar(PROP_SCALE)
     return { object, radius: spec.radius * PROP_SCALE }
   }
@@ -1754,8 +1833,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
         builtItems.set(item.uid, built)
         userGroup.add(built.object)
       }
-      built.object.position.set(item.x, FLOOR_Y, item.z)
-      built.object.rotation.y = item.rot
+      const spec = roomItemSpec(item.kind)
+      const wall = spec?.placement === 'wall'
+        ? wallAnchorTransform(roomLayout(layoutId), item.wallAnchor ?? wallAnchorAt(roomLayout(layoutId), item))
+        : null
+      built.object.position.set(wall?.x ?? item.x, FLOOR_Y + (wall?.height ?? 0), wall?.z ?? item.z)
+      built.object.rotation.y = wall?.rot ?? item.rot
     }
     for (const [uid, built] of builtItems) {
       if (seen.has(uid)) continue
@@ -1765,7 +1848,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     userBlockers.length = 0
     for (const item of items) {
       const built = builtItems.get(item.uid)
-      if (built) userBlockers.push({ x: item.x, z: item.z, radius: built.radius })
+      if (built && roomItemSpec(item.kind)?.placement !== 'wall') userBlockers.push({ x: item.x, z: item.z, radius: built.radius })
     }
   }
 
@@ -1912,7 +1995,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     return object
   }
 
-  const setGhost = (kind: string | null, x = 0, z = 0, rot = 0, valid = true, tint?: string) => {
+  const setGhost = (kind: string | null, x = 0, z = 0, rot = 0, valid = true, tint?: string, y = FLOOR_Y) => {
     if (!kind) {
       ghostGroup.visible = false
       return
@@ -1947,7 +2030,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     ghostRing.material = valid ? ghostRingOkMat : ghostRingBadMat
     for (const mesh of ghostSolids) mesh.material = mat
     for (const wire of ghostWires) wire.material = wireMat
-    ghostGroup.position.set(x, FLOOR_Y, z)
+    ghostGroup.position.set(x, y, z)
     ghostGroup.rotation.y = rot
     ghostGroup.visible = true
   }

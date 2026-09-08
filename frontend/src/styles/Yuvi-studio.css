@@ -299,6 +299,28 @@
 .ys-shop--confirm .ys-shop__balance { margin-block-start: 10px; line-height: 1.5; }
 .ys-shop__stay { display: block; inline-size: 100%; margin-block-start: 10px; }
 
+.ys-world-picker { inline-size: min(680px, 100%); text-align: start; }
+.ys-world-picker__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ys-world-picker h2 { margin: 0; font-size: 19px; color: var(--ys-ink); }
+.ys-world-picker > p { margin: 7px 0 16px; color: var(--ys-ink-soft); font-size: 13px; line-height: 1.5; }
+.ys-world-picker__options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ys-world-choice {
+  min-block-size: 172px; padding: 9px; text-align: start; border: 1px solid var(--ys-line);
+  border-radius: 8px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; font: inherit;
+  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+.ys-world-choice:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ys-accent); box-shadow: 0 9px 20px rgba(20, 12, 60, .12); }
+.ys-world-choice.is-active { border-color: var(--ys-accent); box-shadow: inset 0 0 0 1px var(--ys-accent); }
+.ys-world-choice.is-locked { cursor: default; opacity: .64; }
+.ys-world-choice__scene { display: block; block-size: 78px; margin-block-end: 10px; border-radius: 5px; }
+.ys-world-choice__scene--lab { background: linear-gradient(145deg, #101d4b 0 48%, #3bd3dd 49% 51%, #070a22 52%); }
+.ys-world-choice__scene--dome { background: radial-gradient(ellipse at 50% 100%, #63eff1 0 4%, transparent 5%), radial-gradient(circle at 50% 105%, #183d70 0 46%, #071025 47%); }
+.ys-world-choice__scene--observatory { background: linear-gradient(63deg, transparent 47%, #e4aa4b 48% 51%, transparent 52%), linear-gradient(117deg, transparent 47%, #e4aa4b 48% 51%, transparent 52%), #160e2c; }
+.ys-world-choice strong, .ys-world-choice small { display: block; }
+.ys-world-choice strong { font-size: 14px; }
+.ys-world-choice small { margin-block-start: 5px; color: var(--ys-ink-soft); font-size: 12px; line-height: 1.35; }
+@media (max-width: 600px) { .ys-world-picker__options { grid-template-columns: 1fr; } .ys-world-choice { min-block-size: 104px; } .ys-world-choice__scene { block-size: 42px; } }
+
 /* Two-state control (Yuvi / Yuvi-Girl) — same grammar as the nav, inline. */
 .ys-variant-row { display: flex; gap: 8px; }
 .ys-variant {
