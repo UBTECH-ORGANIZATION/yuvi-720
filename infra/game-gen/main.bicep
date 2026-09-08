@@ -79,6 +79,12 @@ resource games 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-0
   properties: { publicAccess: 'None' }
 }
 
+// ── Worker identity (user-assigned so its roles exist BEFORE the first revision pulls) ──
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-game-gen-${env}'
+  location: location
+}
+
 // ── Container Apps environment (shared) ─────────────────────────────────────
 resource law 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: last(split(logAnalyticsWorkspaceId, '/'))
@@ -103,13 +109,14 @@ resource cae 'Microsoft.App/managedEnvironments@2025-01-01' = {
 resource app 'Microsoft.App/containerApps@2025-01-01' = {
   name: appName
   location: location
-  identity: { type: 'SystemAssigned' }
+  identity: { type: 'UserAssigned', userAssignedIdentities: { '${uami.id}': {} } }
+  dependsOn: [uamiAcrPull, uamiSbReceive, uamiBlob]
   properties: {
     managedEnvironmentId: cae.id
     configuration: {
       activeRevisionsMode: 'Single'
       registries: [
-        { server: acr.properties.loginServer, identity: 'system' }
+        { server: acr.properties.loginServer, identity: uami.id }
       ]
       secrets: concat([
         { name: 'copilot-github-token', value: copilotGithubToken }
@@ -145,6 +152,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
             { name: 'GAME_WORKER_LOG_LEVEL', value: 'INFO' }
             { name: 'APIM_BASE_URL', value: apimBaseUrl }
             { name: 'APIM_API_VERSION', value: '2024-10-21' }
+            { name: 'AZURE_CLIENT_ID', value: uami.properties.clientId }
             { name: 'PYTHONPATH', value: '/app/workers:/app/backend' }
             { name: 'PLAYWRIGHT_BROWSERS_PATH', value: '/ms-playwright' }
             { name: 'COPILOT_GITHUB_TOKEN', secretRef: 'copilot-github-token' }
@@ -164,7 +172,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
             name: 'sb-game-jobs'
             custom: {
               type: 'azure-servicebus'
-              identity: 'system'
+              identity: uami.id
               metadata: {
                 queueName: queueName
                 namespace: sb.name
@@ -185,20 +193,20 @@ var roleSbReceiver = subscriptionResourceId('Microsoft.Authorization/roleDefinit
 var roleSbSender = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
 var roleBlobContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 
-resource appAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, app.id, 'acrpull')
+resource uamiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, uami.id, 'acrpull')
   scope: acr
-  properties: { roleDefinitionId: roleAcrPull, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+  properties: { roleDefinitionId: roleAcrPull, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
-resource appSbReceive 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(queue.id, app.id, 'sb-receiver')
+resource uamiSbReceive 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(queue.id, uami.id, 'sb-receiver')
   scope: queue
-  properties: { roleDefinitionId: roleSbReceiver, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+  properties: { roleDefinitionId: roleSbReceiver, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
-resource appBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, app.id, 'blob-contrib')
+resource uamiBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, uami.id, 'blob-contrib')
   scope: storage
-  properties: { roleDefinitionId: roleBlobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+  properties: { roleDefinitionId: roleBlobContributor, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
 resource webSbSend 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(appServicePrincipalId)) {
   name: guid(queue.id, appServicePrincipalId, 'sb-sender')
@@ -212,7 +220,7 @@ resource webBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!emp
 }
 
 output appName string = app.name
-output appPrincipalId string = app.identity.principalId
+output appPrincipalId string = uami.properties.principalId
 output queueName string = queue.name
 output serviceBusNamespace string = '${sb.name}.servicebus.windows.net'
 output blobContainer string = games.name

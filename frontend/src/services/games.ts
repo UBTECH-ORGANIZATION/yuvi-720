@@ -120,14 +120,16 @@ export function isGameFrame(frame: unknown): frame is GameFrame {
   return !!frame && typeof frame === 'object' && (frame as { type?: unknown }).type === 'game'
 }
 
-export function listGames(params: { component?: string; objective?: string; cursor?: string | null; limit?: number } = {}) {
+export async function listGames(params: { component?: string; objective?: string; cursor?: string | null; limit?: number } = {}): Promise<GameListPage> {
   const q = new URLSearchParams()
   if (params.component) q.set('component', params.component)
   if (params.objective) q.set('objective', params.objective)
   if (params.cursor) q.set('cursor', params.cursor)
   if (params.limit) q.set('limit', String(params.limit))
   const qs = q.toString()
-  return apiGet<GameListPage>(`/api/games${qs ? `?${qs}` : ''}`)
+  // The route answers `{games, next_cursor}`; keep the client on `items`.
+  const page = await apiGet<{ games?: LearnerGame[]; items?: LearnerGame[]; next_cursor?: string | null }>(`/api/games${qs ? `?${qs}` : ''}`)
+  return { items: page.items ?? page.games ?? [], next_cursor: page.next_cursor ?? null }
 }
 
 export function getGame(gameId: string) {

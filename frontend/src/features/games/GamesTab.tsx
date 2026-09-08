@@ -109,12 +109,14 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest }: Game
   // The doors that arrive as a request: the bell's deep link and the studio.
   useEffect(() => {
     if (!openRequest || openRequest.seq === handledRequest.current) return
-    handledRequest.current = openRequest.seq
     let active = true
     const known = games.find((game) => game.game_id === openRequest.gameId)
-    if (known) { setPlaying({ game: known, panel: null }); return }
+    if (known) { handledRequest.current = openRequest.seq; setPlaying({ game: known, panel: null }); return }
+    // The request is marked handled only once the fetch lands: StrictMode
+    // runs this effect twice, and marking it up front would let the first
+    // run's cleanup discard the game while the second run sees "done".
     getGame(openRequest.gameId)
-      .then((game) => { if (active) setPlaying({ game, panel: null }) })
+      .then((game) => { if (active) { handledRequest.current = openRequest.seq; setPlaying({ game, panel: null }) } })
       .catch(() => { /* a game that is not theirs, or gone — the list stands */ })
     return () => { active = false }
     // `games` is read once at request time on purpose: a later list refresh
