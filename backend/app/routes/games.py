@@ -410,6 +410,28 @@ async def read_game_html(
     )
 
 
+@router.get("/{game_id}/live")
+async def read_game_live(game_id: str, learner_id: str = Depends(_reader)):
+    """Where the current build is: phase, how much thinking, the code so far.
+    A page opened mid-build reads this once, then follows the realtime frames."""
+    game = await _owned_game(game_id, learner_id)
+    job = await store.latest_job(game_id)
+    if not job or job.get("status") not in ("queued", "running"):
+        return JSONResponse(content={"active": False}, headers=_NO_STORE)
+    live = dict(job.get("live") or {})
+    return JSONResponse(content={
+        "active": True,
+        "job_id": job["_id"],
+        "kind": job.get("kind"),
+        "started_at": job.get("started_at") or job.get("created_at"),
+        "phase": live.get("phase") or "thinking",
+        "thinking_chars": int(live.get("thinking_chars") or 0),
+        "code_len": int(live.get("code_len") or 0),
+        "code_tail": str(live.get("code_tail") or ""),
+        "updated_at": live.get("updated_at"),
+    }, headers=_NO_STORE)
+
+
 @router.get("/{game_id}/thumb")
 async def read_game_thumb(game_id: str, learner_id: str = Depends(_reader)):
     """The validator's screenshot of the current version — the card's tile."""

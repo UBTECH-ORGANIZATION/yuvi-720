@@ -157,7 +157,9 @@ async def enqueue(
         "instruction": (instruction or "")[:1200],
         "runtime_errors": list(runtime_errors or [])[:20],
         "history": _history(game),
-        "reasoning_effort": "xhigh" if deep_thinking else "high",
+        # A design is worth the long think; a patch is not. Edits and fixes run
+        # a tier lower so a change lands in minutes, not a quarter of an hour.
+        "reasoning_effort": ("xhigh" if deep_thinking else "high") if kind == "create" else ("high" if deep_thinking else "medium"),
         "feature": FEATURE,
         "context": context,
     }

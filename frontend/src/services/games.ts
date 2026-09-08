@@ -125,6 +125,24 @@ export interface GameFrame {
   /** `event: 'code'` — a slice of the game as Yuvi writes it, and the total so far. */
   chunk?: string
   code_len?: number
+  /** `event: 'thinking'` — how much the model has reasoned so far (a pulse, not content). */
+  thinking_chars?: number
+}
+
+/** Where the current build is; read once when the page opens mid-build. */
+export interface GameLive {
+  active: boolean
+  job_id?: string
+  kind?: 'create' | 'edit' | 'fix'
+  started_at?: number | string | null
+  phase?: 'thinking' | 'writing' | 'validating' | 'judging'
+  thinking_chars?: number
+  code_len?: number
+  code_tail?: string
+}
+
+export function getGameLive(gameId: string) {
+  return apiGet<GameLive>(`/api/games/${encodeURIComponent(gameId)}/live`)
 }
 
 export function isGameFrame(frame: unknown): frame is GameFrame {

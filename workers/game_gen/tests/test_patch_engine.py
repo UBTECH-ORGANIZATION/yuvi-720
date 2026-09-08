@@ -148,3 +148,14 @@ def test_check_js_structural_integrity_direct():
 def test_no_patches_in_response():
     res = apply_patches(HTML, "I would change line 7 but here is no patch.")
     assert res.html is None and res.error == "no patches found in response"
+
+
+def test_brace_guard_forgives_a_pre_existing_imbalance():
+    """An apostrophe in a comment makes the naive counter see +1 in the
+    original; a correct patch must not be blamed for it."""
+    from game_gen.patch_engine import _check_js_structural_integrity
+    original = "<html><script>// the kid's ship\nfunction a(){ return 1 }\n</script></html>"
+    patched = "<html><script>// the kid's ship\nfunction a(){ return 2 }\n</script></html>"
+    assert _check_js_structural_integrity(original, patched) == []
+    broken = "<html><script>// the kid's ship\nfunction a(){ return 2 \n</script></html>"
+    assert any("Brace mismatch" in issue for issue in _check_js_structural_integrity(original, broken))

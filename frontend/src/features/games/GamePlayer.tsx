@@ -29,7 +29,7 @@ import { YuviHeadIcon } from '../../components/YuviHeadIcon'
 import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
-  askGame, checkAnswer, editGame, fetchGameHtml, getGame, isGameFrame, reportBug,
+  askGame, checkAnswer, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
   type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport,
 } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
@@ -110,6 +110,10 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
   const [errorCount, setErrorCount] = useState(0)
   const [liveCode, setLiveCode] = useState('')
   const [liveStep, setLiveStep] = useState<string>('')
+  const [thinkingChars, setThinkingChars] = useState(0)
+  const [phase, setPhase] = useState<'thinking' | 'writing' | 'validating' | 'judging'>('thinking')
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(() => Date.now())
   const [isFull, setIsFull] = useState(false)
 
   const errorsRef = useRef<GameRuntimeError[]>([])
@@ -152,6 +156,62 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
     const el = codeRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [liveCode])
+
+  // A page opened mid-build catches up from the job's snapshot: the phase,
+  // how long it has been thinking, and the code written so far.
+  useEffect(() => {
+    if (!busy) return
+    let active = true
+    getGameLive(game.game_id).then((live) => {
+      if (!active || !live.active) return
+      if (live.phase) setPhase(live.phase)
+      setThinkingChars(live.thinking_chars ?? 0)
+      if (live.code_tail) setLiveCode(unescapeChunk(live.code_tail))
+      const started = typeof live.started_at === 'number' ? live.started_at * 1000
+        : live.started_at ? Date.parse(String(live.started_at)) : NaN
+      setStartedAt(Number.isFinite(started) ? started : Date.now())
+    }).catch(() => {})
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, game.game_id])
+
+  // The elapsed clock ticks while the build runs.
+  useEffect(() => {
+    if (!busy) return
+    setNow(Date.now())
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [busy])
+
+  // Frames are the fast path; the snapshot is the truth. While a build runs
+  // the page re-reads it every few seconds, so a dropped relay (Redis
+  // hiccup, a laptop worker) still shows the phase, the clock and the code.
+  useEffect(() => {
+    if (!busy) return
+    let active = true
+    const tick = async () => {
+      try {
+        const live = await getGameLive(game.game_id)
+        if (!active) return
+        if (!live.active) {
+          // The job ended and the "ready" frame never arrived: ask the row.
+          const row = await getGame(game.game_id)
+          if (!active) return
+          setGame(row); setSparks(row.sparks_spent); setStatus(row.status)
+          if (row.current_version > version) { setVersion(row.current_version); setLiveCode(''); showToast(t('games.player.updated')) }
+          return
+        }
+        if (live.phase) setPhase(live.phase)
+        if (typeof live.thinking_chars === 'number') setThinkingChars((current) => Math.max(current, live.thinking_chars ?? 0))
+        if (live.code_tail) {
+          const tail = unescapeChunk(live.code_tail)
+          setLiveCode((current) => (tail.length > current.length ? tail : current))
+        }
+      } catch { /* next tick */ }
+    }
+    const timer = window.setInterval(() => { void tick() }, 5000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [busy, game.game_id, version, showToast, t])
 
   useEffect(() => {
     const onChange = () => setIsFull(Boolean(document.fullscreenElement))
@@ -224,12 +284,20 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
       if (!isGameFrame(frame) || frame.game_id !== game.game_id) return
       const live = frame as GameFrame
       if (live.event === 'code' && live.chunk) {
+        setPhase('writing')
         setLiveCode((current) => {
           const next = current + unescapeChunk(live.chunk ?? '')
           return next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
         })
         return
       }
+      if (live.event === 'thinking') {
+        setPhase('thinking')
+        if (typeof live.thinking_chars === 'number') setThinkingChars(live.thinking_chars)
+        return
+      }
+      if (live.event === 'validate' || live.event === 'validated') setPhase('validating')
+      if (live.event === 'judge') setPhase('judging')
       if (live.event && live.event !== 'code') setLiveStep(live.event)
       if (live.status) setStatus(live.status)
       if (live.status === 'ready' && live.v > version) {
@@ -288,6 +356,9 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
       await editGame(game.game_id, text, caughtErrors())
       setStatus('building')
       setLiveCode('')
+      setThinkingChars(0)
+      setPhase('thinking')
+      setStartedAt(Date.now())
     } catch (error) {
       const code = statusOf(error)
       setJobs((current) => current.map((row) =>
@@ -344,6 +415,9 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
     return text && text !== key ? text : t(`games.status.${status}`)
   })()
   const codeLines = liveCode ? liveCode.split('\n').length : 0
+  const elapsedMin = startedAt ? Math.max(0, Math.floor((now - startedAt) / 60000)) : 0
+  const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000) % 60) : 0
+  const thinkingWords = Math.round(thinkingChars / 5)
   const canSend = !busy && !sending && (draft.trim().length > 0 || (mode === 'change' && errorCount > 0))
   const fullLabel = isFull ? t('games.player.exitFullscreen') : t('games.player.fullscreen')
 
@@ -356,10 +430,22 @@ export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
               <span className="game-player__pulse" aria-hidden="true" />
               <strong>{t('games.build.title')}</strong>
               <span className="game-player__build-step">{stepLabel}</span>
-              {codeLines > 0 && <span className="game-player__build-lines">{t('games.build.lines', { count: codeLines })}</span>}
+              <span className="game-player__build-lines">
+                {startedAt ? t('games.build.elapsed', { min: elapsedMin, sec: String(elapsedSec).padStart(2, '0') }) : ''}
+                {codeLines > 0 ? ` · ${t('games.build.lines', { count: codeLines })}` : ''}
+              </span>
             </header>
-            <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')}>
-              {liveCode || t('games.build.waiting')}
+            {/* Thinking is invisible work: a pulse and a count, never the
+                reasoning itself. The code takes over the moment it starts. */}
+            {!liveCode && (
+              <div className={`game-player__thinking is-${phase}`} dir="auto">
+                <span className="game-player__thinking-orb" aria-hidden="true" />
+                <strong>{t(`games.build.phase.${phase}`)}</strong>
+                <span>{phase === 'thinking' && thinkingWords > 0 ? t('games.build.thoughtWords', { count: thinkingWords }) : t('games.build.waiting')}</span>
+              </div>
+            )}
+            <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')} hidden={!liveCode}>
+              {liveCode}
             </pre>
           </section>
         ) : status === 'ready' && html ? (

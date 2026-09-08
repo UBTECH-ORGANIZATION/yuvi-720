@@ -50,7 +50,7 @@ class GameNotifyTest(unittest.IsolatedAsyncioTestCase):
         action = row["actions"][0]
         self.assertEqual(action["label_key"], "notif.action.openGame")
         self.assertEqual(action["route"],
-                         f"/learning/lesson?unit={UNIT}&component={COMP}&game={self.game['_id']}")
+                         f"/games/play?game={self.game['_id']}&from=bell")
         game_frames = [frame for frame in frames if frame.get("type") == "game"]
         self.assertEqual(len(game_frames), 1)
         self.assertEqual(game_frames[0]["game_id"], self.game["_id"])

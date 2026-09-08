@@ -82,14 +82,28 @@ def _check_js_structural_integrity(original: str, patched: str) -> list[str]:
     """
     issues: list[str] = []
 
-    patched_blocks = re.findall(r"<script[^>]*>(.*?)</script>", patched, re.DOTALL | re.IGNORECASE)
-    for i, block in enumerate(patched_blocks):
-        cleaned = re.sub(r'"[^"]*"|' + r"'[^']*'" + r"|`[^`]*`", "", block)
-        opens, closes = cleaned.count("{"), cleaned.count("}")
-        if opens != closes:
+    # The string stripping is naive (an apostrophe in a Hebrew comment opens a
+    # "string" that swallows real braces), so an untouched file can already
+    # read as unbalanced. The guard therefore compares the patched file's
+    # imbalance with the ORIGINAL's under the same counter: a patch is only
+    # blamed for a delta it introduced. (A live edit on a 1271-line Three.js
+    # game burned $3.40 on three rejected patches before this was so.)
+    def _deltas(html: str) -> list[int]:
+        out = []
+        for block in re.findall(r"<script[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE):
+            cleaned = re.sub(r'"[^"]*"|' + r"'[^']*'" + r"|`[^`]*`", "", block)
+            out.append(cleaned.count("{") - cleaned.count("}"))
+        return out
+
+    original_deltas = _deltas(original)
+    patched_deltas = _deltas(patched)
+    same_shape = len(original_deltas) == len(patched_deltas)
+    for i, delta in enumerate(patched_deltas):
+        before = original_deltas[i] if same_shape else 0
+        if delta != before and not (delta == 0):
             issues.append(
                 f"Brace mismatch in <script> block {i + 1}: "
-                f"{opens} '{{' vs {closes} '}}' (delta {opens - closes:+d})"
+                f"delta {delta:+d} (was {before:+d} before the patch)"
             )
 
     orig_funcs = set(re.findall(r"function\s+(\w+)\s*\(", original))

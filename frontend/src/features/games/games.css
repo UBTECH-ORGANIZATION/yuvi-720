@@ -142,6 +142,44 @@
   font-variant-numeric: tabular-nums;
 }
 
+.game-player__thinking {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: #b9c3ff;
+  font: 600 14px/1.5 var(--sp-font);
+}
+
+.game-player__thinking strong {
+  color: #fff;
+  font-size: 17px;
+}
+
+.game-player__thinking-orb {
+  inline-size: 64px;
+  block-size: 64px;
+  margin-block-end: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #c9b8ff, #6f5bff 55%, #2b1f7a);
+  box-shadow: 0 0 40px rgba(111, 91, 255, .55), 0 0 90px rgba(76, 201, 240, .25);
+  animation: game-player-orb 2.4s ease-in-out infinite;
+}
+
+.game-player__thinking.is-validating .game-player__thinking-orb,
+.game-player__thinking.is-judging .game-player__thinking-orb {
+  background: radial-gradient(circle at 35% 35%, #bff7ff, #4cc9f0 55%, #14515e);
+}
+
+@keyframes game-player-orb {
+  0%, 100% { transform: scale(.92); filter: brightness(.9); }
+  50% { transform: scale(1.08); filter: brightness(1.15); }
+}
+
 .game-player__code {
   flex: 1;
   min-block-size: 0;
@@ -645,6 +683,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .game-player__pulse,
+  .game-player__thinking-orb,
   .game-chat__dots i,
   .game-player__done,
   .game-player__toast,

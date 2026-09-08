@@ -41,6 +41,9 @@ MAX_ATTEMPTS = int(os.environ.get("GAME_JOBS_MAX_DELIVERY", "3"))
 SPARKS_PER_USD = float(os.environ.get("GAME_SPARKS_PER_USD", "100"))  # kid-facing "sparks" = cents
 CODE_FRAME_INTERVAL_S = 1.0   # live-code frames to the player, at most this often…
 CODE_FRAME_MAX = 6000         # …unless this much piled up first
+THINK_FRAME_INTERVAL_S = 2.0  # "still thinking" frames while the model reasons
+LIVE_SNAPSHOT_INTERVAL_S = 3.0  # the job row keeps a snapshot so a page opened mid-build catches up
+LIVE_CODE_TAIL = 24_000
 
 
 def _backend():
@@ -123,7 +126,22 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     pending: list[asyncio.Task[Any]] = []  # status writes; awaited before the version lands
     # The code stream is coalesced: deltas pile up and go out about once a
     # second as one frame, so a 1500-line game is ~100 frames, not 20,000.
-    code = {"buf": "", "at": 0.0, "len": 0}
+    code = {"buf": "", "at": 0.0, "len": 0, "tail": ""}
+    live = {"phase": "thinking", "thinking_chars": 0, "code_len": 0, "code_tail": "", "updated_at": time.time()}
+    think = {"at": 0.0}
+    snap = {"at": 0.0}
+
+    def snapshot(force: bool = False) -> None:
+        """The job row remembers where the build is, so a page opened
+        mid-build (or after a refresh) starts from the truth, not from empty."""
+        now = time.monotonic()
+        if not force and now - snap["at"] < LIVE_SNAPSHOT_INTERVAL_S:
+            return
+        snap["at"] = now
+        live["code_len"] = code["len"] + len(code["buf"])
+        live["code_tail"] = (code["tail"] + code["buf"])[-LIVE_CODE_TAIL:]
+        live["updated_at"] = time.time()
+        pending.append(asyncio.get_event_loop().create_task(store.update_job(job_id, live=dict(live))))
 
     def flush_code(force: bool = False) -> None:
         now = time.monotonic()
@@ -131,21 +149,42 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             return
         chunk, code["buf"], code["at"] = code["buf"], "", now
         code["len"] += len(chunk)
+        code["tail"] = (code["tail"] + chunk)[-LIVE_CODE_TAIL:]
         notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",
                                 chunk=chunk, code_len=code["len"])
+        snapshot()
 
     def progress(event: dict[str, Any]) -> None:
-        if event.get("type") == "tool_delta":
+        kind = event.get("type")
+        if kind == "tool_delta":
+            live["phase"] = "writing"
             code["buf"] += str(event.get("text") or "")
             flush_code()
             return
+        if kind == "reasoning_delta":
+            live["phase"] = "thinking"
+            live["thinking_chars"] += len(str(event.get("text") or ""))
+            now = time.monotonic()
+            if now - think["at"] >= THINK_FRAME_INTERVAL_S:
+                think["at"] = now
+                notify.publish_progress(learner_id, game_id, "thinking", status=last_status["value"] or "building",
+                                        thinking_chars=live["thinking_chars"])
+                snapshot()
+            return
+        if kind in {"validate", "validated"}:
+            live["phase"] = "validating"
+        elif kind == "judge":
+            live["phase"] = "judging"
+        elif kind == "build":
+            live["phase"] = "thinking"
         status = _game_status_for(event)
         if status and status != last_status["value"]:
             last_status["value"] = status
             pending.append(asyncio.get_event_loop().create_task(store.update_status(game_id, status)))
-        if event.get("type") in {"build", "validate", "validated", "judge", "tool"}:
+        if kind in {"build", "validate", "validated", "judge", "tool"}:
             flush_code(force=True)
-            notify.publish_progress(learner_id, game_id, str(event.get("type")), status=status or "", detail=json.dumps(
+            snapshot(force=True)
+            notify.publish_progress(learner_id, game_id, str(kind), status=status or "", detail=json.dumps(
                 {k: v for k, v in event.items() if k not in {"type", "text"}}, ensure_ascii=False)[:300])
 
     await store.update_status(game_id, "building" if kind == "create" else "fixing")

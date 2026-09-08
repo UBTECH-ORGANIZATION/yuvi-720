@@ -99,9 +99,14 @@ def publish(topic: str, event: dict[str, Any]) -> int:
 # ── the bridge ─────────────────────────────────────────────────────────────
 
 import json
+import os
 from uuid import uuid4
 
 _ORIGIN = uuid4().hex
+# A publish that takes longer than this is dropped (the local delivery already
+# happened). Half a second was fine app→Redis in one region; a worker on a
+# laptop relaying to Azure needs more, and 2 s still bounds the task.
+_RELAY_TIMEOUT_S = float(os.environ.get("REALTIME_RELAY_TIMEOUT_S", "2.0"))
 
 
 class _Bridge:
@@ -129,7 +134,7 @@ class _Bridge:
             return
         try:
             payload = json.dumps({"o": _ORIGIN, "t": topic, "e": event}, ensure_ascii=False, default=str)
-            await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=0.5)
+            await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=_RELAY_TIMEOUT_S)
             self.relayed += 1
         except Exception as exc:  # the local delivery already happened; the relay is best effort
             print(f"⚠️ realtime relay failed: {type(exc).__name__}")
