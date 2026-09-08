@@ -10,7 +10,7 @@ import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
 import { SegmentedNav } from './SegmentedNav'
 import {
-  VIBE_MAX, createErrorKey, findComponent, findObjective, genreIcon, isBusyStatus, mergeUpdates,
+  TITLE_MAX, VIBE_MAX, createErrorKey, findComponent, findObjective, genreIcon, isBusyStatus, mergeUpdates,
   orderComponents, orderObjectives, statusTone, upsertGame, type GameLabPreselect, type GameLabTab,
 } from './gameLabModel'
 import type { GameLabActivity } from '../useGameLabActivity'
@@ -194,6 +194,9 @@ function GameCard({
   const busy = isBusyStatus(game.status)
   const tone = statusTone(game.status)
   const playable = game.current_version > 0
+  // A building game opens too: the page shows Yuvi's live console (thinking
+  // pulse, then the code as it streams), which is half the fun of making one.
+  const openable = playable || busy
   // Only steps with words of their own; the code stream and tool pings stay quiet.
   const stepKey = event && ['plan', 'build', 'validate', 'fix', 'judge'].includes(event) ? `games.step.${event}` : ''
   const stepLabel = stepKey ? t(stepKey) : ''
@@ -215,7 +218,14 @@ function GameCard({
 
   return (
     <li className={`ys-gamelab-card is-${tone}${busy ? ' is-building' : ''}`}>
-      <div className="ys-gamelab-card__tile" aria-hidden>
+      <div
+        className={`ys-gamelab-card__tile${openable ? ' is-openable' : ''}`}
+        onClick={openable ? play : undefined}
+        role={openable ? 'button' : undefined}
+        tabIndex={openable ? 0 : undefined}
+        onKeyDown={openable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play() } } : undefined}
+        aria-label={openable ? t(busy ? 'studio.gamelab.action.watch' : 'studio.gamelab.action.play') : undefined}
+      >
         {game.has_thumb
           ? <img className="ys-gamelab-card__thumb" src={gameThumbUrl(game)} alt="" loading="lazy" />
           : genreIcon(game.genre)}
@@ -257,9 +267,9 @@ function GameCard({
         </div>
         {!confirmDelete && (
           <div className="ys-gamelab-card__actions">
-            <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={play} disabled={!playable}>
-              <Icon name="play" size={14} />
-              {t('studio.gamelab.action.play')}
+            <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={play} disabled={!openable}>
+              <Icon name={busy ? 'eye' : 'play'} size={14} />
+              {t(busy ? 'studio.gamelab.action.watch' : 'studio.gamelab.action.play')}
             </button>
             <button
               type="button"
@@ -307,6 +317,7 @@ function CreateWizard({
   const [component, setComponent] = useState<PickerComponent | null>(null)
   const [inspirations, setInspirations] = useState<GameInspiration[]>([])
   const [vibe, setVibe] = useState('')
+  const [name, setName] = useState('')
   const [deep, setDeep] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -353,6 +364,7 @@ function CreateWizard({
         component_id: component.id,
         inspirations,
         vibe: vibe.trim(),
+        title: name.trim().slice(0, TITLE_MAX),
         device: isTouch ? 'touch' : 'keyboard',
         deep_thinking: deep,
       })
@@ -456,6 +468,19 @@ function CreateWizard({
           />
           <h2 className="ys-section__title">{t('studio.gamelab.pick.brief')}</h2>
           <p className="ys-gamelab-lead">{t('studio.gamelab.brief.lead')}</p>
+          <div className="ys-gamelab-field ys-gamelab-field--name">
+            <input
+              id="ys-gamelab-name"
+              className="ys-gamelab-input"
+              type="text"
+              maxLength={TITLE_MAX}
+              value={name}
+              aria-label={t('studio.gamelab.name.label')}
+              placeholder={t('studio.gamelab.name.placeholder')}
+              onChange={(change) => setName(change.target.value.slice(0, TITLE_MAX))}
+            />
+            <span className="ys-gamelab-counter" aria-live="polite">{name.length}/{TITLE_MAX}</span>
+          </div>
           <div className="ys-gamelab-field">
             <textarea
               id="ys-gamelab-vibe"

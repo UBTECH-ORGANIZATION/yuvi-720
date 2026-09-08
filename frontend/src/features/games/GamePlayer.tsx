@@ -45,6 +45,7 @@ const TOAST_MS = 3200
 const CHEER_MS = 1800
 /** The live code view keeps this much of the tail; the rest scrolled by. */
 const LIVE_CODE_MAX = 80_000
+const THINK_TEXT_MAX = 12_000
 
 type ChatMode = 'change' | 'ask'
 
@@ -60,6 +61,8 @@ interface PlayerJob {
   /** Yuvi's answer, for a question. */
   reply?: string
 }
+
+type BuildPhase = 'thinking' | 'writing' | 'validating' | 'judging'
 
 interface GamePlayerProps {
   game: LearnerGame
@@ -123,8 +126,14 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const rawRef = useRef('')
   const [liveStep, setLiveStep] = useState<string>('')
   const [thinkingChars, setThinkingChars] = useState(0)
-  const [phase, setPhase] = useState<'thinking' | 'writing' | 'validating' | 'judging'>('thinking')
+  // Yuvi's reasoning as it streams, kept to a tail: the kid reads what Yuvi
+  // is weighing, in the collapsible log, never on the stage.
+  const [thinkingText, setThinkingText] = useState('')
+  const thinkRef = useRef<HTMLDivElement>(null)
+  const [phase, setPhase] = useState<BuildPhase>('thinking')
   const [startedAt, setStartedAt] = useState<number | null>(null)
+  // What Yuvi did so far, one line per phase, for the collapsible log in the chat.
+  const [buildLog, setBuildLog] = useState<{ phase: BuildPhase; at: number }[]>([])
   const [now, setNow] = useState(() => Date.now())
   const [isFull, setIsFull] = useState(false)
 
@@ -178,6 +187,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       if (!active || !live.active) return
       if (live.phase) setPhase(live.phase)
       setThinkingChars(live.thinking_chars ?? 0)
+      if (live.thinking_tail) setThinkingText(live.thinking_tail)
       if (live.code_tail) { rawRef.current = live.code_tail; setLiveCode(codeFromToolInput(live.code_tail)) }
       const started = typeof live.started_at === 'number' ? live.started_at * 1000
         : live.started_at ? Date.parse(String(live.started_at)) : NaN
@@ -215,6 +225,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         }
         if (live.phase) setPhase(live.phase)
         if (typeof live.thinking_chars === 'number') setThinkingChars((current) => Math.max(current, live.thinking_chars ?? 0))
+        if (live.thinking_tail) setThinkingText((current) => (live.thinking_tail!.length > current.length ? live.thinking_tail! : current))
         if (live.code_tail && live.code_tail.length > rawRef.current.length) {
           rawRef.current = live.code_tail
           setLiveCode(codeFromToolInput(live.code_tail))
@@ -306,6 +317,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       if (live.event === 'thinking') {
         setPhase('thinking')
         if (typeof live.thinking_chars === 'number') setThinkingChars(live.thinking_chars)
+        if (live.chunk) setThinkingText((current) => (current + live.chunk).slice(-THINK_TEXT_MAX))
         return
       }
       if (live.event === 'validate' || live.event === 'validated') setPhase('validating')
@@ -371,6 +383,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       setLiveCode('')
       rawRef.current = ''
       setThinkingChars(0)
+      setThinkingText('')
       setPhase('thinking')
       setStartedAt(Date.now())
     } catch (error) {
@@ -429,11 +442,33 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     return text && text !== key ? text : t(`games.status.${status}`)
   })()
   const codeLines = liveCode ? liveCode.split('\n').length : 0
+  useEffect(() => {
+    if (!busy) return
+    setBuildLog((current) => (current.length && current[current.length - 1].phase === phase)
+      ? current
+      : [...current, { phase, at: Date.now() }])
+  }, [busy, phase])
+  useEffect(() => { if (!busy) setBuildLog([]) }, [busy])
+  useEffect(() => {
+    const box = thinkRef.current
+    if (box) box.scrollTop = box.scrollHeight
+  }, [thinkingText])
+
   const elapsedMin = startedAt ? Math.max(0, Math.floor((now - startedAt) / 60000)) : 0
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000) % 60) : 0
   const thinkingWords = Math.round(thinkingChars / 5)
   const canSend = !busy && !sending && (draft.trim().length > 0 || (mode === 'change' && errorCount > 0))
   const fullLabel = isFull ? t('games.player.exitFullscreen') : t('games.player.fullscreen')
+  // One short figure beside the phase in the collapsed log: thought words while
+  // thinking, code lines while writing, nothing otherwise.
+  const buildStat = phase === 'thinking' && thinkingWords > 0 ? t('games.build.words', { count: thinkingWords })
+    : phase === 'writing' && codeLines > 0 ? t('games.build.lines', { count: codeLines })
+    : ''
+  const clock = (at: number) => {
+    const base = startedAt ?? at
+    const secs = Math.max(0, Math.floor((at - base) / 1000))
+    return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
+  }
 
   return (
     <main className="game-player" dir={direction} aria-label={game.title}>
@@ -455,11 +490,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
               <div className={`game-player__thinking is-${phase}`} dir="auto">
                 <span className="game-player__thinking-orb" aria-hidden="true" />
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
-                <span>
-                  {phase === 'writing' ? t('games.build.writingBrief')
-                    : phase === 'thinking' && thinkingWords > 0 ? t('games.build.thoughtWords', { count: thinkingWords })
-                    : t('games.build.waiting')}
-                </span>
               </div>
             )}
             <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')} hidden={!liveCode}>
@@ -570,7 +600,34 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
             <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--brief" dir="auto">{game.description}</div>
           )}
           {busy ? (
-            <div className="game-chat__msg game-chat__msg--yuvi" dir="auto">{t('games.chat.building')}</div>
+            <details className="game-chat__msg game-chat__msg--yuvi game-chat__log" dir="auto">
+              <summary>
+                <span className="game-chat__log-orb" aria-hidden="true" />
+                <strong>{t(`games.build.phase.${phase}`)}</strong>
+                <span className="game-chat__log-stat">{buildStat}</span>
+                <Icon name="chevronDown" size={14} />
+              </summary>
+              {thinkingText ? (
+                <div ref={thinkRef} className="game-chat__log-think" dir="auto" aria-label={t('games.build.phase.thinking')}>
+                  {thinkingText}
+                </div>
+              ) : (
+                <p className="game-chat__log-detail">
+                  {phase === 'writing' ? (liveCode ? t('games.build.lines', { count: codeLines }) : t('games.build.writingBrief'))
+                    : phase === 'thinking' ? t('games.build.waiting')
+                    : t(`games.build.phase.${phase}`)}
+                </p>
+              )}
+              <ol className="game-chat__log-steps">
+                {buildLog.map((entry) => (
+                  <li key={`${entry.phase}-${entry.at}`}>
+                    <time>{clock(entry.at)}</time>
+                    <span>{t(`games.build.phase.${entry.phase}`)}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="game-chat__log-foot">{t('games.chat.building')}</p>
+            </details>
           ) : jobs.length === 0 && (
             <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--hint" dir="auto">{t('games.chat.hint')}</div>
           )}

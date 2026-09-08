@@ -81,6 +81,7 @@ class JobSpec:
     vibe: str = ""
     clarifications: dict[str, str] = field(default_factory=dict)
     inspirations: list[str] = field(default_factory=list)  # flavour chips, context only
+    learner_title: str = ""  # the kid's own name for the game; kept as-is
     instruction: str = ""            # edit / fix
     current_html: str = ""           # edit / fix
     runtime_errors: list[dict[str, Any]] = field(default_factory=list)  # fix
@@ -293,7 +294,8 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
 
     if spec.kind == "create":
         system = prompts.builder_system_message(language)
-        prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications, inspirations=spec.inspirations)
+        prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications,
+                                       inspirations=spec.inspirations, learner_title=spec.learner_title)
     else:
         system = prompts.editor_system_message(language)
         if len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD:

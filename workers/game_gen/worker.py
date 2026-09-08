@@ -41,7 +41,9 @@ MAX_ATTEMPTS = int(os.environ.get("GAME_JOBS_MAX_DELIVERY", "3"))
 SPARKS_PER_USD = float(os.environ.get("GAME_SPARKS_PER_USD", "100"))  # kid-facing "sparks" = cents
 CODE_FRAME_INTERVAL_S = 1.0   # live-code frames to the player, at most this often…
 CODE_FRAME_MAX = 6000         # …unless this much piled up first
-THINK_FRAME_INTERVAL_S = 2.0  # "still thinking" frames while the model reasons
+THINK_FRAME_INTERVAL_S = 2.0  # reasoning frames to the player, at most this often…
+THINK_FRAME_MAX = 4000        # …unless this much piled up
+LIVE_THINK_TAIL = 12_000      # reasoning kept on the job row for a page opened mid-think
 LIVE_SNAPSHOT_INTERVAL_S = 3.0  # the job row keeps a snapshot so a page opened mid-build catches up
 LIVE_CODE_TAIL = 24_000
 
@@ -84,6 +86,7 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         vibe=str(payload.get("vibe") or ""),
         clarifications=dict(payload.get("clarifications") or {}),
         inspirations=[str(x) for x in (payload.get("inspirations") or [])][:6],
+        learner_title=str(payload.get("learner_title") or "")[:40],
         instruction=str(payload.get("instruction") or ""),
         current_html=str(payload.get("current_html") or ""),
         runtime_errors=list(payload.get("runtime_errors") or []),
@@ -127,8 +130,10 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     # The code stream is coalesced: deltas pile up and go out about once a
     # second as one frame, so a 1500-line game is ~100 frames, not 20,000.
     code = {"buf": "", "at": 0.0, "len": 0, "tail": ""}
-    live = {"phase": "thinking", "thinking_chars": 0, "code_len": 0, "code_tail": "", "updated_at": time.time()}
-    think = {"at": 0.0}
+    live = {"phase": "thinking", "thinking_chars": 0, "thinking_tail": "", "code_len": 0, "code_tail": "", "updated_at": time.time()}
+    # The reasoning streams too, coalesced like the code: a page shows the
+    # kid what Yuvi is weighing, not just that it is thinking.
+    think = {"at": 0.0, "buf": ""}
     snap = {"at": 0.0}
 
     def snapshot(force: bool = False) -> None:
@@ -163,12 +168,15 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             return
         if kind == "reasoning_delta":
             live["phase"] = "thinking"
-            live["thinking_chars"] += len(str(event.get("text") or ""))
+            text = str(event.get("text") or "")
+            live["thinking_chars"] += len(text)
+            live["thinking_tail"] = (live["thinking_tail"] + text)[-LIVE_THINK_TAIL:]
+            think["buf"] += text
             now = time.monotonic()
-            if now - think["at"] >= THINK_FRAME_INTERVAL_S:
-                think["at"] = now
+            if now - think["at"] >= THINK_FRAME_INTERVAL_S or len(think["buf"]) >= THINK_FRAME_MAX:
+                chunk, think["buf"], think["at"] = think["buf"], "", now
                 notify.publish_progress(learner_id, game_id, "thinking", status=last_status["value"] or "building",
-                                        thinking_chars=live["thinking_chars"])
+                                        thinking_chars=live["thinking_chars"], chunk=chunk)
                 snapshot()
             return
         if kind in {"validate", "validated"}:

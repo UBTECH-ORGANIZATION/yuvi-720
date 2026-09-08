@@ -101,6 +101,8 @@ export interface CreateGameInput {
   genre?: GameGenre
   inspirations?: GameInspiration[]
   vibe: string
+  /** The kid's own name for the game (≤40). Empty lets Yuvi title it. */
+  title?: string
   clarifications?: Record<string, string>
   device?: 'keyboard' | 'touch'
   deep_thinking?: boolean
@@ -125,7 +127,7 @@ export interface GameFrame {
   /** `event: 'code'` — a slice of the game as Yuvi writes it, and the total so far. */
   chunk?: string
   code_len?: number
-  /** `event: 'thinking'` — how much the model has reasoned so far (a pulse, not content). */
+  /** `event: 'thinking'` — how much the model has reasoned so far; `chunk` carries the words. */
   thinking_chars?: number
 }
 
@@ -137,6 +139,7 @@ export interface GameLive {
   started_at?: number | string | null
   phase?: 'thinking' | 'writing' | 'validating' | 'judging'
   thinking_chars?: number
+  thinking_tail?: string
   code_len?: number
   code_tail?: string
 }

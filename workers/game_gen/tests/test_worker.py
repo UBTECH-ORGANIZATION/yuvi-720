@@ -58,9 +58,9 @@ class FakeHtmlStore:
 
 
 class FakeNotify:
-    def __init__(self): self.bells = []; self.frames = []
+    def __init__(self): self.bells = []; self.frames = []; self.extras = []
     async def notify_game(self, kind, game, v): self.bells.append((kind, game["_id"], v)); return {"kind": kind}
-    def publish_progress(self, learner_id, game_id, event, **extra): self.frames.append(event); return 1
+    def publish_progress(self, learner_id, game_id, event, **extra): self.frames.append(event); self.extras.append((event, extra)); return 1
 
 
 @pytest.fixture
@@ -155,3 +155,23 @@ def test_mongo_loop_once_drains_queue(fakes, monkeypatch):
     monkeypatch.setitem(__import__("sys").modules, "app.brain.repository", fake_repo)
     handled = asyncio.run(worker.run_mongo_loop(once=True))
     assert handled == 1 and fakes.store.jobs["j1"]["status"] == "done"
+
+
+def test_reasoning_streams_as_thinking_frames_and_a_tail(fakes, monkeypatch):
+    async def fake_run_job(spec, progress):
+        progress({"type": "build", "status": "start", "model": spec.model})
+        progress({"type": "reasoning_delta", "text": "First, the world: a space station. "})
+        progress({"type": "reasoning_delta", "text": "Then the loop."})
+        # The snapshot is throttled; a phase event forces it, as the clock does in production.
+        progress({"type": "validate", "attempt": 1, "tool": "submit_game"})
+        await asyncio.sleep(0)
+        return _result(True)
+
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    thinking = [extra for event, extra in fakes.notify.extras if event == "thinking"]
+    assert thinking and thinking[0]["chunk"].startswith("First, the world")
+    assert thinking[0]["thinking_chars"] == len("First, the world: a space station. ")
+    live = fakes.store.jobs["j1"]["live"]
+    assert live["thinking_tail"].endswith("Then the loop.")
+    assert live["thinking_chars"] == len("First, the world: a space station. Then the loop.")

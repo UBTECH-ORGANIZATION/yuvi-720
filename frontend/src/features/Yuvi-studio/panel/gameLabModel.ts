@@ -38,6 +38,8 @@ export function genreIcon(genre: string): string {
 
 /** The kid's brief: the one real design input, so it gets room. */
 export const VIBE_MAX = 600
+/** The kid's own game name; the model titles the game when it is empty. */
+export const TITLE_MAX = 40
 
 export type StatusTone = 'busy' | 'ready' | 'failed'
 

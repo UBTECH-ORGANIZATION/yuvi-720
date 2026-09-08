@@ -265,12 +265,13 @@ async def create_game(
     *, learner_id: str, objective_id: str, unit_id: str, component_id: str,
     title: str, genre: str, prompt: str = "", language: str = "he",
     device: str = "keyboard", path_node_id: Optional[str] = None,
+    title_by_learner: bool = False,
 ) -> dict[str, Any]:
     """Record what the learner asked for. The build is a separate job.
 
-    `title` is provisional — the worker replaces it with the one the model
-    chose (``SubmitParams.title``) when the first version lands. Until then the
-    card shows the component's name, which is what the game is about anyway.
+    `title` is provisional unless `title_by_learner`: the worker replaces it
+    with the one the model chose (``SubmitParams.title``) when the first
+    version lands. A name the kid typed is theirs and is never overwritten.
     """
     document = {
         "_id": new_game_id(),
@@ -280,6 +281,7 @@ async def create_game(
         "component_id": component_id,
         "path_node_id": path_node_id,
         "title": (title or "")[:80],
+        "title_by_learner": bool(title_by_learner),
         "genre": genre,
         "prompt": (prompt or "")[:600],
         "language": language,
@@ -390,7 +392,7 @@ async def add_version(
         "errors_last": [],
         "sparks_spent": int(game.get("sparks_spent") or 0) + max(0, int(sparks)),
     }
-    if title:
+    if title and not game.get("title_by_learner"):
         fields["title"] = str(title)[:80]
     if thumb_blob_path:
         fields["thumb_blob_path"] = thumb_blob_path

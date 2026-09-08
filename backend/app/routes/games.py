@@ -93,6 +93,9 @@ class CreateGameRequest(BaseModel):
     genre: str = Field(default="open", min_length=1, max_length=32)
     inspirations: list[str] = Field(default_factory=list, max_length=6)
     vibe: str = Field(default="", max_length=600)
+    # The kid's own name for the game. When given it stays; otherwise the
+    # model titles the game and the card shows the component name until then.
+    title: str = Field(default="", max_length=40)
     clarifications: dict[str, str] = Field(default_factory=dict)
     device: Device = "keyboard"
     language: Language = "he"
@@ -326,11 +329,12 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
     if await store.count_created_today(learner_id) >= cap:
         raise HTTPException(status_code=429, detail="daily_create_cap")
 
-    title = (kata_catalog.component_title(data.component_id, data.language)
-             or component.get("title") or data.component_id)
+    learner_title = " ".join(data.title.split())[:40]
+    title = learner_title or (kata_catalog.component_title(data.component_id, data.language)
+                              or component.get("title") or data.component_id)
     game = await store.create_game(
         learner_id=learner_id, objective_id=data.objective_id, unit_id=data.unit_id,
-        component_id=data.component_id, title=title, genre=data.genre, prompt=data.vibe,
+        component_id=data.component_id, title=title, title_by_learner=bool(learner_title), genre=data.genre, prompt=data.vibe,
         language=data.language, device=data.device,
     )
     try:
@@ -338,6 +342,7 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
             game, "create", genre=data.genre, vibe=data.vibe, inspirations=inspirations,
             clarifications=data.clarifications, language=data.language,
             device=data.device, deep_thinking=data.deep_thinking,
+            learner_title=learner_title,
         )
     except jobs.EnqueueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
@@ -418,6 +423,7 @@ async def read_game_live(game_id: str, learner_id: str = Depends(_reader)):
         "started_at": job.get("started_at") or job.get("created_at"),
         "phase": live.get("phase") or "thinking",
         "thinking_chars": int(live.get("thinking_chars") or 0),
+        "thinking_tail": str(live.get("thinking_tail") or ""),
         "code_len": int(live.get("code_len") or 0),
         "code_tail": str(live.get("code_tail") or ""),
         "updated_at": live.get("updated_at"),

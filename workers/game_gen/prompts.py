@@ -144,7 +144,7 @@ def editor_system_message(language: str = "he") -> str:
 
 
 def create_prompt(pack: ContextPack, *, genre: str = "open", vibe: str = "", clarifications: dict[str, str] | None = None,
-                  inspirations: list[str] | None = None) -> str:
+                  inspirations: list[str] | None = None, learner_title: str = "") -> str:
     """The build request. The kid's brief and the learning context are the
     inputs; genre and engine are the designer's call. A legacy `genre` other
     than "open"/"surprise" becomes one more inspiration line."""
@@ -157,9 +157,12 @@ def create_prompt(pack: ContextPack, *, genre: str = "open", vibe: str = "", cla
     extra = ""
     if clarifications:
         extra = "\nKid's answers to your questions:\n" + "\n".join(f"- {k}: {v}" for k, v in clarifications.items())
+    named = ""
+    if learner_title.strip():
+        named = f"\nThe kid named this game \"{learner_title.strip()}\" — use exactly that as the title (on the title screen and in `submit_game`)."
     return f"""Design and build a learning game for a kid. The design is yours: choose the genre, the world and the engine that make this topic unforgettable.
 
-The kid's brief: "{vibe.strip() or 'make the most impressive game you can for this topic'}"{inspire}{extra}
+The kid's brief: "{vibe.strip() or 'make the most impressive game you can for this topic'}"{inspire}{extra}{named}
 
 LEARNING_CONTEXT (JSON):
 {pack.to_prompt_json()}

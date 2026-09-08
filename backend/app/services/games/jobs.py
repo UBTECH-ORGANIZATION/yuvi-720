@@ -131,7 +131,8 @@ async def enqueue(
     inspirations: Optional[list[str]] = None,
     language: Optional[str] = None, device: Optional[str] = None,
     instruction: str = "", runtime_errors: Optional[list[dict[str, Any]]] = None,
-    deep_thinking: bool = False, version: Optional[int] = None,
+    deep_thinking: bool = False,
+    learner_title: str = "", version: Optional[int] = None,
 ) -> dict[str, Any]:
     """Write the job, then hand it to the worker. Returns the job document.
 
@@ -157,9 +158,10 @@ async def enqueue(
         "instruction": (instruction or "")[:1200],
         "runtime_errors": list(runtime_errors or [])[:20],
         "history": _history(game),
-        # A design is worth the long think; a patch is not. Edits and fixes run
-        # a tier lower so a change lands in minutes, not a quarter of an hour.
-        "reasoning_effort": ("xhigh" if deep_thinking else "high") if kind == "create" else ("high" if deep_thinking else "medium"),
+        # "Deep thinking" is the kid's choice between a quick build and a
+        # long one: high effort when on, low when off, for every job kind.
+        "reasoning_effort": "high" if deep_thinking else "low",
+        "learner_title": (learner_title or "")[:40],
         "feature": FEATURE,
         "context": context,
     }
