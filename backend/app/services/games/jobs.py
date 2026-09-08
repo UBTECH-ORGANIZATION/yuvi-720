@@ -159,8 +159,10 @@ async def enqueue(
         "runtime_errors": list(runtime_errors or [])[:20],
         "history": _history(game),
         # "Deep thinking" is the kid's choice between a quick build and a
-        # long one: high effort when on, low when off, for every job kind.
-        "reasoning_effort": "high" if deep_thinking else "low",
+        # longer one: medium effort when on, low when off, for every job kind.
+        # Higher tiers spend the 32k per-turn output budget on reasoning and
+        # the game no longer fits one tool call (see pipeline.OUTPUT_CAP_HINT_TOKENS).
+        "reasoning_effort": "medium" if deep_thinking else "low",
         "learner_title": (learner_title or "")[:40],
         "feature": FEATURE,
         "context": context,

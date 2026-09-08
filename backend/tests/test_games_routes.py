@@ -93,7 +93,7 @@ class GamesRoutesTest(unittest.TestCase):
     def test_deep_thinking_raises_reasoning_effort(self):
         created = self._create(deep_thinking=True)
         job = self._run(store.get_job(created["job_id"]))
-        self.assertEqual(job["payload"]["reasoning_effort"], "high")
+        self.assertEqual(job["payload"]["reasoning_effort"], "medium")
 
     # ── reads never leak ─────────────────────────────────────────────────────
 
