@@ -33,11 +33,13 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current_user, require_learner
 from app.services import content_filter, events, kata_catalog
+from app.services.llm import call_llm
+from app.services.ai_usage import UsageContext
 from app.services.games import grading, html_store, jobs, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
@@ -115,6 +117,10 @@ class EditRequest(BaseModel):
 class BugReport(BaseModel):
     errors: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
     note: str = Field(default="", max_length=600)
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=600)
 
 
 class CheckRequest(BaseModel):
@@ -402,6 +408,62 @@ async def read_game_html(
             "X-Frame-Options": "SAMEORIGIN",
         },
     )
+
+
+@router.get("/{game_id}/thumb")
+async def read_game_thumb(game_id: str, learner_id: str = Depends(_reader)):
+    """The validator's screenshot of the current version — the card's tile."""
+    game = await _owned_game(game_id, learner_id)
+    key = str(game.get("thumb_blob_path") or "")
+    if not key:
+        raise HTTPException(status_code=404, detail="no_thumb")
+    try:
+        data = await html_store.get_bytes(key)
+    except html_store.HtmlStoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    if not data:
+        raise HTTPException(status_code=404, detail="no_thumb")
+    return Response(content=data, media_type="image/png",
+                    headers={"Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff"})
+
+
+_ASK_SYSTEM = (
+    "You are Yuvi (יובי), the game developer who built the kid's learning game. The kid asks about "
+    "the game: how it works, why something happens, what a part of the code does, how to win. Answer "
+    "from the GAME SOURCE only, in the kid's language ({lang}), warmly, in at most 4 short sentences. "
+    "Never reveal correct answers to the learning questions, never reveal model names or vendors. "
+    "If the kid wants a change, say they can send it as a change request in the same chat."
+)
+
+
+@router.post("/{game_id}/ask")
+async def ask_about_game(game_id: str, data: AskRequest, learner_id: str = Depends(require_learner)):
+    """A question about the game, answered without a rebuild (mini tier)."""
+    game = await _owned_game(game_id, learner_id)
+    entry = store.version_entry(game)
+    if not entry:
+        raise HTTPException(status_code=409, detail="game_busy")
+    _refuse_if_flagged(data.question)
+    try:
+        html = await html_store.get_html(str(entry.get("blob_path") or entry.get("html_path") or ""))
+    except html_store.HtmlStoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    source = (html or "")[:60_000]
+    lang = str(game.get("language") or "he")
+    answer = await call_llm(
+        [
+            {"role": "system", "content": _ASK_SYSTEM.format(lang=lang)},
+            {"role": "user", "content": f"GAME TITLE: {game.get('title')}\n\nGAME SOURCE:\n{source}\n\nKID'S QUESTION: {data.question.strip()}"},
+        ],
+        usage_context=UsageContext(
+            actor_id=learner_id, actor_type="learner", endpoint="internal:game_ask",
+            feature="feature_7_learning_games", operation="game.ask", source="games.ask",
+        ),
+        max_tokens=400, model_tier="mini", timeout=40,
+    )
+    if not answer:
+        raise HTTPException(status_code=503, detail="ask_unavailable")
+    return JSONResponse(content={"answer": str(answer).strip()}, headers=_NO_STORE)
 
 
 @router.post("/{game_id}/edit")

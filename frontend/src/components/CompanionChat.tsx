@@ -22,6 +22,7 @@ import {
 } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
+import { gamePlayPath } from '../services/games'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { useTour } from './tour/TourProvider'
@@ -272,10 +273,12 @@ export function CompanionChat() {
       const params = new URLSearchParams(window.location.search)
       const gameId = params.get('game')
       if (!gameId) return
+      // Older links still carry `?game=` on the lesson; the game page is the
+      // one door now, and it knows the way back to this lesson.
       params.delete('game')
-      const query = params.toString()
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
-      request(gameId)
+      const extra: Record<string, string> = {}
+      for (const key of ['unit', 'component']) { const value = params.get(key); if (value) extra[key] = value }
+      navigate(gamePlayPath(gameId, 'lesson', extra), { replace: true })
     }
     const fromStudio = (event: Event) => {
       const gameId = (event as CustomEvent<{ gameId?: string }>).detail?.gameId

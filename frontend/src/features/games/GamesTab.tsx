@@ -19,10 +19,9 @@ import { navigate } from '../../app/router'
 import { Icon, StatusPill, type StatusTone } from '../../components/primitives'
 import { subscribe } from '../../services/realtime'
 import {
-  getGame, isBusy, isGameFrame, listGames,
+  gamePlayPath, gameThumbUrl, isBusy, isGameFrame, listGames,
   type GameFrame, type LearnerGame,
 } from '../../services/games'
-import { GamePlayer } from './GamePlayer'
 
 export interface GameOpenRequest {
   gameId: string
@@ -51,7 +50,6 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequ
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [reload, setReload] = useState(0)
-  const [playing, setPlaying] = useState<LearnerGame | null>(null)
   const handledRequest = useRef<number>(0)
 
   useEffect(() => {
@@ -99,34 +97,22 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequ
     })
   }, [knownIds])
 
-  const patchGame = useCallback((next: Partial<LearnerGame> & { game_id: string }) => {
-    setGames((current) => current.map((game) => game.game_id === next.game_id ? { ...game, ...next } : game))
-  }, [])
+  const play = useCallback((game: LearnerGame) => {
+    navigate(gamePlayPath(game.game_id, 'lesson', {
+      ...(unitId ? { unit: unitId } : {}), ...(componentId ? { component: componentId } : {}),
+    }))
+  }, [unitId, componentId])
 
-  // The doors that arrive as a request: the bell's deep link and the studio.
+  // A request from outside the tab (the bell's old deep link, the studio)
+  // goes to the game page too; the request is cleared so it cannot replay.
   useEffect(() => {
     if (!openRequest || openRequest.seq === handledRequest.current) return
-    let active = true
-    const known = games.find((game) => game.game_id === openRequest.gameId)
-    if (known) { handledRequest.current = openRequest.seq; setPlaying(known); onRequestHandled?.(openRequest.seq); return }
-    // The request is marked handled only once the fetch lands: StrictMode
-    // runs this effect twice, and marking it up front would let the first
-    // run's cleanup discard the game while the second run sees "done".
-    getGame(openRequest.gameId)
-      .then((game) => {
-        if (!active) return
-        handledRequest.current = openRequest.seq
-        setPlaying(game)
-        onRequestHandled?.(openRequest.seq)
-      })
-      .catch(() => { /* a game that is not theirs, or gone — the list stands */ })
-    return () => { active = false }
-    // `games` is read once at request time on purpose: a later list refresh
-    // must not reopen the player.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openRequest])
-
-  const closePlayer = useCallback(() => setPlaying(null), [])
+    handledRequest.current = openRequest.seq
+    onRequestHandled?.(openRequest.seq)
+    navigate(gamePlayPath(openRequest.gameId, 'lesson', {
+      ...(unitId ? { unit: unitId } : {}), ...(componentId ? { component: componentId } : {}),
+    }))
+  }, [openRequest, onRequestHandled, unitId, componentId])
 
   const createHref = `/yuvi-studio?station=gamelab${objectiveId ? `&objective=${encodeURIComponent(objectiveId)}` : ''}${componentId ? `&component=${encodeURIComponent(componentId)}` : ''}${unitId ? `&unit=${encodeURIComponent(unitId)}` : ''}`
 
@@ -138,6 +124,9 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequ
     const ready = game.status === 'ready'
     return (
       <article key={game.game_id} className={`sp-companion__game${busy ? ' is-busy' : ''}`} data-status={game.status}>
+        {game.has_thumb && (
+          <img className="sp-companion__game-thumb" src={gameThumbUrl(game)} alt="" loading="lazy" />
+        )}
         <div className="sp-companion__game-head">
           <strong className="sp-companion__game-title" dir="auto">{game.title}</strong>
           <span className={`sp-companion__game-status${busy ? ' is-busy' : ''}`}>
@@ -151,7 +140,7 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequ
         {/* Changing and fixing live in the player: the card only opens it. */}
         {ready && (
           <div className="sp-companion__game-actions">
-            <button type="button" className="sp-companion__game-btn is-primary" onClick={() => setPlaying(game)}>
+            <button type="button" className="sp-companion__game-btn is-primary" onClick={() => play(game)}>
               <Icon name="play" size={15} />
               <span>{t('games.card.play')}</span>
             </button>
@@ -197,14 +186,6 @@ export function GamesTab({ componentId, objectiveId, unitId, openRequest, onRequ
         </>
       )}
 
-      {playing && (
-        <GamePlayer
-          key={playing.game_id}
-          game={playing}
-          onClose={closePlayer}
-          onGameChange={patchGame}
-        />
-      )}
     </div>
   )
 }

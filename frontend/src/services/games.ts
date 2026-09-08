@@ -122,6 +122,9 @@ export interface GameFrame {
   event?: string
   kind?: string
   detail?: string
+  /** `event: 'code'` — a slice of the game as Yuvi writes it, and the total so far. */
+  chunk?: string
+  code_len?: number
 }
 
 export function isGameFrame(frame: unknown): frame is GameFrame {
@@ -159,6 +162,22 @@ export function editGame(gameId: string, instruction: string, errors: RuntimeErr
 
 export function reportBug(gameId: string, errors: RuntimeErrorReport[], note = '') {
   return apiPost<{ job_id: string; status: string }>(`/api/games/${encodeURIComponent(gameId)}/report-bug`, { errors, note })
+}
+
+/** A question about the game, answered without a rebuild. */
+export function askGame(gameId: string, question: string) {
+  return apiPost<{ answer: string }>(`/api/games/${encodeURIComponent(gameId)}/ask`, { question })
+}
+
+/** The card's tile: the validator's screenshot of the current version. */
+export function gameThumbUrl(game: Pick<LearnerGame, 'game_id' | 'current_version'>) {
+  return `/api/games/${encodeURIComponent(game.game_id)}/thumb?v=${game.current_version}`
+}
+
+/** Every door to a game goes through the game page. */
+export function gamePlayPath(gameId: string, from: 'studio' | 'lesson' | 'bell', extra: Record<string, string> = {}) {
+  const q = new URLSearchParams({ game: gameId, from, ...extra })
+  return `/games/play?${q.toString()}`
 }
 
 export function checkAnswer(gameId: string, questionId: string, answer: string | number) {

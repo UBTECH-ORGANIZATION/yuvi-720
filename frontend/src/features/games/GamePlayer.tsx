@@ -1,11 +1,16 @@
-/* The full-screen game page.
+/* The game player — the body of the game page (GamePage.tsx).
  *
- * It is its own place, not a platform screen: a fixed arcade look that
- * ignores the app theme, no app bar, the game filling the stage, a floating
- * HUD for leaving and status, and Yuvi's console on the right — one chat
- * where the learner says what should change OR what is broken, in the same
- * words. Runtime errors the frame reported ride along with the message, so
- * "the ship is stuck" and "make the ship faster" are the same kind of ask.
+ * A learner page like any other: platform theme, the app bar above it, a back
+ * button that says where it goes. The game fills the stage; a small floating
+ * HUD carries back / title / status / fullscreen. Yuvi's chat sits on the
+ * right in the companion's own visual language, and it is ONE chat: a message
+ * is either a change (it carries the runtime errors the frame reported, so
+ * "the ship is stuck" and "make the ship faster" are the same ask) or a
+ * question about the game, answered without a rebuild.
+ *
+ * While Yuvi builds, the stage turns into the build console: the code streams
+ * in as it is written, the same way vibe-coding-kids shows it, and the chat
+ * waits until the game is ready.
  *
  * The iframe is `srcdoc`, never `src`: without `allow-same-origin` the page
  * has an opaque origin and could not fetch itself with the session cookie, so
@@ -14,24 +19,20 @@
  *
  * Runtime errors from the frame are kept (last 20). One that fires in the
  * first seconds after load is treated as "the game does not start" and sent
- * for a fix automatically, once per version — the backend caps fixes at two
- * per version and says so with a 429, which the panel shows as a sentence
- * rather than a failure.
+ * for a fix automatically, once per version.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useI18n } from '../../i18n/I18nProvider'
-import { useResponsive } from '../../hooks/useResponsive'
 import { Icon } from '../../components/primitives'
+import { YuviHeadIcon } from '../../components/YuviHeadIcon'
 import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
-  checkAnswer, editGame, fetchGameHtml, isGameFrame, reportBug,
+  askGame, checkAnswer, editGame, fetchGameHtml, getGame, isGameFrame, reportBug,
   type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport,
 } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
-import yuviMarkUrl from '../../assets/yuvi-favicon.png'
 import './games.css'
 
 /** Errors kept for a bug report — the backend reads at most this many too. */
@@ -42,27 +43,28 @@ const AUTO_FIX_WINDOW_MS = 3000
 const TOAST_MS = 3200
 /** The cheer at the end, and the banner that goes with it. */
 const CHEER_MS = 1800
+/** The live code view keeps this much of the tail; the rest scrolled by. */
+const LIVE_CODE_MAX = 80_000
+
+type ChatMode = 'change' | 'ask'
 
 interface PlayerJob {
   id: string
-  kind: 'edit' | 'fix'
+  kind: 'edit' | 'fix' | 'ask'
   /** What the learner wrote — or the auto-fix line when Yuvi started it. */
   text: string
   auto?: boolean
   status: 'queued' | 'running' | 'done' | 'failed' | 'capped'
   /** The finer build step when the worker reports one. */
   step?: string
+  /** Yuvi's answer, for a question. */
+  reply?: string
 }
 
 interface GamePlayerProps {
   game: LearnerGame
-  onClose: () => void
-  /** The list behind the overlay keeps its card current. */
-  onGameChange?: (next: Partial<LearnerGame> & { game_id: string }) => void
+  onBack: () => void
 }
-
-const FOCUSABLE =
-  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], iframe, [tabindex]:not([tabindex="-1"])'
 
 let jobSeq = 0
 const nextJobId = () => `job-${Date.now().toString(36)}-${++jobSeq}`
@@ -71,22 +73,32 @@ function statusOf(error: unknown): number {
   return (error as { status?: number } | null)?.status ?? 0
 }
 
-export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
-  const { t, direction } = useI18n()
-  const { isCompact } = useResponsive()
-  const rootRef = useRef<HTMLDivElement>(null)
-  const frameRef = useRef<HTMLIFrameElement>(null)
-  const returnFocusRef = useRef<HTMLElement | null>(null)
+/** The streamed tool input is JSON text; undo the escapes so it reads as code. */
+function unescapeChunk(chunk: string): string {
+  return chunk
+    .replace(/^\{"html":\s*"/, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+}
 
-  const [status, setStatus] = useState<GameStatus>(game.status)
-  const [version, setVersion] = useState(game.current_version)
-  const [sparks, setSparks] = useState(game.sparks_spent)
+export function GamePlayer({ game: initial, onBack }: GamePlayerProps) {
+  const { t, direction } = useI18n()
+  const stageRef = useRef<HTMLDivElement>(null)
+  const frameRef = useRef<HTMLIFrameElement>(null)
+  const codeRef = useRef<HTMLPreElement>(null)
+
+  const [game, setGame] = useState<LearnerGame>(initial)
+  const [status, setStatus] = useState<GameStatus>(initial.status)
+  const [version, setVersion] = useState(initial.current_version)
+  const [sparks, setSparks] = useState(initial.sparks_spent)
   const [html, setHtml] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [loadNonce, setLoadNonce] = useState(0)
   const nonce = useMemo(() => (html ? parseNonce(html) : null), [html])
 
-  const [panelOpen, setPanelOpen] = useState(() => !isCompact)
+  const [mode, setMode] = useState<ChatMode>('change')
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [jobs, setJobs] = useState<PlayerJob[]>([])
@@ -96,13 +108,18 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
   const [finished, setFinished] = useState<GameProgress | null>(null)
   const [total, setTotal] = useState(0)
   const [errorCount, setErrorCount] = useState(0)
+  const [liveCode, setLiveCode] = useState('')
+  const [liveStep, setLiveStep] = useState<string>('')
+  const [isFull, setIsFull] = useState(false)
 
   const errorsRef = useRef<GameRuntimeError[]>([])
   const questionOpenRef = useRef(false)
   const autoFixedVersionRef = useRef<number | null>(null)
   const toastTimer = useRef<number | null>(null)
   const cheerStop = useRef<(() => void) | null>(null)
-  const draftRef = useRef<HTMLTextAreaElement>(null)
+  const draftRef = useRef<HTMLInputElement>(null)
+
+  const busy = status !== 'ready' && status !== 'failed'
 
   const showToast = useCallback((text: string) => {
     setToast(text)
@@ -130,6 +147,18 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     setFinished(null)
   }, [version, html])
 
+  // The live code view follows the writing.
+  useEffect(() => {
+    const el = codeRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [liveCode])
+
+  useEffect(() => {
+    const onChange = () => setIsFull(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
   // ── The bridge ─────────────────────────────────────────────────────────
   const caughtErrors = (): RuntimeErrorReport[] => errorsRef.current.map((error) => ({
     message: error.message,
@@ -149,7 +178,6 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     try {
       await reportBug(game.game_id, errors, note.trim())
       setStatus('fixing')
-      onGameChange?.({ game_id: game.game_id, status: 'fixing' })
     } catch (error) {
       const code = statusOf(error)
       setJobs((current) => current.map((row) =>
@@ -159,7 +187,7 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     } finally {
       setSending(false)
     }
-  }, [game.game_id, onGameChange, t])
+  }, [game.game_id, t])
 
   useEffect(() => {
     if (!nonce) return
@@ -183,7 +211,6 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
         // Once per version — the second attempt is the child's call.
         if (error.at <= AUTO_FIX_WINDOW_MS && autoFixedVersionRef.current !== version && status === 'ready') {
           autoFixedVersionRef.current = version
-          setPanelOpen(true)
           void submitBug('', true)
         }
       },
@@ -191,21 +218,29 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     return bridge.attach(window, () => frameRef.current)
   }, [nonce, game.game_id, version, status, submitBug])
 
-  // ── Live status from the worker ────────────────────────────────────────
+  // ── Live status and code from the worker ───────────────────────────────
   useEffect(() => {
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
       if (!isGameFrame(frame) || frame.game_id !== game.game_id) return
       const live = frame as GameFrame
-      if (live.status) {
-        setStatus(live.status)
-        onGameChange?.({ game_id: game.game_id, status: live.status, current_version: live.v })
+      if (live.event === 'code' && live.chunk) {
+        setLiveCode((current) => {
+          const next = current + unescapeChunk(live.chunk ?? '')
+          return next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
+        })
+        return
       }
+      if (live.event && live.event !== 'code') setLiveStep(live.event)
+      if (live.status) setStatus(live.status)
       if (live.status === 'ready' && live.v > version) {
         setJobs((current) => current.map((row) =>
           row.status === 'queued' || row.status === 'running' ? { ...row, status: 'done' } : row))
         setVersion(live.v)
+        setLiveCode('')
         setNotice(null)
         showToast(t('games.player.updated'))
+        // The brief, the thumbnail and what it cost live on the game row.
+        getGame(game.game_id).then((row) => { setGame(row); setSparks(row.sparks_spent) }).catch(() => {})
         return
       }
       if (live.status === 'failed') {
@@ -219,14 +254,30 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
             ? { ...row, status: 'running', step: live.event } : row))
       }
     })
-  }, [game.game_id, version, onGameChange, showToast, t])
+  }, [game.game_id, version, showToast, t])
 
   // ── The one chat ───────────────────────────────────────────────────────
-  // Words go as an edit that carries the caught errors; no words with errors
-  // caught is a plain fix request.
   const submit = async () => {
     const text = draft.trim()
-    if (sending) return
+    if (sending || busy) return
+    if (mode === 'ask') {
+      if (!text) return
+      const job: PlayerJob = { id: nextJobId(), kind: 'ask', text, status: 'running' }
+      setJobs((current) => [...current, job])
+      setDraft('')
+      setSending(true)
+      try {
+        const { answer } = await askGame(game.game_id, text)
+        setJobs((current) => current.map((row) => row.id === job.id ? { ...row, status: 'done', reply: answer } : row))
+      } catch {
+        setJobs((current) => current.map((row) => row.id === job.id ? { ...row, status: 'failed', reply: t('games.chat.askError') } : row))
+      } finally {
+        setSending(false)
+      }
+      return
+    }
+    // Words go as an edit that carries the caught errors; no words with
+    // errors caught is a plain fix request.
     if (!text) { if (errorCount > 0) await submitBug('', false); return }
     const job: PlayerJob = { id: nextJobId(), kind: 'edit', text, status: 'queued' }
     setJobs((current) => [...current, job])
@@ -236,7 +287,7 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     try {
       await editGame(game.game_id, text, caughtErrors())
       setStatus('building')
-      onGameChange?.({ game_id: game.game_id, status: 'building' })
+      setLiveCode('')
     } catch (error) {
       const code = statusOf(error)
       setJobs((current) => current.map((row) =>
@@ -250,49 +301,31 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     }
   }
 
-  // ── Leaving ────────────────────────────────────────────────────────────
-  const requestClose = useCallback(() => {
+  // ── Leaving, fullscreen ────────────────────────────────────────────────
+  const requestBack = useCallback(() => {
     if (questionOpenRef.current && !finished) { setLeaveConfirm(true); return }
-    onClose()
-  }, [finished, onClose])
+    onBack()
+  }, [finished, onBack])
 
-  useEffect(() => {
-    document.body.classList.add('is-game-fullscreen')
-    returnFocusRef.current = document.activeElement as HTMLElement | null
-    rootRef.current?.focus()
-    return () => {
-      document.body.classList.remove('is-game-fullscreen')
-      returnFocusRef.current?.focus?.()
-      if (toastTimer.current) window.clearTimeout(toastTimer.current)
-      cheerStop.current?.()
-    }
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) { void document.exitFullscreen(); return }
+    void stageRef.current?.requestFullscreen?.()
+  }
+
+  useEffect(() => () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    cheerStop.current?.()
+    if (document.fullscreenElement) void document.exitFullscreen()
   }, [])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        if (leaveConfirm) setLeaveConfirm(false)
-        else requestClose()
-        return
-      }
-      if (event.key !== 'Tab' || !rootRef.current) return
-      const items = [...rootRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)]
-      if (!items.length) return
-      const first = items[0]
-      const last = items[items.length - 1]
-      // The iframe swallows focus once inside it; the trap only turns the ends.
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault(); last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault(); first.focus()
-      }
+      if (event.key === 'Escape' && leaveConfirm) { event.preventDefault(); setLeaveConfirm(false) }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [leaveConfirm, requestClose])
+  }, [leaveConfirm])
 
-  const busy = status !== 'ready' && status !== 'failed'
   const jobLine = (job: PlayerJob) => {
     if (job.status === 'capped') return job.kind === 'fix' ? t('games.bug.capReached') : t('games.edit.capReached')
     if (job.status === 'failed') return t('games.edit.failed')
@@ -305,23 +338,31 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
     return t('games.edit.queued')
   }
 
-  const panelToggleLabel = panelOpen ? t('games.player.panelClose') : t('games.player.panelOpen')
-  const canSend = !busy && !sending && (draft.trim().length > 0 || errorCount > 0)
+  const stepLabel = (() => {
+    const key = liveStep ? `games.step.${liveStep}` : ''
+    const text = key ? t(key) : ''
+    return text && text !== key ? text : t(`games.status.${status}`)
+  })()
+  const codeLines = liveCode ? liveCode.split('\n').length : 0
+  const canSend = !busy && !sending && (draft.trim().length > 0 || (mode === 'change' && errorCount > 0))
+  const fullLabel = isFull ? t('games.player.exitFullscreen') : t('games.player.fullscreen')
 
-  // The grid is laid out LTR on purpose so the console is on the physical
-  // right in every language; the HUD and the console set their own direction.
-  return createPortal(
-    <div
-      ref={rootRef}
-      className={`game-player${panelOpen ? ' is-panel-open' : ''}`}
-      role="dialog"
-      aria-modal="true"
-      aria-label={game.title}
-      tabIndex={-1}
-      dir="ltr"
-    >
-      <div className="game-player__stage">
-        {status === 'ready' && html ? (
+  return (
+    <main className="game-player" dir={direction} aria-label={game.title}>
+      <div ref={stageRef} className={`game-player__stage${isFull ? ' is-fullscreen' : ''}`}>
+        {busy ? (
+          <section className="game-player__build" aria-live="polite">
+            <header className="game-player__build-head">
+              <span className="game-player__pulse" aria-hidden="true" />
+              <strong>{t('games.build.title')}</strong>
+              <span className="game-player__build-step">{stepLabel}</span>
+              {codeLines > 0 && <span className="game-player__build-lines">{t('games.build.lines', { count: codeLines })}</span>}
+            </header>
+            <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')}>
+              {liveCode || t('games.build.waiting')}
+            </pre>
+          </section>
+        ) : status === 'ready' && html ? (
           <iframe
             key={`${version}:${loadNonce}`}
             ref={frameRef}
@@ -331,34 +372,29 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
             srcDoc={html}
           />
         ) : status === 'failed' ? (
-          <div className="game-player__state" role="alert" dir={direction}>
+          <div className="game-player__state" role="alert">
             <Icon name="alert" size={30} />
             <p>{t('games.player.failed')}</p>
           </div>
         ) : loadError ? (
-          <div className="game-player__state" role="alert" dir={direction}>
+          <div className="game-player__state" role="alert">
             <Icon name="alert" size={30} />
             <p>{t('games.player.loadError')}</p>
-            <button type="button" className="game-player__btn" onClick={() => setLoadNonce((value) => value + 1)}>
+            <button type="button" className="sp-btn" onClick={() => setLoadNonce((value) => value + 1)}>
               {t('games.player.retry')}
             </button>
           </div>
         ) : (
-          <div className="game-player__state" role="status" aria-live="polite" dir={direction}>
+          <div className="game-player__state" role="status" aria-live="polite">
             <span className="game-player__spinner" aria-hidden="true" />
-            <p>{busy ? t(`games.status.${status}`) : t('games.player.loading')}</p>
+            <p>{t('games.player.loading')}</p>
           </div>
         )}
 
-        <div className="game-player__hud" dir={direction}>
-          <button
-            type="button"
-            className="game-player__hud-btn game-player__exit"
-            onClick={requestClose}
-            aria-label={t('games.player.exit')}
-            data-tooltip={t('games.player.exit')}
-          >
-            <Icon name="close" size={18} />
+        <div className="game-player__hud">
+          <button type="button" className="game-player__back" onClick={requestBack}>
+            <Icon name="chevronLeft" size={16} />
+            <span>{t('games.player.back')}</span>
           </button>
           <span className="game-player__hud-title" dir="auto">{game.title}</span>
           {busy && (
@@ -369,134 +405,134 @@ export function GamePlayer({ game, onClose, onGameChange }: GamePlayerProps) {
           )}
           <button
             type="button"
-            className={`game-player__hud-btn game-player__panel-toggle${panelOpen ? ' is-active' : ''}`}
-            onClick={() => setPanelOpen((value) => !value)}
-            aria-expanded={panelOpen}
-            aria-controls="game-player-panel"
-            aria-label={panelToggleLabel}
-            data-tooltip={panelToggleLabel}
+            className="game-player__hud-btn game-player__full"
+            onClick={toggleFullscreen}
+            aria-pressed={isFull}
+            aria-label={fullLabel}
+            data-tooltip={fullLabel}
           >
-            <img src={yuviMarkUrl} alt="" width={22} height={22} />
+            <Icon name={isFull ? 'collapse' : 'expand'} size={18} />
           </button>
         </div>
 
         {finished && (
-          <div className="game-player__done" role="status" dir={direction}>
+          <div className="game-player__done" role="status">
             <Icon name="spark" size={22} aria-hidden="true" />
             <strong>{t('games.player.done')}</strong>
             <span>{t('games.player.doneScore', { correct: finished.correct, total: total || finished.answered })}</span>
-            <button type="button" className="game-player__btn" onClick={onClose}>{t('games.player.exit')}</button>
+            <button type="button" className="sp-btn sp-btn--primary" onClick={onBack}>{t('games.player.back')}</button>
           </div>
         )}
 
         {toast && (
-          <div className="game-player__toast" role="status" dir={direction}>
+          <div className="game-player__toast" role="status">
             <Icon name="check" size={15} aria-hidden="true" />
             {toast}
           </div>
         )}
+
+        {leaveConfirm && (
+          <div className="game-player__confirm" role="alertdialog" aria-label={t('games.player.leaveTitle')}>
+            <div className="game-player__confirm-card">
+              <p className="game-player__confirm-title">{t('games.player.leaveTitle')}</p>
+              <p className="game-player__confirm-body">{t('games.player.leaveBody')}</p>
+              <div className="game-player__confirm-actions">
+                <button type="button" className="sp-btn sp-btn--primary" onClick={() => setLeaveConfirm(false)} autoFocus>
+                  {t('games.player.leaveNo')}
+                </button>
+                <button type="button" className="sp-btn" onClick={onBack}>
+                  {t('games.player.leaveYes')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <aside
-        id="game-player-panel"
-        className="game-player__panel"
-        aria-label={t('games.player.chat.label')}
-        hidden={!panelOpen}
-        dir={direction}
-      >
-        <header className="game-player__console-head">
-          <span className="game-player__console-avatar" aria-hidden="true">
-            <img src={yuviMarkUrl} alt="" width={30} height={30} />
-          </span>
-          <div className="game-player__console-id">
+      <aside className="game-chat" aria-label={t('games.player.chat.label')}>
+        <header className="game-chat__head">
+          <span className="game-chat__avatar" aria-hidden="true"><YuviHeadIcon /></span>
+          <div className="game-chat__id">
             <strong dir="auto">{t('games.chat.title')}</strong>
-            <span className="game-player__console-meta">
+            <span className="game-chat__meta">
               <Icon name="spark" size={12} aria-hidden="true" />
               {t('games.card.sparks', { count: sparks })}
             </span>
           </div>
         </header>
 
-        <div className="game-player__thread" role="log" aria-live="polite" aria-relevant="additions text">
+        <div className="game-chat__thread" role="log" aria-live="polite" aria-relevant="additions text">
           {game.description && (
-            <p className="game-player__bubble game-player__bubble--yuvi game-player__brief" dir="auto">
-              {game.description}
-            </p>
+            <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--brief" dir="auto">{game.description}</div>
           )}
-          {jobs.length === 0 && (
-            <p className="game-player__bubble game-player__bubble--yuvi game-player__hint" dir="auto">
-              {t('games.chat.hint')}
-            </p>
+          {busy ? (
+            <div className="game-chat__msg game-chat__msg--yuvi" dir="auto">{t('games.chat.building')}</div>
+          ) : jobs.length === 0 && (
+            <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--hint" dir="auto">{t('games.chat.hint')}</div>
           )}
           {jobs.map((job) => (
-            <div key={job.id} className={`game-player__job is-${job.status}${job.auto ? ' is-auto' : ''}`}>
-              {!job.auto && <p className="game-player__bubble game-player__bubble--you" dir="auto">{job.text}</p>}
-              <p className="game-player__bubble game-player__bubble--yuvi" dir="auto">
-                {job.auto ? job.text : jobLine(job)}
+            <div key={job.id} className={`game-chat__job is-${job.status}${job.auto ? ' is-auto' : ''}`}>
+              {!job.auto && <div className="game-chat__msg game-chat__msg--you" dir="auto">{job.text}</div>}
+              <div className="game-chat__msg game-chat__msg--yuvi" dir="auto">
+                {job.kind === 'ask'
+                  ? (job.reply ?? t('games.chat.thinking'))
+                  : job.auto ? job.text : jobLine(job)}
                 {(job.status === 'queued' || job.status === 'running') && (
-                  <span className="game-player__dots" aria-hidden="true"><i /><i /><i /></span>
+                  <span className="game-chat__dots" aria-hidden="true"><i /><i /><i /></span>
                 )}
                 {job.auto && job.status !== 'queued' && job.status !== 'running' && ` ${jobLine(job)}`}
-              </p>
+              </div>
             </div>
           ))}
-          {notice && <p className="game-player__notice" role="status" dir="auto">{notice}</p>}
+          {notice && <p className="game-chat__notice" role="status" dir="auto">{notice}</p>}
         </div>
 
-        <form
-          className="game-player__composer"
-          onSubmit={(event) => { event.preventDefault(); void submit() }}
-        >
-          {errorCount > 0 && (
-            <small className="game-player__caught" dir="auto">
-              <Icon name="alert" size={12} aria-hidden="true" />
-              {t('games.chat.errorsAttached', { count: errorCount })}
-            </small>
-          )}
-          <div className="game-player__composer-row">
-            <textarea
+        <form className="game-chat__composer-shell" onSubmit={(event) => { event.preventDefault(); void submit() }}>
+          <div className="game-chat__modes" role="radiogroup" aria-label={t('games.chat.mode.label')}>
+            {(['change', 'ask'] as ChatMode[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={mode === option}
+                className={`game-chat__mode${mode === option ? ' is-active' : ''}`}
+                onClick={() => setMode(option)}
+                disabled={busy}
+              >
+                <Icon name={option === 'change' ? 'wand' : 'help'} size={13} aria-hidden="true" />
+                {t(`games.chat.mode.${option}`)}
+              </button>
+            ))}
+            {mode === 'change' && errorCount > 0 && !busy && (
+              <small className="game-chat__caught" dir="auto">
+                <Icon name="alert" size={12} aria-hidden="true" />
+                {t('games.chat.errorsAttached', { count: errorCount })}
+              </small>
+            )}
+          </div>
+          <div className="game-chat__composer">
+            <input
               ref={draftRef}
+              type="text"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder={t('games.chat.placeholder')}
-              aria-label={t('games.chat.placeholder')}
-              rows={2}
+              placeholder={busy ? t('games.chat.building') : mode === 'ask' ? t('games.chat.askPlaceholder') : t('games.chat.placeholder')}
+              aria-label={mode === 'ask' ? t('games.chat.askPlaceholder') : t('games.chat.placeholder')}
               dir={draft.trim() ? 'auto' : direction}
               disabled={busy}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void submit() }
-              }}
+              maxLength={600}
             />
             <button
               type="submit"
-              className="game-player__btn game-player__btn--send"
+              className="game-chat__send"
               disabled={!canSend}
-              aria-label={draft.trim() ? t('games.edit.send') : t('games.chat.fixOnly')}
-              data-tooltip={draft.trim() ? t('games.edit.send') : t('games.chat.fixOnly')}
+              aria-label={mode === 'ask' ? t('games.chat.mode.ask') : draft.trim() ? t('games.edit.send') : t('games.chat.fixOnly')}
             >
               <Icon name="send" size={17} />
             </button>
           </div>
         </form>
       </aside>
-
-      {leaveConfirm && (
-        <div className="game-player__confirm" role="alertdialog" aria-label={t('games.player.leaveTitle')} dir={direction}>
-          <div className="game-player__confirm-card">
-            <p className="game-player__confirm-title">{t('games.player.leaveTitle')}</p>
-            <p className="game-player__confirm-body">{t('games.player.leaveBody')}</p>
-            <div className="game-player__confirm-actions">
-              <button type="button" className="game-player__btn" onClick={() => setLeaveConfirm(false)} autoFocus>
-                {t('games.player.leaveNo')}
-              </button>
-              <button type="button" className="game-player__btn game-player__btn--quiet" onClick={onClose}>
-                {t('games.player.leaveYes')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>,
-    document.body,
+    </main>
   )
 }

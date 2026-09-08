@@ -63,6 +63,7 @@ class _Backend(Protocol):
     async def put(self, key: str, html: str) -> None: ...
     async def put_bytes(self, key: str, data: bytes, content_type: str) -> None: ...
     async def get(self, key: str) -> Optional[str]: ...
+    async def get_bytes(self, key: str) -> Optional[bytes]: ...
     async def exists(self, key: str) -> bool: ...
 
 
@@ -105,6 +106,14 @@ class _LocalBackend:
             return target.read_text(encoding="utf-8") if target.exists() else None
         except OSError as exc:
             log.warning("game html local read failed: %s", exc)
+            raise HtmlStoreError("storage_unavailable") from None
+
+    async def get_bytes(self, key: str) -> Optional[bytes]:
+        target = self._path(key)
+        try:
+            return target.read_bytes() if target.exists() else None
+        except OSError as exc:
+            log.warning("game asset local read failed: %s", exc)
             raise HtmlStoreError("storage_unavailable") from None
 
     async def exists(self, key: str) -> bool:
@@ -187,6 +196,20 @@ class _BlobBackend:
         finally:
             await service.close()
 
+    async def get_bytes(self, key: str) -> Optional[bytes]:
+        service, container = self._clients()
+        try:
+            blob = container.get_blob_client(key)
+            if not await blob.exists():
+                return None
+            stream = await blob.download_blob()
+            return await stream.readall()
+        except Exception as exc:
+            log.warning("game asset blob read failed: %s", type(exc).__name__)
+            raise HtmlStoreError("storage_unavailable") from None
+        finally:
+            await service.close()
+
     async def exists(self, key: str) -> bool:
         service, container = self._clients()
         try:
@@ -228,6 +251,11 @@ async def put_bytes(
 async def get_html(key: str) -> Optional[str]:
     """The stored document, or None when the key holds nothing."""
     return await backend().get(key)
+
+
+async def get_bytes(key: str) -> Optional[bytes]:
+    """A sidecar asset (the thumbnail), or None."""
+    return await backend().get_bytes(key)
 
 
 async def html_exists(key: str) -> bool:

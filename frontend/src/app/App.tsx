@@ -21,6 +21,7 @@ import { getGroupSnapshot, listGroups } from '../services/teacher'
 import { MentoringPage } from '../features/mentoring/MentoringPage'
 import { LearningPortalPage } from '../features/learning-portal/LearningPortalPage'
 import { LessonPage } from '../features/learning-lesson/LessonPage'
+import { GamePage } from '../features/games/GamePage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 /* The studio is a 3D room editor: it owns the avatar renderer, the lab room and
@@ -64,6 +65,7 @@ const PROTECTED_ROUTES = [
   '/student-dashboard',
   '/mentoring',
   '/learning',
+  '/games',
   '/badges',
   '/tasks'
 ]
@@ -131,7 +133,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/tasks', '/admin', '/mentoring', '/learning',
+  '/badges', '/tasks', '/admin', '/mentoring', '/learning', '/games',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -278,6 +280,7 @@ function pageForRoute(pathname: string) {
   }
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
   if (pathname.startsWith('/learning/lesson')) return <LessonPage />
+  if (pathname.startsWith('/games/play')) return <GamePage />
   if (pathname.startsWith('/learning/create')) return <LomdaCreatorPage />
   if (pathname.startsWith('/learning')) return <LearningPortalPage />
   return <LandingLoginPage />
@@ -291,6 +294,7 @@ function isLearnerRoute(pathname: string) {
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning') ||
+    pathname.startsWith('/games') ||
     pathname.startsWith('/badges') ||
     /* Both task screens sit in the learner shell. The solve screen is a focus
        surface, and `isActiveTaskRoute` collapses the chrome around it — the
@@ -317,7 +321,7 @@ export function App() {
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
   /* Focus surfaces: a lesson, and now solving a task. Both are screens where
      the surrounding chrome is a way to lose work, so the shell collapses. */
-  const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
+  const isActiveTaskRoute = pathname.startsWith('/learning/lesson') || pathname.startsWith('/games/play')
     || pathname.startsWith('/tasks/')
   // While signed out the guard renders the landing page, so the learner shell
   // and its companion must not wrap it.

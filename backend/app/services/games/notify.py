@@ -34,8 +34,8 @@ GAME_KINDS = (
 
 def player_route(game: dict[str, Any]) -> str:
     """The deep link: the lesson page with the player open on this game."""
-    return (f"/learning/lesson?unit={game.get('unit_id') or ''}"
-            f"&component={game.get('component_id') or ''}&game={game.get('_id') or ''}")
+    # The game page, not the lesson: the bell opens the game itself.
+    return f"/games/play?game={game.get('_id') or ''}&from=bell"
 
 
 def frame(game: dict[str, Any], *, event: Optional[str] = None, v: Optional[int] = None,

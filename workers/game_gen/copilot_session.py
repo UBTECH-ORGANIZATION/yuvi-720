@@ -487,6 +487,13 @@ class HeadlessCopilotSession:
         elif etype == "assistant.turn_end":
             logger.debug("[%s] turn ended", sid)
 
+        elif etype == "assistant.tool_call_delta":
+            # The game arrives as the `submit_game` tool's input: streaming it
+            # is how the kid watches the code being written.
+            delta = _data_str(data, "input_delta")
+            if delta:
+                self._emit({"type": "tool_delta", "name": _data_str(data, "tool_name") or "", "text": delta})
+
         elif etype == "tool.execution_start":
             name = _data_str(data, "tool_name")
             call_id = _data_str(data, "tool_call_id")

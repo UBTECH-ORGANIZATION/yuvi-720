@@ -36,7 +36,7 @@ class FakeStore:
         return self.games[gid]
     def version_entry(self, game, v=None):
         return next((e for e in game["versions"] if e["v"] == (v or game["current_version"])), None)
-    async def add_version(self, gid, *, blob_path, sha256, source, summary="", title=None, thumb_blob_path=None, sparks=0):
+    async def add_version(self, gid, *, blob_path, sha256, source, summary="", title=None, thumb_blob_path=None, sparks=0, design_brief=None):
         g = self.games[gid]; v = len(g["versions"]) + 1
         entry = {"v": v, "blob_path": blob_path, "sha256": sha256, "source": source, "summary": summary}
         g["versions"].append(entry); g["current_version"] = v; g["status"] = "ready"; g["sparks_spent"] += sparks

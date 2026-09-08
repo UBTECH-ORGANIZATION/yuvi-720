@@ -3,7 +3,7 @@ import { Icon } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
 import {
-  GAME_INSPIRATIONS, createGame, deleteGame, getPicker, listGames,
+  GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames,
   type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject,
 } from '../../../services/games'
 import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
@@ -195,15 +195,8 @@ function GameCard({
   const tone = statusTone(game.status)
   const playable = game.current_version > 0
 
-  const play = () => {
-    // The lesson page owns the player. A listener that opens it in place
-    // cancels the event; nobody listening means we go to the lesson instead.
-    const request = new CustomEvent('yuvilab:open-game', { detail: { gameId: game.game_id }, cancelable: true })
-    const unhandled = window.dispatchEvent(request)
-    if (!unhandled) return
-    const q = new URLSearchParams({ unit: game.unit_id, component: game.component_id, game: game.game_id })
-    navigate(`/learning/lesson?${q.toString()}`)
-  }
+  // Straight to the game page — never through the lesson screen.
+  const play = () => navigate(gamePlayPath(game.game_id, 'studio'))
 
   const confirmRemove = async () => {
     if (deleteBusy) return
@@ -219,7 +212,11 @@ function GameCard({
 
   return (
     <li className={`ys-gamelab-card is-${tone}`}>
-      <div className="ys-gamelab-card__tile" aria-hidden>{genreIcon(game.genre)}</div>
+      <div className="ys-gamelab-card__tile" aria-hidden>
+        {game.has_thumb
+          ? <img className="ys-gamelab-card__thumb" src={gameThumbUrl(game)} alt="" loading="lazy" />
+          : genreIcon(game.genre)}
+      </div>
       <div className="ys-gamelab-card__main">
         <h3 className="ys-gamelab-card__title">
           <bdi dir="auto">{game.title || t('studio.gamelab.untitled')}</bdi>

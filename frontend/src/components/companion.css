@@ -506,6 +506,16 @@
   margin: 0;
 }
 
+.sp-companion__game-thumb {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--sp-border);
+  background: #05060d;
+}
+
 .sp-companion__game {
   display: flex;
   flex-direction: column;
