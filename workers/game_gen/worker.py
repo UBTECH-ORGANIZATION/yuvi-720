@@ -220,10 +220,20 @@ async def run_mongo_loop(once: bool = False) -> int:
     return handled
 
 
-# ── Service Bus transport (task #548 fills in the receive loop) ─────────────
+# ── Service Bus transport ─────────────────────────────────────────────────
+# The queue requires sessions (session_id = game_id, infra/game-gen/main.bicep),
+# so a receiver must accept a session: NEXT_AVAILABLE_SESSION takes whichever
+# game has work, drains it, and moves on. With sessions the lock to renew is
+# the session's, not the message's. No session within max_wait_time raises
+# OperationTimeoutError; that is the idle case, not a failure.
+
+SESSION_IDLE_WAIT_S = 30
+
 
 async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
+    from azure.servicebus import NEXT_AVAILABLE_SESSION  # type: ignore
     from azure.servicebus.aio import ServiceBusClient  # type: ignore
+    from azure.servicebus.exceptions import OperationTimeoutError  # type: ignore
     conn = (os.environ.get("GAME_JOBS_SERVICEBUS_CONNECTION_STRING") or "").strip()
     namespace = (os.environ.get("GAME_JOBS_SERVICEBUS_NAMESPACE") or "").strip()
     queue = os.environ.get("GAME_JOBS_QUEUE", "game-jobs")
@@ -233,34 +243,50 @@ async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
     else:
         from azure.identity.aio import DefaultAzureCredential  # type: ignore
         client = ServiceBusClient(namespace, credential=DefaultAzureCredential())
+    log.info("worker %s receiving from %s (%s)", REPLICA, queue, namespace or "connection string")
     async with client:
         while True:
-            receiver = client.get_queue_receiver(queue_name=queue, session_id=None, max_wait_time=30)  # next available session
-            async with receiver:
-                async for msg in receiver:
-                    body = json.loads(str(msg))
-                    job = await store.get_job(str(body.get("job_id") or ""))
-                    if not job or job.get("status") in ("done",):
-                        await receiver.complete_message(msg)
-                        continue
-                    renew = asyncio.create_task(_renew(receiver, msg))
-                    try:
-                        await handle_job(job)
-                        await receiver.complete_message(msg)
-                    except Exception:
-                        log.exception("job %s crashed", job.get("_id"))
-                        await receiver.abandon_message(msg)
-                    finally:
-                        renew.cancel()
+            try:
+                receiver = client.get_queue_receiver(
+                    queue_name=queue, session_id=NEXT_AVAILABLE_SESSION, max_wait_time=SESSION_IDLE_WAIT_S,
+                )
+                async with receiver:
+                    session_id = receiver.session.session_id
+                    log.info("session %s accepted", session_id)
+                    async for msg in receiver:
+                        await _handle_servicebus_message(receiver, msg, store)
+                    log.info("session %s drained", session_id)
+            except OperationTimeoutError:
+                continue  # no session had work; KEDA scales us to 0 when the queue stays empty
+            except Exception:
+                log.exception("service bus receive loop error; retrying")
+                await asyncio.sleep(5)
 
 
-async def _renew(receiver: Any, msg: Any) -> None:  # pragma: no cover
+async def _handle_servicebus_message(receiver: Any, msg: Any, store: Any) -> None:  # pragma: no cover
+    body = json.loads(str(msg))
+    job = await store.get_job(str(body.get("job_id") or ""))
+    if not job or job.get("status") in ("done",):
+        await receiver.complete_message(msg)
+        return
+    renew = asyncio.create_task(_renew_session(receiver))
+    try:
+        await handle_job(job)
+        await receiver.complete_message(msg)
+    except Exception:
+        log.exception("job %s crashed", job.get("_id"))
+        await receiver.abandon_message(msg)
+    finally:
+        renew.cancel()
+
+
+async def _renew_session(receiver: Any) -> None:  # pragma: no cover
     while True:
         await asyncio.sleep(30)
         try:
-            await receiver.renew_message_lock(msg)
+            await receiver.session.renew_lock()
         except Exception as exc:
-            log.warning("lock renew failed: %s", exc)
+            log.warning("session lock renew failed: %s", exc)
             return
 
 
