@@ -224,10 +224,16 @@ async def run_mongo_loop(once: bool = False) -> int:
 
 async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
     from azure.servicebus.aio import ServiceBusClient  # type: ignore
-    conn = os.environ["AZURE_SERVICEBUS_CONNECTION_STRING"]
+    conn = (os.environ.get("GAME_JOBS_SERVICEBUS_CONNECTION_STRING") or "").strip()
+    namespace = (os.environ.get("GAME_JOBS_SERVICEBUS_NAMESPACE") or "").strip()
     queue = os.environ.get("GAME_JOBS_QUEUE", "game-jobs")
     store, _, _ = _backend()
-    async with ServiceBusClient.from_connection_string(conn) as client:
+    if conn:
+        client = ServiceBusClient.from_connection_string(conn)
+    else:
+        from azure.identity.aio import DefaultAzureCredential  # type: ignore
+        client = ServiceBusClient(namespace, credential=DefaultAzureCredential())
+    async with client:
         while True:
             receiver = client.get_queue_receiver(queue_name=queue, session_id=None, max_wait_time=30)  # next available session
             async with receiver:
@@ -258,14 +264,37 @@ async def _renew(receiver: Any, msg: Any) -> None:  # pragma: no cover
             return
 
 
+async def _with_realtime_bridge(coro: Any) -> Any:
+    """Progress frames and bells cross to the app's SSE through the Redis
+    bridge; without REDIS_CONNECTION_STRING publish() stays local (the bell row
+    is still written to Mongo, so the kid sees it on the next refresh)."""
+    try:
+        from app.services import realtime  # type: ignore
+    except Exception:
+        realtime = None
+    if realtime is not None:
+        try:
+            await realtime.start_bridge()
+        except Exception as exc:  # pragma: no cover - env dependent
+            log.warning("realtime bridge not started: %s", exc)
+    try:
+        return await coro
+    finally:
+        if realtime is not None:
+            try:
+                await realtime.stop_bridge()
+            except Exception:
+                pass
+
+
 def main() -> None:
     logging.basicConfig(level=os.environ.get("GAME_WORKER_LOG_LEVEL", "INFO"),
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
     mode = os.environ.get("GAME_JOBS_MODE", "mongo").strip().lower()
     if mode == "servicebus":
-        asyncio.run(run_servicebus_loop())
+        asyncio.run(_with_realtime_bridge(run_servicebus_loop()))
     else:
-        asyncio.run(run_mongo_loop(once=os.environ.get("GAME_WORKER_ONCE") == "1"))
+        asyncio.run(_with_realtime_bridge(run_mongo_loop(once=os.environ.get("GAME_WORKER_ONCE") == "1")))
 
 
 if __name__ == "__main__":

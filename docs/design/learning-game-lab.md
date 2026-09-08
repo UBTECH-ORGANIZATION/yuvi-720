@@ -103,8 +103,10 @@ Local dev: `GAME_JOBS_MODE=inline` runs the worker pipeline in-process inside th
 
 - Code: `workers/game_gen/` in this repo, Python 3.11, imports `backend/app` for `ai_usage`, `notifications`, `realtime`, `kata_client` snapshot readers.
 - Image: `workers/game_gen/Dockerfile` — python slim + Copilot CLI binary (official backend-services Dockerfile pattern) + Playwright Chromium + Noto fonts (Hebrew/Arabic).
-- Scaling: KEDA `azure-servicebus` rule, `messageCount: "1"` (one Opus build per replica), `minReplicas 0`, `maxReplicas 10` (parallelism knob), CPU 1 / 2 GiB, `activeRevisionsMode single`, managed identity with *Service Bus Data Receiver* + Blob Contributor. Cold start from zero ≈ 30–60 s; the UI shows "in queue".
-- Deploy: `.github/workflows/deploy-game-gen.yml` (ACR `yuvi720acr`, RG `rg-yuvi-720`), Bicep `infra/game-gen/main.bicep` (Container Apps env, app, Service Bus namespace + queue, role assignments).
+- Scaling: KEDA `azure-servicebus` rule, `messageCount: "1"` (one Opus build per replica), `minReplicas 0`, `maxReplicas` 2 (dev) / 10 (prod), CPU 1 / 2 GiB, `activeRevisionsMode single`, managed identity with *Service Bus Data Receiver* + *Storage Blob Data Contributor* + *AcrPull*. Cold start from zero ≈ 30–60 s; the UI shows "in queue".
+- Resources (rg-yuvi-720, North Europe): Service Bus Standard namespace `sb-yuvi-720` with queues `game-jobs-dev` / `game-jobs-prod` (sessions, maxDeliveryCount 3, lock 5 min); Container Apps environment `cae-yuvi-720` on `law-yuvi-720`; apps `ca-game-gen-dev` / `ca-game-gen-prod`; blob containers `games-dev` / `games-prod` in `yuvi720blobstorage`. The App Service (`ubi-yuvi-720`, prod + `dev` slot) got system identities with *Service Bus Data Sender* + *Blob Data Contributor* and the matching slot settings (`GAME_JOBS_MODE=servicebus`, `GAME_JOBS_QUEUE`, `GAME_JOBS_SERVICEBUS_NAMESPACE`, `GAMES_STORAGE=blob`, `GAMES_BLOB_CONTAINER`, `GAMES_STORAGE_ACCOUNT_URL`).
+- Environment contract: `backend/env.template` (backend keys) and `workers/game_gen/env.template` (worker keys = the Container App env vars in `infra/game-gen/main.bicep`). Secrets on the apps: `copilot-github-token` (the vibe-coding-kids Copilot token, per Gal 2026-09-08), `mongodb-connection-string`, `redis-connection-string`.
+- Deploy: `.github/workflows/deploy-game-gen.yml` — `az acr build` → Bicep to dev on every push touching the worker; prod only on manual dispatch with `confirm=prod`. Needs repo secrets `AZURE_CREDENTIALS` and `COPILOT_GITHUB_TOKEN`.
 
 ### 2.5 Pipeline (per job)
 

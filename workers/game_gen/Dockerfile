@@ -20,11 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY workers/game_gen/requirements.txt workers/game_gen/requirements.txt
-RUN pip install -r workers/game_gen/requirements.txt \
-    && python -m playwright install --with-deps chromium \
-    # Pre-fetch the pinned Copilot CLI runtime at build time so a cold replica
-    # does not download it on first job (the SDK would otherwise do this lazily).
-    && python -m copilot
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install -r workers/game_gen/requirements.txt -r backend/requirements.txt \
+    && python -m playwright install --with-deps chromium
 
 COPY backend/app backend/app
 COPY workers/game_gen workers/game_gen
@@ -33,6 +31,8 @@ COPY workers/game_gen workers/game_gen
 RUN useradd -m -u 10001 worker && mkdir -p /home/worker/.copilot && chown -R worker:worker /home/worker /ms-playwright
 USER worker
 ENV HOME=/home/worker
+# Pre-fetch the pinned Copilot CLI runtime as the runtime user so a cold replica
+# never downloads it on its first job (the SDK would otherwise do this lazily).
+RUN python -m copilot download-runtime
 
-# Task #548 replaces this with the Service Bus consumer entrypoint.
-CMD ["python", "-m", "game_gen.spike", "--help"]
+CMD ["python", "-m", "game_gen.worker"]

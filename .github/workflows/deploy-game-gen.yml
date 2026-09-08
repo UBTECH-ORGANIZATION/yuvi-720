@@ -1,0 +1,103 @@
+# Learning Game Lab worker (docs/design/learning-game-lab.md, ADO #548).
+# Build the image once, roll it to the DEV Container App on every push that
+# touches the worker or the backend services it imports, and to PROD only on
+# manual dispatch with confirm=prod. Infra (Service Bus, Container Apps env,
+# role assignments) lives in infra/game-gen/main.bicep and is applied here too,
+# so a parameter change is a commit, not a portal click.
+name: Deploy game-gen worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/game_gen/**"
+      - "backend/app/services/games/**"
+      - "backend/app/services/ai_usage.py"
+      - "backend/app/services/notifications.py"
+      - "backend/app/services/realtime.py"
+      - "backend/requirements.txt"
+      - "infra/game-gen/**"
+      - ".github/workflows/deploy-game-gen.yml"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'prod' to also roll the image to ca-game-gen-prod"
+        required: false
+        default: ""
+
+env:
+  RESOURCE_GROUP: rg-yuvi-720
+  ACR_NAME: yuvi720acr
+  ACR_LOGIN_SERVER: yuvi720acr.azurecr.io
+  IMAGE: yuvi720acr.azurecr.io/game-gen
+  WEBAPP_NAME: ubi-yuvi-720
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Build and push (ACR task — no local Docker daemon needed)
+        run: |
+          az acr build --registry "$ACR_NAME" \
+            --image "game-gen:${{ steps.meta.outputs.tag }}" \
+            --image "game-gen:dev" \
+            --file workers/game_gen/Dockerfile .
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Apply infra + image (dev)
+        run: |
+          set -euo pipefail
+          principal="$(az webapp identity show -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --slot dev --query principalId -o tsv)"
+          mongo="$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --slot dev --query "[?name=='MONGODB_CONNECTION_STRING'].value" -o tsv)"
+          redis="$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --slot dev --query "[?name=='REDIS_CONNECTION_STRING'].value" -o tsv)"
+          az deployment group create -g "$RESOURCE_GROUP" -n "game-gen-dev-${{ needs.build.outputs.tag }}" \
+            -f infra/game-gen/main.bicep -p infra/game-gen/dev.bicepparam \
+            -p image="$IMAGE:${{ needs.build.outputs.tag }}" \
+               appServicePrincipalId="$principal" \
+               copilotGithubToken="${{ secrets.COPILOT_GITHUB_TOKEN }}" \
+               mongoConnectionString="$mongo" redisConnectionString="$redis" \
+            --query "properties.outputs" -o json
+      - name: Smoke — replica can start (scale rule keeps it at 0 when idle)
+        run: az containerapp show -g "$RESOURCE_GROUP" -n ca-game-gen-dev --query "properties.{state:provisioningState, image:template.containers[0].image}" -o json
+
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'prod'
+    needs: [build, deploy-dev]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Tag latest
+        run: az acr import --name "$ACR_NAME" --source "$IMAGE:${{ needs.build.outputs.tag }}" --image "game-gen:latest" --force
+      - name: Apply infra + image (prod)
+        run: |
+          set -euo pipefail
+          principal="$(az webapp identity show -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --query principalId -o tsv)"
+          mongo="$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --query "[?name=='MONGODB_CONNECTION_STRING'].value" -o tsv)"
+          redis="$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --query "[?name=='REDIS_CONNECTION_STRING'].value" -o tsv)"
+          az deployment group create -g "$RESOURCE_GROUP" -n "game-gen-prod-${{ needs.build.outputs.tag }}" \
+            -f infra/game-gen/main.bicep -p infra/game-gen/prod.bicepparam \
+            -p image="$IMAGE:${{ needs.build.outputs.tag }}" \
+               appServicePrincipalId="$principal" \
+               copilotGithubToken="${{ secrets.COPILOT_GITHUB_TOKEN }}" \
+               mongoConnectionString="$mongo" redisConnectionString="$redis" \
+            --query "properties.outputs" -o json

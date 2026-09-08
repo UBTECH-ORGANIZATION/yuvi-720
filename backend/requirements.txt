@@ -34,3 +34,4 @@ importlib-metadata>=4.6; python_version < "3.10"
 # Chemistry visuals: validates model-emitted SMILES before anything is
 # rendered, and computes formula/mass. See app/agents/molecule.py.
 rdkit>=2024.3
+azure-servicebus>=7.13
