@@ -50,6 +50,14 @@ class FakeSession:
 
     async def send(self, prompt):
         text = ""
+        if not self.tools:
+            # Text delivery (creates): the scripted submission is the reply.
+            FakeSession.prompts = getattr(FakeSession, "prompts", []) + [prompt]
+            name, params = FakeSession.script[min(len(FakeSession.prompts) - 1, len(FakeSession.script) - 1)]
+            body = params.get("html", "")
+            text = (f"TITLE: {params.get('title', '')}\nBRIEF: {params.get('design_brief', 'עולם')}\n"
+                    f"SUMMARY: {params.get('learning_summary', '')}\n```html\n{body}\n```\n")
+            return TurnResult(text=text, usage=TurnUsage(input_tokens=1000, output_tokens=500, model="fake"), model="fake", elapsed_s=0.1, stop_reason="idle")
         for name, params in FakeSession.script:
             tool = self.tools[name]
             # call the wrapped handler the way the SDK runtime does
@@ -66,6 +74,7 @@ class FakeSession:
 @pytest.fixture(autouse=True)
 def fake_session(monkeypatch):
     FakeSession.instances = []
+    FakeSession.prompts = []
     monkeypatch.setattr(pipeline, "HeadlessCopilotSession", FakeSession)
     yield
 
@@ -79,7 +88,7 @@ def test_create_accepts_valid_game_on_first_submission():
     assert len(result.attempts) == 1 and result.attempts[0].ok and result.attempts[0].contract_ok
     assert result.screenshot_png
     assert result.usage.output_tokens == 500 and "game.build" in result.usage.by_operation
-    assert FakeSession.instances[0].kw["tools"][0].name == "submit_game"
+    assert FakeSession.instances[0].kw["tools"] == []  # creates are text delivery: no tools
 
 
 @pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
@@ -133,3 +142,24 @@ def test_output_cap_without_a_submission_gets_one_shrink_retry(monkeypatch):
     assert len(CappedSession.prompts_seen) == 2
     assert CappedSession.prompts_seen[1] == pipeline.prompts.SHRINK_PROMPT
     assert result.usage.output_tokens == 32500
+
+
+@pytest.mark.skipif(not chromium_available(), reason="Chromium not installed")
+def test_text_delivery_parses_meta_lines_and_retries_an_incomplete_reply():
+    FakeSession.script = [
+        ("submit_game", {"html": "<p>not a game</p>", "title": "x", "learning_summary": "y"}),
+        ("submit_game", {"html": TINY_GAME, "title": "משחק", "learning_summary": "שאלות בשער", "design_brief": "עולם חלל"}),
+    ]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok, result.error
+    assert result.title == "משחק" and result.design_brief == "עולם חלל" and result.summary == "שאלות בשער"
+    assert len(FakeSession.prompts) == 2 and "COMPLETE game in ONE ```html block" in FakeSession.prompts[1]
+    assert [a.ok for a in result.attempts] == [False, True] and result.attempts[0].contract_reason == "incomplete"
+
+
+def test_parse_text_delivery_reads_only_the_prose_before_the_fence():
+    parsed = pipeline.parse_text_delivery(
+        "TITLE: חלל\nBRIEF: עולם\nSUMMARY: שער\n```html\n<!DOCTYPE html><html><body>TITLE: no<script>1</script></body></html>\n```"
+    )
+    assert parsed["title"] == "חלל" and parsed["brief"] == "עולם" and parsed["summary"] == "שער"
+    assert parsed["html"].startswith("<!DOCTYPE html>")

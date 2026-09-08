@@ -463,6 +463,9 @@ class HeadlessCopilotSession:
             if not delta:
                 return
             self.full_response += delta
+            # The game itself travels in the message when delivery is text
+            # (a ```html block): streaming it is how the kid watches it grow.
+            self._emit({"type": "text_delta", "text": delta})
             self._track_code_block(delta)
 
         elif etype == "assistant.message":

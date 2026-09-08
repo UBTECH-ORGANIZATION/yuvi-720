@@ -26,6 +26,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { Icon } from '../../components/primitives'
 import { YuviHeadIcon } from '../../components/YuviHeadIcon'
+import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
+import { CodeView } from './CodeView'
 import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
@@ -96,7 +98,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const { t, direction } = useI18n()
   const stageRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLIFrameElement>(null)
-  const codeRef = useRef<HTMLPreElement>(null)
 
   const [game, setGame] = useState<LearnerGame>(initial)
   const [status, setStatus] = useState<GameStatus>(initial.status)
@@ -166,12 +167,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     questionOpenRef.current = false
     setFinished(null)
   }, [version, html])
-
-  // The live code view follows the writing.
-  useEffect(() => {
-    const el = codeRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [liveCode])
 
   // A page opened mid-build catches up from the job's snapshot: the phase,
   // how long it has been thinking, and the code written so far.
@@ -467,7 +462,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   }
 
   return (
-    <main className="game-player" dir={direction} aria-label={game.title}>
+    <main className={`game-player${busy ? ' is-building' : ''}`} dir={direction} aria-label={game.title}>
       <div ref={stageRef} className={`game-player__stage${isFull ? ' is-fullscreen' : ''}`}>
         {busy ? (
           <section className="game-player__build" aria-live="polite">
@@ -488,14 +483,19 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                   <i className="game-player__bot-ring" />
                   <i className="game-player__bot-orbit"><b /></i>
                   <i className="game-player__bot-orbit is-second"><b /></i>
-                  <span className="game-player__bot-face"><YuviHeadIcon /></span>
+                  <span className="game-player__bot-face">
+                    <YuviRobot3D
+                      label={t('games.build.title')}
+                      thinking={phase === 'thinking'}
+                      speaking={phase === 'writing'}
+                      celebrating={phase === 'judging'}
+                    />
+                  </span>
                 </span>
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
               </div>
             )}
-            <pre ref={codeRef} className="game-player__code" dir="ltr" aria-label={t('games.build.title')} hidden={!liveCode}>
-              {liveCode}
-            </pre>
+            {liveCode && <CodeView code={liveCode} label={t('games.build.title')} />}
           </section>
         ) : status === 'ready' && html ? (
           <iframe
@@ -526,29 +526,21 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
           </div>
         )}
 
-        <div className="game-player__hud">
-          <button type="button" className="game-player__back" onClick={requestBack}>
-            <Icon name="chevronLeft" size={16} />
-            <span>{t(backLabel)}</span>
-          </button>
-          <span className="game-player__hud-title" dir="auto">{game.title}</span>
-          {busy && (
-            <span className="game-player__hud-status" role="status">
-              <span className="game-player__pulse" aria-hidden="true" />
-              {t(`games.status.${status}`)}
-            </span>
-          )}
-          <button
-            type="button"
-            className="game-player__hud-btn game-player__full"
-            onClick={toggleFullscreen}
-            aria-pressed={isFull}
-            aria-label={fullLabel}
-            data-tooltip={fullLabel}
-          >
-            <Icon name={isFull ? 'collapse' : 'expand'} size={18} />
-          </button>
-        </div>
+        {/* In fullscreen the chat is off-screen, so the stage keeps one way out. */}
+        {isFull && (
+          <div className="game-player__hud">
+            <button
+              type="button"
+              className="game-player__hud-btn game-player__full"
+              onClick={toggleFullscreen}
+              aria-pressed={isFull}
+              aria-label={fullLabel}
+              data-tooltip={fullLabel}
+            >
+              <Icon name="collapse" size={18} />
+            </button>
+          </div>
+        )}
 
         {finished && (
           <div className="game-player__done" role="status">
@@ -585,6 +577,29 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       </div>
 
       <aside className="game-chat" aria-label={t('games.player.chat.label')}>
+        <div className="game-chat__bar">
+          <button type="button" className="game-chat__back" onClick={requestBack}>
+            <Icon name="chevronLeft" size={16} />
+            <span>{t(backLabel)}</span>
+          </button>
+          <span className="game-chat__bar-title" dir="auto">{game.title}</span>
+          {busy && (
+            <span className="game-chat__bar-status" role="status">
+              <span className="game-player__pulse" aria-hidden="true" />
+              {t(`games.status.${status}`)}
+            </span>
+          )}
+          <button
+            type="button"
+            className="game-chat__bar-btn"
+            onClick={toggleFullscreen}
+            aria-pressed={isFull}
+            aria-label={fullLabel}
+            data-tooltip={fullLabel}
+          >
+            <Icon name={isFull ? 'collapse' : 'expand'} size={18} />
+          </button>
+        </div>
         <header className="game-chat__head">
           <span className="game-chat__avatar" aria-hidden="true"><YuviHeadIcon /></span>
           <div className="game-chat__id">

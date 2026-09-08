@@ -32,6 +32,7 @@ from .context_pack import AnswerKey, ContextPack
 from .copilot_session import HeadlessCopilotSession, TurnUsage
 from .harness import build_harness, inject_harness
 from .patch_engine import FULL_REWRITE_LINE_THRESHOLD, apply_patches, number_lines
+from .html_utils import extract_html
 from .usage import UsageTotals, estimate_cost_usd, record_to_ledger
 from .validator import ValidationResult, validate_html
 
@@ -181,35 +182,96 @@ async def _validate_candidate(state: _State, html: str) -> ValidationResult:
     return result
 
 
+async def _submit(state: _State, progress: ProgressFn, html: str, title: str, summary: str,
+                  tool_name: str, brief: str = "") -> ToolResult:
+    """Validate one candidate game and record the attempt. Shared by the
+    tool handlers (edits) and the text-delivery loop (creates)."""
+    started = time.perf_counter()
+    idx = len(state.attempts) + 1
+    if idx > MAX_SUBMISSIONS:
+        return ToolResult(text_result_for_llm="No submissions left. Stop.", result_type="failure", error="max_submissions")
+    progress({"type": "validate", "attempt": idx, "tool": tool_name})
+    try:
+        result = await _validate_candidate(state, html)
+    except Exception as exc:  # validator crash must not kill the job silently
+        log.exception("validator crashed")
+        state.attempts.append(Attempt(idx, tool_name, False, [{"message": str(exc)}], False, "validator_error", time.perf_counter() - started))
+        return ToolResult(text_result_for_llm=f"The validator could not run the game: {exc}. Check the HTML is complete and try again.", result_type="failure", error="validator_error")
+    ok = bool(result.ok and result.contract_ok)
+    state.attempts.append(Attempt(idx, tool_name, ok, list(result.errors), bool(result.contract_ok), str(result.contract_reason or ""), time.perf_counter() - started))
+    progress({"type": "validated", "attempt": idx, "ok": ok, "errors": len(result.errors), "contract_ok": result.contract_ok})
+    if ok:
+        state.accepted_html = validate_and_fix_code(html)
+        state.accepted_title = title.strip()[:60]
+        state.accepted_summary = summary.strip()[:300]
+        if brief.strip():
+            state.accepted_brief = brief.strip()[:600]
+        state.screenshot = result.screenshot_png
+        return ToolResult(text_result_for_llm=_format_result_for_llm(result, 0), result_type="success")
+    return ToolResult(
+        text_result_for_llm=_format_result_for_llm(result, MAX_SUBMISSIONS - idx),
+        result_type="failure",
+        error="validation_failed",
+    )
+
+
+_META_LINE = re.compile(r"^\s*(TITLE|BRIEF|SUMMARY)\s*:\s*(.+?)\s*$", re.I | re.M)
+
+
+def parse_text_delivery(text: str) -> dict[str, str]:
+    """The create reply: `TITLE:` / `BRIEF:` / `SUMMARY:` lines (before the
+    fence, in the kid's language) and one ```html block. Only the prose before
+    the first fence is scanned for the lines, so code never leaks into them."""
+    head = text.split("```", 1)[0]
+    meta = {key.lower(): value for key, value in _META_LINE.findall(head)}
+    html = extract_html(text) or ""
+    return {"title": meta.get("title", ""), "brief": meta.get("brief", ""),
+            "summary": meta.get("summary", ""), "html": html}
+
+
+async def _run_text_delivery(session: Any, state: _State, progress: ProgressFn, prompt: str,
+                             totals: UsageTotals, spec: "JobSpec", operation: str) -> Optional[str]:
+    """Creates: the game is a ```html block in the reply. It streams to the
+    kid as text (tool-call input does not), and the SDK can auto-continue a
+    block cut by the output cap, which it cannot do for a tool call. Each
+    failed validation is answered in the same session with the findings and
+    a request for the full corrected block, up to MAX_SUBMISSIONS."""
+    next_prompt = prompt
+    for _ in range(MAX_SUBMISSIONS):
+        timer = _timer()
+        turn = await session.send(next_prompt)
+        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+        if turn.error:
+            return str(turn.error)
+        parsed = parse_text_delivery(turn.text or "")
+        html = parsed["html"]
+        if not html or "<script" not in html.lower():
+            state.attempts.append(Attempt(len(state.attempts) + 1, "text", False, [{"message": "incomplete html"}], False, "incomplete", 0.0))
+            if turn.usage.output_tokens >= OUTPUT_CAP_HINT_TOKENS:
+                # The budget went on reasoning and the block never closed: ask
+                # for a smaller game rather than the same one again.
+                progress({"type": "build", "status": "shrink", "output_tokens": turn.usage.output_tokens})
+                next_prompt = prompts.SHRINK_PROMPT
+            else:
+                next_prompt = ("I did not receive a complete game. Reply with the TITLE/BRIEF/SUMMARY lines and then the "
+                               "COMPLETE game in ONE ```html block, <!DOCTYPE html> to </html>.")
+            continue
+        outcome = await _submit(state, progress, html, parsed["title"], parsed["summary"], "text", parsed["brief"])
+        if outcome.result_type == "success":
+            return None
+        if outcome.error == "max_submissions":
+            break
+        next_prompt = outcome.text_result_for_llm.replace(
+            "call the tool again with the FULL corrected HTML",
+            "reply with the FULL corrected game in ONE ```html block (TITLE/BRIEF/SUMMARY lines first)",
+        )
+    return None
+
+
 def _make_tools(state: _State, progress: ProgressFn) -> list[Any]:
     async def _handle(html: str, title: str, summary: str, tool_name: str, brief: str = "") -> ToolResult:
-        started = time.perf_counter()
-        idx = len(state.attempts) + 1
-        if idx > MAX_SUBMISSIONS:
-            return ToolResult(text_result_for_llm="No submissions left. Stop.", result_type="failure", error="max_submissions")
-        progress({"type": "validate", "attempt": idx, "tool": tool_name})
-        try:
-            result = await _validate_candidate(state, html)
-        except Exception as exc:  # validator crash must not kill the job silently
-            log.exception("validator crashed")
-            state.attempts.append(Attempt(idx, tool_name, False, [{"message": str(exc)}], False, "validator_error", time.perf_counter() - started))
-            return ToolResult(text_result_for_llm=f"The validator could not run the game: {exc}. Check the HTML is complete and try again.", result_type="failure", error="validator_error")
-        ok = bool(result.ok and result.contract_ok)
-        state.attempts.append(Attempt(idx, tool_name, ok, list(result.errors), bool(result.contract_ok), str(result.contract_reason or ""), time.perf_counter() - started))
-        progress({"type": "validated", "attempt": idx, "ok": ok, "errors": len(result.errors), "contract_ok": result.contract_ok})
-        if ok:
-            state.accepted_html = validate_and_fix_code(html)
-            state.accepted_title = title.strip()[:60]
-            state.accepted_summary = summary.strip()[:300]
-            if brief.strip():
-                state.accepted_brief = brief.strip()[:600]
-            state.screenshot = result.screenshot_png
-            return ToolResult(text_result_for_llm=_format_result_for_llm(result, 0), result_type="success")
-        return ToolResult(
-            text_result_for_llm=_format_result_for_llm(result, MAX_SUBMISSIONS - idx),
-            result_type="failure",
-            error="validation_failed",
-        )
+        return await _submit(state, progress, html, title, summary, tool_name, brief)
 
     async def submit_game(params: SubmitParams, _inv: ToolInvocation) -> ToolResult:
         html = params.html or ""
@@ -296,7 +358,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
     language = spec.pack.language
 
     if spec.kind == "create":
-        system = prompts.builder_system_message(language)
+        system = prompts.builder_system_message(language, delivery="text")
         prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications,
                                        inspirations=spec.inspirations, learner_title=spec.learner_title)
     else:
@@ -309,9 +371,11 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
             numbered,
             errors_block=_errors_block(spec.runtime_errors) if spec.runtime_errors else "",
             history=spec.history,
+            language=language,
         )
 
-    tools = _make_tools(state, progress)
+    text_delivery = spec.kind == "create"
+    tools = [] if text_delivery else _make_tools(state, progress)
     session = HeadlessCopilotSession(
         model=spec.model,
         reasoning_effort=spec.reasoning_effort,
@@ -327,11 +391,17 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         await session.start()
         progress({"type": "build", "status": "start", "model": spec.model})
         operation = {"create": "game.build", "edit": "game.patch", "fix": "game.fix"}.get(spec.kind, "game.build")
-        timer = _timer()
-        turn = await session.send(prompt)
-        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
-        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
-        if turn.error:
+        if text_delivery:
+            error = await _run_text_delivery(session, state, progress, prompt, totals, spec, operation)
+            turn = None
+        else:
+            timer = _timer()
+            turn = await session.send(prompt)
+            totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+            await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+        if turn is None:
+            pass
+        elif turn.error:
             error = turn.error
         elif not state.attempts and turn.usage.output_tokens >= OUTPUT_CAP_HINT_TOKENS:
             # No tool call landed and the turn burned the output budget: the

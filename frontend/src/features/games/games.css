@@ -49,6 +49,15 @@
   direction: var(--game-dir, inherit);
 }
 
+/* While Yuvi builds, the page reads like vibe-coding-kids' code tab: the code
+   on top with its own scroller, the chat (build log) underneath. The game,
+   once ready, gets the wide stage with the chat at its side again. */
+.game-player.is-building {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 34vh);
+  grid-template-areas: 'stage' 'chat';
+}
+
 [dir='rtl'] .game-player {
   --game-dir: rtl;
 }
@@ -174,26 +183,26 @@
 .game-player__thinking.is-validating .game-player__bot,
 .game-player__thinking.is-judging .game-player__bot { --bot-glow: 76, 201, 240; }
 
+.game-player__bot {
+  inline-size: 260px;
+  block-size: 260px;
+}
 .game-player__bot-face {
   position: relative;
   z-index: 2;
-  inline-size: 78px;
-  block-size: 78px;
-  display: grid;
-  place-items: center;
-  border-radius: 24px;
-  background: linear-gradient(145deg, #ffffff, #e9e4ff);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, .5),
-    0 18px 40px rgba(var(--bot-glow), .45),
-    0 0 90px rgba(var(--bot-glow), .35);
+  inline-size: 200px;
+  block-size: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, rgba(var(--bot-glow), .28), rgba(11, 13, 28, 0) 70%);
+  filter: drop-shadow(0 18px 30px rgba(var(--bot-glow), .45));
   animation: game-player-bot-float 3s ease-in-out infinite;
 }
-.game-player__bot-face svg { inline-size: 58px; block-size: 58px; }
+.game-player__bot-face .robot-3d-canvas { position: absolute; inset: 0; }
 
 .game-player__bot-ring {
   position: absolute;
-  inset: 8px;
+  inset: 14px;
   border-radius: 50%;
   border: 2px dashed rgba(var(--bot-glow), .55);
   animation: game-player-bot-spin 9s linear infinite;
@@ -241,19 +250,6 @@
   50% { transform: scale(1.08); filter: brightness(1.15); }
 }
 
-.game-player__code {
-  flex: 1;
-  min-block-size: 0;
-  margin: 0;
-  padding: 12px 18px 18px;
-  overflow: auto;
-  color: #cfe3ff;
-  font: 500 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  white-space: pre;
-  text-align: left;
-  tab-size: 2;
-  scrollbar-color: rgba(255, 255, 255, .18) transparent;
-}
 
 /* The HUD floats over the stage; the back button is the way out. */
 .game-player__hud {
@@ -839,3 +835,115 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── Code view ────────────────────────────────────────────────────────── */
+
+.code-view {
+  flex: 1;
+  min-block-size: 0;
+  overflow: auto;
+  margin: 0 12px 12px;
+  border-radius: 12px;
+  background: #1e1e2e;
+  outline: 2px solid rgba(167, 139, 250, .35);
+  outline-offset: -2px;
+  font: 500 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #cdd6f4;
+  text-align: left;
+  tab-size: 2;
+  scrollbar-color: rgba(255, 255, 255, .18) transparent;
+}
+.code-view__row {
+  display: flex;
+  align-items: flex-start;
+  min-block-size: 1.6em;
+}
+.code-view__row:nth-child(even) { background: rgba(255, 255, 255, .015); }
+.code-view__row.is-last { background: rgba(167, 139, 250, .12); }
+.code-view__n {
+  flex: none;
+  inline-size: 48px;
+  padding-inline: 12px 8px;
+  text-align: right;
+  color: rgba(255, 255, 255, .25);
+  background: #181825;
+  border-right: 1px solid rgba(255, 255, 255, .06);
+  user-select: none;
+  position: sticky;
+  inset-inline-start: 0;
+}
+.code-view__l {
+  flex: 1;
+  padding-inline: 12px;
+  white-space: pre;
+}
+.cv-tag { color: #89b4fa; font-weight: 700; }
+.cv-attr { color: #f9e2af; }
+.cv-str { color: #a6e3a1; }
+.cv-cmt { color: #6c7086; font-style: italic; }
+.cv-kw { color: #cba6f7; font-weight: 700; }
+.cv-num { color: #fab387; }
+.cv-fn { color: #89b4fa; }
+.cv-punct { color: #9399b2; }
+
+/* ── Chat bar: back, title, status, fullscreen (moved off the game) ─────── */
+
+.game-chat__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+}
+.game-chat__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 36px;
+  padding-inline: 10px 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  background: var(--sp-bg);
+  color: var(--sp-ink-900);
+  font: 700 13px/1 var(--sp-font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.game-chat__back:hover { background: var(--sp-surface); box-shadow: 0 4px 14px rgba(29, 22, 74, .12); }
+[dir='rtl'] .game-chat__back .sp-icon { transform: scaleX(-1); }
+.game-chat__bar-title {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sp-ink-700);
+  font: 700 13px/1.2 var(--sp-font);
+}
+.game-chat__bar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sp-primary-600) 12%, var(--sp-surface));
+  color: var(--sp-primary-700, var(--sp-ink-700));
+  font: 600 12px/1 var(--sp-font);
+  white-space: nowrap;
+}
+.game-chat__bar-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 36px;
+  block-size: 36px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: var(--sp-bg);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+.game-chat__bar-btn:hover { background: var(--sp-surface); }
+.game-player.is-building .game-chat__bar { border-bottom: 0; }
+.game-player.is-building .game-chat__head { display: none; }

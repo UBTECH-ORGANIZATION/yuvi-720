@@ -164,6 +164,64 @@ def _unescape_one(match: "re.Match[str]") -> str:
     return _SIMPLE_ESCAPES.get(token, match.group(0))
 
 
+class _FenceDecoder:
+    """Streams the inside of a ```html block out of message text. Returns
+    (code_chunk, restarted): `restarted` is True when a new ```html fence
+    opens after code already streamed (the model started the file over)."""
+
+    OPEN = "```html"
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.inside = False
+        self.done_once = False
+        self.head = ""
+        self.carry = ""
+
+    def feed(self, text: str) -> tuple[str, bool]:
+        restarted = False
+        out = ""
+        buf = self.carry + text
+        self.carry = ""
+        while buf:
+            if not self.inside:
+                idx = buf.find(self.OPEN)
+                if idx < 0:
+                    # keep a tail in case the fence is split across chunks
+                    self.carry = buf[-len(self.OPEN):] if len(buf) >= len(self.OPEN) else buf
+                    return out, restarted
+                rest = buf[idx + len(self.OPEN):]
+                if rest.startswith("\n"):
+                    rest = rest[1:]
+                elif not rest:
+                    self.carry = self.OPEN  # wait for the newline
+                    return out, restarted
+                if self.done_once or out:
+                    restarted = True
+                    out = ""
+                self.inside = True
+                self.done_once = True
+                buf = rest
+                continue
+            end = buf.find("```")
+            if end < 0:
+                # a partial closing fence may be split across chunks
+                keep = 0
+                for n in (2, 1):
+                    if buf.endswith("`" * n):
+                        keep = n
+                        break
+                out += buf[: len(buf) - keep] if keep else buf
+                self.carry = buf[len(buf) - keep:] if keep else ""
+                return out, restarted
+            out += buf[:end]
+            self.inside = False
+            buf = buf[end + 3:]
+        return out, restarted
+
+
 def _code_from_arguments(arguments: Any) -> str:
     if not isinstance(arguments, dict):
         return ""
@@ -195,6 +253,7 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     # The tool input is JSON; the player only ever sees the decoded `html` /
     # `patches` string, so the key is found here and escapes are undone here.
     decoder = _ToolInputDecoder()
+    fence = _FenceDecoder()
     live = {"phase": "thinking", "thinking_chars": 0, "thinking_tail": "", "code_len": 0, "code_tail": "", "updated_at": time.time()}
     # The reasoning streams too, coalesced like the code: a page shows the
     # kid what Yuvi is weighing, not just that it is thinking.
@@ -231,6 +290,22 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             code["buf"] += decoder.feed(str(event.get("text") or ""))
             flush_code()
             return
+        if kind == "text_delta":
+            # Text delivery: the game is a ```html block in the reply. A new
+            # fence after a cut-off is the model restarting the file: the
+            # player starts over with it too.
+            chunk, restarted = fence.feed(str(event.get("text") or ""))
+            if restarted:
+                code["buf"], code["len"], code["tail"] = "", 0, ""
+                notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",
+                                        chunk="", code_len=0, reset=True)
+            if chunk:
+                live["phase"] = "writing"
+                code["buf"] += chunk
+                flush_code()
+            return
+        if kind == "build":
+            fence.reset()
         if kind == "tool" and event.get("status") == "start":
             # Deltas are best-effort (they stop early on long inputs); the
             # start event carries the whole input, so the player gets the

@@ -206,3 +206,13 @@ def test_hand_in_replaces_partial_stream_with_the_whole_code(fakes, monkeypatch)
     assert "".join(c["chunk"] for c in bursts) == html
     assert fakes.store.jobs["j1"]["live"]["code_len"] == len(html)
     assert fakes.store.jobs["j1"]["live"]["code_tail"].endswith("</body></html>")
+
+
+def test_fence_decoder_streams_the_html_block_and_restarts_on_a_new_fence():
+    d = worker._FenceDecoder()
+    assert d.feed("TITLE: x\nBRIEF: y\n``") == ("", False)
+    assert d.feed("`html\n<!DOCTYPE html>\n<p>") == ("<!DOCTYPE html>\n<p>", False)
+    assert d.feed("hi</p>`") == ("hi</p>", False)
+    assert d.feed("``\nDone.") == ("", False)
+    # a cut-off, then the model starts the file again
+    assert d.feed("\n```html\n<!DOCTYPE html>\n<b>") == ("<!DOCTYPE html>\n<b>", True)
