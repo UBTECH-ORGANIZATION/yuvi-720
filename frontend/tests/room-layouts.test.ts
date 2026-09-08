@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { normalizeRoom } from '../src/features/Yuvi-studio/RoomDesign.ts'
-import { FREE_ROOM_LAYOUTS, ROOM_LAYOUTS, isRoomLayoutId, reconcileItemsForLayout, reconcileStationsForLayout, wallAnchorAt, wallAnchorTransform, type RoomLayout } from '../src/features/Yuvi-studio/RoomLayouts.ts'
+import { FREE_ROOM_LAYOUTS, LAB_USABLE_AREA, ROOM_LAYOUTS, isRoomLayoutId, pointInLayout, polygonArea, reconcileItemsForLayout, reconcileStationsForLayout, wallAnchorAt, wallAnchorTransform, type RoomLayout } from '../src/features/Yuvi-studio/RoomLayouts.ts'
 
 test('legacy rooms migrate to the unchanged Lab layout', () => {
   const room = normalizeRoom({ version: 1, items: [{ uid: 'desk', kind: 'desk', x: 2, z: -3, rot: 0.5 }] })
@@ -16,6 +16,23 @@ test('only supported layouts can be restored from learner state', () => {
   assert.deepEqual(FREE_ROOM_LAYOUTS, ['lab', 'dome'])
   assert.equal(isRoomLayoutId('triangularObservatory'), true)
   assert.equal(ROOM_LAYOUTS.triangularObservatory.buildablePolygon.length, 3)
+  const domeRadius = Math.max(...ROOM_LAYOUTS.dome.buildablePolygon.map((point) => Math.hypot(point.x, point.z)))
+  assert.equal(domeRadius > 30 && domeRadius < 30.3, true)
+  assert.equal(ROOM_LAYOUTS.lab.buildablePolygon[1].x - ROOM_LAYOUTS.lab.buildablePolygon[0].x, 48.8)
+})
+
+test('all room layouts have the same usable floor area as the lab', () => {
+  assert.equal(Math.abs(LAB_USABLE_AREA - 2854.8) < 0.001, true)
+  for (const layout of Object.values(ROOM_LAYOUTS)) {
+    assert.equal(Math.abs(polygonArea(layout.buildablePolygon) - LAB_USABLE_AREA) < 0.001, true, layout.id)
+  }
+})
+
+test('large circular footprints cannot enter an observatory corner', () => {
+  const layout = ROOM_LAYOUTS.triangularObservatory
+  const corner = layout.buildablePolygon[0]
+  assert.equal(pointInLayout(layout, { x: corner.x, z: corner.z + 1 }, 1.8), false)
+  assert.equal(pointInLayout(layout, { x: 0, z: 4 }, 1.8), true)
 })
 
 test('layout reconciliation preserves legal props and relocates only illegal props', () => {
@@ -23,7 +40,7 @@ test('layout reconciliation preserves legal props and relocates only illegal pro
     ROOM_LAYOUTS.triangularObservatory,
     [
       { uid: 'legal', kind: 'plant', x: 0, z: 3, rot: 0.2 },
-      { uid: 'outside', kind: 'desk', x: 12, z: -10, rot: 0.4 },
+      { uid: 'outside', kind: 'desk', x: 30, z: -20, rot: 0.4 },
     ],
     [],
     { radiusFor: (item) => (item.kind === 'desk' ? 0.85 : 0.34), gridStep: 1 },
@@ -68,13 +85,23 @@ test('wall-mounted props remain anchored to a valid wall at the same height', ()
   assert.equal(item.wallAnchor?.height, 0.35)
   assert.equal(ROOM_LAYOUTS.dome.walls.some((wall) => wall.id === item.wallAnchor?.wallId), true)
   const transform = wallAnchorTransform(ROOM_LAYOUTS.dome, item.wallAnchor!)
-  assert.equal(Math.abs(transform.x) <= 13.1 && Math.abs(transform.z) <= 13.1, true)
+  const domeRadius = Math.max(...ROOM_LAYOUTS.dome.buildablePolygon.map((point) => Math.hypot(point.x, point.z)))
+  assert.equal(Math.hypot(transform.x, transform.z) <= domeRadius, true)
+})
+
+test('wall-mounted props keep their full width away from observatory corners', () => {
+  const layout = ROOM_LAYOUTS.triangularObservatory
+  const anchor = wallAnchorAt(layout, layout.buildablePolygon[0], 0.5, 2)
+  const wall = layout.walls.find((candidate) => candidate.id === anchor.wallId)!
+  const wallLength = Math.hypot(wall.to.x - wall.from.x, wall.to.z - wall.from.z)
+  assert.equal(anchor.offset * wallLength >= 2 - 1e-9, true)
+  assert.equal((1 - anchor.offset) * wallLength >= 2 - 1e-9, true)
 })
 
 test('stations retain legal positions and relocate only when a shell excludes them', () => {
   const stations = {
     ...ROOM_LAYOUTS.lab.defaultStations,
-    mission: { ...ROOM_LAYOUTS.lab.defaultStations.mission, x: 20, z: 20 },
+    mission: { ...ROOM_LAYOUTS.lab.defaultStations.mission, x: 31, z: 20 },
   }
   const result = reconcileStationsForLayout(ROOM_LAYOUTS.dome, stations, [], {
     radiusFor: () => 1.6,
@@ -82,5 +109,5 @@ test('stations retain legal positions and relocate only when a shell excludes th
   })
   assert.equal(result.stations.avatar.x, stations.avatar.x)
   assert.notEqual(result.stations.mission.x, stations.mission.x)
-  assert.deepEqual(result.relocatedStationIds, ['explore', 'mission'])
+  assert.deepEqual(result.relocatedStationIds, ['mission'])
 })

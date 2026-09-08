@@ -77,7 +77,8 @@ export class FriendTravelController {
       .call(() => move('yobiExiting'))
       .to(clock, { value: 3, duration: 0.7, ease: 'power3.out' })
       .call(() => move('landing'))
-      .to(clock, { value: 4, duration: 0.26, ease: 'back.out(1.3)' })
+      // Yuvi settles onto the floor as soon as he emerges from the ring.
+      .to(clock, { value: 4, duration: 0.38, ease: 'power2.in' })
   }
 
   /** Collapse the destination portal after the landing settles. */

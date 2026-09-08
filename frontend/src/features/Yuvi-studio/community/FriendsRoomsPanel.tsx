@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../../i18n/I18nProvider'
-import { Icon } from '../../../components/primitives'
 import { normalizeDesign } from '../YuviDesign'
 import {
   getCommunityRooms, getRoomSharing, updateRoomSharing,
@@ -63,7 +62,8 @@ export function FriendsRoomsPanel({
 function FriendRoomCard({ room, pending, onVisit }: { room: CommunityRoom; pending: boolean; onVisit: () => void }) {
   const { t } = useI18n()
   const design = normalizeDesign(room.yuvi_design)
-  return <button className="ys-friends__room" type="button" onClick={onVisit} disabled={pending}>
+  return <button className="ys-friends__room" type="button" onClick={onVisit} disabled={pending}
+    aria-label={t('YuviStudio.community.visit')} aria-busy={pending}>
     <span className={`ys-friends__yuvi-face is-face-${design.equipped.face ?? 'plain'} is-head-${design.equipped.headTop ?? 'plain'}`} aria-hidden="true"
       style={{ '--yuvi-body': design.colors.body, '--yuvi-eyes': design.colors.eyes, '--yuvi-smile': design.colors.smile, '--yuvi-glow': design.colors.glow } as React.CSSProperties}>
       <i className="ys-friends__yuvi-ear ys-friends__yuvi-ear--start" />
@@ -77,33 +77,5 @@ function FriendRoomCard({ room, pending, onVisit }: { room: CommunityRoom; pendi
       <i className="ys-friends__yuvi-headgear" />
     </span>
     <strong dir="auto">{room.display_name}</strong>
-    <span>{pending ? t('YuviStudio.community.preparing') : t('YuviStudio.community.visit')}</span>
   </button>
-}
-
-export function FriendRoomVisitorPanel({
-  room, pending, onBack, onLike,
-}: {
-  room: CommunityRoom
-  pending: boolean
-  onBack: () => void
-  onLike: () => void
-}) {
-  const { t } = useI18n()
-  const likeLabel = room.liked_by_me
-    ? t('YuviStudio.community.unlike')
-    : t('YuviStudio.community.like')
-  return <section className="ys-friends ys-friends--visitor" aria-label={room.display_name}>
-    <p className="ys-friends__guest" dir="auto">{room.display_name}</p>
-    <p className="ys-friends__intro">{t('YuviStudio.community.readOnly')}</p>
-    <div className="ys-friends__like">
-      <button type="button" disabled={pending} aria-pressed={room.liked_by_me}
-        aria-label={likeLabel} title={likeLabel} onClick={onLike}>
-        <Icon name="thumbUp" size={20} />
-      </button>
-    </div>
-    <button type="button" className="ys-btn ys-btn--ghost" onClick={onBack} disabled={pending}>
-      {t('YuviStudio.community.back')}
-    </button>
-  </section>
 }

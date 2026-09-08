@@ -8,6 +8,7 @@ const SRC = fileURLToPath(new URL('../src/', import.meta.url))
 const studio = readFileSync(join(SRC, 'features/Yuvi-studio/StudioContent.tsx'), 'utf8')
 const panel = readFileSync(join(SRC, 'features/Yuvi-studio/community/FriendsRoomsPanel.tsx'), 'utf8')
 const loader = readFileSync(join(SRC, 'features/Yuvi-studio/StudioLoadingExperience.tsx'), 'utf8')
+const roomLike = readFileSync(join(SRC, 'features/Yuvi-studio/community/RoomLikeButton.tsx'), 'utf8')
 
 test('a community room visit uses the Studio stage without editing hooks', () => {
   assert.match(studio, /const activeDesign = design/)
@@ -18,10 +19,7 @@ test('a community room visit uses the Studio stage without editing hooks', () =>
   assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\)/)
 })
 
-test('community cards expose a private like without peer counts', () => {
-  assert.match(panel, /liked_by_me/)
-  assert.match(panel, /onLike/)
-  assert.match(panel, /name="thumbUp"/)
+test('Friends rooms use a named circular avatar button without a visible visit label', () => {
   assert.match(studio, /getCommunityRoom\(ownerId\)/)
   assert.match(panel, /ys-friends__toggle--top/)
   assert.doesNotMatch(panel, /YuviStudio\.community\.subtitle/)
@@ -30,7 +28,8 @@ test('community cards expose a private like without peer counts', () => {
   assert.match(panel, /normalizeDesign\(room\.yuvi_design\)/)
   assert.match(panel, /ys-friends__yuvi-face/)
   assert.match(panel, /design\.equipped\.face/)
-  assert.match(panel, /YuviStudio\.community\.preparing/)
+  assert.match(panel, /aria-label=\{t\('YuviStudio\.community\.visit'\)\}/)
+  assert.doesNotMatch(panel, /pending \? t\('YuviStudio\.community\.preparing'\)/)
   assert.doesNotMatch(panel, /appreciation_count|acknowledgement_count|like_count|most liked/i)
 })
 
@@ -60,11 +59,27 @@ test('Studio opens through a cinematic loader after data and the first WebGL fra
   assert.match(studio, /ready=\{loaded && roomState\.loaded && stageRendered\}/)
   assert.match(studio, /<StudioLoadingExperience[\s\S]{0,120}design=\{activeDesign\}/)
   assert.match(loader, /new THREE\.WebGLRenderer/)
+  assert.match(loader, /const portalSystem = new THREE\.Group\(\)/)
+  assert.match(loader, /portalSystem\.add\(portal\)/)
+  assert.match(loader, /portalSystem\.add\(particles\)/)
   assert.match(loader, /<YuviAvatar3D key=\{designKey\(design\)\} initialDesign=\{design\} label="" performanceMode="low"/)
+  assert.match(loader, /ys-loading__portal-system[\s\S]{0,300}ys-loading__yuvi/)
   assert.doesNotMatch(loader, /new THREE\.SphereGeometry\(0\.46/)
-  assert.match(loader, /portal\.scale\.setScalar\(0\.5\)/)
+  assert.match(loader, /portal\.scale\.setScalar\(1\)/)
   assert.match(loader, /\}, \[design\]\)/)
   assert.match(loader, /new THREE\.Points/)
   assert.match(loader, /new THREE\.TorusGeometry/)
   assert.match(loader, /prefers-reduced-motion: reduce/)
+})
+
+test('a visited room removes the Capsule Olam panel and exposes an animated in-stage Like control', () => {
+  assert.match(studio, /ys-visiting-friend/)
+  assert.match(studio, /mode === 'friends' && !visitorRoom/)
+  assert.match(studio, /<div className="ys-stage-tools">[\s\S]{0,1300}<RoomLikeButton liked=\{visitorRoom\.liked_by_me\}/)
+  assert.match(roomLike, /import gsap from 'gsap'/)
+  assert.match(roomLike, /scale: 1\.3, y: -10/)
+  assert.match(roomLike, /to\(glow, \{ opacity: 1, duration: 0\.12/)
+  assert.match(roomLike, /scale: 2\.15, opacity: 0/)
+  assert.match(roomLike, /y: -34, scale: 1\.08, opacity: 0/)
+  assert.match(roomLike, /lockedRef\.current/)
 })

@@ -17,12 +17,15 @@ export class TravelVisualFX {
   private phaseStartedAt = 0
   private active = false
   private captured = false
+  private arrivalPending = false
   private readonly originalPosition = new THREE.Vector3()
   private readonly originalScale = new THREE.Vector3(1, 1, 1)
   private readonly originalRotation = new THREE.Euler()
   private readonly sourceRobotPosition = new THREE.Vector3()
   private readonly sourcePortalPosition = new THREE.Vector3()
+  private readonly sourceRobotTarget = new THREE.Vector3()
   private readonly destinationPortalPosition = new THREE.Vector3()
+  private readonly arrivalFloorPosition = new THREE.Vector3()
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -31,6 +34,8 @@ export class TravelVisualFX {
     private readonly robot: THREE.Group,
     private readonly reducedMotion: boolean,
     private readonly capsuleAnchor: () => THREE.Vector3 | null,
+    private readonly capsuleApproach: () => THREE.Vector3 | null,
+    private readonly isArrivalAnchorReady: () => boolean,
   ) {
     this.group.visible = false
     scene.add(this.group)
@@ -68,7 +73,7 @@ export class TravelVisualFX {
     }
     if (phase === 'yobiExiting') {
       this.sourcePortal.close(1)
-      this.beginArrival()
+      this.arrivalPending = true
     }
     if (phase === 'landing' || phase === 'portalClosing') this.sourcePortal.close(1)
     if (phase === 'landing') this.beginLanding()
@@ -80,14 +85,22 @@ export class TravelVisualFX {
     this.robot.updateWorldMatrix(true, true)
     this.robot.getWorldPosition(this.sourceRobotPosition)
     this.sourcePortalPosition.copy(this.capsuleAnchor() ?? this.sourceRobotPosition)
+    // The avatar group is rooted at Yuvi's feet. Aim that root below the
+    // aperture so his body settles in the middle of the raised ring.
+    this.sourceRobotTarget.copy(this.sourcePortalPosition).addScaledVector(new THREE.Vector3(0, -0.72, 0), 1)
     this.sourcePortal.setPosition(this.sourcePortalPosition)
     this.sourcePortal.open(0)
   }
 
   private beginArrival() {
     this.robot.updateWorldMatrix(true, true)
-    this.captureArrivalTransform()
     this.destinationPortalPosition.copy(this.capsuleAnchor() ?? this.robot.getWorldPosition(new THREE.Vector3()))
+    this.captureArrivalTransform()
+    this.arrivalFloorPosition.copy(this.capsuleApproach() ?? this.originalPosition)
+    // The avatar root is at the feet, while the capsule anchor is its aperture.
+    // Offset the root so Yuvi materializes with his body centered in the ring.
+    this.originalPosition.copy(this.destinationPortalPosition)
+    this.originalPosition.y -= 0.72
     this.destinationPortal.setPosition(this.destinationPortalPosition)
     this.destinationPortal.open(1)
     this.destinationPortal.burst()
@@ -154,13 +167,24 @@ export class TravelVisualFX {
     if (this.phase === 'yobiEntering') {
       const progress = Math.min(elapsed / 0.68, 1)
       if (!this.avatarParticles.visible) this.captureAvatarParticles()
-      this.robot.position.lerpVectors(this.originalPosition, this.sourcePortalPosition, progress)
+      this.robot.position.lerpVectors(this.originalPosition, this.sourceRobotTarget, progress)
       this.robot.scale.copy(this.originalScale).multiplyScalar(Math.max(0, 1 - progress))
       this.robot.visible = progress < 0.98
       this.updateParticleStream(this.sourcePortalPosition, progress, time, false)
     }
     if (this.phase === 'worldSwap') this.robot.visible = false
     if (this.phase === 'yobiExiting') {
+      if (this.arrivalPending && this.isArrivalAnchorReady()) {
+        this.arrivalPending = false
+        this.phaseStartedAt = performance.now()
+        this.beginArrival()
+      }
+      if (this.arrivalPending) {
+        this.robot.visible = false
+        this.sourcePortal.update(time, delta, this.camera)
+        this.destinationPortal.update(time, delta, this.camera)
+        return
+      }
       const progress = Math.min(elapsed / 0.56, 1)
       this.robot.position.copy(this.originalPosition)
       this.robot.position.y += Math.sin(progress * Math.PI) * 0.45
@@ -169,9 +193,13 @@ export class TravelVisualFX {
       this.updateParticleStream(this.originalPosition, progress, time, true)
     }
     if (this.phase === 'landing') {
-      const progress = Math.min(elapsed / 0.34, 1)
-      this.impact.scale.setScalar(0.18 + progress * 4)
-      ;(this.impact.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - progress)
+      const descent = Math.min(elapsed / 0.38, 1)
+      const easedDescent = 1 - Math.pow(1 - descent, 3)
+      if (descent > 0) this.robot.position.lerpVectors(this.originalPosition, this.arrivalFloorPosition, easedDescent)
+      const impactProgress = Math.min(elapsed / 0.34, 1)
+      this.impact.scale.setScalar(0.18 + impactProgress * 4)
+      ;(this.impact.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - impactProgress)
+      if (descent >= 1) this.originalPosition.copy(this.arrivalFloorPosition)
     }
     if (this.phase === 'portalClosing') {
       const progress = Math.min(elapsed / 0.38, 1)
@@ -208,6 +236,7 @@ export class TravelVisualFX {
     this.impact.visible = false
     this.sourcePortal.close(1)
     this.destinationPortal.close(1)
+    this.arrivalPending = false
     this.captured = false
   }
 

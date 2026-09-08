@@ -33,9 +33,10 @@
   opacity: 1; transition: opacity .62s ease-out; pointer-events: auto;
 }
 .ys-loading.is-leaving { opacity: 0; pointer-events: none; }
+.ys-loading__portal-system { position: absolute; z-index: 1; left: 50%; inset-block-start: 50%; inline-size: clamp(244px, 34vw, 390px); aspect-ratio: 1; transform: translate(-50%, -50%); transform-origin: center; pointer-events: none; animation: ys-portal-system 2.8s ease-in-out infinite; }
 .ys-loading__canvas { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
 .ys-loading__canvas canvas { display: block; inline-size: 100%; block-size: 100%; }
-.ys-loading__yuvi { position: absolute; z-index: 1; left: 50%; inset-block-start: 50%; inline-size: clamp(92px, 12vw, 156px); block-size: clamp(138px, 19vw, 234px); transform: translate(-50%, -50%); pointer-events: none; }
+.ys-loading__yuvi { position: absolute; z-index: 1; left: 50%; inset-block-start: 50%; inline-size: 42%; block-size: 67%; transform: translate(-50%, -50%); pointer-events: none; }
 .ys-loading__yuvi .Yuvi-avatar-canvas { overflow: visible; }
 .ys-loading::before, .ys-loading::after { content: ''; position: absolute; inline-size: 56vmax; block-size: 1px; background: rgba(141, 246, 255, .22); transform: rotate(-26deg); }
 .ys-loading::before { inset-inline-start: -16vmax; inset-block-start: 25%; }
@@ -47,7 +48,8 @@
 .ys-loading__copy i:nth-child(2) { animation-delay: .16s; background: #d88dff; }
 .ys-loading__copy i:nth-child(3) { animation-delay: .32s; background: #ff8abc; }
 @keyframes ys-loading-pulse { to { transform: translateY(-.35rem) scale(1.18); opacity: .5; } }
-@media (prefers-reduced-motion: reduce) { .ys-loading { transition-duration: .2s; } .ys-loading__copy i { animation: none; } }
+@keyframes ys-portal-system { 0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); } 50% { transform: translate(-50%, -50%) translateY(-8px) scale(1.035); } }
+@media (prefers-reduced-motion: reduce) { .ys-loading { transition-duration: .2s; } .ys-loading__copy i, .ys-loading__portal-system { animation: none; } }
 /* Grid body sits below the shared navbar. */
 .ys-body {
   display: grid;
@@ -161,12 +163,13 @@
 .ys-friends__tabs { display: flex; gap: 16px; border-block-end: 1px solid var(--ys-line); }
 .ys-friends__tabs button { border: 0; border-block-end: 2px solid transparent; padding: 4px 0 8px; background: transparent; color: var(--ys-ink-soft); cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; }
 .ys-friends__tabs button[aria-selected="true"] { border-color: var(--ys-accent); color: var(--ys-accent-ink); }
-.ys-friends__list { display: grid; gap: 8px; }
-.ys-friends__room { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-block-size: 68px; border: 1px solid var(--ys-line); border-radius: var(--ys-radius-card); padding: 7px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; font: inherit; text-align: start; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
-.ys-friends__room:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--ys-accent) 46%, transparent); background: var(--ys-surface-hover); }
+.ys-friends__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 14px 10px; }
+.ys-friends__room { display: flex; flex-direction: column; align-items: center; gap: 7px; min-inline-size: 0; border: 0; padding: 2px; background: transparent; color: var(--ys-ink); cursor: pointer; font: inherit; text-align: center; transition: transform .18s ease; }
+.ys-friends__room:hover { transform: translateY(-2px); }
 .ys-friends__room:disabled { cursor: wait; opacity: .7; }
-.ys-friends__room span { color: var(--ys-accent-ink); font-size: 12px; font-weight: 750; }
-.ys-friends__yuvi-face { position: relative; display: block; inline-size: 54px; block-size: 52px; overflow: visible; border: 1px solid color-mix(in srgb, var(--yuvi-glow) 44%, #fff); border-radius: 48% 48% 43% 43%; background: linear-gradient(110deg, color-mix(in srgb, var(--yuvi-body) 76%, #fff), var(--yuvi-body)); box-shadow: inset 0 -8px 12px rgba(17, 30, 72, .14), 0 0 0 3px color-mix(in srgb, var(--yuvi-glow) 17%, transparent); }
+.ys-friends__room strong { inline-size: 100%; overflow: hidden; color: var(--ys-ink); font-size: 12px; font-weight: 800; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.ys-friends__room:focus-visible { outline: 2px solid var(--ys-accent); outline-offset: 3px; border-radius: 50%; }
+.ys-friends__yuvi-face { position: relative; display: block; inline-size: 64px; block-size: 64px; overflow: visible; border: 1px solid color-mix(in srgb, var(--yuvi-glow) 44%, #fff); border-radius: 50%; background: linear-gradient(110deg, color-mix(in srgb, var(--yuvi-body) 76%, #fff), var(--yuvi-body)); box-shadow: inset 0 -8px 12px rgba(17, 30, 72, .14), 0 0 0 3px color-mix(in srgb, var(--yuvi-glow) 17%, transparent); }
 .ys-friends__yuvi-ear { position: absolute; z-index: -1; inset-block-start: 18px; inline-size: 8px; block-size: 18px; border: 1px solid color-mix(in srgb, var(--yuvi-glow) 38%, #fff); border-radius: 5px; background: var(--yuvi-body); }.ys-friends__yuvi-ear--start { inset-inline-start: -5px; }.ys-friends__yuvi-ear--end { inset-inline-end: -5px; }
 .ys-friends__yuvi-antenna { position: absolute; z-index: 4; inset-inline-start: 24px; inset-block-start: -6px; inline-size: 5px; block-size: 12px; border-radius: 99px; background: var(--yuvi-glow); box-shadow: 0 -2px 0 2px var(--yuvi-glow); }
 .ys-friends__yuvi-visor { position: absolute; z-index: 1; inset-inline: 5px; inset-block-start: 15px; block-size: 29px; border: 1px solid rgba(152, 173, 215, .44); border-radius: 12px 12px 15px 15px; background: linear-gradient(155deg, #2c2d50 0 15%, #0a0b1f 48%, #151631 100%); box-shadow: inset 0 2px rgba(255,255,255,.13); }
@@ -321,28 +324,6 @@
 .ys-shop--confirm .ys-shop__balance { margin-block-start: 10px; line-height: 1.5; }
 .ys-shop__stay { display: block; inline-size: 100%; margin-block-start: 10px; }
 
-.ys-world-picker { inline-size: min(680px, 100%); text-align: start; }
-.ys-world-picker__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ys-world-picker h2 { margin: 0; font-size: 19px; color: var(--ys-ink); }
-.ys-world-picker > p { margin: 7px 0 16px; color: var(--ys-ink-soft); font-size: 13px; line-height: 1.5; }
-.ys-world-picker__options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.ys-world-choice {
-  min-block-size: 172px; padding: 9px; text-align: start; border: 1px solid var(--ys-line);
-  border-radius: 8px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; font: inherit;
-  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
-}
-.ys-world-choice:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ys-accent); box-shadow: 0 9px 20px rgba(20, 12, 60, .12); }
-.ys-world-choice.is-active { border-color: var(--ys-accent); box-shadow: inset 0 0 0 1px var(--ys-accent); }
-.ys-world-choice.is-locked { cursor: default; opacity: .64; }
-.ys-world-choice__scene { display: block; block-size: 78px; margin-block-end: 10px; border-radius: 5px; }
-.ys-world-choice__scene--lab { background: linear-gradient(145deg, #101d4b 0 48%, #3bd3dd 49% 51%, #070a22 52%); }
-.ys-world-choice__scene--dome { background: radial-gradient(ellipse at 50% 100%, #63eff1 0 4%, transparent 5%), radial-gradient(circle at 50% 105%, #183d70 0 46%, #071025 47%); }
-.ys-world-choice__scene--observatory { background: linear-gradient(63deg, transparent 47%, #e4aa4b 48% 51%, transparent 52%), linear-gradient(117deg, transparent 47%, #e4aa4b 48% 51%, transparent 52%), #160e2c; }
-.ys-world-choice strong, .ys-world-choice small { display: block; }
-.ys-world-choice strong { font-size: 14px; }
-.ys-world-choice small { margin-block-start: 5px; color: var(--ys-ink-soft); font-size: 12px; line-height: 1.35; }
-@media (max-width: 600px) { .ys-world-picker__options { grid-template-columns: 1fr; } .ys-world-choice { min-block-size: 104px; } .ys-world-choice__scene { block-size: 42px; } }
-
 /* Two-state control (Yuvi / Yuvi-Girl) — same grammar as the nav, inline. */
 .ys-variant-row { display: flex; gap: 8px; }
 .ys-variant {
@@ -420,6 +401,35 @@
   background: radial-gradient(circle at 50% 46%, transparent 44%, rgba(2, 5, 24, .5) 100%);
 }
 .ys-stage__canvas { position: absolute; inset: 0; z-index: 1; }
+.ys-world-projection {
+  position: absolute; inset: 10% 4% 7%; z-index: 5; pointer-events: none;
+  opacity: 0; transform: translateY(28%) scale(.18); transform-origin: 50% 100%;
+  transition: opacity .32s ease-out, transform .38s cubic-bezier(.2, .72, .24, 1);
+}
+.ys-world-projection.is-open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.ys-world-projection__canvas, .ys-world-projection__canvas canvas { inline-size: 100%; block-size: 100%; }
+.ys-world-projection__canvas canvas { display: block; touch-action: none; }
+.ys-world-projection__targets {
+  position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center;
+  direction: ltr; pointer-events: none;
+}
+.ys-world-projection__targets button {
+  inline-size: 100%; block-size: 52%; border: 0; padding: 0; background: transparent; color: transparent;
+  pointer-events: auto; cursor: pointer; outline: 0;
+}
+.ys-world-projection__targets button:focus-visible { outline: 2px solid #7cf7ff; outline-offset: -18px; border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) {
+  .ys-world-projection { transform: none; transition-duration: .14s; }
+}
+.ys-visiting-friend .ys-body { grid-template-columns: 1fr; }
+.ys-room-like { position: relative; z-index: 4; inline-size: 40px; block-size: 40px; }
+.ys-room-like button { position: relative; z-index: 2; display: grid; place-items: center; inline-size: 40px; block-size: 40px; border: 1px solid rgba(152, 133, 255, .78); border-radius: 50%; background: #201c5b; color: #b4f8ff; box-shadow: 0 0 0 3px rgba(118, 91, 255, .2), 0 0 20px rgba(101, 229, 255, .42); cursor: pointer; }
+.ys-room-like.is-liked button { border-color: #b2faff; background: #4d38c4; color: #fff; box-shadow: 0 0 0 3px rgba(129, 103, 255, .4), 0 0 24px rgba(113, 239, 255, .78); }
+.ys-room-like button:active { transform: scale(.93); }
+.ys-room-like button:disabled { cursor: wait; opacity: .62; }
+.ys-room-like__glow { position: absolute; z-index: 0; inset: -12px; border-radius: 50%; background: radial-gradient(circle, rgba(115, 240, 255, .72), rgba(121, 92, 255, .22) 46%, transparent 72%); opacity: 0; pointer-events: none; }
+.ys-room-like__pulse { position: absolute; z-index: 1; inset: 4px; border: 2px solid #8cf6ff; border-radius: 50%; opacity: 0; pointer-events: none; }
+.ys-room-like__particle { position: absolute; z-index: 3; inset-inline-start: 16px; inset-block-start: -3px; color: #b8faff; opacity: 0; pointer-events: none; }
 .Yuvi-avatar-canvas { width: 100%; height: 100%; }
 .Yuvi-avatar-canvas__fallback {
   position: absolute;
@@ -803,7 +813,7 @@
 /* Signposts inside the bay: even a learner who never touches the keyboard can
    reach both stations. */
 .ys-stations {
-  position: absolute; inset-block-end: 16px; inset-inline: 0; z-index: 2;
+  position: absolute; inset-block-end: 16px; inset-inline: 0; z-index: 6;
   margin-inline: auto; width: fit-content; max-width: calc(100% - 32px);
   display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
 }

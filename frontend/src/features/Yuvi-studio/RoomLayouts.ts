@@ -25,23 +25,23 @@ export interface RoomLayout {
 
 const LAB_STATIONS: RoomStations = {
   avatar: { x: 0, z: 0, rot: 0, placed: false },
-  room: { x: -9, z: 3.9, rot: 1.2, placed: false },
-  explore: { x: 8.8, z: -7.5, rot: -0.7, placed: true },
-  mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
+  room: { x: -18, z: 7.8, rot: 1.2, placed: false },
+  explore: { x: 17.6, z: -15, rot: -0.7, placed: true },
+  mission: { x: 11.2, z: -6.6, rot: -0.72, placed: true },
 }
 
 const DOME_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 1.5, rot: 0, placed: false },
-  room: { x: -6.9, z: 2.8, rot: 1.2, placed: false },
-  explore: { x: 6.8, z: -4.6, rot: -0.7, placed: true },
-  mission: { x: 4.8, z: 2.4, rot: 2.5, placed: true },
+  avatar: { x: 0, z: 3, rot: 0, placed: false },
+  room: { x: -13.8, z: 5.6, rot: 1.2, placed: false },
+  explore: { x: 13.6, z: -9.2, rot: -0.7, placed: true },
+  mission: { x: 9.6, z: 4.8, rot: 2.5, placed: true },
 }
 
 const OBSERVATORY_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 3, rot: 0, placed: false },
-  room: { x: -6.5, z: 4.8, rot: 1.1, placed: false },
-  explore: { x: 6.3, z: 4.5, rot: -1.1, placed: true },
-  mission: { x: 0, z: -6.6, rot: 0, placed: true },
+  avatar: { x: 0, z: 6, rot: 0, placed: false },
+  room: { x: -13, z: 9.6, rot: 1.1, placed: false },
+  explore: { x: 12.6, z: 9, rot: -1.1, placed: true },
+  mission: { x: 0, z: -13.2, rot: 0, placed: true },
 }
 
 const rectangleWalls = (halfX: number, backZ: number, frontZ: number): RoomLayoutWall[] => [
@@ -57,14 +57,33 @@ const polygonWalls = (points: RoomLayoutPoint[]): RoomLayoutWall[] => points.map
   to: points[(index + 1) % points.length],
 }))
 
-const DOME_POLYGON = [{ x: 0, z: -13 }, { x: 9.2, z: -9.2 }, { x: 13, z: 0 }, { x: 9.2, z: 9.2 }, { x: 0, z: 13 }, { x: -9.2, z: 9.2 }, { x: -13, z: 0 }, { x: -9.2, z: -9.2 }]
-const OBSERVATORY_POLYGON = [{ x: 0, z: -13 }, { x: 13, z: 13 }, { x: -13, z: 13 }]
+export function polygonArea(points: RoomLayoutPoint[]): number {
+  return Math.abs(points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length]
+    return sum + point.x * next.z - next.x * point.z
+  }, 0)) / 2
+}
+
+const LAB_POLYGON = [{ x: -24.4, z: -25.8 }, { x: 24.4, z: -25.8 }, { x: 24.4, z: 32.7 }, { x: -24.4, z: 32.7 }]
+export const LAB_USABLE_AREA = polygonArea(LAB_POLYGON)
+const DOME_SEGMENTS = 64
+export const DOME_RADIUS = Math.sqrt((2 * LAB_USABLE_AREA) / (DOME_SEGMENTS * Math.sin((2 * Math.PI) / DOME_SEGMENTS)))
+const DOME_POLYGON = Array.from({ length: DOME_SEGMENTS }, (_, index) => {
+  const angle = -Math.PI / 2 + (index / DOME_SEGMENTS) * Math.PI * 2
+  return { x: Math.cos(angle) * DOME_RADIUS, z: Math.sin(angle) * DOME_RADIUS }
+})
+const BASE_OBSERVATORY_POLYGON = [{ x: 0, z: -26 }, { x: 26, z: 26 }, { x: -26, z: 26 }]
+const OBSERVATORY_SCALE = Math.sqrt(LAB_USABLE_AREA / polygonArea(BASE_OBSERVATORY_POLYGON))
+const OBSERVATORY_POLYGON = BASE_OBSERVATORY_POLYGON.map((point) => ({
+  x: point.x * OBSERVATORY_SCALE,
+  z: point.z * OBSERVATORY_SCALE,
+}))
 
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
   lab: {
     id: 'lab',
-    buildablePolygon: [{ x: -12.2, z: -12.9 }, { x: 12.2, z: -12.9 }, { x: 12.2, z: 16.35 }, { x: -12.2, z: 16.35 }],
-    walls: rectangleWalls(12.2, -12.9, 16.35),
+    buildablePolygon: LAB_POLYGON,
+    walls: rectangleWalls(24.4, -25.8, 32.7),
     decorBlockers: [],
     defaultStations: LAB_STATIONS,
     camera: { x: 0, y: 7.5, z: 22, targetX: 0, targetY: 0, targetZ: 0 },
@@ -73,17 +92,21 @@ export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
     id: 'dome',
     buildablePolygon: DOME_POLYGON,
     walls: polygonWalls(DOME_POLYGON),
-    decorBlockers: [{ x: 0, z: -11.2, radius: 1.4 }],
-    defaultStations: DOME_STATIONS,
-    camera: { x: 0, y: 8, z: 22, targetX: 0, targetY: 0, targetZ: 0 },
+    decorBlockers: [{ x: 0, z: -11.2 * (DOME_RADIUS / 28), radius: 1.4 }],
+    defaultStations: Object.fromEntries(Object.entries(DOME_STATIONS).map(([id, station]) => [id, {
+      ...station, x: station.x * (DOME_RADIUS / 28), z: station.z * (DOME_RADIUS / 28),
+    }])) as RoomStations,
+    camera: { x: 0, y: 8, z: 23.7, targetX: 0, targetY: 0, targetZ: 0 },
   },
   triangularObservatory: {
     id: 'triangularObservatory',
     buildablePolygon: OBSERVATORY_POLYGON,
     walls: polygonWalls(OBSERVATORY_POLYGON),
-    decorBlockers: [{ x: 0, z: -10.4, radius: 1.6 }],
-    defaultStations: OBSERVATORY_STATIONS,
-    camera: { x: 0, y: 8.5, z: 23, targetX: 0, targetY: 0, targetZ: 1.5 },
+    decorBlockers: [{ x: 0, z: -10.4 * OBSERVATORY_SCALE, radius: 1.6 }],
+    defaultStations: Object.fromEntries(Object.entries(OBSERVATORY_STATIONS).map(([id, station]) => [id, {
+      ...station, x: station.x * OBSERVATORY_SCALE, z: station.z * OBSERVATORY_SCALE,
+    }])) as RoomStations,
+    camera: { x: 0, y: 9.5, z: 30, targetX: 0, targetY: 0, targetZ: 2.2 },
   },
 }
 
@@ -97,12 +120,15 @@ export function roomLayout(id: RoomLayoutId): RoomLayout {
   return ROOM_LAYOUTS[id]
 }
 
-export function wallAnchorAt(layout: RoomLayout, point: RoomLayoutPoint, height = 0): WallAnchor {
+export function wallAnchorAt(layout: RoomLayout, point: RoomLayoutPoint, height = 0, clearance = 0): WallAnchor {
   const closest = layout.walls.reduce<{ wall: RoomLayoutWall; offset: number; distance: number } | null>((best, wall) => {
     const dx = wall.to.x - wall.from.x
     const dz = wall.to.z - wall.from.z
     const lengthSquared = dx * dx + dz * dz
-    const offset = lengthSquared ? Math.max(0, Math.min(1, ((point.x - wall.from.x) * dx + (point.z - wall.from.z) * dz) / lengthSquared)) : 0
+    const length = Math.sqrt(lengthSquared)
+    const edgeInset = length > 0 ? Math.min(0.49, clearance / length) : 0
+    const rawOffset = lengthSquared ? ((point.x - wall.from.x) * dx + (point.z - wall.from.z) * dz) / lengthSquared : 0
+    const offset = Math.max(edgeInset, Math.min(1 - edgeInset, rawOffset))
     const x = wall.from.x + dx * offset
     const z = wall.from.z + dz * offset
     const candidate = { wall, offset, distance: Math.hypot(point.x - x, point.z - z) }
@@ -189,6 +215,8 @@ export interface ReconcileLayoutOptions {
   gridStep?: number
 }
 
+const WALL_CLEARANCE = 0.08
+
 const overlaps = (left: RoomLayoutPoint, leftRadius: number, right: RoomLayoutPoint, rightRadius: number) =>
   Math.hypot(left.x - right.x, left.z - right.z) < leftRadius + rightRadius
 
@@ -220,7 +248,7 @@ export function reconcileItemsForLayout(
   const blockers = layout.decorBlockers
   const fits = (item: RoomItem, point: RoomLayoutPoint) => {
     const radius = options.radiusFor(item)
-    return pointInLayout(layout, point, radius)
+    return pointInLayout(layout, point, radius + WALL_CLEARANCE)
       && !blockers.some((blocker) => overlaps(point, radius, blocker, blocker.radius))
       && !accepted.some((other) => overlaps(point, radius, other, options.radiusFor(other)))
   }
@@ -231,7 +259,7 @@ export function reconcileItemsForLayout(
       const sourceLayout = options.sourceLayout ?? layout
       const sourceAnchor = item.wallAnchor ?? wallAnchorAt(sourceLayout, item)
       const sourcePoint = wallAnchorTransform(sourceLayout, sourceAnchor)
-      accepted.push({ ...item, wallAnchor: wallAnchorAt(layout, sourcePoint, sourceAnchor.height) })
+      accepted.push({ ...item, wallAnchor: wallAnchorAt(layout, sourcePoint, sourceAnchor.height, options.radiusFor(item) + WALL_CLEARANCE) })
     } else if (fits(item, item)) accepted.push(item)
     else relocate.push(item)
   }
@@ -270,7 +298,7 @@ export function reconcileStationsForLayout(
   const relocatedStationIds: StationId[] = []
   const fits = (id: StationId, point: RoomLayoutPoint) => {
     const radius = options.radiusFor(id)
-    return pointInLayout(layout, point, radius)
+    return pointInLayout(layout, point, radius + WALL_CLEARANCE)
       && !layout.decorBlockers.some((blocker) => overlaps(point, radius, blocker, blocker.radius))
       && !items.some((item) => !isWallItem(item) && overlaps(point, radius, item, options.itemRadiusFor(item)))
       && !accepted.some((station) => overlaps(point, radius, station, station.radius))

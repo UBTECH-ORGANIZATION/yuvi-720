@@ -96,7 +96,7 @@ test('the World Capsule opens Friends rooms in the Studio side panel', () => {
   assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[\s+\{ x: stations\.explore\.x, z: stations\.explore\.z, radius: STATION_RADIUS\.explore \},\s+\]/)
   assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
-  assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
+  assert.match(studio, /if \(zone === 'mission' && worldPickerIntentRef\.current\) return[\s\S]{0,120}if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
   assert.match(studio, /\{mode === 'friends' && \([\s\S]{0,180}<StationPanel[\s\S]{0,220}YuviStudio\.capsule\.title/)
   assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
   assert.equal(he['YuviStudio.capsule.title'], 'קפסולת עולם')
@@ -240,6 +240,12 @@ test('two fingers zoom and pan', () => {
 test('a cancelled gesture does not strand the drag', () => {
   assert.match(avatar, /addEventListener\('pointercancel', onPointerCancel\)/)
   assert.match(avatar, /removeEventListener\('pointercancel', onPointerCancel\)/)
+})
+
+test('left-drag camera orbit supports a complete turn', () => {
+  assert.doesNotMatch(avatar, /YAW_LIMIT/)
+  assert.match(avatar, /userYaw -= dx \* 0\.007/)
+  assert.match(avatar, /userYaw \+= velYaw/)
 })
 
 test('the tap test allows for a finger, not a mouse', () => {
