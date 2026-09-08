@@ -76,7 +76,7 @@ function statusOf(error: unknown): number {
 /** The streamed tool input is JSON text; undo the escapes so it reads as code. */
 function unescapeChunk(chunk: string): string {
   return chunk
-    .replace(/^\{"html":\s*"/, '')
+    .replace(/^\{"(?:html|patches)":\s*"/, '')
     .replace(/\\n/g, '\n')
     .replace(/\\t/g, '\t')
     .replace(/\\"/g, '"')
