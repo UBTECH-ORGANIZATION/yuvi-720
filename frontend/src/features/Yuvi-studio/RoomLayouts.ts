@@ -1,6 +1,6 @@
 import type { RoomItem, RoomStations, StationId, WallAnchor } from './RoomDesign.ts'
 
-export type RoomLayoutId = 'lab' | 'dome' | 'triangularObservatory'
+export type RoomLayoutId = 'lab' | 'adventurePark' | 'sportsArena' | 'creatorLoft'
 
 export interface RoomLayoutPoint {
   x: number
@@ -30,32 +30,12 @@ const LAB_STATIONS: RoomStations = {
   mission: { x: 11.2, z: -6.6, rot: -0.72, placed: true },
 }
 
-const DOME_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 3, rot: 0, placed: false },
-  room: { x: -13.8, z: 5.6, rot: 1.2, placed: false },
-  explore: { x: 13.6, z: -9.2, rot: -0.7, placed: true },
-  mission: { x: 9.6, z: 4.8, rot: 2.5, placed: true },
-}
-
-const OBSERVATORY_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 6, rot: 0, placed: false },
-  room: { x: -13, z: 9.6, rot: 1.1, placed: false },
-  explore: { x: 12.6, z: 9, rot: -1.1, placed: true },
-  mission: { x: 0, z: -13.2, rot: 0, placed: true },
-}
-
 const rectangleWalls = (halfX: number, backZ: number, frontZ: number): RoomLayoutWall[] => [
   { id: 'north', from: { x: -halfX, z: backZ }, to: { x: halfX, z: backZ } },
   { id: 'east', from: { x: halfX, z: backZ }, to: { x: halfX, z: frontZ } },
   { id: 'south', from: { x: halfX, z: frontZ }, to: { x: -halfX, z: frontZ } },
   { id: 'west', from: { x: -halfX, z: frontZ }, to: { x: -halfX, z: backZ } },
 ]
-
-const polygonWalls = (points: RoomLayoutPoint[]): RoomLayoutWall[] => points.map((from, index) => ({
-  id: `wall-${index + 1}`,
-  from,
-  to: points[(index + 1) % points.length],
-}))
 
 export function polygonArea(points: RoomLayoutPoint[]): number {
   return Math.abs(points.reduce((sum, point, index) => {
@@ -66,54 +46,35 @@ export function polygonArea(points: RoomLayoutPoint[]): number {
 
 const LAB_POLYGON = [{ x: -24.4, z: -25.8 }, { x: 24.4, z: -25.8 }, { x: 24.4, z: 32.7 }, { x: -24.4, z: 32.7 }]
 export const LAB_USABLE_AREA = polygonArea(LAB_POLYGON)
-const DOME_SEGMENTS = 64
-export const DOME_RADIUS = Math.sqrt((2 * LAB_USABLE_AREA) / (DOME_SEGMENTS * Math.sin((2 * Math.PI) / DOME_SEGMENTS)))
-const DOME_POLYGON = Array.from({ length: DOME_SEGMENTS }, (_, index) => {
-  const angle = -Math.PI / 2 + (index / DOME_SEGMENTS) * Math.PI * 2
-  return { x: Math.cos(angle) * DOME_RADIUS, z: Math.sin(angle) * DOME_RADIUS }
+const LAB_WALLS = rectangleWalls(24.4, -25.8, 32.7)
+const WORLD_CAMERA = { x: 0, y: 7.5, z: 22, targetX: 0, targetY: 0, targetZ: 0 }
+
+const rectangularWorld = (id: RoomLayoutId): RoomLayout => ({
+  id,
+  buildablePolygon: LAB_POLYGON,
+  walls: LAB_WALLS,
+  decorBlockers: [],
+  defaultStations: LAB_STATIONS,
+  camera: WORLD_CAMERA,
 })
-const BASE_OBSERVATORY_POLYGON = [{ x: 0, z: -26 }, { x: 26, z: 26 }, { x: -26, z: 26 }]
-const OBSERVATORY_SCALE = Math.sqrt(LAB_USABLE_AREA / polygonArea(BASE_OBSERVATORY_POLYGON))
-const OBSERVATORY_POLYGON = BASE_OBSERVATORY_POLYGON.map((point) => ({
-  x: point.x * OBSERVATORY_SCALE,
-  z: point.z * OBSERVATORY_SCALE,
-}))
 
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
-  lab: {
-    id: 'lab',
-    buildablePolygon: LAB_POLYGON,
-    walls: rectangleWalls(24.4, -25.8, 32.7),
-    decorBlockers: [],
-    defaultStations: LAB_STATIONS,
-    camera: { x: 0, y: 7.5, z: 22, targetX: 0, targetY: 0, targetZ: 0 },
-  },
-  dome: {
-    id: 'dome',
-    buildablePolygon: DOME_POLYGON,
-    walls: polygonWalls(DOME_POLYGON),
-    decorBlockers: [{ x: 0, z: -11.2 * (DOME_RADIUS / 28), radius: 1.4 }],
-    defaultStations: Object.fromEntries(Object.entries(DOME_STATIONS).map(([id, station]) => [id, {
-      ...station, x: station.x * (DOME_RADIUS / 28), z: station.z * (DOME_RADIUS / 28),
-    }])) as RoomStations,
-    camera: { x: 0, y: 8, z: 23.7, targetX: 0, targetY: 0, targetZ: 0 },
-  },
-  triangularObservatory: {
-    id: 'triangularObservatory',
-    buildablePolygon: OBSERVATORY_POLYGON,
-    walls: polygonWalls(OBSERVATORY_POLYGON),
-    decorBlockers: [{ x: 0, z: -10.4 * OBSERVATORY_SCALE, radius: 1.6 }],
-    defaultStations: Object.fromEntries(Object.entries(OBSERVATORY_STATIONS).map(([id, station]) => [id, {
-      ...station, x: station.x * OBSERVATORY_SCALE, z: station.z * OBSERVATORY_SCALE,
-    }])) as RoomStations,
-    camera: { x: 0, y: 9.5, z: 30, targetX: 0, targetY: 0, targetZ: 2.2 },
-  },
+  lab: rectangularWorld('lab'),
+  adventurePark: rectangularWorld('adventurePark'),
+  sportsArena: rectangularWorld('sportsArena'),
+  creatorLoft: rectangularWorld('creatorLoft'),
 }
 
-export const FREE_ROOM_LAYOUTS: RoomLayoutId[] = ['lab', 'dome']
+export const FREE_ROOM_LAYOUTS: RoomLayoutId[] = ['lab', 'adventurePark']
 
 export function isRoomLayoutId(value: unknown): value is RoomLayoutId {
-  return value === 'lab' || value === 'dome' || value === 'triangularObservatory'
+  return value === 'lab' || value === 'adventurePark' || value === 'sportsArena' || value === 'creatorLoft'
+}
+
+export function normalizeRoomLayoutId(value: unknown): RoomLayoutId {
+  if (value === 'dome') return 'adventurePark'
+  if (value === 'triangularObservatory') return 'creatorLoft'
+  return isRoomLayoutId(value) ? value : 'lab'
 }
 
 export function roomLayout(id: RoomLayoutId): RoomLayout {

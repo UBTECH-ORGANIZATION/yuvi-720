@@ -47,7 +47,7 @@ test('Friends room journeys use the cinematic state machine, swap once, and land
 })
 
 test('personal world changes use the same capsule transition and save only at world swap', () => {
-  assert.match(studio, /const chooseWorld = async \(layoutId: 'lab' \| 'dome' \| 'triangularObservatory'\) => \{[\s\S]{0,280}travelPhase !== 'idle'/)
+  assert.match(studio, /const chooseWorld = async \(layoutId: RoomLayoutId\) => \{[\s\S]{0,280}travelPhase !== 'idle'/)
   assert.match(studio, /controller\.play\(\{[\s\S]{0,500}void roomState\.setActiveLayout\(layoutId\)/)
   assert.match(studio, /onFailure: \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(true\)/)
 })

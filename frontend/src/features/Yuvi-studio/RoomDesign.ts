@@ -5,7 +5,7 @@
 // record with no three.js types in it, so the same layout can be rendered by
 // the studio, a thumbnail, or a future shared space.
 
-import { isRoomLayoutId, type RoomLayoutId } from './RoomLayouts.ts'
+import { normalizeRoomLayoutId, type RoomLayoutId } from './RoomLayouts.ts'
 
 export type RoomStyleId = 'lab' | 'wood' | 'carpet' | 'meadow' | 'court'
 export type WallStyleId = 'lab' | 'warm' | 'sky' | 'forest' | 'space'
@@ -49,10 +49,21 @@ export interface RoomStation {
  */
 export type RoomStations = Record<StationId, RoomStation>
 
+export interface RoomWorldDesign {
+  floor: RoomStyleId
+  wall: WallStyleId
+  mood: MoodId
+  items: RoomItem[]
+  storedItems: RoomItem[]
+}
+
 export interface RoomDesign {
   version: number
-  /** The shell currently rendering the learner's one shared room design. */
+  /** The world currently rendered in the Studio. */
   activeLayoutId: RoomLayoutId
+  /** Independent learner decoration for every world. */
+  worlds: Record<RoomLayoutId, RoomWorldDesign>
+  /** Active-world projection retained for existing Studio rendering/editing code. */
   floor: RoomStyleId
   wall: WallStyleId
   mood: MoodId
@@ -87,9 +98,25 @@ export const DEFAULT_STATIONS: RoomStations = {
   mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
 }
 
+const DEFAULT_WORLD = (): RoomWorldDesign => ({
+  floor: 'lab',
+  wall: 'lab',
+  mood: 'studio',
+  items: [],
+  storedItems: [],
+})
+
+export const DEFAULT_WORLDS: Record<RoomLayoutId, RoomWorldDesign> = {
+  lab: DEFAULT_WORLD(),
+  adventurePark: DEFAULT_WORLD(),
+  sportsArena: DEFAULT_WORLD(),
+  creatorLoft: DEFAULT_WORLD(),
+}
+
 export const DEFAULT_ROOM: RoomDesign = {
-  version: 2,
+  version: 3,
   activeLayoutId: 'lab',
+  worlds: DEFAULT_WORLDS,
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
@@ -108,6 +135,13 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
   return {
     version: room.version,
     activeLayoutId: room.activeLayoutId,
+    worlds: Object.fromEntries(Object.entries(room.worlds).map(([id, world]) => [id, {
+      floor: world.floor,
+      wall: world.wall,
+      mood: world.mood,
+      items: world.items.map(cloneItem),
+      storedItems: world.storedItems.map(cloneItem),
+    }])) as Record<RoomLayoutId, RoomWorldDesign>,
     floor: room.floor,
     wall: room.wall,
     mood: room.mood,
@@ -121,6 +155,45 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
     },
     introDone: room.introDone,
     tutorialDone: room.tutorialDone,
+  }
+}
+
+export function isSharedWorldItem(item: RoomItem): boolean {
+  return item.kind.startsWith('surprise_') || item.kind.startsWith('weekly_surprise_')
+}
+
+function activeWorldSnapshot(room: RoomDesign): RoomWorldDesign {
+  return {
+    floor: room.floor,
+    wall: room.wall,
+    mood: room.mood,
+    items: room.items.filter((item) => !isSharedWorldItem(item)).map((item) => ({ ...item })),
+    storedItems: room.storedItems.filter((item) => !isSharedWorldItem(item)).map((item) => ({ ...item })),
+  }
+}
+
+export function syncActiveWorld(room: RoomDesign): RoomDesign {
+  const next = cloneRoom(room)
+  next.worlds[next.activeLayoutId] = activeWorldSnapshot(next)
+  return next
+}
+
+/** Switches world without leaking ordinary furniture into the destination. */
+export function switchRoomWorld(room: RoomDesign, activeLayoutId: RoomLayoutId): RoomDesign {
+  const current = syncActiveWorld(room)
+  if (current.activeLayoutId === activeLayoutId) return current
+  const sharedItems = [...current.items, ...current.storedItems]
+    .filter(isSharedWorldItem)
+    .filter((item, index, all) => all.findIndex((candidate) => candidate.uid === item.uid) === index)
+  const destination = current.worlds[activeLayoutId]
+  return {
+    ...current,
+    activeLayoutId,
+    floor: destination.floor,
+    wall: destination.wall,
+    mood: destination.mood,
+    items: [...destination.items.map((item) => ({ ...item })), ...sharedItems.map((item) => ({ ...item }))],
+    storedItems: destination.storedItems.map((item) => ({ ...item })),
   }
 }
 
@@ -164,7 +237,7 @@ export function normalizeRoom(raw: unknown): RoomDesign {
   if (!raw || typeof raw !== 'object') return base
   const record = raw as Record<string, unknown>
 
-  if (isRoomLayoutId(record.activeLayoutId)) base.activeLayoutId = record.activeLayoutId
+  base.activeLayoutId = normalizeRoomLayoutId(record.activeLayoutId)
 
   if (ROOM_STYLES.includes(record.floor as RoomStyleId)) base.floor = record.floor as RoomStyleId
   if (WALL_STYLES.includes(record.wall as WallStyleId)) base.wall = record.wall as WallStyleId
@@ -210,6 +283,22 @@ export function normalizeRoom(raw: unknown): RoomDesign {
     }
   }
 
+  const rawWorlds = record.worlds as Record<string, unknown> | undefined
+  if (rawWorlds && typeof rawWorlds === 'object') {
+    for (const id of Object.keys(base.worlds) as RoomLayoutId[]) {
+      const rawWorld = rawWorlds[id]
+      if (!rawWorld || typeof rawWorld !== 'object') continue
+      const normalized = normalizeRoom({ ...rawWorld, activeLayoutId: id })
+      base.worlds[id] = {
+        floor: normalized.floor,
+        wall: normalized.wall,
+        mood: normalized.mood,
+        items: normalized.items.filter((item) => !isSharedWorldItem(item)),
+        storedItems: normalized.storedItems.filter((item) => !isSharedWorldItem(item)),
+      }
+    }
+  }
+
   const introDone = record.introDone === true
   const rawStations = record.stations as Record<string, unknown> | undefined
   if (rawStations && typeof rawStations === 'object') {
@@ -233,11 +322,17 @@ export function normalizeRoom(raw: unknown): RoomDesign {
   }
   base.introDone = introDone
   base.tutorialDone = record.tutorialDone === true
+  // Version 1/2 had one traveling design. Preserve it in the world where the
+  // learner last used it; all other new worlds begin as clean canvases.
+  if (!rawWorlds) base.worlds[base.activeLayoutId] = activeWorldSnapshot(base)
+  base.version = 3
   return base
 }
 
 /** Layout equality, used for the unsaved-changes guard. */
 export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
+  if (a.activeLayoutId !== b.activeLayoutId) return false
+  if (JSON.stringify(syncActiveWorld(a).worlds) !== JSON.stringify(syncActiveWorld(b).worlds)) return false
   if (a.floor !== b.floor || a.wall !== b.wall || a.mood !== b.mood) return false
   if (a.introDone !== b.introDone || a.tutorialDone !== b.tutorialDone) return false
   for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {

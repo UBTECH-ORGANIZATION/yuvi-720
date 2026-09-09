@@ -20,7 +20,8 @@ CATALOG: dict[str, dict[str, Any]] = {
     "lightsaber": {"price": 70, "slot": "handR", "tier": 2},
     "heroarmor": {"price": 120, "slot": "body", "tier": 3},
     "dragonwings": {"price": 120, "slot": "back", "tier": 3},
-    "layout:triangularObservatory": {"price": 1500, "slot": "room", "tier": 4, "unlock": "room", "completed_components": 10},
+    "layout:sportsArena": {"price": 900, "slot": "room", "tier": 3, "unlock": "room", "completed_components": 6},
+    "layout:creatorLoft": {"price": 1500, "slot": "room", "tier": 4, "unlock": "room", "completed_components": 10},
 }
 
 

@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { RoomLayoutId } from './RoomLayouts'
 
-const WORLD_IDS: RoomLayoutId[] = ['lab', 'dome', 'triangularObservatory']
+const WORLD_IDS: RoomLayoutId[] = ['lab', 'adventurePark', 'sportsArena', 'creatorLoft']
 
 interface HolographicWorldSelectorProps {
+  compact?: boolean
   open: boolean
   busy: boolean
   activeLayoutId: RoomLayoutId
   labels: Record<RoomLayoutId, string>
+  lockedIds: RoomLayoutId[]
+  lockedLabel: string
+  currentLabel: string
   onSelect: (layoutId: RoomLayoutId) => void
 }
 
@@ -18,6 +22,7 @@ type WorldProjection = {
   glowMaterials: THREE.Material[]
   particles: THREE.Points
   phase: number
+  lock: THREE.Group
 }
 
 const material = (color: number, opacity: number, wireframe = false) => new THREE.MeshBasicMaterial({
@@ -95,74 +100,96 @@ function buildLab() {
   return { group, glowMaterials: [cyan, violet] }
 }
 
-function buildDome() {
+function buildAdventurePark() {
   const group = projectionBase()
-  const cyan = material(0x64f5ff, 0.52, true)
-  const violet = material(0x997cff, 0.42)
-  const floor = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.1, 40), material(0x3d64d8, 0.3))
+  const green = material(0x64ff91, 0.62)
+  const amber = material(0xffd45f, 0.58)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 1.45), material(0x335262, 0.32))
   floor.position.y = 0.02
   group.add(floor)
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(1.08, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), cyan)
-  dome.scale.y = 0.82
-  dome.position.y = 0.07
-  group.add(dome)
-  const planet = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 12), violet)
-  planet.position.set(-0.18, 0.62, 0)
-  planet.userData.float = true
-  group.add(planet)
-  const orbit = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.018, 8, 40), material(0x73efff, 0.72))
-  orbit.position.copy(planet.position)
-  orbit.rotation.x = Math.PI / 2.5
-  orbit.userData.spin = -0.5
-  group.add(orbit)
-  return { group, glowMaterials: [cyan, violet] }
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 0.1), material(0x62dba0, 0.28))
+  wall.position.set(0, 0.62, -0.65)
+  group.add(wall)
+  for (let index = 0; index < 14; index += 1) {
+    const hold = new THREE.Mesh(new THREE.DodecahedronGeometry(0.07), index % 3 ? green : amber)
+    hold.position.set(-0.72 + (index % 7) * 0.24, 0.3 + (index % 4) * 0.24, -0.72)
+    group.add(hold)
+  }
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 0.48), amber)
+  ramp.position.set(-0.55, 0.2, 0.35)
+  ramp.rotation.z = -0.22
+  group.add(ramp)
+  return { group, glowMaterials: [green, amber] }
 }
 
-function buildObservatory() {
+function buildSportsArena() {
   const group = projectionBase()
   const cyan = material(0x64efff, 0.68)
-  const violet = material(0xa275ff, 0.46)
-  const vertices = [
-    new THREE.Vector3(0, 1.5, 0),
-    new THREE.Vector3(-1.05, 0.05, 0.72),
-    new THREE.Vector3(1.05, 0.05, 0.72),
-    new THREE.Vector3(0, 0.05, -1.08),
-  ]
-  const edges = [[0, 1], [0, 2], [0, 3], [1, 2], [2, 3], [3, 1]]
-  edges.forEach(([from, to], index) => {
-    const geometry = new THREE.BufferGeometry().setFromPoints([vertices[from], vertices[to]])
-    group.add(new THREE.Line(geometry, index % 2 ? violet : cyan))
-  })
-  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), material(0xb6fbff, 0.68, true))
-  core.position.y = 0.62
-  core.userData.spin = 1.1
-  group.add(core)
-  for (let index = 0; index < 3; index++) {
-    const energy = new THREE.Mesh(new THREE.TorusGeometry(0.32 + index * 0.16, 0.012, 6, 32), index % 2 ? violet : cyan)
-    energy.rotation.x = Math.PI / 2
-    energy.position.y = 0.32 + index * 0.28
-    energy.userData.spin = index % 2 ? -0.8 : 0.8
-    group.add(energy)
+  const red = material(0xff5d62, 0.58)
+  const court = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 1.5), material(0x2b7290, 0.3))
+  court.position.y = 0.02
+  group.add(court)
+  const centre = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.018, 8, 32), cyan)
+  centre.rotation.x = Math.PI / 2
+  centre.position.y = 0.1
+  group.add(centre)
+  for (const x of [-0.78, 0.78]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.75, 0.04), red)
+    post.position.set(x, 0.45, 0)
+    group.add(post)
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 8, 24), red)
+    hoop.position.set(x > 0 ? x - 0.12 : x + 0.12, 0.72, 0)
+    hoop.rotation.y = Math.PI / 2
+    group.add(hoop)
   }
-  return { group, glowMaterials: [cyan, violet] }
+  return { group, glowMaterials: [cyan, red] }
 }
 
-export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, onSelect }: HolographicWorldSelectorProps) {
+function buildCreatorLoft() {
+  const group = projectionBase()
+  const pink = material(0xff58ac, 0.64)
+  const cyan = material(0x58eaff, 0.6)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 1.45), material(0x62486d, 0.28))
+  floor.position.y = 0.02
+  group.add(floor)
+  const stage = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.18, 0.48), pink)
+  stage.position.set(0, 0.18, -0.42)
+  group.add(stage)
+  for (let index = 0; index < 9; index += 1) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.3 + (index % 4) * 0.13, 0.08), index % 2 ? cyan : pink)
+    bar.position.set(-0.55 + index * 0.14, 0.48, -0.68)
+    bar.userData.float = true
+    group.add(bar)
+  }
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.48, 0.08), cyan)
+  screen.position.set(0.55, 0.65, 0.3)
+  group.add(screen)
+  return { group, glowMaterials: [pink, cyan] }
+}
+
+export function HolographicWorldSelector({ compact = false, open, busy, activeLayoutId, labels, lockedIds, lockedLabel, currentLabel, onSelect }: HolographicWorldSelectorProps) {
   const mountRef = useRef<HTMLDivElement | null>(null)
+  const viewportRefs = useRef<Partial<Record<RoomLayoutId, HTMLSpanElement>>>({})
   const [activated, setActivated] = useState(open)
+  const [selectedId, setSelectedId] = useState<RoomLayoutId | null>(null)
   const openRef = useRef(open)
   const busyRef = useRef(busy)
   const selectRef = useRef(onSelect)
   const hoveredRef = useRef<RoomLayoutId | null>(null)
   const selectedRef = useRef<RoomLayoutId | null>(null)
+  const lockedRef = useRef(new Set(lockedIds))
   const requestSelectionRef = useRef<(id: RoomLayoutId) => void>(() => {})
 
   useEffect(() => {
     openRef.current = open
     if (open) setActivated(true)
-    else selectedRef.current = null
+    else {
+      selectedRef.current = null
+      setSelectedId(null)
+    }
   }, [open])
   useEffect(() => { busyRef.current = busy }, [busy])
+  useEffect(() => { lockedRef.current = new Set(lockedIds) }, [lockedIds])
   useEffect(() => { selectRef.current = onSelect }, [onSelect])
 
   useEffect(() => {
@@ -178,61 +205,44 @@ export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, o
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40)
-    camera.position.set(0, 1.3, 10)
-    const builders = [buildLab, buildDome, buildObservatory]
+    camera.position.set(0, 0.72, compact ? 5.8 : 6.4)
+    const builders = [buildLab, buildAdventurePark, buildSportsArena, buildCreatorLoft]
     const worlds: WorldProjection[] = WORLD_IDS.map((id, index) => {
       const built = builders[index]()
       const particles = particleCloud(reduceMotion ? 24 : 58, 1.45, index === 2 ? 0xac78ff : 0x69f4ff)
       built.group.add(particles)
+      const lock = new THREE.Group()
+      const lockMaterial = material(0xffd76a, 0.88)
+      const lockBody = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.1), lockMaterial)
+      const lockShackle = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 20, Math.PI), lockMaterial)
+      lockShackle.position.y = 0.14
+      lockShackle.rotation.z = Math.PI
+      lock.add(lockBody, lockShackle)
+      lock.position.set(0, 1.65, 0)
+      built.group.add(lock)
       built.group.userData.worldId = id
       built.group.traverse((object) => { object.userData.worldId = id })
       scene.add(built.group)
-      return { id, ...built, particles, phase: index * 1.9 }
+      return { id, ...built, particles, lock, phase: index * 1.9 }
     })
-    const raycaster = new THREE.Raycaster()
-    const pointer = new THREE.Vector2(4, 4)
     let openProgress = 0
     let last = performance.now()
     let frame = 0
     let selectionStarted = 0
-    let worldSpacing = 3.15
 
     const resize = () => {
       const width = mount.clientWidth || 1
       const height = mount.clientHeight || 1
       renderer.setSize(width, height, false)
-      camera.aspect = width / height
-      camera.position.z = width < 560 ? 18 : 10
-      worldSpacing = width < 560 ? 2 : 3.15
-      camera.updateProjectionMatrix()
     }
-    const hitTest = (event: PointerEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect()
-      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1)
-      raycaster.setFromCamera(pointer, camera)
-      return raycaster.intersectObjects(worlds.map((world) => world.group), true)
-        .map((hit) => hit.object.userData.worldId as RoomLayoutId | undefined)
-        .find(Boolean) ?? null
-    }
-    const onPointerMove = (event: PointerEvent) => {
-      hoveredRef.current = openRef.current && !busyRef.current ? hitTest(event) : null
-      renderer.domElement.style.cursor = hoveredRef.current ? 'pointer' : 'default'
-    }
-    const onPointerLeave = () => { hoveredRef.current = null; renderer.domElement.style.cursor = 'default' }
     const requestSelection = (id: RoomLayoutId) => {
       if (!openRef.current || busyRef.current || selectedRef.current) return
       selectedRef.current = id
+      setSelectedId(id)
       selectionStarted = performance.now()
       window.setTimeout(() => selectRef.current(id), reduceMotion ? 120 : 460)
     }
     requestSelectionRef.current = requestSelection
-    const onPointerUp = (event: PointerEvent) => {
-      const id = hitTest(event)
-      if (id) requestSelection(id)
-    }
-    renderer.domElement.addEventListener('pointermove', onPointerMove)
-    renderer.domElement.addEventListener('pointerleave', onPointerLeave)
-    renderer.domElement.addEventListener('pointerup', onPointerUp)
     const observer = new ResizeObserver(resize)
     observer.observe(mount)
     resize()
@@ -245,16 +255,17 @@ export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, o
       const selected = selectedRef.current
       worlds.forEach((world, index) => {
         const hovered = hoveredRef.current === world.id
+        world.lock.visible = lockedRef.current.has(world.id)
+        world.lock.position.y = 1.65 + (reduceMotion ? 0 : Math.sin(now * 0.0025 + world.phase) * 0.06)
         const selectedAge = selected === world.id ? Math.min(1, (now - selectionStarted) / 460) : 0
         const stagger = Math.max(0, Math.min(1, openProgress * 1.45 - index * 0.12))
         const visibility = selected && selected !== world.id ? Math.max(0, 1 - selectedAge * 1.7) : stagger
         const hoverScale = hovered ? 1.2 : 1
         const selectedScale = selected === world.id ? 1 + Math.sin(selectedAge * Math.PI) * 0.32 : 1
-        const scale = Math.max(0.001, visibility * hoverScale * selectedScale)
+        const scale = Math.max(0.001, visibility * hoverScale * selectedScale * (compact ? 1.02 : 1))
         world.group.scale.lerp(new THREE.Vector3(scale, scale, scale), Math.min(1, dt * 12))
-        const targetX = (index - 1) * worldSpacing
-        world.group.position.x += (targetX - world.group.position.x) * Math.min(1, dt * 8)
-        world.group.position.y = -2.65 + stagger * 3.1 + Math.sin(now * 0.0014 + world.phase) * 0.09
+        world.group.position.x = 0
+        world.group.position.y = -2.45 + stagger * 2.78 + Math.sin(now * 0.0014 + world.phase) * 0.06
         world.group.rotation.y += dt * (hovered ? 0.75 : 0.24)
         world.group.rotation.x += ((hovered ? -0.12 : 0) - world.group.rotation.x) * Math.min(1, dt * 8)
         world.particles.rotation.y -= dt * (hovered ? 1.25 : 0.32)
@@ -267,7 +278,24 @@ export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, o
           if (child.userData.float) child.position.y = 0.62 + Math.sin(now * 0.002) * 0.08
         })
       })
-      renderer.render(scene, camera)
+      const canvasRect = renderer.domElement.getBoundingClientRect()
+      renderer.setScissorTest(true)
+      worlds.forEach((world) => {
+        const viewport = viewportRefs.current[world.id]
+        if (!viewport) return
+        const rect = viewport.getBoundingClientRect()
+        const width = Math.max(1, rect.width)
+        const height = Math.max(1, rect.height)
+        const x = rect.left - canvasRect.left
+        const y = canvasRect.bottom - rect.bottom
+        renderer.setViewport(x, y, width, height)
+        renderer.setScissor(x, y, width, height)
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
+        worlds.forEach((entry) => { entry.group.visible = entry === world })
+        renderer.render(scene, camera)
+      })
+      worlds.forEach((world) => { world.group.visible = true })
       frame = requestAnimationFrame(render)
     }
     frame = requestAnimationFrame(render)
@@ -275,9 +303,6 @@ export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, o
       cancelAnimationFrame(frame)
       observer.disconnect()
       requestSelectionRef.current = () => {}
-      renderer.domElement.removeEventListener('pointermove', onPointerMove)
-      renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
-      renderer.domElement.removeEventListener('pointerup', onPointerUp)
       scene.traverse((object) => {
         const renderable = object as THREE.Mesh
         renderable.geometry?.dispose()
@@ -290,22 +315,37 @@ export function HolographicWorldSelector({ open, busy, activeLayoutId, labels, o
     }
   }, [activated])
 
-  return <div className={`ys-world-projection${open ? ' is-open' : ''}`} aria-hidden={!open}>
+  return <div className={`ys-world-projection${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`} aria-hidden={!open}>
     <div className="ys-world-projection__canvas" ref={mountRef} />
     <div className="ys-world-projection__targets">
       {WORLD_IDS.map((id) => (
         <button
           key={id}
           type="button"
-          aria-label={labels[id]}
+          className={selectedId === id ? 'is-selected' : undefined}
+          aria-label={`${labels[id]}${lockedIds.includes(id) ? `, ${lockedLabel}` : ''}`}
           aria-current={activeLayoutId === id ? 'true' : undefined}
+          aria-pressed={selectedId === id}
           disabled={!open || busy}
           onPointerEnter={() => { hoveredRef.current = id }}
           onPointerLeave={() => { hoveredRef.current = null }}
           onFocus={() => { hoveredRef.current = id }}
           onBlur={() => { hoveredRef.current = null }}
           onClick={() => requestSelectionRef.current(id)}
-        />
+        >
+          <span
+            className="ys-world-card__hologram"
+            ref={(element) => {
+              if (element) viewportRefs.current[id] = element
+              else delete viewportRefs.current[id]
+            }}
+            aria-hidden="true"
+          />
+          <span className="ys-world-card__state">
+            {activeLayoutId === id ? currentLabel : lockedIds.includes(id) ? lockedLabel : ''}
+          </span>
+          <span className="ys-world-card__name">{labels[id]}</span>
+        </button>
       ))}
     </div>
   </div>

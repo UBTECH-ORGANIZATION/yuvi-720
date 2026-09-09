@@ -21,7 +21,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
 import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
 import { roomLayout, wallAnchorAt, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
-import { createDomePlanetarium, type DomePlanetarium, type PlanetariumProgress } from './DomePlanetarium'
+import { createStudentWorldEnvironment } from './StudentWorldEnvironment'
 export type LabRoomQuality = 'high' | 'low'
 
 export interface LabRoomOptions {
@@ -33,8 +33,6 @@ export interface LabRoomOptions {
   deckY?: number
   /** Initial LED / hologram accent (usually the learner's glow colour). */
   accent?: THREE.ColorRepresentation
-  /** Real Brain/xAPI rollup; absent means the constellation has no progress evidence. */
-  planetariumProgress?: PlanetariumProgress | null
 }
 
 export interface LabRoomBounds {
@@ -182,7 +180,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const HALF_X = 24.4
   const BACK_Z = -25.8
   const FRONT_Z = 32.7
-  const CEIL_Y = FLOOR_Y + (layoutId === 'lab' ? 9.5 : layoutId === 'dome' ? 18.5 : 16)
+  const CEIL_Y = FLOOR_Y + (layoutId === 'lab' ? 9.5 : 12)
   const DEPTH = FRONT_Z - BACK_Z
   const MID_Z = (FRONT_Z + BACK_Z) / 2
   const layoutXs = activeLayout.buildablePolygon.map((point) => point.x)
@@ -396,89 +394,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   if (layoutId !== 'lab') {
     legacyShell.forEach((mesh) => { mesh.visible = false })
-    const shellMaterial = track(new THREE.MeshStandardMaterial({
-      color: layoutId === 'dome' ? 0x111a3b : 0x162b46,
-      roughness: layoutId === 'dome' ? 0.82 : 0.62,
-      metalness: layoutId === 'dome' ? 0.18 : 0.46,
-      side: layoutId === 'dome' ? THREE.BackSide : THREE.DoubleSide,
-      envMapIntensity: 0.12,
-    }))
-    const shellFloorMaterial = track(new THREE.MeshBasicMaterial({
-      color: layoutId === 'dome' ? 0x08152a : 0x000000,
-    }))
-    const shellGlowMaterial = track(new THREE.MeshBasicMaterial({
-      color: layoutId === 'dome' ? 0x4eeef0 : 0x8ef2b0,
-      transparent: true,
-      opacity: 0.32,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      toneMapped: false,
-    }))
-    const footprint = activeLayout.buildablePolygon.map((point) => new THREE.Vector2(point.x, point.z))
-    const shellRadius = Math.max(...footprint.map((point) => point.length()))
-    const shape = new THREE.Shape(footprint)
-    const shellFloorGeometry = layoutId === 'dome'
-      ? new THREE.CircleGeometry(shellRadius, 64)
-      : new THREE.ShapeGeometry(shape)
-    const shellFloor = new THREE.Mesh(track(shellFloorGeometry), shellFloorMaterial)
-    shellFloor.rotation.x = -Math.PI / 2
-    shellFloor.position.y = FLOOR_Y + 0.006
-    shellFloor.receiveShadow = false
-    group.add(shellFloor)
-    floorStyleMaterial = shellFloorMaterial
-    const outlinePoints = layoutId === 'dome'
-      ? Array.from({ length: 64 }, (_, index) => {
-          const angle = (index / 64) * Math.PI * 2
-          return new THREE.Vector3(Math.cos(angle) * shellRadius, FLOOR_Y + 0.035, Math.sin(angle) * shellRadius)
-        })
-      : footprint.map((point) => new THREE.Vector3(point.x, FLOOR_Y + 0.035, point.y))
-    const outline = new THREE.LineLoop(
-      track(new THREE.BufferGeometry().setFromPoints(outlinePoints)),
-      shellGlowMaterial,
-    )
-    group.add(outline)
-
-    if (layoutId === 'dome') {
-      const domeWalls = new THREE.Mesh(track(new THREE.CylinderGeometry(shellRadius, shellRadius, 16, 64, 1, true)), shellMaterial)
-      domeWalls.position.y = FLOOR_Y + 8
-      group.add(domeWalls)
-      const domeRoof = new THREE.Mesh(track(new THREE.SphereGeometry(shellRadius, 64, 28, 0, Math.PI * 2, 0, Math.PI / 2)), shellMaterial)
-      domeRoof.scale.y = 0.62
-      domeRoof.position.y = FLOOR_Y
-      group.add(domeRoof)
-    } else {
-      const wallTopY = FLOOR_Y + 7.6
-      const centreZ = footprint.reduce((sum, point) => sum + point.y, 0) / footprint.length
-      const apex = new THREE.Vector3(0, FLOOR_Y + 15.6, centreZ)
-      const observatoryPanels = [0x162b46, 0x10243c, 0x1b3552].map((color) => track(new THREE.MeshStandardMaterial({
-        color, roughness: 0.62, metalness: 0.46, side: THREE.DoubleSide, envMapIntensity: 0.12,
-      })))
-      const trussMaterial = track(new THREE.LineBasicMaterial({
-        color: 0x7fe4ff, transparent: true, opacity: 0.34, depthWrite: false, toneMapped: false,
-      }))
-      const mintMaterial = track(new THREE.LineBasicMaterial({
-        color: 0x8ef2b0, transparent: true, opacity: 0.22, depthWrite: false, toneMapped: false,
-      }))
-      const face = (points: THREE.Vector3[], material: THREE.Material, indices: number[]) => {
-        const geometry = track(new THREE.BufferGeometry().setFromPoints(points))
-        geometry.setIndex(indices)
-        geometry.computeVertexNormals()
-        const mesh = new THREE.Mesh(geometry, material)
-        group.add(mesh)
-      }
-      footprint.forEach((point, index) => {
-        const next = footprint[(index + 1) % footprint.length]
-        const bottomStart = new THREE.Vector3(point.x, FLOOR_Y, point.y)
-        const bottomEnd = new THREE.Vector3(next.x, FLOOR_Y, next.y)
-        const topStart = new THREE.Vector3(point.x, wallTopY, point.y)
-        const topEnd = new THREE.Vector3(next.x, wallTopY, next.y)
-        face([bottomStart, bottomEnd, topEnd, topStart], observatoryPanels[index], [0, 1, 2, 0, 2, 3])
-        face([topStart, topEnd, apex], observatoryPanels[index], [0, 1, 2])
-        const midpoint = topStart.clone().lerp(topEnd, 0.5)
-        group.add(new THREE.Line(track(new THREE.BufferGeometry().setFromPoints([bottomStart, topStart, apex, topEnd, bottomEnd])), trussMaterial))
-        group.add(new THREE.Line(track(new THREE.BufferGeometry().setFromPoints([topStart, midpoint.clone().lerp(apex, 0.55), topEnd])), mintMaterial))
-      })
-    }
+    const environment = createStudentWorldEnvironment({ id: layoutId, floorY: FLOOR_Y, rich, reduceMotion })
+    group.add(environment.group)
+    floorStyleMaterial = environment.floorMaterial
+    updaters.push((elapsed) => environment.update(elapsed))
+    disposables.push(environment)
   }
 
   // The playable floor is deliberately bounded; this distant environment is
@@ -793,17 +713,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     explore: { ...DEFAULT_STATIONS.explore },
     mission: { ...DEFAULT_STATIONS.mission },
   }
-  const planetarium: DomePlanetarium | null = layoutId === 'dome'
-    ? createDomePlanetarium({
-        floorY: FLOOR_Y,
-        radius: Math.max(...activeLayout.buildablePolygon.map((point) => Math.hypot(point.x, point.z))),
-        rich,
-        reduceMotion,
-        progress: options.planetariumProgress ?? null,
-        stations,
-      })
-    : null
-  if (planetarium) group.add(planetarium.group)
   // The bench and its floor shadow move as one.
   const bench = new THREE.Group()
   group.add(bench)
@@ -1858,7 +1767,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       pad.marker.position.x = padAt.x
       pad.marker.position.z = padAt.z
     }
-    planetarium?.setStations(stations)
   }
   setStations(stations)
 
@@ -2311,9 +2219,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   const setRoomStyle = (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => {
     const texture = makeFloorTexture(style.floor)
-    floorStyleMaterial.map = layoutId === 'triangularObservatory'
-      ? null
-      : texture ?? (layoutId === 'lab' ? floorTexture : null)
+    floorStyleMaterial.map = texture ?? (layoutId === 'lab' ? floorTexture : null)
     floorStyleMaterial.needsUpdate = true
 
     const tint = WALL_TINTS[style.wall] ?? WALL_TINTS.lab
@@ -2324,7 +2230,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     moodWarm = mood.warm
     moodAccent = mood.accent
     windowLight.intensity = (rich ? 5 : 3) * mood.window
-    planetarium?.setMood(style.mood)
     if ((scene.fog as THREE.FogExp2 | null)?.color) (scene.fog as THREE.FogExp2).color.setHex(mood.fog)
   }
 
@@ -2342,7 +2247,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   const update = (t: number, dt: number) => {
-    planetarium?.update(t)
     if (!reduceMotion) {
       for (const built of builtItems.values()) {
         if (built.kind !== 'weekly_surprise_covered' && built.kind !== 'weekly_surprise_ready') continue
@@ -2415,10 +2319,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   const dispose = () => {
-    if (planetarium) {
-      group.remove(planetarium.group)
-      planetarium.dispose()
-    }
     scene.remove(group)
     group.traverse((obj: any) => {
       if (obj.isMesh || obj.isPoints) {

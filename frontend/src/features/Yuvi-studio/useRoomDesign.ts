@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
-  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom,
+  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom, switchRoomWorld, syncActiveWorld,
   type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallAnchor, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
@@ -106,17 +106,15 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
 
-  /**
-   * One room travels through different shells. Legal placements stay untouched;
-   * only props that cannot fit the target layout are repositioned or stored.
-   */
+  /** Each world restores its own design; stations and surprise rewards travel. */
   const setActiveLayout = async (activeLayoutId: RoomLayoutId) => {
     const current = cloneRoom(roomRef.current)
     if (current.activeLayoutId === activeLayoutId) return { ok: true, relocatedUids: [] as string[], hiddenItems: [] as RoomItem[] }
-    const reconciliation = reconcileItemsForLayout(roomLayout(activeLayoutId), current.items, current.storedItems, {
+    const switched = switchRoomWorld(current, activeLayoutId)
+    const reconciliation = reconcileItemsForLayout(roomLayout(activeLayoutId), switched.items, switched.storedItems, {
       radiusFor: (item) => (roomItemSpec(item.kind)?.radius ?? 0.5) * ROOM_PROP_SCALE,
       isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
-      sourceLayout: roomLayout(current.activeLayoutId),
+      sourceLayout: roomLayout(activeLayoutId),
     })
     const stationReconciliation = reconcileStationsForLayout(roomLayout(activeLayoutId), current.stations, reconciliation.items, {
       radiusFor: () => 1.6,
@@ -124,8 +122,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
       isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
     })
     const next = {
-      ...current,
-      activeLayoutId,
+      ...switched,
       items: reconciliation.items,
       storedItems: reconciliation.storedItems,
       stations: stationReconciliation.stations,
@@ -167,7 +164,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
 
   const save = async (next?: RoomDesign) => {
     if (saving) return false
-    const payload = next ?? room
+    const payload = syncActiveWorld(next ?? room)
     setSaving(true)
     let ok = false
     try {

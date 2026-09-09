@@ -57,7 +57,9 @@ export function useStudioDesign(autoLoad = true) {
       const catalog = await getShop()
       setShop(Object.fromEntries(catalog.items.map((item) => [item.id, item])))
       setWallet(catalog.wallet)
-      setPropUnlocks(new Set(catalog.roomUnlocks ?? []))
+      const roomUnlocks = new Set(catalog.roomUnlocks ?? [])
+      if (roomUnlocks.has('layout:triangularObservatory')) roomUnlocks.add('layout:creatorLoft')
+      setPropUnlocks(roomUnlocks)
       setStreak(catalog.streak ?? 0)
       setRequirements(Object.fromEntries((catalog.unlocks ?? []).map((row) => [row.id, row.requirementKey])))
       // A cosmetic granted by this very request would otherwise stay locked

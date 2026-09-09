@@ -121,6 +121,12 @@ async def _screen_layout(payload: dict, room_unlocks: list[str]) -> dict:
     return payload
 
 
+async def _screen_room_items(payload: dict, held: set[str]) -> dict:
+    with patch.object(route.unlock_sync, "held_props", AsyncMock(return_value=held)):
+        await route._screen_room_items(LEARNER, payload)
+    return payload
+
+
 def _design(**equipped) -> dict:
     slots = {"headTop": None, "face": None, "back": None, "handR": None, "body": None}
     return {**DESIGN, "equipped": {**slots, **equipped}}
@@ -162,15 +168,38 @@ class YuviWearsOnlyWhatWasEarned(unittest.IsolatedAsyncioTestCase):
 
 
 class RoomLayoutsRequireTheirUnlock(unittest.IsolatedAsyncioTestCase):
-    async def test_forged_observatory_selection_returns_to_lab(self) -> None:
-        payload = {"room": {"activeLayoutId": "triangularObservatory"}}
+    async def test_forged_locked_world_selection_returns_to_lab(self) -> None:
+        payload = {"room": {"activeLayoutId": "sportsArena"}}
         screened = await _screen_layout(payload, room_unlocks=[])
         self.assertEqual(screened["room"]["activeLayoutId"], "lab")
 
-    async def test_purchased_observatory_selection_is_preserved(self) -> None:
+    async def test_purchased_locked_world_selection_is_preserved(self) -> None:
+        payload = {"room": {"activeLayoutId": "creatorLoft"}}
+        screened = await _screen_layout(payload, room_unlocks=["layout:creatorLoft"])
+        self.assertEqual(screened["room"]["activeLayoutId"], "creatorLoft")
+
+    async def test_legacy_observatory_unlock_migrates_to_creator_loft(self) -> None:
         payload = {"room": {"activeLayoutId": "triangularObservatory"}}
         screened = await _screen_layout(payload, room_unlocks=["layout:triangularObservatory"])
-        self.assertEqual(screened["room"]["activeLayoutId"], "triangularObservatory")
+        self.assertEqual(screened["room"]["activeLayoutId"], "creatorLoft")
+
+    async def test_locked_furniture_cannot_hide_in_an_inactive_world(self) -> None:
+        payload = {
+            "room": {
+                "items": [{"kind": "desk"}],
+                "worlds": {
+                    "creatorLoft": {
+                        "items": [{"kind": "podium"}, {"kind": "chair"}],
+                        "storedItems": [{"kind": "rocketModel"}],
+                    },
+                },
+            },
+        }
+        screened = await _screen_room_items(payload, held=set())
+        world = screened["room"]["worlds"]["creatorLoft"]
+        self.assertEqual(world["items"], [{"kind": "chair"}])
+        self.assertEqual(world["storedItems"], [])
+        self.assertEqual(screened["room"]["items"], [{"kind": "desk"}])
 
     async def test_the_old_field_is_not_a_way_around_the_screen(self) -> None:
         """A design written to `avatar` is still served back as the design (see

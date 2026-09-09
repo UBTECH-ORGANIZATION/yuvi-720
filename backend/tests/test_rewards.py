@@ -219,29 +219,31 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(result["reason"], "not_for_sale")
 
-    async def test_observatory_requires_unique_component_completions_before_spending(self) -> None:
+    async def test_creator_loft_requires_unique_component_completions_before_spending(self) -> None:
         with patch.object(wallet, "count_distinct_completed_components", return_value=9):
-            result = await rewards.purchase_asset(LEARNER, "layout:triangularObservatory")
+            result = await rewards.purchase_asset(LEARNER, "layout:creatorLoft")
         self.assertFalse(result["ok"])
         self.assertEqual(result["reason"], "prerequisite")
         self.assertEqual(result["completedComponents"], 9)
         self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 0)
 
-    async def test_catalog_exposes_observatory_completion_progress_without_changing_price(self) -> None:
-        observatory = next(item for item in catalog.catalog_for_client(completed_components=6) if item["id"] == "layout:triangularObservatory")
-        self.assertEqual(observatory["completedComponents"], 10)
-        self.assertEqual(observatory["completedComponentsCurrent"], 6)
-        self.assertEqual(observatory["price"], 1500)
+    async def test_catalog_exposes_both_world_progress_requirements(self) -> None:
+        worlds = {item["id"]: item for item in catalog.catalog_for_client(completed_components=6) if item["id"].startswith("layout:")}
+        self.assertEqual(worlds["layout:sportsArena"]["completedComponents"], 6)
+        self.assertEqual(worlds["layout:sportsArena"]["price"], 900)
+        self.assertEqual(worlds["layout:creatorLoft"]["completedComponents"], 10)
+        self.assertEqual(worlds["layout:creatorLoft"]["completedComponentsCurrent"], 6)
+        self.assertEqual(worlds["layout:creatorLoft"]["price"], 1500)
 
-    async def test_observatory_spends_server_price_and_grants_a_room_unlock(self) -> None:
+    async def test_creator_loft_spends_server_price_and_grants_a_room_unlock(self) -> None:
         wallet_state = await wallet._load_wallet(LEARNER)
         wallet_state["balance"] = 1500
         await wallet._store_wallet(LEARNER, wallet_state)
         with patch.object(wallet, "count_distinct_completed_components", return_value=10):
-            result = await rewards.purchase_asset(LEARNER, "layout:triangularObservatory")
+            result = await rewards.purchase_asset(LEARNER, "layout:creatorLoft")
         self.assertTrue(result["ok"])
         self.assertEqual(result["price"], 1500)
-        self.assertIn("layout:triangularObservatory", self._room_unlocks)
+        self.assertIn("layout:creatorLoft", self._room_unlocks)
         self.assertEqual(result["wallet"]["balance"], 0)
 
     async def test_ledger_records_every_movement(self) -> None:

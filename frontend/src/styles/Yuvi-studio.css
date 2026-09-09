@@ -407,17 +407,50 @@
   transition: opacity .32s ease-out, transform .38s cubic-bezier(.2, .72, .24, 1);
 }
 .ys-world-projection.is-open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.ys-world-projection__canvas { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .ys-world-projection__canvas, .ys-world-projection__canvas canvas { inline-size: 100%; block-size: 100%; }
-.ys-world-projection__canvas canvas { display: block; touch-action: none; }
+.ys-world-projection__canvas canvas { display: block; pointer-events: none; }
 .ys-world-projection__targets {
-  position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center;
+  position: absolute; inset: 0; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center;
   direction: ltr; pointer-events: none;
 }
 .ys-world-projection__targets button {
   inline-size: 100%; block-size: 52%; border: 0; padding: 0; background: transparent; color: transparent;
   pointer-events: auto; cursor: pointer; outline: 0;
 }
-.ys-world-projection__targets button:focus-visible { outline: 2px solid #7cf7ff; outline-offset: -18px; border-radius: 50%; }
+.ys-world-projection__targets strong { display: none; }
+.ys-world-projection.is-compact {
+  position: relative; inset: auto; inline-size: 100%; block-size: 359px; flex: 0 0 359px;
+  opacity: 1; transform: none;
+}
+.ys-world-projection.is-compact .ys-world-projection__targets {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-items: stretch; gap: 7px; padding: 2px; overflow: hidden;
+}
+.ys-world-projection.is-compact .ys-world-projection__targets button {
+  position: relative; display: flex; align-items: flex-end; justify-content: center; min-inline-size: 0; block-size: 100%; padding: 8px 5px 10px;
+  overflow: hidden; border: 1px solid rgba(116, 136, 184, .36); border-radius: 8px; color: var(--ys-ink);
+  background: linear-gradient(180deg, rgba(239, 252, 255, .03) 0 54%, rgba(249, 250, 255, .9) 72%, #f7f8fc 100%);
+  box-shadow: 0 4px 12px rgba(35, 38, 74, .08), inset 0 0 0 1px rgba(255, 255, 255, .5);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background-color .18s ease;
+}
+.ys-world-card__hologram {
+  position: absolute; inset-block-start: 23px; inset-inline: 3px; block-size: 104px; overflow: hidden; border-radius: 6px; pointer-events: none;
+}
+.ys-world-projection.is-compact .ys-world-projection__targets button:hover { border-color: rgba(81, 94, 226, .72); transform: translateY(-2px); box-shadow: 0 7px 18px rgba(51, 57, 127, .15); }
+.ys-world-projection.is-compact .ys-world-projection__targets button[aria-current="true"] { border-color: var(--ys-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ys-accent) 24%, transparent), 0 7px 18px rgba(71, 58, 175, .16); }
+.ys-world-projection.is-compact .ys-world-projection__targets button.is-selected { border-color: #4eeef0; background: linear-gradient(180deg, rgba(78, 238, 240, .12) 0 54%, rgba(239, 252, 255, .96) 72%, #eefcff 100%); box-shadow: 0 0 0 3px rgba(78, 238, 240, .28), 0 8px 22px rgba(29, 171, 187, .2); transform: translateY(-3px); }
+.ys-world-card__name {
+  position: relative; z-index: 3; display: -webkit-box; inline-size: 100%; min-block-size: 32px; overflow: hidden; font-size: 11px; font-weight: 850; line-height: 1.35;
+  text-align: center; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.ys-world-card__state {
+  position: absolute; inset-block-start: 7px; inset-inline-start: 50%; translate: -50% 0; z-index: 2; max-inline-size: calc(100% - 10px);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 999px; padding: 2px 6px;
+  background: rgba(26, 25, 70, .86); color: #fff; font-size: 9px; font-weight: 800; line-height: 1.35;
+}
+.ys-world-card__state:empty { display: none; }
+.ys-world-projection__targets button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ys-world-projection { transform: none; transition-duration: .14s; }
 }
