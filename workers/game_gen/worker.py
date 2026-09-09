@@ -439,7 +439,18 @@ async def run_mongo_loop(once: bool = False) -> int:
             pass
     log.info("worker %s polling learner_game_jobs every %.0fs", REPLICA, POLL_SECONDS)
     while not stop.is_set():
-        job = await _claim_next_mongo()
+        try:
+            job = await _claim_next_mongo()
+        except Exception as exc:
+            # A Cosmos read timeout or a dropped socket must not kill the
+            # worker: a queued job would then wait for a process that no
+            # longer exists. Log, back off, poll again.
+            log.warning("claim failed (%s); retrying in %.0fs", type(exc).__name__, POLL_SECONDS * 2)
+            try:
+                await asyncio.wait_for(stop.wait(), POLL_SECONDS * 2)
+            except asyncio.TimeoutError:
+                pass
+            continue
         if job is None:
             if once:
                 break

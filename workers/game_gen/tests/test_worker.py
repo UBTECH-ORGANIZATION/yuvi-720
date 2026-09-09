@@ -216,3 +216,18 @@ def test_fence_decoder_streams_the_html_block_and_restarts_on_a_new_fence():
     assert d.feed("``\nDone.") == ("", False)
     # a cut-off, then the model starts the file again
     assert d.feed("\n```html\n<!DOCTYPE html>\n<b>") == ("<!DOCTYPE html>\n<b>", True)
+
+
+def test_mongo_loop_survives_a_claim_error(monkeypatch):
+    calls = {"n": 0}
+
+    async def flaky_claim():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise TimeoutError("cosmos read timed out")
+        return None
+
+    monkeypatch.setattr(worker, "_claim_next_mongo", flaky_claim)
+    monkeypatch.setattr(worker, "POLL_SECONDS", 0.01)
+    handled = asyncio.run(worker.run_mongo_loop(once=True))
+    assert handled == 0 and calls["n"] == 2
