@@ -131,3 +131,25 @@ class RealtimeBusTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BusChannelTests(unittest.TestCase):
+    """The relay channel follows the cache environment unless a process
+    asks to join another environment's bus (a laptop backend whose game
+    jobs are built by the dev worker)."""
+
+    def test_channel_follows_cache_prefix_by_default(self) -> None:
+        import os
+        from app.core import cache as cache_config
+
+        os.environ.pop("REALTIME_BUS_ENVIRONMENT", None)
+        self.assertEqual(realtime.bus_channel(), cache_config.key_prefix() + "bus")
+
+    def test_channel_override_joins_another_environment(self) -> None:
+        import os
+
+        os.environ["REALTIME_BUS_ENVIRONMENT"] = "Dev"
+        try:
+            self.assertEqual(realtime.bus_channel(), "spark:dev:v1:bus")
+        finally:
+            os.environ.pop("REALTIME_BUS_ENVIRONMENT", None)

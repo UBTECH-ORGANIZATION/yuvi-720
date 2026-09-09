@@ -127,12 +127,22 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const rawRef = useRef('')
   const shownRef = useRef(0)
   const revealRef = useRef<number | null>(null)
+  // How far apart the worker's frames arrive (ms, smoothed). The backlog is
+  // spread over that gap, so the typing runs at the worker's own pace and the
+  // view is caught up just as the next frame lands: no burst, no idle pause.
+  const gapRef = useRef({ at: 0, ms: 400 })
   const reveal = useCallback((instant = false) => {
     if (instant) {
       shownRef.current = rawRef.current.length
       setLiveCode(rawRef.current)
       return
     }
+    const now = performance.now()
+    if (gapRef.current.at) {
+      const gap = Math.min(2000, Math.max(50, now - gapRef.current.at))
+      gapRef.current.ms = gapRef.current.ms * 0.6 + gap * 0.4
+    }
+    gapRef.current.at = now
     if (revealRef.current !== null) return
     const step = () => {
       const target = rawRef.current
@@ -143,8 +153,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         revealRef.current = null
         return
       }
-      // Drain faster when far behind, so the view never trails the worker.
-      const take = Math.max(24, Math.ceil(backlog / 12))
+      // Spread what is pending over the frames until the next one is due;
+      // drain faster when far behind, so the view never trails the worker.
+      const framesLeft = Math.max(2, Math.min(40, Math.round(gapRef.current.ms / 16)))
+      const take = Math.max(8, Math.ceil(backlog / framesLeft))
       shownRef.current = Math.min(target.length, shownRef.current + take)
       setLiveCode(target.slice(0, shownRef.current))
       revealRef.current = requestAnimationFrame(step)
@@ -333,7 +345,9 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     let stopped = false
     const tick = () => {
       getGameNarration(game.game_id)
-        .then((n) => { if (!stopped && n.lines.length) setNarration(n.lines) })
+        // Keep lines that arrived live (an edit's summary) and are not in
+        // the narrator's cache; the narrator's own lines never repeat.
+        .then((n) => { if (!stopped && n.lines.length) setNarration((current) => [...n.lines, ...current.filter((l) => !n.lines.includes(l))]) })
         .catch(() => {})
     }
     tick()
@@ -372,6 +386,12 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.chunk) setThinkingText((current) => (current + live.chunk).slice(-THINK_TEXT_MAX))
         return
       }
+      if (live.event === 'summary' && typeof live.detail === 'string' && live.detail) {
+        // Yuvi's own one-line summary of the edit, in the kid's language:
+        // on screen the moment it is written, before any code moves.
+        setNarration((current) => (current[current.length - 1] === live.detail ? current : [...current, live.detail as string]))
+      }
+      if (live.event === 'patching') setPhase('writing')
       if (live.event === 'validate' || live.event === 'validated') setPhase('validating')
       if (live.event === 'judge') setPhase('judging')
       if (live.event && live.event !== 'code') setLiveStep(live.event)

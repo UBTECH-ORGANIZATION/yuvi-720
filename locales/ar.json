@@ -3827,6 +3827,7 @@
   "games.step.build": "يوفي يكتب اللعبة…",
   "games.step.validate": "يوفي يتأكّد أن كل شيء يعمل…",
   "games.step.fix": "يوفي يصلح…",
+  "games.step.patching": "يوفي يعدّل اللعبة…",
   "games.step.judge": "يوفي يتحقق من أن اللعبة تعلّم فعلاً…",
   "games.player.exit": "الخروج من اللعبة",
   "games.player.panelOpen": "التحدث مع يوفي عن اللعبة",

@@ -188,7 +188,7 @@ class _Bridge:
             cache_config.connection_string(), socket_timeout=None,
             socket_connect_timeout=5, health_check_interval=30, decode_responses=False,
         )
-        self._channel = cache_config.key_prefix() + "bus"
+        self._channel = bus_channel()
         self._task = asyncio.create_task(self._listen())
         self.active = True
         return True
@@ -209,6 +209,21 @@ class _Bridge:
                 pass
             self._listener = None
         self._client = None
+
+
+def bus_channel() -> str:
+    """The Redis channel this process relays on. One per environment, keyed
+    like the cache, so dev and production never hear each other. A laptop
+    backend is `local` but its game jobs are built by the DEV worker (the
+    queue is `game-jobs-dev`), so its live frames arrive on the dev bus:
+    `REALTIME_BUS_ENVIRONMENT=dev` in the local .env joins that bus while the
+    cache keys stay `local`."""
+    from app.core import cache as cache_config
+
+    override = (os.environ.get("REALTIME_BUS_ENVIRONMENT") or "").strip().lower()
+    if override:
+        return f"spark:{override}:v1:bus"
+    return cache_config.key_prefix() + "bus"
 
 
 _bridge = _Bridge()

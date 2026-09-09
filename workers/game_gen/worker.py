@@ -41,10 +41,13 @@ REPLICA = os.environ.get("CONTAINER_APP_REPLICA_NAME") or socket.gethostname()
 POLL_SECONDS = float(os.environ.get("GAME_WORKER_POLL_SECONDS", "3"))
 MAX_ATTEMPTS = int(os.environ.get("GAME_JOBS_MAX_DELIVERY", "3"))
 SPARKS_PER_USD = float(os.environ.get("GAME_SPARKS_PER_USD", "100"))  # kid-facing "sparks" = cents
-CODE_FRAME_INTERVAL_S = 0.35  # live-code frames to the player, at most this often…
+# The player paces its reveal to the gap between frames, so the gap IS the
+# feel: ~7 code frames a second reads as typing; a frame every third of a
+# second read as stalls with bursts between them.
+CODE_FRAME_INTERVAL_S = 0.15  # live-code frames to the player, at most this often…
 CODE_FRAME_MAX = 6000         # …unless this much piled up first
-THINK_FRAME_INTERVAL_S = 2.0  # reasoning frames to the player, at most this often…
-THINK_FRAME_MAX = 4000        # …unless this much piled up
+THINK_FRAME_INTERVAL_S = 0.4  # reasoning frames to the player, at most this often…
+THINK_FRAME_MAX = 1500        # …unless this much piled up
 LIVE_THINK_TAIL = 12_000      # reasoning kept on the job row for a page opened mid-think
 LIVE_SNAPSHOT_INTERVAL_S = 3.0  # the job row keeps a snapshot so a page opened mid-build catches up
 LIVE_CODE_TAIL = 240_000     # the whole game, so a reload mid-build shows every line
@@ -170,6 +173,10 @@ def _unescape_one(match: "re.Match[str]") -> str:
     if token.startswith("u"):
         return chr(int(token[1:], 16))
     return _SIMPLE_ESCAPES.get(token, match.group(0))
+
+
+#: The SUMMARY line is complete once its newline arrived.
+_SUMMARY_DONE = re.compile(r"^\s*SUMMARY:\s*(.+?)\s*\n", re.MULTILINE)
 
 
 class _PatchStreamer:
@@ -310,6 +317,11 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     # kid what Yuvi is weighing, not just that it is thinking.
     think = {"at": 0.0, "buf": ""}
     snap = {"at": 0.0}
+    # An edit's reply streams as text the kid must not see raw (SUMMARY line,
+    # then patch DSL). The summary is in the kid's language: it goes out the
+    # moment it is complete, and until the first operation lands the page
+    # hears how far the patch has come, so the wait is never blank.
+    edit = {"text": "", "summary": "", "at": 0.0}
 
     def snapshot(force: bool = False) -> None:
         """The job row remembers where the build is, so a page opened
@@ -346,7 +358,20 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             if patcher.original and not patcher.rewrite:
                 # An edit as patches: show the patched file each time an
                 # operation completes, with the changed lines marked.
+                edit["text"] += text
+                if not edit["summary"]:
+                    m = _SUMMARY_DONE.search(edit["text"])
+                    if m:
+                        edit["summary"] = m.group(1).strip()
+                        notify.publish_progress(learner_id, game_id, "summary", status=last_status["value"] or "building",
+                                                detail=edit["summary"][:300])
                 frame = patcher.feed(text)
+                if not frame:
+                    now = time.monotonic()
+                    if now - edit["at"] >= THINK_FRAME_INTERVAL_S:
+                        edit["at"] = now
+                        notify.publish_progress(learner_id, game_id, "patching", status=last_status["value"] or "building",
+                                                chars=len(edit["text"]))
                 if frame:
                     live["phase"] = "writing"
                     code["len"], code["tail"], code["buf"] = len(frame["html"]), frame["html"][-LIVE_CODE_TAIL:], ""

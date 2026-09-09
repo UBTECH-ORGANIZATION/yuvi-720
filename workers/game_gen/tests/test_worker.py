@@ -257,3 +257,30 @@ def test_changed_ranges_follow_the_patched_numbering():
         {"type": "insert", "start": 8, "end": 8, "code": "w"},
     ]
     assert changed_ranges(ops) == [(3, 5), (9, 9)]
+
+
+def test_edit_streams_the_summary_and_patching_progress_before_the_first_operation(fakes, monkeypatch):
+    """The kid never waits on a blank page: Yuvi's SUMMARY line goes out the
+    moment it is complete, and while the patch text is still streaming the
+    page hears how far it has come; the patched file follows once an
+    operation lands."""
+    fakes.store.games["g1"]["versions"] = [{"v": 1, "blob_path": "games/l1/g1/v1/index.html"}]
+    fakes.store.games["g1"]["current_version"] = 1
+    fakes.html.blobs["games/l1/g1/v1/index.html"] = "<html>\nb\nc\n</html>"
+    fakes.store.jobs["j1"].update(kind="edit", version=1, payload={**fakes.store.jobs["j1"]["payload"], "instruction": "כחול"})
+
+    async def fake_run_job(spec, progress):
+        progress({"type": "text_delta", "text": "SUMMARY: הרקע "})
+        progress({"type": "text_delta", "text": "כחול עכשיו\nREPLACE_LINES 2-2\n"})
+        progress({"type": "text_delta", "text": "B\n"})
+        progress({"type": "text_delta", "text": "END_REPLACE\n"})
+        return _result(True)
+
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    kinds = [event for event, _ in fakes.notify.extras]
+    summary = next(extra for event, extra in fakes.notify.extras if event == "summary")
+    assert summary["detail"] == "הרקע כחול עכשיו"
+    assert "patching" in kinds  # progress even before the summary line is complete
+    patched = [extra for event, extra in fakes.notify.extras if event == "code" and extra.get("changed")]
+    assert patched and patched[-1]["chunk"] == "<html>\nB\nc\n</html>" and patched[-1]["changed"] == [(2, 2)]

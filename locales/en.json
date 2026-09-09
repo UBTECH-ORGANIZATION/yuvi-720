@@ -3827,6 +3827,7 @@
   "games.step.build": "Yuvi is writing the game…",
   "games.step.validate": "Yuvi is checking everything works…",
   "games.step.fix": "Yuvi is fixing…",
+  "games.step.patching": "Yuvi is changing the game…",
   "games.step.judge": "Yuvi is checking the game really teaches…",
   "games.player.exit": "Leave the game",
   "games.player.panelOpen": "Talk to Yuvi about the game",
