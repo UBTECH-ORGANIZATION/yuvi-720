@@ -131,6 +131,11 @@ export interface GameFrame {
   reset?: boolean
   /** `event: 'thinking'` — how much the model has reasoned so far; `chunk` carries the words. */
   thinking_chars?: number
+  /** Edits: `instant` shows the chunk at once (it is the whole patched file), `changed`
+   *  marks the lines the last operations touched, `focus_line` is where to look. */
+  instant?: boolean
+  changed?: [number, number][]
+  focus_line?: number | null
 }
 
 /** Where the current build is; read once when the page opens mid-build. */

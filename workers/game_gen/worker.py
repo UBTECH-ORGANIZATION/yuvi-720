@@ -31,6 +31,7 @@ from typing import Any, Optional
 
 from . import config  # noqa: F401  (loads backend/.env for local runs)
 from .context_pack import build_context_pack
+from .patch_engine import apply_line_patches, changed_ranges, extract_line_patches
 from .pipeline import JobResult, JobSpec, run_job
 from .usage import usage_context
 
@@ -171,6 +172,43 @@ def _unescape_one(match: "re.Match[str]") -> str:
     return _SIMPLE_ESCAPES.get(token, match.group(0))
 
 
+class _PatchStreamer:
+    """Turns the patch text of an edit reply into what the kid should see:
+    the game file with the change applied, as each operation completes.
+
+    Feed the reply text as it streams. Whenever a REPLACE/INSERT/DELETE
+    operation closes, every operation so far is applied to the ORIGINAL file
+    (that is what the line numbers refer to) and `frame()` returns the
+    patched file plus the changed ranges (patched numbering) and the line to
+    scroll to. A ```html fence means the model chose a full rewrite: the
+    streamer steps aside (`rewrite` becomes True) and the fence decoder
+    takes over."""
+
+    def __init__(self, original: str) -> None:
+        self.original = original
+        self.buf = ""
+        self.ops_seen = 0
+        self.rewrite = False
+
+    def feed(self, text: str) -> Optional[dict[str, Any]]:
+        if self.rewrite or not self.original:
+            return None
+        self.buf += text
+        if "```html" in self.buf:
+            self.rewrite = True
+            return None
+        ops = extract_line_patches(self.buf)
+        if len(ops) <= self.ops_seen:
+            return None
+        self.ops_seen = len(ops)
+        patched, err = apply_line_patches(self.original, ops)
+        if err:
+            return None
+        ranges = changed_ranges(ops)
+        latest = ranges[-1][0] if ranges else None
+        return {"html": patched, "changed": ranges, "focus_line": latest}
+
+
 class _FenceDecoder:
     """Streams the inside of a ```html block out of message text. Returns
     (code_chunk, restarted): `restarted` is True when a new ```html fence
@@ -261,6 +299,12 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     # `patches` string, so the key is found here and escapes are undone here.
     decoder = _ToolInputDecoder()
     fence = _FenceDecoder()
+    patcher = _PatchStreamer(spec.current_html if kind in ("edit", "fix") else "")
+    if patcher.original:
+        # An edit starts from the game as it is: the kid sees the file at once
+        # and then watches the changed places light up.
+        notify.publish_progress(learner_id, game_id, "code", status="building", chunk=patcher.original,
+                                code_len=len(patcher.original), reset=True, instant=True)
     live = {"phase": "thinking", "thinking_chars": 0, "thinking_tail": "", "code_len": 0, "code_tail": "", "updated_at": time.time()}
     # The reasoning streams too, coalesced like the code: a page shows the
     # kid what Yuvi is weighing, not just that it is thinking.
@@ -298,10 +342,24 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
             flush_code()
             return
         if kind == "text_delta":
+            text = str(event.get("text") or "")
+            if patcher.original and not patcher.rewrite:
+                # An edit as patches: show the patched file each time an
+                # operation completes, with the changed lines marked.
+                frame = patcher.feed(text)
+                if frame:
+                    live["phase"] = "writing"
+                    code["len"], code["tail"], code["buf"] = len(frame["html"]), frame["html"][-LIVE_CODE_TAIL:], ""
+                    notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",
+                                            chunk=frame["html"], code_len=len(frame["html"]), reset=True, instant=True,
+                                            changed=frame["changed"], focus_line=frame["focus_line"])
+                    snapshot()
+                if not patcher.rewrite:
+                    return
             # Text delivery: the game is a ```html block in the reply. A new
             # fence after a cut-off is the model restarting the file: the
             # player starts over with it too.
-            chunk, restarted = fence.feed(str(event.get("text") or ""))
+            chunk, restarted = fence.feed(text)
             if restarted:
                 code["buf"], code["len"], code["tail"] = "", 0, ""
                 notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",

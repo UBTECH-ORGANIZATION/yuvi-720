@@ -163,3 +163,52 @@ def test_parse_text_delivery_reads_only_the_prose_before_the_fence():
     )
     assert parsed["title"] == "חלל" and parsed["brief"] == "עולם" and parsed["summary"] == "שער"
     assert parsed["html"].startswith("<!DOCTYPE html>")
+
+
+# ── Edits as reply text: patches, then SEARCH/REPLACE, then a full game ──
+
+NUMBERED_SRC = "<!DOCTYPE html><html><head><title>a</title></head>\n<body>\n<script>\nlet x = 1;\nfunction f() { return x; }\n</script>\n</body></html>"
+
+
+def test_parse_edit_delivery_applies_line_patches_and_reads_the_summary():
+    reply = "SUMMARY: שיניתי את הכותרת\nREPLACE_LINES 1-1\n<!DOCTYPE html><html><head><title>b</title></head>\nEND_REPLACE\nINSERT_AFTER 4\nlet y = 2;\nEND_INSERT"
+    parsed = pipeline.parse_edit_delivery(reply, NUMBERED_SRC)
+    assert parsed["mode"] == "patch" and parsed["error"] is None
+    assert parsed["summary"] == "שיניתי את הכותרת"
+    assert "<title>b</title>" in parsed["html"] and "let y = 2;" in parsed["html"]
+    assert len(parsed["ops"]) == 2
+
+
+def test_parse_edit_delivery_falls_back_to_a_full_block_and_reports_bad_patches():
+    full = "SUMMARY: rewrite\n```html\n<!DOCTYPE html><html><body><script>let z=1;</script></body></html>\n```"
+    parsed = pipeline.parse_edit_delivery(full, NUMBERED_SRC)
+    assert parsed["mode"] == "rewrite" and "let z=1" in parsed["html"]
+    bad = "SUMMARY: x\nREPLACE_LINES 90-95\nnope\nEND_REPLACE"
+    parsed = pipeline.parse_edit_delivery(bad, NUMBERED_SRC)
+    assert parsed["html"] is None and parsed["mode"] == "patch" and "total lines" in parsed["error"]
+    nothing = pipeline.parse_edit_delivery("I think the game is fine.", NUMBERED_SRC)
+    assert nothing["html"] is None and nothing["mode"] == "none"
+
+
+def test_edit_asks_once_for_the_full_game_when_patches_do_not_apply():
+    """A patch that cannot be applied gets exactly one 'send the whole game'
+    request; a second failure ends the job instead of looping."""
+    class TextSession(FakeSession):
+        replies = ["SUMMARY: x\nREPLACE_LINES 900-901\nnope\nEND_REPLACE", "SUMMARY: y\nstill nothing"]
+        prompts_seen = []
+
+        async def send(self, prompt):
+            TextSession.prompts_seen.append(prompt)
+            text = TextSession.replies[min(len(TextSession.prompts_seen) - 1, len(TextSession.replies) - 1)]
+            return TurnResult(text=text, usage=TurnUsage(input_tokens=10, output_tokens=10, model="fake"),
+                              model="fake", elapsed_s=0.1, stop_reason="idle")
+
+    pipeline.HeadlessCopilotSession = TextSession  # type: ignore[attr-defined]
+    try:
+        result = asyncio.run(pipeline.run_job(_spec(kind="edit", instruction="שנה", current_html=TINY_GAME)))
+    finally:
+        pipeline.HeadlessCopilotSession = FakeSession  # type: ignore[attr-defined]
+    assert not result.ok
+    assert len(TextSession.prompts_seen) == 2
+    assert "COMPLETE updated game" in TextSession.prompts_seen[1]
+    assert TextSession.instances[-1].kw["tools"] == []

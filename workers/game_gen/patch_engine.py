@@ -218,6 +218,30 @@ def apply_line_patches(code: str, ops: list[dict]) -> tuple[str, Optional[str]]:
     return result, None
 
 
+def changed_ranges(ops: list[dict]) -> list[tuple[int, int]]:
+    """Where the patched file differs, in the PATCHED file's line numbers:
+    one (start, end) per replace/insert (a delete leaves nothing to point
+    at, so it is skipped). Ops are applied bottom-up, so an op's own start
+    shifts by the net growth of every op above it."""
+    ordered = sorted(ops, key=lambda o: o["start"])
+    shift = 0
+    out: list[tuple[int, int]] = []
+    for op in ordered:
+        new_count = len(op.get("code", "").split("\n")) if op.get("code") else 0
+        if op["type"] == "replace":
+            old_count = op["end"] - op["start"] + 1
+            if new_count:
+                out.append((op["start"] + shift, op["start"] + shift + new_count - 1))
+            shift += new_count - old_count
+        elif op["type"] == "insert":
+            if new_count:
+                out.append((op["start"] + 1 + shift, op["start"] + shift + new_count))
+            shift += new_count
+        elif op["type"] == "delete":
+            shift -= op["end"] - op["start"] + 1
+    return out
+
+
 # ── Legacy SEARCH/REPLACE ────────────────────────────────────────────────────
 
 def extract_search_replace_patches(text: str) -> list[dict[str, str]]:
@@ -346,6 +370,7 @@ def apply_patches(current_html: str, response_text: str) -> PatchResult:
 
 __all__ = [
     "FULL_REWRITE_LINE_THRESHOLD",
+    "changed_ranges",
     "PatchResult",
     "apply_patches",
     "number_lines",

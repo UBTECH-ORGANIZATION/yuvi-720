@@ -231,3 +231,29 @@ def test_mongo_loop_survives_a_claim_error(monkeypatch):
     monkeypatch.setattr(worker, "POLL_SECONDS", 0.01)
     handled = asyncio.run(worker.run_mongo_loop(once=True))
     assert handled == 0 and calls["n"] == 2
+
+
+def test_patch_streamer_shows_the_patched_file_as_each_operation_lands():
+    """An edit streams as patch text; the kid sees the file with the change
+    applied and the changed lines marked, once per completed operation."""
+    original = "<html>\nb\nc\nd\n</html>"
+    s = worker._PatchStreamer(original)
+    assert s.feed("SUMMARY: x\nREPLACE_LINES 2-2\nB1\nB2\n") is None  # operation still open
+    frame = s.feed("END_REPLACE\n")
+    assert frame["html"] == "<html>\nB1\nB2\nc\nd\n</html>"
+    assert frame["changed"] == [(2, 3)] and frame["focus_line"] == 2
+    assert s.feed("some words") is None
+    frame = s.feed("INSERT_AFTER 5\nF\nEND_INSERT\n")
+    assert frame["html"] == "<html>\nB1\nB2\nc\nd\n</html>\nF"
+    assert frame["changed"] == [(2, 3), (7, 7)] and frame["focus_line"] == 7
+    assert s.feed("```html\n<!DOCTYPE html>") is None and s.rewrite
+
+
+def test_changed_ranges_follow_the_patched_numbering():
+    from game_gen.patch_engine import changed_ranges
+    ops = [
+        {"type": "delete", "start": 1, "end": 2},
+        {"type": "replace", "start": 5, "end": 5, "code": "x\ny\nz"},
+        {"type": "insert", "start": 8, "end": 8, "code": "w"},
+    ]
+    assert changed_ranges(ops) == [(3, 5), (9, 9)]

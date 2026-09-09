@@ -31,7 +31,10 @@ from .code_utils import validate_and_fix_code
 from .context_pack import AnswerKey, ContextPack
 from .copilot_session import HeadlessCopilotSession, TurnUsage
 from .harness import build_harness, inject_harness
-from .patch_engine import FULL_REWRITE_LINE_THRESHOLD, apply_patches, number_lines
+from .patch_engine import (
+    FULL_REWRITE_LINE_THRESHOLD, apply_line_patches, apply_patches, apply_search_replace_patches,
+    extract_line_patches, extract_search_replace_patches, number_lines,
+)
 from .html_utils import extract_html
 from .usage import UsageTotals, estimate_cost_usd, record_to_ledger
 from .validator import ValidationResult, validate_html
@@ -229,6 +232,83 @@ def parse_text_delivery(text: str) -> dict[str, str]:
             "summary": meta.get("summary", ""), "html": html}
 
 
+_SUMMARY_LINE = re.compile(r"^\s*SUMMARY:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def parse_edit_delivery(text: str, current_html: str) -> dict[str, Any]:
+    """An edit reply: `SUMMARY:` plus line patches, SEARCH/REPLACE hunks, or
+    a full ```html block — tried in that order, like vibe-coding-kids.
+    Returns ``{html, summary, mode, error, ops}``; ``html`` is None when
+    nothing usable arrived (``error`` says why, ``mode`` what was tried)."""
+    head = text.split("```", 1)[0]
+    m = _SUMMARY_LINE.search(head)
+    summary = m.group(1) if m else ""
+    ops = extract_line_patches(text or "")
+    if ops:
+        patched, err = apply_line_patches(current_html, ops)
+        if not err:
+            return {"html": patched, "summary": summary, "mode": "patch", "error": None, "ops": ops}
+        html = extract_html(text) or ""
+        if html and "<script" in html.lower():
+            return {"html": html, "summary": summary, "mode": "rewrite", "error": None, "ops": []}
+        return {"html": None, "summary": summary, "mode": "patch", "error": err, "ops": ops}
+    hunks = extract_search_replace_patches(text or "")
+    if hunks:
+        patched, err = apply_search_replace_patches(current_html, hunks)
+        if not err:
+            return {"html": patched, "summary": summary, "mode": "search", "error": None, "ops": []}
+        return {"html": None, "summary": summary, "mode": "search", "error": err, "ops": []}
+    html = extract_html(text) or ""
+    if html and "<script" in html.lower():
+        return {"html": html, "summary": summary, "mode": "rewrite", "error": None, "ops": []}
+    return {"html": None, "summary": summary, "mode": "none", "error": "no patches and no ```html block in the reply", "ops": []}
+
+
+async def _run_text_edit(session: Any, state: _State, progress: ProgressFn, prompt: str,
+                         totals: UsageTotals, spec: "JobSpec", operation: str) -> Optional[str]:
+    """Edits and fixes: patches (or a full game) as reply text, so the change
+    streams to the kid and the SDK can continue a cut-off block. A patch
+    that does not apply is answered with one request for the full game; a
+    patch that applies but fails validation is answered with the findings
+    and the renumbered file, up to MAX_SUBMISSIONS."""
+    next_prompt = prompt
+    asked_full = False
+    for _ in range(MAX_SUBMISSIONS):
+        timer = _timer()
+        turn = await session.send(next_prompt)
+        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+        if turn.error:
+            return str(turn.error)
+        parsed = parse_edit_delivery(turn.text or "", state.current_html)
+        if parsed["html"] is None:
+            state.attempts.append(Attempt(len(state.attempts) + 1, "text-edit", False,
+                                          [{"message": parsed["error"] or "no delivery"}], False, parsed["mode"], 0.0))
+            progress({"type": "patch", "status": "rejected", "mode": parsed["mode"], "error": parsed["error"]})
+            if asked_full:
+                break
+            asked_full = True
+            next_prompt = (f"Your patches could not be applied ({parsed['error']}). Reply with `SUMMARY: …` and then the "
+                           "COMPLETE updated game in ONE ```html block, <!DOCTYPE html> to </html>, with the change "
+                           "the kid asked for. No patches this time.")
+            continue
+        progress({"type": "patch", "status": "applied", "mode": parsed["mode"], "ops": len(parsed["ops"])})
+        outcome = await _submit(state, progress, parsed["html"], state.accepted_title or "", parsed["summary"], "text-edit")
+        if outcome.result_type == "success":
+            return None
+        if outcome.error == "max_submissions":
+            break
+        # The next patch must target the file as it is now.
+        state.current_html = parsed["html"]
+        numbered = number_lines(parsed["html"])
+        findings = outcome.text_result_for_llm.replace(
+            "call the tool again with the FULL corrected HTML",
+            "reply with `SUMMARY: …` and then PATCHES against the numbering below, or the FULL corrected game in ONE ```html block",
+        )
+        next_prompt = f"{findings}\n\nCURRENT GAME (line-numbered, after your change):\n{numbered}"
+    return None
+
+
 async def _run_text_delivery(session: Any, state: _State, progress: ProgressFn, prompt: str,
                              totals: UsageTotals, spec: "JobSpec", operation: str) -> Optional[str]:
     """Creates: the game is a ```html block in the reply. It streams to the
@@ -362,20 +442,23 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         prompt = prompts.create_prompt(spec.pack, genre=spec.genre, vibe=spec.vibe, clarifications=spec.clarifications,
                                        inspirations=spec.inspirations, learner_title=spec.learner_title)
     else:
-        system = prompts.editor_system_message(language)
-        if len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD:
-            state.current_html = ""  # forces submit_game (full rewrite) path
-        numbered = number_lines(spec.current_html)
+        system = prompts.editor_system_message(language, delivery="text")
+        full_rewrite = len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD
+        numbered = spec.current_html if full_rewrite else number_lines(spec.current_html)
         prompt = prompts.edit_prompt(
             spec.instruction or "fix the errors",
             numbered,
             errors_block=_errors_block(spec.runtime_errors) if spec.runtime_errors else "",
             history=spec.history,
             language=language,
+            delivery="text",
+            full_rewrite=full_rewrite,
         )
 
-    text_delivery = spec.kind == "create"
-    tools = [] if text_delivery else _make_tools(state, progress)
+    # Everything is delivered as reply text (see _run_text_delivery /
+    # _run_text_edit): tool-call input neither streams nor continues.
+    text_delivery = True
+    tools: list[Any] = []
     session = HeadlessCopilotSession(
         model=spec.model,
         reasoning_effort=spec.reasoning_effort,
@@ -391,8 +474,11 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         await session.start()
         progress({"type": "build", "status": "start", "model": spec.model})
         operation = {"create": "game.build", "edit": "game.patch", "fix": "game.fix"}.get(spec.kind, "game.build")
-        if text_delivery:
+        if spec.kind == "create":
             error = await _run_text_delivery(session, state, progress, prompt, totals, spec, operation)
+            turn = None
+        elif text_delivery:
+            error = await _run_text_edit(session, state, progress, prompt, totals, spec, operation)
             turn = None
         else:
             timer = _timer()

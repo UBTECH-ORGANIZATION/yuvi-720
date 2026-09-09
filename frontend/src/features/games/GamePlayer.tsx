@@ -119,6 +119,8 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const [total, setTotal] = useState(0)
   const [errorCount, setErrorCount] = useState(0)
   const [liveCode, setLiveCode] = useState('')
+  const [changed, setChanged] = useState<[number, number][]>([])
+  const [focusLine, setFocusLine] = useState<number | null>(null)
   // `rawRef` is everything received; `liveCode` is what is on screen. A
   // frame's chunk is revealed over the next frames instead of landing as a
   // block, so the stream reads as writing, not as pasting.
@@ -351,7 +353,17 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.reset) { rawRef.current = ''; shownRef.current = 0; setLiveCode('') }
         const next = rawRef.current + live.chunk
         rawRef.current = next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
-        reveal()
+        // An edit sends the whole patched file: show it at once and light up
+        // the lines that changed, instead of "typing" a file the kid knows.
+        if (live.instant) {
+          setChanged(live.changed ?? [])
+          setFocusLine(typeof live.focus_line === 'number' ? live.focus_line : null)
+          reveal(true)
+        } else {
+          setChanged([])
+          setFocusLine(null)
+          reveal()
+        }
         return
       }
       if (live.event === 'thinking') {
@@ -551,7 +563,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                 )}
               </div>
             )}
-            {liveCode && <CodeView code={liveCode} label={t('games.build.title')} />}
+            {liveCode && <CodeView code={liveCode} label={t('games.build.title')} changed={changed} focusLine={focusLine} />}
           </section>
         ) : status === 'ready' && html ? (
           <iframe

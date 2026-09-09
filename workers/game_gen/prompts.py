@@ -148,6 +148,24 @@ HOW TO DELIVER AN EDIT
 """.strip()
 
 
+EDIT_TEXT = """
+HOW TO DELIVER AN EDIT
+- The current game is shown below with line numbers (`  42| code`). Reply with ONE line `SUMMARY: <what you changed, one sentence in the kid's language>` and then your change in ONE of two forms:
+  (a) PATCHES — precise line operations, line numbers as shown (they refer to the ORIGINAL numbering, never shifted by your own edits):
+      REPLACE_LINES 42-45
+      ...new code (no line numbers in it)...
+      END_REPLACE
+      INSERT_AFTER 100
+      ...new code...
+      END_INSERT
+      DELETE_LINES 50-55
+      Several operations are fine — one per place that changes (new variables near the variables, new functions near similar functions, listeners near listeners, loop changes as a REPLACE of the loop). Keep every brace balanced inside each operation.
+  (b) FULL GAME — when the change is large (more than ~10 operations, a rewrite of a system, or you are unsure of line numbers): the COMPLETE updated game in ONE ```html block, <!DOCTYPE html> to </html>, with everything that worked kept as it was.
+- Never mix the two. Never paste line numbers into code. Do not explain; the kid watches the code change live.
+- The result is run and checked automatically. If problems come back, reply the same way again (patches against the numbering you are shown then, or the full game). At most 3 deliveries.
+""".strip()
+
+
 def builder_system_message(language: str = "he", delivery: str = "tools") -> str:
     return "\n\n".join([
         IDENTITY,
@@ -160,14 +178,14 @@ def builder_system_message(language: str = "he", delivery: str = "tools") -> str
     ])
 
 
-def editor_system_message(language: str = "he") -> str:
+def editor_system_message(language: str = "he", delivery: str = "tools") -> str:
     return "\n\n".join([
         IDENTITY,
         CODE_RULES + "\n" + library_prompt_block(),
         LEARNING_CONTRACT,
         QUALITY_BAR,
         HARNESS_API,
-        EDIT_TOOLS,
+        EDIT_TEXT if delivery == "text" else EDIT_TOOLS,
         get_language_rule(language),
     ])
 
@@ -202,7 +220,7 @@ First decide the design (silently): the concept in one line, the world, the core
 
 
 def edit_prompt(instruction: str, numbered_html: str, *, errors_block: str = "", history: list[str] | None = None,
-                language: str = "he") -> str:
+                language: str = "he", delivery: str = "tools", full_rewrite: bool = False) -> str:
     think = _THINK_IN.get(language, "")
     hist = ""
     if history:
@@ -214,7 +232,17 @@ The kid wants this change: "{instruction.strip()}"{hist}{errs}
 CURRENT GAME (line-numbered):
 {numbered_html}
 
-Deliver with `patch_game` (or `submit_game` for a rewrite)."""
+{_edit_delivery_line(delivery, full_rewrite)}"""
+
+
+def _edit_delivery_line(delivery: str, full_rewrite: bool) -> str:
+    if delivery != "text":
+        return "Deliver with `patch_game` (or `submit_game` for a rewrite)."
+    if full_rewrite:
+        return ("This file is large: reply with `SUMMARY: …` and then the COMPLETE updated game in ONE ```html block "
+                "(no patches).")
+    return ("Reply with `SUMMARY: …` and then either line PATCHES (REPLACE_LINES / INSERT_AFTER / DELETE_LINES against "
+            "the numbering above) or the COMPLETE game in ONE ```html block — never both.")
 
 
 JUDGE_SYSTEM = """You are a strict reviewer of educational games for grades 7-9. You receive the LEARNING_CONTEXT (a learning component with its questions) and the game's HTML source. Score, as JSON only:
