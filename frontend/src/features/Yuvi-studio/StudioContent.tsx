@@ -737,14 +737,6 @@ export function StudioContent({
               <Icon name="home" size={16} />
               <span>{t('YuviStudio.zone.room')}</span>
             </button>
-            <button
-              type="button"
-              className="ys-station"
-              onClick={() => goToStation('gamelab')}
-            >
-              <Icon name="gamepad" size={16} />
-              <span>{t('YuviStudio.zone.gamelab')}</span>
-            </button>
             <div className="ys-help" ref={helpRef}>
               <button
                 type="button"

@@ -263,6 +263,7 @@ function GameCard({
           <span className="ys-gamelab-card__stat">
             <Icon name="spark" size={12} />
             {game.sparks_spent} {t('rewards.currency')}
+            <em className="ys-gamelab-card__usd">${(game.sparks_spent / 100).toFixed(2)}</em>
           </span>
         </div>
         {!confirmDelete && (

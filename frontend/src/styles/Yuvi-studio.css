@@ -1376,3 +1376,5 @@
   font: inherit; font-weight: 700;
 }
 .ys-gamelab-input:focus-visible { outline: 2px solid var(--ys-accent); outline-offset: 1px; }
+
+.ys-gamelab-card__usd { margin-inline-start: 4px; font-style: normal; font-weight: 700; color: var(--ys-ink); opacity: .75; }

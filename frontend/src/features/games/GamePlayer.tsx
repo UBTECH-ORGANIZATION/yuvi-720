@@ -575,14 +575,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
           </div>
         )}
 
-        {finished && (
-          <div className="game-player__done" role="status">
-            <Icon name="spark" size={22} aria-hidden="true" />
-            <strong>{t('games.player.done')}</strong>
-            <span>{t('games.player.doneScore', { correct: finished.correct, total: total || finished.answered })}</span>
-            <button type="button" className="sp-btn sp-btn--primary" onClick={onBack}>{t(backLabel)}</button>
-          </div>
-        )}
 
         {toast && (
           <div className="game-player__toast" role="status">
@@ -639,7 +631,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
             <strong dir="auto">{t('games.chat.title')}</strong>
             <span className="game-chat__meta">
               <Icon name="spark" size={12} aria-hidden="true" />
-              {t('games.card.sparks', { count: sparks })}
+              {t('games.card.sparks', { count: sparks })} · ${(sparks / 100).toFixed(2)}
             </span>
           </div>
         </header>
