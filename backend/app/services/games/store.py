@@ -282,6 +282,10 @@ async def create_game(
         "path_node_id": path_node_id,
         "title": (title or "")[:80],
         "title_by_learner": bool(title_by_learner),
+        # Which question kinds this game's code renders. Games built before
+        # typed questions existed only know buttons, and the served pack (and
+        # any patch of them) must keep to that.
+        "question_kinds": ["choice", "text"],
         "genre": genre,
         "prompt": (prompt or "")[:600],
         "language": language,

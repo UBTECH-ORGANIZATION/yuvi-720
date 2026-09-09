@@ -167,6 +167,7 @@ async def enqueue(
         # the game no longer fits one tool call (see pipeline.OUTPUT_CAP_HINT_TOKENS).
         "reasoning_effort": "medium" if deep_thinking else "low",
         "learner_title": (learner_title or "")[:40],
+        "question_kinds": list(game.get("question_kinds") or ["choice"]),
         "feature": FEATURE,
         "context": context,
     }

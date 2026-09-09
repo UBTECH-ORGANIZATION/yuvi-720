@@ -125,6 +125,7 @@ def build_context_pack(
     language: str = "he",
     device: str = "keyboard",
     max_questions: int = MAX_QUESTIONS,
+    typed: bool = True,
 ) -> tuple[ContextPack, AnswerKey]:
     """Turn a normalized Kata component (+ unit + objective) into a pack and key.
 
@@ -140,7 +141,7 @@ def build_context_pack(
         answers = [_clean(a, MAX_ANSWER_CHARS) for a in (row.get("answers") or []) if _clean(a, MAX_ANSWER_CHARS)]
         correct = [_clean(a, MAX_ANSWER_CHARS) for a in (row.get("correctAnswers") or []) if _clean(a, MAX_ANSWER_CHARS)]
         qtype = question_kind(row, answers, correct)
-        if not text or not correct or qtype is None:
+        if not text or not correct or qtype is None or (qtype == "text" and not typed):
             continue
         # Kata question ids repeat across sub-content items ("q1" on every
         # screen), so the pack id is item-scoped; grading splits it on "#".

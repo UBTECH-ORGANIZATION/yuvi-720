@@ -41,7 +41,7 @@ from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current
 from app.services import content_filter, events, kata_catalog
 from app.services.llm import call_llm
 from app.services.ai_usage import UsageContext
-from app.services.games import budget, grading, html_store, jobs, store
+from app.services.games import budget, distractors, grading, html_store, jobs, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
 log = logging.getLogger(__name__)
@@ -390,9 +390,13 @@ async def read_game_html(
     }
     unit = kata_catalog.get_unit(str(game.get("unit_id") or ""))
     objective = kata_catalog.get_objective(str(game.get("objective_id") or ""))
+    # The same options the build saw (cached distractors), and typed questions
+    # only for games whose code renders an input box.
+    component = await distractors.enrich_component(component, actor_id=learner_id)
     pack, _key = context_pack.build_context_pack(
         component, unit, objective,
         language=str(game.get("language") or "he"), device=str(game.get("device") or "keyboard"),
+        typed="text" in (game.get("question_kinds") or []),
     )
     # `answer_key` deliberately absent: the bridge grades through /check.
     fragment = harness.build_harness(pack.to_learn_data())

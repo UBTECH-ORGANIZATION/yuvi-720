@@ -75,6 +75,7 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         ctx.get("objective") or {},
         language=str(payload.get("language") or "he"),
         device=str(payload.get("device") or "keyboard"),
+        typed="text" in (payload.get("question_kinds") or ["choice", "text"]),
     )
     return JobSpec(
         job_id=str(job["_id"]),
