@@ -42,7 +42,7 @@ from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current
 from app.services import content_filter, events, kata_catalog
 from app.services.llm import call_llm
 from app.services.ai_usage import UsageContext
-from app.services.games import blueprints, budget, distractors, grading, html_store, instances, jobs, store
+from app.services.games import blueprints, budget, distractors, grading, html_store, instances, jobs, narration, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
 log = logging.getLogger(__name__)
@@ -518,6 +518,17 @@ async def read_game_live(game_id: str, learner_id: str = Depends(_reader)):
         "code_tail": str(live.get("code_tail") or ""),
         "updated_at": live.get("updated_at"),
     }, headers=_NO_STORE)
+
+
+@router.get("/{game_id}/narration")
+async def read_game_narration(game_id: str, learner_id: str = Depends(_reader)):
+    """What Yuvi is doing right now, one short sentence per stretch of
+    thinking, in the kid's language. Polled by the build page."""
+    game = await _owned_game(game_id, learner_id)
+    job = await store.latest_job(game_id)
+    live = dict(job.get("live") or {}) if job and job.get("status") in ("queued", "running") else None
+    result = await narration.narrate(game, live, actor_id=learner_id)
+    return JSONResponse(content=result, headers=_NO_STORE)
 
 
 @router.get("/{game_id}/thumb")

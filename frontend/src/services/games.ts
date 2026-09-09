@@ -146,6 +146,18 @@ export interface GameLive {
   code_tail?: string
 }
 
+/** What Yuvi is doing right now, one short sentence per stretch of thinking,
+ *  in the kid's language. Polled while the build page shows the thinking phase. */
+export interface GameNarration {
+  lines: string[]
+  chars: number
+  phase: string
+}
+
+export function getGameNarration(gameId: string) {
+  return apiGet<GameNarration>(`/api/games/${encodeURIComponent(gameId)}/narration`)
+}
+
 export function getGameLive(gameId: string) {
   return apiGet<GameLive>(`/api/games/${encodeURIComponent(gameId)}/live`)
 }

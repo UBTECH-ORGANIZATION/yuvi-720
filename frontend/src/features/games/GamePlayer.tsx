@@ -32,7 +32,7 @@ import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
   askGame, checkAnswer, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
-  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, nextQuestion } from '../../services/games'
+  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, nextQuestion, getGameNarration } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
 import './games.css'
 
@@ -45,6 +45,7 @@ const TOAST_MS = 3200
 /** The cheer at the end, and the banner that goes with it. */
 const CHEER_MS = 1800
 /** The live code view keeps this much of the tail; the rest scrolled by. */
+const NARRATION_POLL_MS = 6000
 const LIVE_CODE_MAX = 400_000
 const THINK_TEXT_MAX = 12_000
 
@@ -154,7 +155,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   // Yuvi's reasoning as it streams, kept to a tail: the kid reads what Yuvi
   // is weighing, in the collapsible log, never on the stage.
   const [thinkingText, setThinkingText] = useState('')
-  const thinkRef = useRef<HTMLDivElement>(null)
+  // Yuvi's thinking, told to the kid: one Hebrew/Arabic sentence per stretch
+  // of reasoning, from the server's narrator. Polled while thinking.
+  const [narration, setNarration] = useState<string[]>([])
+  const thinkRef = useRef<HTMLOListElement>(null)
   const [phase, setPhase] = useState<BuildPhase>('thinking')
   const [startedAt, setStartedAt] = useState<number | null>(null)
   // What Yuvi did so far, one line per phase, for the collapsible log in the chat.
@@ -321,6 +325,20 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     return bridge.attach(window, () => frameRef.current)
   }, [nonce, game.game_id, version, status, submitBug])
 
+  // ── What Yuvi is doing, in the kid's words ─────────────────────────────
+  useEffect(() => {
+    if (!busy) { setNarration([]); return }
+    let stopped = false
+    const tick = () => {
+      getGameNarration(game.game_id)
+        .then((n) => { if (!stopped && n.lines.length) setNarration(n.lines) })
+        .catch(() => {})
+    }
+    tick()
+    const timer = window.setInterval(tick, phase === 'thinking' ? NARRATION_POLL_MS : NARRATION_POLL_MS * 3)
+    return () => { stopped = true; window.clearInterval(timer) }
+  }, [busy, phase, game.game_id])
+
   // ── Live status and code from the worker ───────────────────────────────
   useEffect(() => {
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
@@ -476,7 +494,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   useEffect(() => {
     const box = thinkRef.current
     if (box) box.scrollTop = box.scrollHeight
-  }, [thinkingText])
+  }, [narration])
 
   const elapsedMin = startedAt ? Math.max(0, Math.floor((now - startedAt) / 60000)) : 0
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000) % 60) : 0
@@ -526,6 +544,11 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                   </span>
                 </span>
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
+                {narration.length > 0 && (
+                  <p key={narration.length} className="game-player__narration" dir="auto" aria-live="polite">
+                    {narration[narration.length - 1]}
+                  </p>
+                )}
               </div>
             )}
             {liveCode && <CodeView code={liveCode} label={t('games.build.title')} />}
@@ -648,10 +671,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                 <span className="game-chat__log-stat">{buildStat}</span>
                 <Icon name="chevronDown" size={14} />
               </summary>
-              {thinkingText ? (
-                <div ref={thinkRef} className="game-chat__log-think" dir="auto" aria-label={t('games.build.phase.thinking')}>
-                  {thinkingText}
-                </div>
+              {narration.length > 0 ? (
+                <ol ref={thinkRef} className="game-chat__log-lines" dir="auto" aria-label={t('games.build.phase.thinking')}>
+                  {narration.map((line, i) => <li key={i}>{line}</li>)}
+                </ol>
               ) : (
                 <p className="game-chat__log-detail">
                   {phase === 'writing' ? (liveCode ? t('games.build.lines', { count: codeLines }) : t('games.build.writingBrief'))

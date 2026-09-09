@@ -935,3 +935,34 @@
   cursor: pointer;
 }
 .game-chat__bar-btn:hover { background: var(--sp-surface); }
+
+
+/* Yuvi's thinking, told to the kid: the latest sentence under the robot,
+   fading in as each new one arrives. */
+.game-player__narration {
+  margin: 4px 0 0;
+  max-width: 34rem;
+  padding: 0 16px;
+  color: rgba(255, 255, 255, .82);
+  font-size: 15px;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+  animation: game-player-narration-in .5s ease both;
+}
+@keyframes game-player-narration-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .game-player__narration { animation: none; } }
+
+/* The build log lists every sentence so far. */
+.game-chat__log-lines {
+  margin: 8px 0 0;
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--sp-ink-700);
+  max-height: 220px;
+  overflow: auto;
+}
+.game-chat__log-lines li:last-child { color: var(--sp-ink-900); font-weight: 600; }
