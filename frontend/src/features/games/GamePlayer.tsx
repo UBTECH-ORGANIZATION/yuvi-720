@@ -46,7 +46,7 @@ const TOAST_MS = 3200
 /** The cheer at the end, and the banner that goes with it. */
 const CHEER_MS = 1800
 /** The live code view keeps this much of the tail; the rest scrolled by. */
-const LIVE_CODE_MAX = 80_000
+const LIVE_CODE_MAX = 400_000
 const THINK_TEXT_MAX = 12_000
 
 type ChatMode = 'change' | 'ask'
@@ -119,7 +119,37 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const [total, setTotal] = useState(0)
   const [errorCount, setErrorCount] = useState(0)
   const [liveCode, setLiveCode] = useState('')
+  // `rawRef` is everything received; `liveCode` is what is on screen. A
+  // frame's chunk is revealed over the next frames instead of landing as a
+  // block, so the stream reads as writing, not as pasting.
   const rawRef = useRef('')
+  const shownRef = useRef(0)
+  const revealRef = useRef<number | null>(null)
+  const reveal = useCallback((instant = false) => {
+    if (instant) {
+      shownRef.current = rawRef.current.length
+      setLiveCode(rawRef.current)
+      return
+    }
+    if (revealRef.current !== null) return
+    const step = () => {
+      const target = rawRef.current
+      const backlog = target.length - shownRef.current
+      if (backlog <= 0 || shownRef.current > target.length) {
+        shownRef.current = target.length
+        setLiveCode(target)
+        revealRef.current = null
+        return
+      }
+      // Drain faster when far behind, so the view never trails the worker.
+      const take = Math.max(24, Math.ceil(backlog / 12))
+      shownRef.current = Math.min(target.length, shownRef.current + take)
+      setLiveCode(target.slice(0, shownRef.current))
+      revealRef.current = requestAnimationFrame(step)
+    }
+    revealRef.current = requestAnimationFrame(step)
+  }, [])
+  useEffect(() => () => { if (revealRef.current !== null) cancelAnimationFrame(revealRef.current) }, [])
   const [liveStep, setLiveStep] = useState<string>('')
   const [thinkingChars, setThinkingChars] = useState(0)
   // Yuvi's reasoning as it streams, kept to a tail: the kid reads what Yuvi
@@ -178,7 +208,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       if (live.phase) setPhase(live.phase)
       setThinkingChars(live.thinking_chars ?? 0)
       if (live.thinking_tail) setThinkingText(live.thinking_tail)
-      if (live.code_tail) { rawRef.current = live.code_tail; setLiveCode(live.code_tail) }
+      if (live.code_tail) { rawRef.current = live.code_tail; reveal(true) }
       const started = typeof live.started_at === 'number' ? live.started_at * 1000
         : live.started_at ? Date.parse(String(live.started_at)) : NaN
       setStartedAt(Number.isFinite(started) ? started : Date.now())
@@ -218,7 +248,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.thinking_tail) setThinkingText((current) => (live.thinking_tail!.length > current.length ? live.thinking_tail! : current))
         if (live.code_tail && live.code_tail.length > rawRef.current.length) {
           rawRef.current = live.code_tail
-          setLiveCode(live.code_tail)
+          reveal()
         }
       } catch { /* next tick */ }
     }
@@ -300,9 +330,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         setPhase('writing')
         // The worker sends decoded code, and `reset` means "start over with
         // the complete game" (the deltas were partial; the hand-in is whole).
-        const next = (live.reset ? '' : rawRef.current) + live.chunk
+        if (live.reset) { rawRef.current = ''; shownRef.current = 0; setLiveCode('') }
+        const next = rawRef.current + live.chunk
         rawRef.current = next.length > LIVE_CODE_MAX ? next.slice(next.length - LIVE_CODE_MAX) : next
-        setLiveCode(rawRef.current)
+        reveal()
         return
       }
       if (live.event === 'thinking') {
@@ -321,6 +352,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         setVersion(live.v)
         setLiveCode('')
         rawRef.current = ''
+        shownRef.current = 0
         setNotice(null)
         showToast(t('games.player.updated'))
         // The brief, the thumbnail and what it cost live on the game row.
@@ -373,6 +405,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       setStatus('building')
       setLiveCode('')
       rawRef.current = ''
+      shownRef.current = 0
       setThinkingChars(0)
       setThinkingText('')
       setPhase('thinking')

@@ -40,13 +40,13 @@ REPLICA = os.environ.get("CONTAINER_APP_REPLICA_NAME") or socket.gethostname()
 POLL_SECONDS = float(os.environ.get("GAME_WORKER_POLL_SECONDS", "3"))
 MAX_ATTEMPTS = int(os.environ.get("GAME_JOBS_MAX_DELIVERY", "3"))
 SPARKS_PER_USD = float(os.environ.get("GAME_SPARKS_PER_USD", "100"))  # kid-facing "sparks" = cents
-CODE_FRAME_INTERVAL_S = 1.0   # live-code frames to the player, at most this often…
+CODE_FRAME_INTERVAL_S = 0.35  # live-code frames to the player, at most this often…
 CODE_FRAME_MAX = 6000         # …unless this much piled up first
 THINK_FRAME_INTERVAL_S = 2.0  # reasoning frames to the player, at most this often…
 THINK_FRAME_MAX = 4000        # …unless this much piled up
 LIVE_THINK_TAIL = 12_000      # reasoning kept on the job row for a page opened mid-think
 LIVE_SNAPSHOT_INTERVAL_S = 3.0  # the job row keeps a snapshot so a page opened mid-build catches up
-LIVE_CODE_TAIL = 24_000
+LIVE_CODE_TAIL = 240_000     # the whole game, so a reload mid-build shows every line
 
 
 def _backend():
