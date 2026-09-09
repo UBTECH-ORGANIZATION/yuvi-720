@@ -91,9 +91,11 @@ test('globe and World Capsule furniture open hover menus with move and rotate on
 })
 
 test('the World Capsule opens friend and world choices in the Studio side panel', () => {
+  assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(false\)[\s\S]{0,80}setMode\('roam'\)/)
   assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
   assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
-  assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[\s+\{ x: stations\.explore\.x, z: stations\.explore\.z, radius: STATION_RADIUS\.explore \},\s+\]/)
+  assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[[\s\S]{0,180}roomLayout\(layoutId\)\.walkBlockers/)
+  assert.match(labRoom, /noBuildZones[\s\S]{0,700}roomLayout\(layoutId\)\.decorBlockers/)
   assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
   assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setWorldPickerOpen\(false\)\s+setMode\('friends'\)/)

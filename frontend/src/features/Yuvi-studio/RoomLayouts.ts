@@ -14,11 +14,21 @@ export interface RoomLayoutWall {
   openings?: Array<{ at: number; width: number }>
 }
 
+export interface RoomWalkSurface {
+  x: number
+  z: number
+  width: number
+  depth: number
+  height: number
+}
+
 export interface RoomLayout {
   id: RoomLayoutId
   buildablePolygon: RoomLayoutPoint[]
   walls: RoomLayoutWall[]
   decorBlockers: Array<{ x: number; z: number; radius: number }>
+  walkBlockers: Array<{ x: number; z: number; radius: number }>
+  walkSurfaces: RoomWalkSurface[]
   defaultStations: RoomStations
   camera: { x: number; y: number; z: number; targetX: number; targetY: number; targetZ: number }
 }
@@ -49,20 +59,74 @@ export const LAB_USABLE_AREA = polygonArea(LAB_POLYGON)
 const LAB_WALLS = rectangleWalls(24.4, -25.8, 32.7)
 const WORLD_CAMERA = { x: 0, y: 7.5, z: 22, targetX: 0, targetY: 0, targetZ: 0 }
 
-const rectangularWorld = (id: RoomLayoutId): RoomLayout => ({
+const ADVENTURE_PARK_BLOCKERS = [
+  { x: -7.2, z: -22.6, radius: 3.2 },
+  { x: 0, z: -22.6, radius: 3.2 },
+  { x: 7.2, z: -22.6, radius: 3.2 },
+  { x: -20.2, z: 21.5, radius: 4.2 },
+  { x: 21.2, z: 23.5, radius: 2.6 },
+]
+
+const ADVENTURE_PARK_WALK_BLOCKERS = [
+  { x: -23, z: 25.4, radius: 1.15 },
+  { x: 21.2, z: 23.5, radius: 2.6 },
+]
+
+const ADVENTURE_PARK_WALK_SURFACES: RoomWalkSurface[] = [
+  { x: -7.2, z: -22.8, width: 6.5, depth: 4.4, height: 0.34 },
+  { x: 0, z: -22.8, width: 6.5, depth: 4.4, height: 0.34 },
+  { x: 7.2, z: -22.8, width: 6.5, depth: 4.4, height: 0.34 },
+  { x: -20.1, z: 18.6, width: 7.6, depth: 1.75, height: 0.5 },
+  { x: -20.1, z: 19.95, width: 6.95, depth: 1.75, height: 0.92 },
+  { x: -20.1, z: 21.3, width: 6.3, depth: 1.75, height: 1.34 },
+]
+
+const SPORTS_ARENA_BLOCKERS = [
+  { x: -21.5, z: -5, radius: 2.2 },
+  { x: -21.5, z: 5, radius: 2.2 },
+  { x: -21.5, z: 15, radius: 2.2 },
+  { x: 21.5, z: -5, radius: 2.2 },
+  { x: 21.5, z: 5, radius: 2.2 },
+  { x: 21.5, z: 15, radius: 2.2 },
+]
+
+const SPORTS_ARENA_WALK_SURFACES: RoomWalkSurface[] = [-1, 1].flatMap((side) => [
+  { x: side * 20.4, z: 5, width: 1.15, depth: 24, height: 0.32 },
+  { x: side * 21.5, z: 5, width: 1.15, depth: 24, height: 0.64 },
+  { x: side * 22.6, z: 5, width: 1.15, depth: 24, height: 0.96 },
+])
+
+const CREATOR_LOFT_BLOCKERS = [
+  { x: -6, z: -21.8, radius: 3.15 },
+  { x: 0, z: -21.8, radius: 3.15 },
+  { x: 6, z: -21.8, radius: 3.15 },
+]
+
+const CREATOR_LOFT_WALK_SURFACES: RoomWalkSurface[] = [
+  { x: 0, z: -21.8, width: 18, depth: 7, height: 0.8 },
+]
+
+const rectangularWorld = (
+  id: RoomLayoutId,
+  decorBlockers: RoomLayout['decorBlockers'] = [],
+  walkBlockers: RoomLayout['walkBlockers'] = decorBlockers,
+  walkSurfaces: RoomLayout['walkSurfaces'] = [],
+): RoomLayout => ({
   id,
   buildablePolygon: LAB_POLYGON,
   walls: LAB_WALLS,
-  decorBlockers: [],
+  decorBlockers,
+  walkBlockers,
+  walkSurfaces,
   defaultStations: LAB_STATIONS,
   camera: WORLD_CAMERA,
 })
 
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
   lab: rectangularWorld('lab'),
-  adventurePark: rectangularWorld('adventurePark'),
-  sportsArena: rectangularWorld('sportsArena'),
-  creatorLoft: rectangularWorld('creatorLoft'),
+  adventurePark: rectangularWorld('adventurePark', ADVENTURE_PARK_BLOCKERS, ADVENTURE_PARK_WALK_BLOCKERS, ADVENTURE_PARK_WALK_SURFACES),
+  sportsArena: rectangularWorld('sportsArena', SPORTS_ARENA_BLOCKERS, [], SPORTS_ARENA_WALK_SURFACES),
+  creatorLoft: rectangularWorld('creatorLoft', CREATOR_LOFT_BLOCKERS, [], CREATOR_LOFT_WALK_SURFACES),
 }
 
 export const FREE_ROOM_LAYOUTS: RoomLayoutId[] = ['lab', 'adventurePark']
@@ -79,6 +143,14 @@ export function normalizeRoomLayoutId(value: unknown): RoomLayoutId {
 
 export function roomLayout(id: RoomLayoutId): RoomLayout {
   return ROOM_LAYOUTS[id]
+}
+
+export function walkSurfaceHeightAt(layout: RoomLayout, point: RoomLayoutPoint): number {
+  return layout.walkSurfaces.reduce((height, surface) => (
+    Math.abs(point.x - surface.x) <= surface.width / 2 && Math.abs(point.z - surface.z) <= surface.depth / 2
+      ? Math.max(height, surface.height)
+      : height
+  ), 0)
 }
 
 export function wallAnchorAt(layout: RoomLayout, point: RoomLayoutPoint, height = 0, clearance = 0): WallAnchor {

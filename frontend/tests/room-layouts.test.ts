@@ -1,11 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeRoom, switchRoomWorld } from '../src/features/Yuvi-studio/RoomDesign.ts'
-import { FREE_ROOM_LAYOUTS, LAB_USABLE_AREA, ROOM_LAYOUTS, isRoomLayoutId, pointInLayout, polygonArea, reconcileItemsForLayout, reconcileStationsForLayout, wallAnchorAt, wallAnchorTransform, type RoomLayout } from '../src/features/Yuvi-studio/RoomLayouts.ts'
+import { ADVENTURE_PARK_DEFAULT_ITEMS, CREATOR_LOFT_DEFAULT_ITEMS, SPORTS_ARENA_DEFAULT_ITEMS, normalizeRoom, switchRoomWorld } from '../src/features/Yuvi-studio/RoomDesign.ts'
+import { FREE_ROOM_LAYOUTS, LAB_USABLE_AREA, ROOM_LAYOUTS, isRoomLayoutId, pointInLayout, polygonArea, reconcileItemsForLayout, reconcileStationsForLayout, walkSurfaceHeightAt, wallAnchorAt, wallAnchorTransform, type RoomLayout } from '../src/features/Yuvi-studio/RoomLayouts.ts'
 
 test('legacy rooms migrate to the unchanged Lab layout', () => {
   const room = normalizeRoom({ version: 1, items: [{ uid: 'desk', kind: 'desk', x: 2, z: -3, rot: 0.5 }] })
-  assert.equal(room.version, 3)
+  assert.equal(room.version, 6)
   assert.equal(room.activeLayoutId, 'lab')
   assert.deepEqual(room.items, [{ uid: 'desk', kind: 'desk', x: 2, z: -3, rot: 0.5, tint: undefined }])
 })
@@ -122,10 +122,81 @@ test('worlds keep independent furniture while stations and surprises travel', ()
     ],
   })
   const park = switchRoomWorld(lab, 'adventurePark')
-  assert.deepEqual(park.items.map((item) => item.uid), ['gift'])
+  assert.deepEqual(park.items.map((item) => item.uid), [...ADVENTURE_PARK_DEFAULT_ITEMS.map((item) => item.uid), 'gift'])
   assert.equal(park.stations.room.placed, true)
   park.items.push({ uid: 'park-seat', kind: 'chair', x: 4, z: 5, rot: 0 })
   const returned = switchRoomWorld(park, 'lab')
   assert.deepEqual(returned.items.map((item) => item.uid), ['desk', 'gift'])
-  assert.deepEqual(returned.worlds.adventurePark.items.map((item) => item.uid), ['park-seat'])
+  assert.deepEqual(returned.worlds.adventurePark.items.map((item) => item.uid), [...ADVENTURE_PARK_DEFAULT_ITEMS.map((item) => item.uid), 'park-seat'])
+})
+
+test('version 3 rooms receive movable Adventure Park furniture exactly once', () => {
+  const migrated = normalizeRoom({ version: 3, activeLayoutId: 'adventurePark', items: [] })
+  const transforms = (items: typeof migrated.items) => items.map(({ uid, kind, x, z, rot }) => ({ uid, kind, x, z, rot }))
+  assert.deepEqual(transforms(migrated.items), ADVENTURE_PARK_DEFAULT_ITEMS)
+  const saved = normalizeRoom({ ...migrated, items: migrated.items.slice(1), worlds: { ...migrated.worlds, adventurePark: { ...migrated.worlds.adventurePark, items: migrated.items.slice(1) } } })
+  assert.deepEqual(transforms(saved.items), ADVENTURE_PARK_DEFAULT_ITEMS.slice(1))
+})
+
+test('Adventure Park architecture protects its perimeter and leaves the centre editable', () => {
+  const layout = ROOM_LAYOUTS.adventurePark
+  assert.equal(layout.decorBlockers.length, 5)
+  assert.equal(layout.walkBlockers.length, 2)
+  assert.equal(layout.walkSurfaces.length, 6)
+  const item = { uid: 'clubhouse-chair', kind: 'chair', x: -20.2, z: 21.5, rot: 0 }
+  const result = reconcileItemsForLayout(layout, [item], [], { radiusFor: () => 0.7, gridStep: 1 })
+  assert.deepEqual(result.relocatedUids, ['clubhouse-chair'])
+  assert.equal(result.items.some((entry) => entry.x === 0 && entry.z === 4), false)
+  assert.equal(layout.decorBlockers.some((blocker) => Math.hypot(blocker.x, blocker.z - 4) <= blocker.radius + 0.7), false)
+})
+
+test('Adventure Park exposes fixed climb heights only for architecture', () => {
+  const layout = ROOM_LAYOUTS.adventurePark
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: -22.8 }), 0.34)
+  assert.equal(walkSurfaceHeightAt(layout, { x: -20.1, z: 21.3 }), 1.34)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: 4 }), 0)
+})
+
+test('Sports Arena protects climbable bleachers and leaves the court editable', () => {
+  const layout = ROOM_LAYOUTS.sportsArena
+  assert.equal(layout.decorBlockers.length, 6)
+  assert.equal(layout.walkBlockers.length, 0)
+  assert.equal(layout.walkSurfaces.length, 6)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 20.4, z: 5 }), 0.32)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 21.5, z: 5 }), 0.64)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 22.6, z: 5 }), 0.96)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: 3 }), 0)
+  const result = reconcileItemsForLayout(layout, [{ uid: 'bleacher-prop', kind: 'chair', x: 21.5, z: 5, rot: 0 }], [], { radiusFor: () => 0.7, gridStep: 1 })
+  assert.deepEqual(result.relocatedUids, ['bleacher-prop'])
+  assert.equal(layout.decorBlockers.some((blocker) => Math.hypot(blocker.x, blocker.z - 3) <= blocker.radius + 0.7), false)
+})
+
+test('Creator Loft protects its climbable stage and leaves the arcade floor editable', () => {
+  const layout = ROOM_LAYOUTS.creatorLoft
+  assert.equal(layout.decorBlockers.length, 3)
+  assert.equal(layout.walkBlockers.length, 0)
+  assert.equal(layout.walkSurfaces.length, 1)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: -21.8 }), 0.8)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: 4 }), 0)
+  const result = reconcileItemsForLayout(layout, [{ uid: 'stage-arcade', kind: 'arcade', x: 0, z: -21.8, rot: 0 }], [], { radiusFor: () => 0.7, gridStep: 1 })
+  assert.deepEqual(result.relocatedUids, ['stage-arcade'])
+  assert.equal(layout.decorBlockers.some((blocker) => Math.hypot(blocker.x, blocker.z - 4) <= blocker.radius + 0.7), false)
+})
+
+test('version 4 rooms receive movable Sports Arena furniture exactly once', () => {
+  const migrated = normalizeRoom({ version: 4, activeLayoutId: 'sportsArena', items: [] })
+  const transforms = (items: typeof migrated.items) => items.map(({ uid, kind, x, z, rot }) => ({ uid, kind, x, z, rot }))
+  assert.deepEqual(transforms(migrated.items), SPORTS_ARENA_DEFAULT_ITEMS)
+  const savedItems = migrated.items.slice(1)
+  const saved = normalizeRoom({ ...migrated, items: savedItems, worlds: { ...migrated.worlds, sportsArena: { ...migrated.worlds.sportsArena, items: savedItems } } })
+  assert.deepEqual(transforms(saved.items), SPORTS_ARENA_DEFAULT_ITEMS.slice(1))
+})
+
+test('version 5 rooms receive movable Creator Loft furniture exactly once', () => {
+  const migrated = normalizeRoom({ version: 5, activeLayoutId: 'creatorLoft', items: [] })
+  const transforms = (items: typeof migrated.items) => items.map(({ uid, kind, x, z, rot, tint }) => ({ uid, kind, x, z, rot, ...(tint ? { tint } : {}) }))
+  assert.deepEqual(transforms(migrated.items), CREATOR_LOFT_DEFAULT_ITEMS)
+  const savedItems = migrated.items.slice(1)
+  const saved = normalizeRoom({ ...migrated, items: savedItems, worlds: { ...migrated.worlds, creatorLoft: { ...migrated.worlds.creatorLoft, items: savedItems } } })
+  assert.deepEqual(transforms(saved.items), CREATOR_LOFT_DEFAULT_ITEMS.slice(1))
 })

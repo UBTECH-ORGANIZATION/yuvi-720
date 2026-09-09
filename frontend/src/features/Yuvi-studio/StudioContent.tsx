@@ -181,6 +181,9 @@ export function StudioContent({
       onComplete: () => {
         transitionCompleteRef.current = true
         setWorldSwitching(false)
+        setWorldPickerOpen(false)
+        setMode('roam')
+        requestAnimationFrame(() => avatarRef.current?.focus('roam'))
         const hiddenItems = pendingUnplacedItemsRef.current
         if (hiddenItems?.length) {
           setUnplacedItems(hiddenItems)
@@ -396,6 +399,9 @@ export function StudioContent({
   const leaveStation = () => {
     setPlacing(null)
     setPropMenu(null)
+    setWorldPickerOpen(false)
+    setMode('roam')
+    avatarRef.current?.focus('roam')
     avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
   }
   const startVisit = async (ownerId: string) => {

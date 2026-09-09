@@ -451,6 +451,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // Set when he has just stepped onto a station and still has to turn around.
     let faceLearnerPending = false
     let deckBlend = roam ? 0 : 1    // 1 = on the platform, 0 = on the floor
+    let walkSurfaceLift = 0
     const heldKeys = new Set<string>()
 
     // ── First person ──
@@ -1684,6 +1685,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           const deckAt = appliedStations?.avatar
           const onDeck = Math.hypot(roamPos.x - (deckAt?.x ?? 0), roamPos.y - (deckAt?.z ?? 0)) < DECK_RADIUS ? 1 : 0
           deckBlend += (onDeck - deckBlend) * 0.12
+          const targetSurfaceLift = onDeck ? 0 : (room?.walkSurfaceHeightAt(roamPos.x, roamPos.y) ?? 0)
+          walkSurfaceLift += (targetSurfaceLift - walkSurfaceLift) * Math.min(1, dt * 9)
           if (room && roomBounds) {
             room.keyLight.position.set(roamPos.x + 0.5, roomBounds.ceilY - 0.35, roamPos.y + 2.3)
             room.keyLight.target.position.set(roamPos.x, room.deckY + 0.7, roamPos.y)
@@ -1751,7 +1754,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         const walkPhase = t * 9
         const walkStride = Math.sin(walkPhase)
         const missionLift = 0
-        const groundY = -0.82 - (1 - deckBlend) * DECK_LIFT + missionLift
+        const groundY = -0.82 - (1 - deckBlend) * DECK_LIFT + walkSurfaceLift * (1 - deckBlend) + missionLift
         const bodyY = groundY
           + Math.sin(t * 1.4) * 0.02 * (1 - roamSpeed)
           + Math.abs(walkStride) * 0.03 * roamSpeed

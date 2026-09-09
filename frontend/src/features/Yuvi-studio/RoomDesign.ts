@@ -98,23 +98,49 @@ export const DEFAULT_STATIONS: RoomStations = {
   mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
 }
 
-const DEFAULT_WORLD = (): RoomWorldDesign => ({
+export const ADVENTURE_PARK_DEFAULT_ITEMS: RoomItem[] = [
+  { uid: 'park-bench-west', kind: 'parkBench', x: -20.2, z: -4.8, rot: Math.PI / 2 },
+  { uid: 'park-bench-north', kind: 'parkBench', x: -9.8, z: -15.2, rot: 0 },
+  { uid: 'park-sandbox', kind: 'parkSandbox', x: -15.5, z: -10.5, rot: 0 },
+  { uid: 'park-coaster', kind: 'parkCoaster', x: 17, z: 0, rot: 0 },
+]
+
+export const SPORTS_ARENA_DEFAULT_ITEMS: RoomItem[] = [
+  { uid: 'arena-bench', kind: 'sportsBench', x: -16.5, z: 15, rot: Math.PI / 2 },
+  { uid: 'arena-ball-rack', kind: 'sportsBallRack', x: 16.5, z: 15, rot: -Math.PI / 2 },
+  { uid: 'arena-training-box-low', kind: 'sportsTrainingBox', x: -11.5, z: 22, rot: 0 },
+  { uid: 'arena-training-box-high', kind: 'sportsTrainingBox', x: -7.5, z: 22, rot: Math.PI / 2 },
+  { uid: 'arena-mini-goal', kind: 'sportsMiniGoal', x: 13, z: 22, rot: Math.PI },
+]
+
+export const CREATOR_LOFT_DEFAULT_ITEMS: RoomItem[] = [
+  { uid: 'loft-arcade-cyan', kind: 'loftArcadeCabinet', x: -18, z: -10, rot: Math.PI / 2 },
+  { uid: 'loft-arcade-coral', kind: 'loftArcadeCabinet', x: -18, z: -5, rot: Math.PI / 2, tint: '#ff5f8f' },
+  { uid: 'loft-claw-machine', kind: 'loftClawMachine', x: 18, z: -10, rot: -Math.PI / 2 },
+  { uid: 'loft-token-pusher', kind: 'loftTokenPusher', x: 18, z: -4, rot: -Math.PI / 2 },
+  { uid: 'loft-pinball', kind: 'loftPinball', x: -16, z: 15, rot: Math.PI / 2 },
+  { uid: 'loft-basketball-arcade', kind: 'loftBasketballArcade', x: 14, z: 17, rot: -Math.PI / 2 },
+  { uid: 'loft-prize-counter', kind: 'loftPrizeCounter', x: 0, z: 23, rot: Math.PI },
+  { uid: 'loft-claw-machine-mini', kind: 'loftClawMachine', x: 18, z: 2, rot: -Math.PI / 2, tint: '#5de7ff' },
+]
+
+const DEFAULT_WORLD = (items: RoomItem[] = []): RoomWorldDesign => ({
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
-  items: [],
+  items: items.map((item) => ({ ...item })),
   storedItems: [],
 })
 
 export const DEFAULT_WORLDS: Record<RoomLayoutId, RoomWorldDesign> = {
   lab: DEFAULT_WORLD(),
-  adventurePark: DEFAULT_WORLD(),
-  sportsArena: DEFAULT_WORLD(),
-  creatorLoft: DEFAULT_WORLD(),
+  adventurePark: DEFAULT_WORLD(ADVENTURE_PARK_DEFAULT_ITEMS),
+  sportsArena: DEFAULT_WORLD(SPORTS_ARENA_DEFAULT_ITEMS),
+  creatorLoft: DEFAULT_WORLD(CREATOR_LOFT_DEFAULT_ITEMS),
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
-  version: 3,
+  version: 6,
   activeLayoutId: 'lab',
   worlds: DEFAULT_WORLDS,
   floor: 'lab',
@@ -236,6 +262,7 @@ export function normalizeRoom(raw: unknown): RoomDesign {
   const base = cloneRoom(DEFAULT_ROOM)
   if (!raw || typeof raw !== 'object') return base
   const record = raw as Record<string, unknown>
+  const sourceVersion = isFinitePoint(record.version) ? record.version : 1
 
   base.activeLayoutId = normalizeRoomLayoutId(record.activeLayoutId)
 
@@ -288,7 +315,7 @@ export function normalizeRoom(raw: unknown): RoomDesign {
     for (const id of Object.keys(base.worlds) as RoomLayoutId[]) {
       const rawWorld = rawWorlds[id]
       if (!rawWorld || typeof rawWorld !== 'object') continue
-      const normalized = normalizeRoom({ ...rawWorld, activeLayoutId: id })
+      const normalized = normalizeRoom({ ...rawWorld, activeLayoutId: id, version: sourceVersion })
       base.worlds[id] = {
         floor: normalized.floor,
         wall: normalized.wall,
@@ -322,10 +349,34 @@ export function normalizeRoom(raw: unknown): RoomDesign {
   }
   base.introDone = introDone
   base.tutorialDone = record.tutorialDone === true
+  if (sourceVersion < 4) {
+    const appendDefaults = (items: RoomItem[]) => {
+      const existing = new Set(items.map((item) => item.uid))
+      return [...items, ...ADVENTURE_PARK_DEFAULT_ITEMS.filter((item) => !existing.has(item.uid)).map((item) => ({ ...item }))]
+    }
+    base.worlds.adventurePark.items = appendDefaults(base.worlds.adventurePark.items)
+    if (base.activeLayoutId === 'adventurePark') base.items = appendDefaults(base.items)
+  }
+  if (sourceVersion < 5) {
+    const appendDefaults = (items: RoomItem[]) => {
+      const existing = new Set(items.map((item) => item.uid))
+      return [...items, ...SPORTS_ARENA_DEFAULT_ITEMS.filter((item) => !existing.has(item.uid)).map((item) => ({ ...item }))]
+    }
+    base.worlds.sportsArena.items = appendDefaults(base.worlds.sportsArena.items)
+    if (base.activeLayoutId === 'sportsArena') base.items = appendDefaults(base.items)
+  }
+  if (sourceVersion < 6) {
+    const appendDefaults = (items: RoomItem[]) => {
+      const existing = new Set(items.map((item) => item.uid))
+      return [...items, ...CREATOR_LOFT_DEFAULT_ITEMS.filter((item) => !existing.has(item.uid)).map((item) => ({ ...item }))]
+    }
+    base.worlds.creatorLoft.items = appendDefaults(base.worlds.creatorLoft.items)
+    if (base.activeLayoutId === 'creatorLoft') base.items = appendDefaults(base.items)
+  }
   // Version 1/2 had one traveling design. Preserve it in the world where the
   // learner last used it; all other new worlds begin as clean canvases.
   if (!rawWorlds) base.worlds[base.activeLayoutId] = activeWorldSnapshot(base)
-  base.version = 3
+  base.version = 6
   return base
 }
 

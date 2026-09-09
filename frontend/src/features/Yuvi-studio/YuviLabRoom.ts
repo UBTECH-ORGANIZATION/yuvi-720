@@ -20,7 +20,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
 import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
-import { roomLayout, wallAnchorAt, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
+import { roomLayout, walkSurfaceHeightAt as layoutWalkSurfaceHeightAt, wallAnchorAt, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 import { createStudentWorldEnvironment } from './StudentWorldEnvironment'
 export type LabRoomQuality = 'high' | 'low'
 
@@ -96,6 +96,8 @@ export interface LabRoom {
   setRoomStyle: (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => void
   /** Footprints Yuvi must walk around. */
   blockers: () => LabRoomCircle[]
+  /** Height above the room floor of permanent low scenery under Yuvi's feet. */
+  walkSurfaceHeightAt: (x: number, z: number) => number
   /** Footprints nothing may be built on, minus the station being carried. */
   noBuildZones: (exclude?: StationId) => LabRoomCircle[]
   /** Move the walk-in stations, and everything that belongs to them. */
@@ -1647,7 +1649,21 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   const decorBlockers = (): LabRoomCircle[] => [
     { x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore },
+    ...roomLayout(layoutId).walkBlockers,
   ]
+  const userWalkSurfaces: Array<{ x: number; z: number; width: number; depth: number; height: number; rot: number }> = []
+
+  const walkSurfaceHeightAt = (x: number, z: number) => userWalkSurfaces.reduce((height, surface) => {
+    const dx = x - surface.x
+    const dz = z - surface.z
+    const cos = Math.cos(surface.rot)
+    const sin = Math.sin(surface.rot)
+    const localX = cos * dx - sin * dz
+    const localZ = sin * dx + cos * dz
+    return Math.abs(localX) <= surface.width / 2 && Math.abs(localZ) <= surface.depth / 2
+      ? Math.max(height, surface.height)
+      : height
+  }, layoutWalkSurfaceHeightAt(roomLayout(layoutId), { x, z }))
 
   const zonePads = new Map<LabRoomZoneId, {
     ring: THREE.Mesh
@@ -1900,9 +1916,27 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       builtItems.delete(uid)
     }
     userBlockers.length = 0
+    userWalkSurfaces.length = 0
     for (const item of items) {
       const built = builtItems.get(item.uid)
-      if (built && roomItemSpec(item.kind)?.placement !== 'wall') userBlockers.push({ x: item.x, z: item.z, radius: built.radius })
+      const spec = roomItemSpec(item.kind)
+      if (!built || spec?.placement === 'wall') continue
+      const walkBlockerRadius = spec?.walkBlockerRadius
+      if (walkBlockerRadius !== 0) userBlockers.push({ x: item.x, z: item.z, radius: walkBlockerRadius == null ? built.radius : walkBlockerRadius * PROP_SCALE })
+      for (const surface of spec?.walkSurfaces ?? []) {
+        const offsetX = (surface.x ?? 0) * PROP_SCALE
+        const offsetZ = (surface.z ?? 0) * PROP_SCALE
+        const cos = Math.cos(item.rot)
+        const sin = Math.sin(item.rot)
+        userWalkSurfaces.push({
+          x: item.x + cos * offsetX + sin * offsetZ,
+          z: item.z - sin * offsetX + cos * offsetZ,
+          width: surface.width * PROP_SCALE,
+          depth: surface.depth * PROP_SCALE,
+          height: surface.height * PROP_SCALE,
+          rot: item.rot,
+        })
+      }
     }
   }
 
@@ -1957,6 +1991,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       .filter((id) => id !== exclude && stations[id].placed)
       .map((id) => ({ x: stations[id].x, z: stations[id].z, radius: STATION_RADIUS[id] })),
     ...ZONES.filter((zone) => zone.id !== exclude).map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
+    ...roomLayout(layoutId).decorBlockers,
   ]
 
   // ── Placement ghost ──────────────────────────────────────────────────────
@@ -2249,6 +2284,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const update = (t: number, dt: number) => {
     if (!reduceMotion) {
       for (const built of builtItems.values()) {
+        built.object.traverse((node) => {
+          const animate = node.userData.update
+          if (typeof animate === 'function') animate(t)
+        })
         if (built.kind !== 'weekly_surprise_covered' && built.kind !== 'weekly_surprise_ready') continue
         const ready = built.kind === 'weekly_surprise_ready'
         built.object.position.y = FLOOR_Y + Math.abs(Math.sin(t * (ready ? 2.8 : 1.35))) * (ready ? 0.16 : 0.06)
@@ -2331,7 +2370,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   return {
     group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
-    zones: ZONES, setZoneHighlight, setMissionTravel, missionPortalAnchor, missionPortalApproach, ambientWaypoints, setUserItems, setGhost, setTarget, setRoomStyle, blockers, noBuildZones,
+    zones: ZONES, setZoneHighlight, setMissionTravel, missionPortalAnchor, missionPortalApproach, ambientWaypoints, setUserItems, setGhost, setTarget, setRoomStyle, blockers, walkSurfaceHeightAt, noBuildZones,
     setStations, pickItem, pickStation, itemAnchor, stationAnchor,
   }
 }

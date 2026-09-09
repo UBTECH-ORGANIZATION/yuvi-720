@@ -33,6 +33,10 @@ export interface RoomItemSpec {
   tintable?: boolean
   /** Default tint for tintable props. */
   tint?: string
+  /** Low top surfaces Yuvi can step onto, in catalog-local coordinates. */
+  walkSurfaces?: Array<{ x?: number; z?: number; width: number; depth: number; height: number }>
+  /** Optional smaller hard obstacle inside a broadly walkable item. Zero means fully walkable. */
+  walkBlockerRadius?: number
   build: (kit: RoomKit, tint: THREE.Color) => THREE.Object3D
 }
 
@@ -1264,6 +1268,312 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
       group.add(at(kit.sph(0.11, kit.mat('emissive', 0xf2fbff)), 0, 1.02, 0))
       group.add(at(flat(kit.halo(1.4, tint, 0.4)), 0, 0.99, 0))
       group.add(at(flat(kit.halo(2.2, tint, 0.3)), 0, 0.02, 0))
+      return group
+    },
+  },
+  {
+    id: 'parkBench', category: 'seating', placement: 'floor', radius: 1.55, height: 0.9,
+    walkSurfaces: [{ width: 2.97, depth: 0.74, height: 0.24 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const timber = kit.mat('wood', 0x8a6845)
+      const steel = kit.mat('metal', 0x27343a)
+      for (const z of [-0.24, 0, 0.24]) group.add(at(kit.rbox(2.97, 0.08, 0.19, 0.025, timber), 0, 0.24, z))
+      for (const x of [-1.17, 1.17]) group.add(at(kit.box(0.1, 0.24, 0.54, steel), x, 0.12, 0))
+      for (const x of [-1.28, -0.85, -0.43, 0, 0.43, 0.85, 1.28]) {
+        const slat = at(kit.rbox(0.33, 0.08, 0.6, 0.025, timber), x, 0.54, -0.3)
+        slat.rotation.x = -0.12
+        group.add(slat)
+      }
+      return group
+    },
+  },
+  {
+    id: 'parkSandbox', category: 'play', placement: 'floor', radius: 2.2, height: 0.45,
+    walkSurfaces: [{ width: 4.11, depth: 3.54, height: 0.057 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const timber = kit.mat('wood', 0x8a6845)
+      group.add(at(kit.box(4.11, 0.114, 3.54, kit.mat('matte', 0xd8b765)), 0, 0.057, 0))
+      for (const [width, depth, x, z] of [
+        [4.34, 0.19, 0, -1.8], [4.34, 0.19, 0, 1.8],
+        [0.19, 3.77, -2.09, 0], [0.19, 3.77, 2.09, 0],
+      ] as const) group.add(at(kit.rbox(width, 0.19, depth, 0.035, timber), x, 0.095, z))
+      group.add(at(kit.cyl(0.24, 0.24, 0.31, kit.mat('gloss', 0xe66f54), 12), -1.03, 0.27, -0.46))
+      const handle = at(kit.tor(0.27, 0.026, kit.mat('metal', 0x27343a)), -1.03, 0.45, -0.46)
+      handle.rotation.x = Math.PI / 2
+      group.add(handle)
+      const shovel = at(kit.box(0.07, 0.07, 0.74, kit.mat('gloss', 0x4a8ec2)), -0.46, 0.17, 0.17)
+      shovel.rotation.y = 0.65
+      group.add(shovel)
+      for (const [index, [x, z]] of [[-0.57, -0.86], [0.74, 0.74], [-0.34, 0.97]].entries()) {
+        group.add(at(kit.cone(0.22, 0.27, kit.mat('gloss', [0x66f28f, 0xffcf4a, 0xff6f91][index])), x, 0.2, z))
+      }
+      return group
+    },
+  },
+  {
+    id: 'parkCoaster', category: 'play', placement: 'floor', radius: 3.55, height: 1.5,
+    walkSurfaces: [{ x: 0, z: 2.46, width: 2.51, depth: 1.83, height: 0.137 }],
+    walkBlockerRadius: 0.72,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const rail = kit.mat('emissive', 0x6cc7cf)
+      const steel = kit.mat('metal', 0x27343a)
+      for (const radius of [2.97, 2.64]) {
+        const track = at(kit.tor(radius, 0.043, rail), 0, 1.05, 0)
+        track.rotation.x = Math.PI / 2
+        track.scale.z = 0.78
+        group.add(track)
+      }
+      for (let index = 0; index < 16; index += 1) {
+        const angle = (index / 16) * Math.PI * 2
+        const x = Math.cos(angle) * 2.8
+        const z = Math.sin(angle) * 2.8 * 0.78
+        group.add(at(kit.cyl(0.052, 0.052, 1.05, steel, 8), x, 0.525, z))
+      }
+      group.add(at(kit.rbox(2.51, 0.137, 1.83, 0.04, kit.mat('dark', 0x252d31)), 0, 0.0685, 2.46))
+      for (const x of [-1.14, 1.14]) group.add(at(kit.box(0.09, 1.26, 0.09, rail), x, 0.63, 2.97))
+      group.add(at(kit.box(2.4, 0.09, 0.09, kit.mat('emissive', 0xff6f91)), 0, 1.23, 2.97))
+      const car = new THREE.Group()
+      car.name = 'park-coaster-car'
+      car.add(at(kit.rbox(0.71, 0.33, 0.51, 0.08, kit.mat('gloss', 0xe9516b)), 0, 0, 0))
+      const bar = at(kit.tor(0.24, 0.034, steel), 0, 0.24, 0)
+      bar.rotation.x = Math.PI / 2
+      car.add(bar)
+      group.add(car)
+      const placeCar = (elapsed: number) => {
+        const angle = elapsed * 0.35
+        car.position.set(Math.cos(angle) * 2.8, 1.05 + Math.sin(angle * 2) * 0.32, Math.sin(angle) * 2.8 * 0.78)
+        car.rotation.y = Math.atan2(-Math.sin(angle), Math.cos(angle) * 0.78)
+      }
+      placeCar(0)
+      group.userData.update = placeCar
+      return group
+    },
+  },
+  {
+    id: 'sportsBench', category: 'seating', placement: 'floor', radius: 1.65, height: 0.82,
+    walkSurfaces: [{ width: 3.15, depth: 0.78, height: 0.28 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const steel = kit.mat('metal', 0x253846)
+      const seat = kit.mat('matte', 0x2e95ad)
+      group.add(at(kit.rbox(3.15, 0.16, 0.78, 0.06, seat), 0, 0.28, 0))
+      for (const x of [-1.18, 1.18]) {
+        group.add(at(kit.box(0.12, 0.28, 0.58, steel), x, 0.14, 0))
+        const brace = at(kit.box(0.09, 0.58, 0.09, steel), x, 0.54, -0.3)
+        brace.rotation.x = -0.16
+        group.add(brace)
+      }
+      group.add(at(kit.rbox(2.7, 0.12, 0.52, 0.04, kit.mat('matte', 0x253f50)), 0, 0.7, -0.34))
+      return group
+    },
+  },
+  {
+    id: 'sportsBallRack', category: 'play', placement: 'floor', radius: 1.35, height: 1.65,
+    walkBlockerRadius: 0.68,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const steel = kit.mat('metal', 0x263846)
+      for (const x of [-0.92, 0.92]) {
+        group.add(at(kit.box(0.1, 1.55, 0.1, steel), x, 0.78, 0))
+        group.add(at(kit.box(0.1, 0.1, 1.05, steel), x, 0.08, 0))
+      }
+      for (const y of [0.42, 0.92, 1.42]) {
+        group.add(at(kit.box(1.94, 0.08, 0.08, steel), 0, y, -0.43))
+        group.add(at(kit.box(1.94, 0.08, 0.08, steel), 0, y, 0.43))
+      }
+      const colors = [0xf06b46, 0x55cbe8, 0xf0c94c, 0xe95662, 0x72d39b, 0xf06b46]
+      for (let index = 0; index < colors.length; index += 1) {
+        const row = Math.floor(index / 2)
+        const ball = at(kit.sph(0.28, kit.mat('matte', colors[index])), index % 2 ? 0.48 : -0.48, 0.43 + row * 0.5, 0)
+        ball.rotation.set(index * 0.4, index * 0.7, 0)
+        group.add(ball)
+      }
+      return group
+    },
+  },
+  {
+    id: 'sportsTrainingBox', category: 'play', placement: 'floor', radius: 1.25, height: 0.62,
+    walkSurfaces: [{ width: 2.15, depth: 1.55, height: 0.62 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(2.15, 0.62, 1.55, 0.09, kit.mat('dark', 0x22343e)), 0, 0.31, 0))
+      group.add(at(kit.rbox(1.78, 0.035, 1.18, 0.025, kit.mat('matte', 0x62d7e8)), 0, 0.638, 0))
+      for (const x of [-0.82, 0.82]) group.add(at(kit.box(0.2, 0.045, 1.22, kit.mat('emissive', 0xff6268)), x, 0.64, 0))
+      return group
+    },
+  },
+  {
+    id: 'sportsMiniGoal', category: 'play', placement: 'floor', radius: 1.8, height: 1.25,
+    walkBlockerRadius: 0.52,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('metal', 0xd7edf1)
+      for (const x of [-1.5, 1.5]) {
+        group.add(at(kit.cyl(0.055, 0.055, 1.22, frame, 10), x, 0.61, -0.42))
+        const foot = at(kit.cyl(0.05, 0.05, 1.15, frame, 10), x, 0.04, 0.1)
+        foot.rotation.x = Math.PI / 2
+        group.add(foot)
+      }
+      const crossbar = at(kit.cyl(0.055, 0.055, 3.1, frame, 10), 0, 1.22, -0.42)
+      crossbar.rotation.z = Math.PI / 2
+      group.add(crossbar)
+      const net = kit.sheer(0x8fc5d2, 0.28)
+      for (let index = 0; index < 7; index += 1) group.add(at(kit.box(0.018, 1.05, 0.018, net), -1.35 + index * 0.45, 0.62, -0.38))
+      for (let index = 0; index < 4; index += 1) group.add(at(kit.box(2.75, 0.018, 0.018, net), 0, 0.2 + index * 0.27, -0.38))
+      return group
+    },
+  },
+  {
+    id: 'loftArcadeCabinet', category: 'play', placement: 'floor', radius: 0.72, height: 2.05,
+    tintable: true, tint: '#5de7ff',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('gloss', tint)
+      const dark = kit.mat('dark', 0x17121f)
+      group.add(at(kit.rbox(1.05, 1.72, 0.86, 0.08, shell), 0, 0.86, 0))
+      group.add(at(kit.rbox(1.12, 0.36, 0.92, 0.07, shell), 0, 1.82, -0.03))
+      group.add(at(kit.plane(0.86, 0.24, kit.mat('emissive', 0xff5f8f)), 0, 1.83, 0.44))
+      group.add(at(kit.plane(0.78, 0.62, kit.mat('emissive', 0x59e8ff)), 0, 1.3, 0.435))
+      const controls = at(kit.rbox(0.9, 0.1, 0.4, 0.035, dark), 0, 0.91, 0.46)
+      controls.rotation.x = -0.28
+      group.add(controls)
+      group.add(at(kit.cyl(0.03, 0.03, 0.2, kit.mat('metal', 0xbac9d6), 8), -0.22, 1.02, 0.52))
+      group.add(at(kit.sph(0.075, kit.mat('gloss', 0xffd45c)), -0.22, 1.13, 0.52))
+      for (let index = 0; index < 3; index += 1) group.add(at(kit.cyl(0.055, 0.055, 0.035, kit.mat('emissive', [0xff5f8f, 0x5de7ff, 0x7cff8c][index]), 12), 0.1 + index * 0.18, 0.99, 0.53))
+      const pulse = at(kit.tor(0.39, 0.025, kit.mat('emissive', 0xffffff)), 0, 1.3, 0.45)
+      pulse.scale.setScalar(0.7)
+      group.add(pulse)
+      group.userData.update = (elapsed: number) => { pulse.scale.setScalar(0.68 + Math.sin(elapsed * 2.4) * 0.08) }
+      return group
+    },
+  },
+  {
+    id: 'loftClawMachine', category: 'play', placement: 'floor', radius: 0.9, height: 2.2,
+    tintable: true, tint: '#ff70b7',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('gloss', tint)
+      const metal = kit.mat('metal', 0x9fb2c3)
+      group.add(at(kit.rbox(1.45, 0.62, 1.15, 0.08, frame), 0, 0.31, 0))
+      group.add(at(kit.rbox(1.5, 0.28, 1.18, 0.07, frame), 0, 2.02, 0))
+      for (const x of [-0.67, 0.67]) for (const z of [-0.52, 0.52]) group.add(at(kit.box(0.08, 1.45, 0.08, frame), x, 1.25, z))
+      for (const z of [-0.54, 0.54]) group.add(at(kit.plane(1.3, 1.32, kit.sheer(0xbcecff, 0.2)), 0, 1.28, z))
+      const sideGlass = kit.sheer(0xbcecff, 0.18)
+      for (const x of [-0.69, 0.69]) {
+        const pane = at(kit.plane(1.02, 1.32, sideGlass), x, 1.28, 0)
+        pane.rotation.y = Math.PI / 2
+        group.add(pane)
+      }
+      const prizeColors = [0xffd45c, 0x67e8ff, 0xff79b8, 0x8cff9b]
+      for (let index = 0; index < 10; index += 1) group.add(at(kit.sph(0.16 + (index % 2) * 0.035, kit.mat('fabric', prizeColors[index % 4])), -0.48 + (index % 4) * 0.32, 0.68 + Math.floor(index / 4) * 0.22, -0.28 + (index % 3) * 0.27))
+      const carriage = new THREE.Group()
+      carriage.add(at(kit.box(0.56, 0.08, 0.08, metal), 0, 0, 0))
+      carriage.add(at(kit.cyl(0.025, 0.025, 0.68, metal, 8), 0, -0.34, 0))
+      const claw = at(kit.tor(0.18, 0.025, metal), 0, -0.68, 0)
+      claw.rotation.x = Math.PI / 2
+      carriage.add(claw)
+      carriage.position.set(0, 1.85, 0)
+      group.add(carriage)
+      group.add(at(kit.sph(0.09, kit.mat('emissive', 0x7cff8c)), -0.38, 0.42, 0.6))
+      group.userData.update = (elapsed: number) => { carriage.position.x = Math.sin(elapsed * 0.42) * 0.42 }
+      return group
+    },
+  },
+  {
+    id: 'loftTokenPusher', category: 'play', placement: 'floor', radius: 0.92, height: 1.72,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('gloss', 0x5f4bc8)
+      const gold = kit.mat('metal', 0xf1c75b)
+      group.add(at(kit.rbox(1.5, 0.7, 1.15, 0.08, shell), 0, 0.35, 0))
+      group.add(at(kit.rbox(1.48, 0.92, 1.08, 0.06, kit.sheer(0x9fe9ff, 0.22)), 0, 1.15, 0))
+      group.add(at(kit.rbox(1.55, 0.24, 1.18, 0.06, shell), 0, 1.64, 0))
+      for (const y of [0.91, 1.25]) group.add(at(kit.box(1.18, 0.055, 0.82, kit.mat('metal', 0x657789)), 0, y, 0))
+      for (let index = 0; index < 16; index += 1) {
+        const coin = at(kit.cyl(0.09, 0.09, 0.025, gold, 12), -0.48 + (index % 5) * 0.24, 0.95 + Math.floor(index / 8) * 0.34, -0.28 + (index % 3) * 0.22)
+        coin.rotation.z = Math.PI / 2
+        group.add(coin)
+      }
+      const pusher = at(kit.box(1.08, 0.3, 0.08, kit.mat('emissive', 0x64edff)), 0, 1.11, -0.3)
+      group.add(pusher)
+      group.userData.update = (elapsed: number) => { pusher.position.z = -0.3 + (Math.sin(elapsed * 1.1) + 1) * 0.18 }
+      return group
+    },
+  },
+  {
+    id: 'loftPinball', category: 'play', placement: 'floor', radius: 1.05, height: 1.72,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('gloss', 0xe94e88)
+      for (const x of [-0.62, 0.62]) for (const z of [-0.62, 0.62]) group.add(at(kit.box(0.09, 0.78, 0.09, kit.mat('metal', 0x394252)), x, 0.39, z))
+      const table = at(kit.rbox(1.5, 0.32, 1.9, 0.07, frame), 0, 0.98, 0)
+      table.rotation.x = -0.12
+      group.add(table)
+      const playfield = at(kit.plane(1.22, 1.55, kit.mat('emissive', 0x42dbea)), 0, 1.17, 0.02)
+      playfield.rotation.x = -Math.PI / 2 - 0.12
+      group.add(playfield)
+      for (const [index, [x, z]] of [[-0.32, -0.3], [0.28, 0.05], [-0.18, 0.43]].entries()) group.add(at(kit.sph(0.11, kit.mat('emissive', [0xffd45c, 0xff70b7, 0x8cff9b][index])), x, 1.22, z))
+      group.add(at(kit.rbox(1.42, 0.85, 0.18, 0.05, frame), 0, 1.48, -0.86))
+      group.add(at(kit.plane(1.16, 0.58, kit.mat('emissive', 0x6b57ff)), 0, 1.5, -0.755))
+      return group
+    },
+  },
+  {
+    id: 'loftBasketballArcade', category: 'play', placement: 'floor', radius: 1.65, height: 2.45,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('metal', 0x394252)
+      const orange = kit.mat('gloss', 0xf07845)
+      group.add(at(kit.rbox(2.2, 0.35, 2.9, 0.08, kit.mat('dark', 0x211a2b)), 0, 0.18, 0.2))
+      const ramp = at(kit.box(1.9, 0.12, 2.4, kit.mat('matte', 0x3c3150)), 0, 0.55, 0.15)
+      ramp.rotation.x = -0.12
+      group.add(ramp)
+      for (const x of [-1.02, 1.02]) {
+        group.add(at(kit.box(0.08, 2.2, 0.08, frame), x, 1.1, -1.15))
+        group.add(at(kit.box(0.08, 1.45, 0.08, frame), x, 0.73, 1.32))
+        const rail = at(kit.box(0.08, 0.08, 2.7, frame), x, 1.45, 0.05)
+        rail.rotation.x = -0.18
+        group.add(rail)
+      }
+      group.add(at(kit.rbox(2.15, 1.35, 0.14, 0.04, kit.mat('gloss', 0xede9ff)), 0, 1.75, -1.2))
+      group.add(at(kit.plane(0.72, 0.3, kit.mat('emissive', 0xff5f8f)), 0, 2.18, -1.12))
+      const rim = at(kit.tor(0.34, 0.035, orange), 0, 1.53, -0.82)
+      rim.rotation.x = Math.PI / 2
+      group.add(rim)
+      for (const [index, [x, z]] of [[-0.45, 0.55], [0.35, 0.8], [0, 0.3]].entries()) {
+        const ball = at(kit.sph(0.22, orange), x, 0.72 + index * 0.03, z)
+        group.add(ball)
+        const stripe = at(kit.tor(0.22, 0.012, kit.mat('dark', 0x3f2b24)), x, 0.72 + index * 0.03, z)
+        stripe.rotation.y = Math.PI / 2
+        group.add(stripe)
+      }
+      return group
+    },
+  },
+  {
+    id: 'loftPrizeCounter', category: 'desk', placement: 'floor', radius: 2.1, height: 1.65,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('gloss', 0x4a3865)
+      group.add(at(kit.rbox(3.8, 0.95, 1.3, 0.09, frame), 0, 0.48, 0))
+      group.add(at(kit.rbox(4.05, 0.14, 1.48, 0.05, kit.mat('emissive', 0x5de7ff)), 0, 1.0, 0))
+      group.add(at(kit.rbox(3.35, 0.58, 0.18, 0.04, kit.sheer(0xd8f7ff, 0.24)), 0, 1.34, 0.46))
+      for (const x of [-1.2, -0.4, 0.4, 1.2]) group.add(at(kit.box(0.045, 0.52, 0.045, kit.mat('metal', 0xa6b5c5)), x, 1.34, 0.48))
+      const prizeColors = [0xffd45c, 0xff70b7, 0x6be9ff, 0x8cff9b]
+      for (let index = 0; index < 8; index += 1) {
+        const prize = index % 2
+          ? kit.sph(0.16, kit.mat('fabric', prizeColors[index % 4]))
+          : kit.rbox(0.28, 0.28, 0.28, 0.05, kit.mat('gloss', prizeColors[index % 4]))
+        group.add(at(prize, -1.38 + (index % 4) * 0.92, 1.33 + Math.floor(index / 4) * 0.18, 0.58))
+      }
+      for (const x of [-1.55, 1.55]) group.add(at(kit.box(0.08, 0.65, 0.08, kit.mat('metal', 0xa6b5c5)), x, 1.34, 0.48))
       return group
     },
   },
