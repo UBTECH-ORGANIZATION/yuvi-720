@@ -39,7 +39,8 @@ SETTLE_TIMEOUT_MS = 4000          # wait after load for first-tick errors
 INTERACTION_SETTLE_MS = 3500      # wait after clicking Start
 PAGE_LOAD_TIMEOUT_MS = 15000
 CONTRACT_TIMEOUT_S = 20.0         # wait for learn.asked >= 1
-EARLY_SCREENSHOT_MS = 4000        # thumbnail: a few seconds of play, before the first question
+POSTER_STEP_MS = 1500             # thumbnail: sample play every 1.5 s while no question is open
+POSTER_WINDOW_MS = 9000           # …for this long after Start (the contract asks after ≥ 8 s of play)
 CONTRACT_POLL_MS = 250
 MIN_HEARTBEAT = 30                # rAF ticks the harness must have counted
 CHROMIUM_ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist"]
@@ -332,19 +333,34 @@ async def validate_html(
 
                 # ── Phase 2: interaction (Start button) ──
                 before = len(errors)
-                clicked = await _click_start_buttons(page)
-                # The thumbnail is the game itself, not its first question:
-                # grab it a few seconds into play, before the first gate opens
-                # (the contract gives the kid ≥ 8 s of play first). The final
-                # screenshot below stays the fallback.
-                early_png: Optional[bytes] = None
+                title_png: Optional[bytes] = None
                 if screenshot:
-                    await page.wait_for_timeout(min(EARLY_SCREENSHOT_MS, interaction_settle_ms))
                     try:
-                        early_png = await page.screenshot(type="png", full_page=False)
+                        title_png = await page.screenshot(type="png", full_page=False)
                     except Exception as e:  # noqa: BLE001
-                        log.warning("early screenshot failed: %s", e)
-                    await page.wait_for_timeout(max(0, interaction_settle_ms - EARLY_SCREENSHOT_MS))
+                        log.warning("title screenshot failed: %s", e)
+                clicked = await _click_start_buttons(page)
+                # The thumbnail is the game itself, never a question overlay.
+                # The bridge counts questions asked and answered, so "a
+                # question is open" is exact: capture play frames only while
+                # asked == answered, keep the latest (the most play on
+                # screen), and fall back to the title screen taken before
+                # Start when the game asks at once.
+                early_png: Optional[bytes] = title_png
+                if screenshot:
+                    window_ms = max(interaction_settle_ms, POSTER_WINDOW_MS)
+                    waited = 0
+                    while waited < window_ms:
+                        step = min(POSTER_STEP_MS, window_ms - waited)
+                        await page.wait_for_timeout(step)
+                        waited += step
+                        try:
+                            learn = (await page.evaluate(_YUVI_STATE_JS) or {}).get("learn") or {}
+                            if int(learn.get("asked") or 0) > int(learn.get("answered") or 0):
+                                continue  # a question is open — not a poster
+                            early_png = await page.screenshot(type="png", full_page=False)
+                        except Exception as e:  # noqa: BLE001
+                            log.warning("poster capture failed: %s", e)
                 else:
                     await page.wait_for_timeout(interaction_settle_ms)
                 for err in errors[before:]:
