@@ -11,18 +11,21 @@
  * moment it does the record becomes a checklist somebody filled in.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../../../../components/primitives'
 import { useI18n } from '../../../../i18n/I18nProvider'
 import { assistTeacherMentoring } from '../../../../services/teacher'
+import { listMentoringPhases, type MentoringPhase } from '../../../../services/mentoring'
 
 interface Props {
   learnerId: string
   notes: string
   teacherOnlyNote: string
+  mentoringPhase: string
   qa: { q: string; a: string }[]
   onNotes: (value: string) => void
   onTeacherOnlyNote: (value: string) => void
+  onMentoringPhase: (value: string) => void
   onQa: (value: { q: string; a: string }[]) => void
 }
 
@@ -43,7 +46,8 @@ function NotesCounter({ value }: { value: string }) {
 }
 
 export function DiscussedStep({
-  learnerId, notes, teacherOnlyNote, qa, onNotes, onTeacherOnlyNote, onQa,
+  learnerId, notes, teacherOnlyNote, mentoringPhase, qa,
+  onNotes, onTeacherOnlyNote, onMentoringPhase, onQa,
 }: Props) {
   const { t, language } = useI18n()
   const [helperOpen, setHelperOpen] = useState(false)
@@ -53,6 +57,15 @@ export function DiscussedStep({
   const [busy, setBusy] = useState(false)
   const [ownMode, setOwnMode] = useState(false)
   const [own, setOwn] = useState('')
+  const [ladder, setLadder] = useState<MentoringPhase[]>([])
+
+  useEffect(() => {
+    let active = true
+    listMentoringPhases()
+      .then((result) => { if (active) setLadder(result.phases || []) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   /* One turn: send the whole thread, take back a rewritten draft. The draft
      REPLACES the textarea rather than appending to it — the model is rebuilding
@@ -91,6 +104,25 @@ export function DiscussedStep({
 
   return (
     <div className="tch-step">
+      {/* A closed list, because the ministry reports it as one. Blank stays
+          allowed: a talk that is not on the ladder is still a talk. */}
+      <label className="tch-step__field">
+        <span>{t('tch.mentoring.phase.label')}</span>
+        <select
+          className="sp-input"
+          dir="auto"
+          value={mentoringPhase}
+          onChange={(event) => onMentoringPhase(event.target.value)}
+        >
+          <option value="">{t('tch.mentoring.phase.none')}</option>
+          {ladder.map((step) => (
+            <option key={step.mentoringPhase} value={step.mentoringPhase}>
+              {step.phaseName}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className="tch-step__field">
         <span>{t('tch.mentoring.notes.label')}</span>
         <textarea

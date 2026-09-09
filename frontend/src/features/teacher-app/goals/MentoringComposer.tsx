@@ -117,6 +117,8 @@ export function MentoringComposer({
           action: goal.action,
         })),
         teacher_only_note: draft.teacher_only_note.trim(),
+        // The ministry's ten-step ladder, reported as `mentoringPhase`.
+        mentoring_phase: draft.mentoring_phase || '',
         // The same key on a retry, so a slow save that the teacher clicks
         // twice cannot become two conversations.
         draft_id: draft.draft_id,
@@ -184,9 +186,11 @@ export function MentoringComposer({
               learnerId={learnerId}
               notes={draft.notes}
               teacherOnlyNote={draft.teacher_only_note}
+              mentoringPhase={draft.mentoring_phase || ''}
               qa={draft.qa}
               onNotes={(notes) => patch({ notes })}
               onTeacherOnlyNote={(teacher_only_note) => patch({ teacher_only_note })}
+              onMentoringPhase={(mentoring_phase) => patch({ mentoring_phase })}
               onQa={(qa) => patch({ qa })}
             />
           ) : draft.step === 1 ? (

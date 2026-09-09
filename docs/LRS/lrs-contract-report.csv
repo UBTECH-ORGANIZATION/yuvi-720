@@ -1,0 +1,32 @@
+﻿Object Type,Verb,Id
+session,enter,c8e3d6e9-dca5-4757-abf2-77f9c087d17b
+session,suspend,ee5d8006-1e1f-49f2-a76f-7bf4c0d34475
+session,resume,7d2aa445-67e0-4a3c-aaf8-ab35d63094ec
+session,exit,eb0c8788-fcd5-46c3-ba07-b0483f709e20
+dashboard,viewed,473ee69c-fd15-4739-8c75-1c5ca418c1b7
+component,initialized,32763b0c-8063-4ce0-a2c1-d35ac8e28d4e
+component,completed,681eac0e-aaed-4caa-bbd1-8f9f784be257
+component,skipped,18bc8b7e-01be-4964-afa2-80b8720a6afe
+questionnaire (agency),initialized,a7f3ca18-19ab-43c7-911d-c3ec578656bb
+question (agency),answered,640133e2-2591-49e3-9030-47ed380ba1b4
+questionnaire (agency),completed,045163b0-9385-47f4-9cae-81ff5b363cbf
+conversation,interacted,bd8d1b45-7363-4f0b-9a2f-a5e9c5975e33
+conversation,rated,60e917bf-14ed-4d9c-bf9d-0b134ed0afd6
+questionnaire (reflection),initialized,6031d1fd-5919-4fd2-b471-f6feafdcbacf
+question (reflection),answered,0752774a-b2f3-44c5-a7a7-7f416a6ff974
+question (reflection),skipped,bc02ee4a-c853-40e6-b753-fd197324387e
+questionnaire (reflection),completed,e1b16b5e-250f-44f9-8d56-446bb68abd38
+mentor-student-meeting,completed,a51eef7f-c57c-4554-91ab-5f121deb597a
+student-goal,initialized,cf7528df-bb74-484e-ba82-bc4240587db6
+student-goal,updated,58bc18a9-53c7-4c6c-9070-48ca3e3d5d33
+student-goal,completed,b73733ec-ef9c-4459-974b-6dd66d736eb0
+questionnaire,initialized,c30de206-0f66-494a-a9fe-bc02b94d2ae0
+questionnaire,completed,b2083a54-b9e9-4782-81c4-5b750d42cdb6
+question,answered,5b504244-6106-43c1-9849-5d30be476de8
+questionnaire,skipped,a8ba6c86-cd89-44e3-a104-de1b3b8b0064
+video / audio / animation (media),played,b8ed0a1e-3413-4b67-8fa7-939e75439518
+video / audio / animation (media),paused,158e34af-14be-4577-b30d-30e48a21c056
+video / audio / animation (media),completed,dfe1329c-916f-436f-b89b-682d7b005281
+component / item,requested,1ce5594f-3efb-4617-8222-1562cd7f4603
+item,selected,984702ee-bf17-4a87-bd10-af73cf39aa1f
+learning-unit,initialized,4309a9fa-2980-4161-8bb0-56cc4c8bc8cd

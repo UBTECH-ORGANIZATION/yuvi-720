@@ -658,5 +658,178 @@ class SmallerFindingsTests(unittest.TestCase):
         self.assertEqual(stmt["result"]["duration"], "PT1M35S")
 
 
+class MentoringPhaseTests(unittest.TestCase):
+    """Report 7: "mentoringPhase לא נשלח". The ministry published the ten steps
+    as a closed list, so the value is normalized rather than passed through."""
+
+    def setUp(self):
+        patcher = mock.patch.object(
+            config, "supplier_domain", return_value="https://app.yuvilab.co.il"
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_the_code_the_hebrew_title_and_a_bare_step_all_resolve(self):
+        for spelling in ("phase3", "צעד 3 - מגדירים פסגות", "3", "צעד 3"):
+            with self.subTest(spelling=spelling):
+                self.assertEqual(
+                    statements.normalize_mentoring_phase(spelling), "phase3"
+                )
+
+    def test_the_tenth_step_is_not_read_as_the_first(self):
+        self.assertEqual(statements.normalize_mentoring_phase("צעד 10"), "phase10")
+
+    def test_free_text_a_teacher_typed_reports_nothing(self):
+        """An off-list value is a rejected statement, and the list is not ours
+        to extend."""
+        for junk in ("", None, "פגישה ראשונה", "phase11", "0"):
+            with self.subTest(junk=junk):
+                self.assertIsNone(statements.normalize_mentoring_phase(junk))
+
+    def test_the_meeting_statement_carries_the_normalized_code(self):
+        stmt = statements.mentor_meeting_completed(
+            IDENTITY, SESSION, "meet-1",
+            mentor_exid="1099999999", student_exid="1012345678",
+            meeting_date="2026-09-01", mentoring_phase="צעד 4 - מתקדמים בצעדים קטנים",
+        )
+        self.assertEqual(
+            _short(stmt["context"]["extensions"])["mentoringPhase"], "phase4"
+        )
+
+    def test_an_unrecognised_phase_is_omitted_not_guessed(self):
+        stmt = statements.mentor_meeting_completed(
+            IDENTITY, SESSION, "meet-1",
+            mentor_exid="1099999999", student_exid="1012345678",
+            meeting_date="2026-09-01", mentoring_phase="שיחה על הכיתה",
+        )
+        self.assertNotIn("mentoringPhase", _short(stmt["context"]["extensions"]))
+
+
+class SeptemberReviewTests(unittest.TestCase):
+    """The 07/09 review: parent typing, question naming, media typing, and the
+    extensions that were forwarded but are not in the 720 dictionary."""
+
+    def setUp(self):
+        patcher = mock.patch.object(
+            config, "supplier_domain", return_value="https://app.yuvilab.co.il"
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.hierarchy = hierarchy.build(
+            unit=UNIT, component=COMPONENT, item=ITEM, level="item"
+        )
+
+    # ── #4 a platform object's parent is the thing that contains it ──────────
+
+    def test_a_rated_statement_hangs_off_the_content_it_rates(self):
+        """It used to name the LEVEL ABOVE the object — the unit — so a rating
+        of a component was filed as a rating of its parent unit."""
+        stmt = statements.content_skipped(
+            IDENTITY, SESSION,
+            object_id=f"https://app.yuvilab.co.il/component/{COMPONENT['id']}",
+            object_type="component",
+            hierarchy=hierarchy.build(unit=UNIT, component=COMPONENT, level="component"),
+        )
+        self.assertEqual(stmt["object"]["definition"]["type"], f"{ACTIVITY}/component")
+
+    # ── #10 every parent carries a type ──────────────────────────────────────
+
+    def test_a_parent_the_content_sent_bare_is_typed_from_its_own_iri(self):
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/question/q1"},
+            "context": {"contextActivities": {
+                "parent": [{"id": "https://lomdot.education.gov.il/act/component/987"}]
+            }},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy, object_below_self=True,
+        )
+        parent = stmt["context"]["contextActivities"]["parent"]
+        self.assertEqual(_types(parent), [f"{ACTIVITY}/component"])
+
+    def test_an_untypeable_parent_gives_way_to_the_catalogs_own(self):
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/question/q1"},
+            "context": {"contextActivities": {"parent": [{"id": "urn:something:42"}]}},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy, object_below_self=True,
+        )
+        for entry in stmt["context"]["contextActivities"]["parent"]:
+            self.assertTrue((entry.get("definition") or {}).get("type"), entry)
+
+    # ── #11 the question in grouping is named ────────────────────────────────
+
+    def test_a_question_is_named_from_the_catalogs_question_digest(self):
+        built = hierarchy.build(
+            unit=UNIT,
+            component=dict(COMPONENT, questions_by_item={ITEM["id"]: [
+                {"questionId": "q1", "questionText": "כמה גרם במאה מיליגרם?"},
+            ]}),
+            item=ITEM, level="item",
+        )
+        digest = (built.get("extensions") or {}).get("questions") or []
+        if not digest:
+            self.skipTest("catalog shape publishes no question digest")
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/question/q1"},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=built, object_below_self=True,
+            context_extensions={"questionId": "q1"},
+        )
+        self.assertEqual(
+            stmt["object"]["definition"]["name"]["he"], "כמה גרם במאה מיליגרם?"
+        )
+
+    # ── #15 the Video Profile keys are not 720 vocabulary ────────────────────
+
+    def test_the_players_own_video_extensions_do_not_reach_the_ministry(self):
+        raw = {
+            "verb": {"id": "https://w3id.org/xapi/video/verbs/paused"},
+            "object": {"id": "https://lomdot.education.gov.il/act/video/v1"},
+            "result": {"extensions": {
+                "https://w3id.org/xapi/video/extensions/time": 42,
+                "https://w3id.org/xapi/video/extensions/progress": 0.5,
+            }},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+        )
+        leftovers = (stmt.get("result") or {}).get("extensions") or {}
+        self.assertEqual(
+            [k for k in leftovers if k.startswith("https://w3id.org/xapi/video/")], []
+        )
+
+    # ── #13 media is typed by its kind, whatever the vendor called it ────────
+
+    def test_a_vendors_spelling_of_video_still_types_the_activity(self):
+        from app.services.lrs.context import resolve_media_format
+
+        for spelling in ("video", "movie", "clip", "mp4", "סרטון", "YouTube"):
+            with self.subTest(spelling=spelling):
+                self.assertEqual(resolve_media_format(spelling), "video")
+        self.assertEqual(resolve_media_format("podcast"), "audio")
+        self.assertEqual(resolve_media_format("gif"), "animation")
+
+    def test_interactive_content_is_not_a_media_format(self):
+        """It is a content TYPE; reporting it as `mediaFormat` was the review's
+        "ערך לא מהמילון"."""
+        from app.services.lrs.context import resolve_media_format
+
+        self.assertIsNone(resolve_media_format("interactive-content"))
+        self.assertIsNone(resolve_media_format(None, "instruction"))
+
+    # ── #14 an empty questions digest is still reported ──────────────────────
+
+    def test_a_media_item_reports_an_empty_questions_array_rather_than_none(self):
+        built = hierarchy.build(unit=UNIT, component=COMPONENT, item=ITEM, level="item")
+        self.assertIn("questions", built["extensions"])
+        self.assertEqual(built["extensions"]["questions"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

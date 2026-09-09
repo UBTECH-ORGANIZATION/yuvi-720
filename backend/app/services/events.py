@@ -1197,6 +1197,17 @@ async def _content_report_fields(
         # reports `result.completion: true` (media completions carry only
         # duration). Tautological on a completed event, so never invented.
         result_extra["completion"] = True
+        # …and a duration: "משך הזמן שלקח למלא את השאלון" / the time spent on the
+        # component. Measured between this event and the learner's FIRST event on
+        # the same screen (or the same component, when the completion is the
+        # component's own) inside this session — all of it recorded fact.
+        seconds = await _time_on_target(event)
+        if seconds is not None:
+            from app.services.lrs.statements import iso_duration
+
+            result_extra["duration"] = iso_duration(seconds)
+        if not item_id:
+            result_extra.update(await _component_outcome(event))
 
     if verb == "selected" and event.get("selection_category"):
         # בחירה שאינה לימודית carries `selectionType` from the 720 dictionary.
@@ -1217,19 +1228,113 @@ async def _content_report_fields(
             extensions["mediaFormat"] = media_format
         extensions.update(_video_profile_seconds(statement or {}))
         elapsed = (event.get("timing") or {}).get("elapsed_since_previous_seconds")
-        if verb in {"paused", "completed"} and isinstance(elapsed, (int, float)):
+        if verb in {"paused", "completed"}:
             from app.services.lrs.statements import iso_duration
 
-            result_extra["duration"] = iso_duration(elapsed)
+            if not isinstance(elapsed, (int, float)):
+                # v1.1 makes `duration` mandatory on a media completion, and Kata
+                # does not always send the elapsed hint. The watched span is then
+                # measured from the `played` that opened it — the player's own
+                # events, not an estimate.
+                elapsed = await _time_on_target(event, verbs={"played", "resumed"})
+            if isinstance(elapsed, (int, float)):
+                result_extra["duration"] = iso_duration(elapsed)
     return extensions, result_extra
+
+
+def _event_time(event: dict[str, Any]) -> Optional[datetime]:
+    raw = str(event.get("occurred_at") or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+async def _time_on_target(
+    event: dict[str, Any], *, verbs: Optional[set[str]] = None
+) -> Optional[float]:
+    """Seconds between this event and the learner's opening event on the same
+    target, inside the same session.
+
+    Target = the same screen when the event is about one, otherwise the whole
+    component. `verbs` narrows the opening event (a media span starts at
+    `played`); without it the earliest event on the target opens the span.
+    Returns None when there is nothing earlier to measure from — an unmeasurable
+    duration is omitted, never guessed.
+    """
+    end = _event_time(event)
+    if not end:
+        return None
+    try:
+        prior = await get_session_events(event["learner_id"], event.get("session_id"))
+    except Exception:
+        return None
+    item_id = event.get("sub_item_id")
+    candidates: list[datetime] = []
+    for row in prior:
+        if row.get("_id") == event.get("_id"):
+            continue
+        if row.get("launch") != event.get("launch"):
+            continue
+        if item_id and row.get("sub_item_id") != item_id:
+            continue
+        if verbs and row.get("verb") not in verbs:
+            continue
+        start = _event_time(row)
+        if start and start <= end:
+            candidates.append(start)
+    if not candidates:
+        return None
+    seconds = (end - (max(candidates) if verbs else min(candidates))).total_seconds()
+    return round(seconds, 3) if seconds > 0 else None
+
+
+async def _component_outcome(event: dict[str, Any]) -> dict[str, Any]:
+    """`success` + `score.scaled` for a component the learner just completed.
+
+    v1.1 marks both mandatory on a component completion, and the relay's own
+    statement carries neither. They are counted from the answers this learner
+    actually gave inside the component in this session: the LAST attempt on each
+    distinct question decides it, `scaled` is the share of those that ended
+    correct, and `success` says whether every one of them did. Nothing is
+    inferred from a threshold nobody published; a component with no graded
+    answer reports neither field.
+    """
+    try:
+        prior = await get_session_events(event["learner_id"], event.get("session_id"))
+    except Exception:
+        return {}
+    last_by_question: dict[str, bool] = {}
+    for row in prior:
+        if row.get("launch") != event.get("launch"):
+            continue
+        if row.get("verb") not in {"answered", "attempted"}:
+            continue
+        success = (row.get("result") or {}).get("success")
+        if not isinstance(success, bool):
+            continue
+        key = f"{row.get('sub_item_id') or ''}|{row.get('question_id') or ''}"
+        last_by_question[key] = success
+    if not last_by_question:
+        return {}
+    correct = sum(1 for value in last_by_question.values() if value)
+    return {
+        "success": correct == len(last_by_question),
+        "score": {"scaled": round(correct / len(last_by_question), 4)},
+    }
 
 
 def _media_format(component_id: Optional[str], item_id: Optional[str]) -> Optional[str]:
     from app.services import kata_catalog
+    from app.services.lrs.context import resolve_media_format
 
     profile = kata_catalog.item_profile(component_id, item_id) if item_id else {}
-    media = (profile or {}).get("media_format")
-    return media if media in {"video", "audio", "animation"} else None
+    return resolve_media_format(
+        (profile or {}).get("media_format"), (profile or {}).get("content_type")
+    )
 
 
 def _is_media_item(component_id: Optional[str], item_id: Optional[str]) -> bool:
