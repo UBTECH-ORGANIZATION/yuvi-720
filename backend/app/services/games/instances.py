@@ -124,7 +124,8 @@ async def next_instance(game: dict[str, Any], *, run_id: str, index: int,
         inst = dsl.instantiate(doc["blueprint"], seed, theme)
     except dsl.DslError as exc:
         raise InstanceError(f"blueprint_failed:{exc}") from None
-    instance_id = f"{ID_PREFIX}{hashlib.sha1(f'{game.get('_id')}:{run_id}:{index}'.encode()).hexdigest()[:12]}{secrets.token_hex(2)}"
+    digest = hashlib.sha1(f"{game.get('_id')}:{run_id}:{index}".encode("utf-8")).hexdigest()[:12]
+    instance_id = f"{ID_PREFIX}{digest}{secrets.token_hex(2)}"
     public = blueprints.public_instance(inst, instance_id, index, total)
     await _store_row({
         "_id": instance_id, "game_id": str(game.get("_id") or ""), "learner_id": str(game.get("learner_id") or ""),
