@@ -211,26 +211,31 @@ async def group_goals(group_id: str, session=Depends(require_teacher_session)):
         return _denied()
 
     from app.brain import org
-    from app.services import goal_progress, mentoring
+    from app.services import cache_store, goal_progress, mentoring
 
-    learner_ids = await org.learners_in_group(group_id)
+    async def _build() -> dict:
+        learner_ids = await org.learners_in_group(group_id)
 
-    # Bounded fan-out: a class is ~30 learners, but never let one slow document
-    # store turn this into an unbounded burst.
-    semaphore = _asyncio.Semaphore(8)
+        # Bounded fan-out: a class is ~30 learners, but never let one slow
+        # document store turn this into an unbounded burst.
+        semaphore = _asyncio.Semaphore(8)
 
-    async def _one(learner_id: str) -> dict:
-        async with semaphore:
-            # No price backfill: this runs once per learner in the class, and
-            # the pricing pass is per-learner bounded, not per-request.
-            conversations = await mentoring.list_conversations(
-                learner_id, "teacher", price_backfill=False)
-            # Counts read nothing for learners with no action-tracked goal.
-            await goal_progress.enrich_conversations(learner_id, conversations)
-        return {"learner_id": learner_id, "conversations": conversations}
+        async def _one(learner_id: str) -> dict:
+            async with semaphore:
+                # No price backfill: this runs once per learner in the class,
+                # and the pricing pass is per-learner bounded, not per-request.
+                conversations = await mentoring.list_conversations(
+                    learner_id, "teacher", price_backfill=False)
+                # Counts read nothing for learners with no action-tracked goal.
+                await goal_progress.enrich_conversations(learner_id, conversations)
+            return {"learner_id": learner_id, "conversations": conversations}
 
-    rows = await _asyncio.gather(*(_one(learner_id) for learner_id in learner_ids))
-    return _ok({"learners": rows})
+        rows = await _asyncio.gather(*(_one(learner_id) for learner_id in learner_ids))
+        return {"learners": rows}
+
+    # Every goal write bumps the learner (and so the class); sixty seconds is
+    # the most a missed bump can cost on this screen.
+    return _ok(await cache_store.remember("grp", group_id, "goals", "", 60, _build))
 
 
 @router.get("/groups/{group_id}/subjects")
@@ -269,18 +274,28 @@ async def group_learnings(
     """
     if not await _guard_group(session, group_id):
         return _denied()
-    from app.services import learning_analytics
+    from app.services import cache_store, learning_analytics
     lang = normalize_language(language)
     import asyncio as _asyncio
-    view, pulse = await _asyncio.gather(
-        learning_analytics.group_learnings(group_id, subject=subject, language=lang),
-        learning_analytics.learnings_pulse(group_id, subject=subject),
+
+    async def _build() -> dict:
+        view, pulse = await _asyncio.gather(
+            learning_analytics.group_learnings(group_id, subject=subject, language=lang),
+            learning_analytics.learnings_pulse(group_id, subject=subject),
+        )
+        # The KPI strip's week-over-week figures; the all-time totals stay for
+        # the catalogue coverage number.
+        view["pulse"] = pulse
+        gaps = await group_analytics.learning_gaps(group_id, subject=subject)
+        view["recommendations"] = group_analytics.group_recommendations(gaps, lang)
+        return view
+
+    # Three roster fan-outs in one handler, and the focus panel re-asked for
+    # it every time it opened. Cached under the class version; ten minutes
+    # bounds whatever a missed bump would leave behind.
+    view = await cache_store.remember(
+        "grp", group_id, "learnings", f"{subject or ''}:{lang}", 600, _build,
     )
-    # The KPI strip's week-over-week figures; the all-time totals stay for the
-    # catalogue coverage number.
-    view["pulse"] = pulse
-    gaps = await group_analytics.learning_gaps(group_id, subject=subject)
-    view["recommendations"] = group_analytics.group_recommendations(gaps, lang)
     await _report(session, "learning-group")
     return _ok(view)
 
@@ -1517,8 +1532,19 @@ async def group_focus(
 
     lang = normalize_language(language)
     learners = []
-    for learner_id in await org.learners_in_group(group_id):
-        brain = await get_brain(learner_id)
+    learner_ids = await org.learners_in_group(group_id)
+    # The reads are independent, so the class is a few round trips, not one
+    # per child: thirty serial trips to Cosmos was most of this handler's
+    # time. Bounded the way the goals fan-out above is.
+    import asyncio as _asyncio
+    semaphore = _asyncio.Semaphore(8)
+
+    async def _read(learner_id: str) -> dict:
+        async with semaphore:
+            return await get_brain(learner_id)
+
+    brains = await _asyncio.gather(*(_read(learner_id) for learner_id in learner_ids))
+    for learner_id, brain in zip(learner_ids, brains):
         # `active_pin` is the shared judgement (#244): an expired pin stops
         # counting here in the same moment it stops steering the child.
         pinned = pinning.active_pin(brain)

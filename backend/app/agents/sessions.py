@@ -45,6 +45,16 @@ def normalize_activity_id(value: object) -> Optional[str]:
     return candidate if _ACTIVITY_ID.fullmatch(candidate) else None
 
 
+async def _touch_chat(learner_id: object) -> None:
+    """Every transcript write moves the learner's chat version, so the cached
+    list and tails (below) re-read. Fails open like the store itself."""
+    try:
+        from app.services import cache_bumps
+        await cache_bumps.touch_chat(normalize_learner_id(str(learner_id or "")))
+    except Exception as exc:  # never let the cache cost a write
+        print(f"⚠️ chat cache bump failed: {type(exc).__name__}")
+
+
 def _key(learner_id: str, role: str, session_id: str = "default") -> str:
     return f"{normalize_learner_id(learner_id)}:{normalize_session_id(session_id)}:{role}"
 
@@ -304,13 +314,29 @@ async def _migrate_legacy_default(learner_id: str, role: str) -> None:
     _write_history_fallback(history)
 
 
+_CHAT_TTL = 600
+
+
 async def get_recent(
     learner_id: str,
     role: str,
     limit: int = 8,
     session_id: str = "default",
 ) -> list[dict[str, str]]:
-    """Return the last `limit` turns as [{role, content}] (oldest→newest)."""
+    """Return the last `limit` turns as [{role, content}] (oldest→newest).
+
+    Read on every coach turn; cached under the learner's chat version, which
+    every write to the transcript moves."""
+    from app.services import cache_store
+    return await cache_store.remember(
+        "chat", normalize_learner_id(learner_id), "recent", f"{role}:{session_id}:{limit}", _CHAT_TTL,
+        lambda: _get_recent_uncached(learner_id, role, limit, session_id),
+    )
+
+
+async def _get_recent_uncached(
+    learner_id: str, role: str, limit: int, session_id: str,
+) -> list[dict[str, str]]:
     key = _key(learner_id, role, session_id)
     collection = _get_collection_named("agent_sessions")
     if collection is not None:
@@ -329,6 +355,16 @@ async def get_conversation_memory(
     session_id: str = "default",
 ) -> dict[str, Any]:
     """Return the compact continuity digest stored outside the verbatim window."""
+    from app.services import cache_store
+    return await cache_store.remember(
+        "chat", normalize_learner_id(learner_id), "memory", f"{role}:{session_id}", _CHAT_TTL,
+        lambda: _get_conversation_memory_uncached(learner_id, role, session_id),
+    )
+
+
+async def _get_conversation_memory_uncached(
+    learner_id: str, role: str, session_id: str,
+) -> dict[str, Any]:
     key = _key(learner_id, role, session_id)
     collection = _get_collection_named("agent_sessions")
     if collection is not None:
@@ -355,6 +391,7 @@ async def create_conversation(
     component must never resume it, but repeated calls for the same launch are
     idempotent. Unscoped callers retain the legacy empty-thread behavior.
     """
+    await _touch_chat(learner_id)
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
@@ -487,6 +524,7 @@ async def supersede_activity_conversations(
     Superseded transcripts stay available for operational audit, but cannot be
     selected as the current learner-facing Coach thread or model history.
     """
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
     safe_component = normalize_activity_id(component_id)
@@ -543,6 +581,7 @@ async def reset_activity_conversations(
     over from the first question). Threads with messages close — and summarize —
     exactly like a completion; empty open threads are soft-deleted instead of
     surviving as clutter in the history list."""
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
     safe_component = normalize_activity_id(component_id)
@@ -594,6 +633,7 @@ async def close_activity_conversations(
     Session close is also the B-9 summary moment: each closed thread gets ONE
     bounded mini-LLM summary replacing the crude last-assistant-lines digest —
     the cheapest change with the largest continuity gain."""
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
     safe_component = normalize_activity_id(component_id)
@@ -666,6 +706,7 @@ async def summarize_closed_conversation(
     """B-9: one bounded mini-LLM summary at session close, stored into the
     thread's `conversation_memory.rolling_summary` (entity ledger untouched).
     Failure keeps the deterministic digest — never raises."""
+    await _touch_chat(learner_id)
     try:
         turns = await get_recent(learner_id, role, limit=30, session_id=conversation_id)
         visible = [
@@ -731,7 +772,22 @@ async def list_conversations(
     limit: int = 12,
     cursor: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Return newest threads first using an opaque stable cursor."""
+    """Return newest threads first using an opaque stable cursor.
+
+    The first page — what the panel opens on — is cached under the learner's
+    chat version; older pages are scroll-up reads and stay live."""
+    if cursor is None:
+        from app.services import cache_store
+        return await cache_store.remember(
+            "chat", normalize_learner_id(learner_id), "list", f"{role}:{limit}", _CHAT_TTL,
+            lambda: _list_conversations_uncached(learner_id, role, limit, None),
+        )
+    return await _list_conversations_uncached(learner_id, role, limit, cursor)
+
+
+async def _list_conversations_uncached(
+    learner_id: str, role: str, limit: int, cursor: Optional[str],
+) -> dict[str, Any]:
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     await _migrate_legacy_default(safe_id, role)
@@ -866,6 +922,7 @@ async def soft_delete_conversation(
     role: str = "coach",
 ) -> bool:
     """Hide a learner-owned thread without deleting its transcript or memory."""
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
     key = _key(safe_id, role, safe_session)
@@ -896,6 +953,7 @@ async def soft_delete_conversation(
 
 async def end_lesson_conversation(learner_id: str, session_id: str) -> bool:
     """Permanently remove the temporary lesson Coach thread on lesson exit."""
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
     role = "lesson_coach"
@@ -951,7 +1009,23 @@ async def list_messages(
     limit: int = 20,
     cursor: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Return one older page in chronological order for scroll-up prepending."""
+    """Return one older page in chronological order for scroll-up prepending.
+
+    The newest page (no cursor) is the tail the panel opens on; cached under
+    the learner's chat version like the thread list."""
+    if cursor is None:
+        from app.services import cache_store
+        return await cache_store.remember(
+            "chat", normalize_learner_id(learner_id), "tail",
+            f"{normalize_session_id(session_id)}:{role}:{limit}", _CHAT_TTL,
+            lambda: _list_messages_uncached(learner_id, session_id, role, limit, None),
+        )
+    return await _list_messages_uncached(learner_id, session_id, role, limit, cursor)
+
+
+async def _list_messages_uncached(
+    learner_id: str, session_id: str, role: str, limit: int, cursor: Optional[str],
+) -> dict[str, Any]:
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
@@ -1038,6 +1112,7 @@ async def append_turn(
     the teacher took one: a restored thread that showed a live button again
     would happily write a second goal.
     """
+    await _touch_chat(learner_id)
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
@@ -1203,6 +1278,7 @@ async def attach_visual(
     role: str = "coach",
 ) -> bool:
     """Attach the rendered visual and displayed text split to its assistant message."""
+    await _touch_chat(learner_id)
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
     collection = _get_collection_named("agent_messages")
@@ -1256,6 +1332,7 @@ async def record_action_outcome(
     Ownership is part of the query, not checked after the read: another
     teacher's conversation id must not be writable even by accident.
     """
+    await _touch_chat(owner_id)
     safe_id = normalize_learner_id(owner_id)
     safe_session = normalize_session_id(session_id)
     stamped = {**outcome, "at": _now()}
@@ -1313,6 +1390,7 @@ async def set_question_quality(
 
     Ownership is part of the query, like ``record_action_outcome``.
     """
+    await _touch_chat(owner_id)
     safe_id = normalize_learner_id(owner_id)
     safe_session = normalize_session_id(session_id)
     message_id = f"{normalize_session_id(exchange_id)}:0"

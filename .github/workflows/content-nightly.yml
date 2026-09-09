@@ -1,6 +1,10 @@
 # Nightly content intelligence: keep content/context/ in step with the live
 # Kata catalog. Fetch → fingerprint diff → browse changed lomdot → regenerate
-# stale texts → open a pull request. A quiet catalog opens nothing.
+# stale texts → open a pull request. A quiet catalog opens nothing, and
+# neither does a night whose only news is timestamps: the pipeline's writer
+# (content_pipeline.write_output) leaves a file alone when it differs from the
+# committed one in probed_at / captured_at / kata_updated_at / generated_at
+# and nothing else, so `git diff` below is empty and the step exits early.
 #
 # A PR, not a push: `main` only accepts pull requests with the three CI checks
 # green (repository rule), so a direct push from here is rejected. The change

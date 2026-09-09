@@ -12,22 +12,42 @@ import { WalletChip } from './WalletChip'
 import { NotificationBell } from './NotificationBell'
 import './learner-app-bar.css'
 
+/* The bar is rendered inside each page, and every page remounts on every
+   navigation (App.tsx keys the route element by path), so without a memory
+   these two counts were re-fetched on every screen change. A module-level
+   note of the last answer survives the remount: a fresh answer is shown at
+   once and not re-asked for a minute, unless the child just entered or left
+   the lane where the number actually changes. */
+const COUNT_FRESH_MS = 60_000
+interface Remembered { at: number; value: number; lane: boolean }
+const remembered: Record<'unread' | 'tasks', Remembered> = {
+  unread: { at: 0, value: 0, lane: false },
+  tasks: { at: 0, value: 0, lane: false },
+}
+function fresh(kind: 'unread' | 'tasks', lane: boolean): number | null {
+  const note = remembered[kind]
+  return note.lane === lane && Date.now() - note.at < COUNT_FRESH_MS ? note.value : null
+}
+function note(kind: 'unread' | 'tasks', lane: boolean, value: number) {
+  remembered[kind] = { at: Date.now(), value, lane }
+}
+
 /** Unread teacher messages: counted on load, re-read on entering or leaving
  *  the chat (which is where it changes), and bumped live off the same stream
  *  the page already holds — a badge that waits for a poll is a badge that
  *  says "nothing" while the toast above it says otherwise. */
 function useMyUnread(pathname: string) {
-  const [count, setCount] = useState(0)
   const onChat = pathname.startsWith('/student-dashboard/chat')
+  const [count, setCount] = useState(() => fresh('unread', onChat) ?? 0)
 
   useEffect(() => {
     let active = true
     const read = () => {
       getMyUnread()
-        .then((result) => { if (active) setCount(result.total ?? 0) })
+        .then((result) => { if (active) { note('unread', onChat, result.total ?? 0); setCount(result.total ?? 0) } })
         .catch(() => { if (active) setCount(0) })
     }
-    read()
+    if (fresh('unread', onChat) === null) read()
     const timer = window.setInterval(read, 120_000)
     const unsubscribe = subscribe(
       'learner-triggers', () => '/api/agent/triggers/subscribe',
@@ -44,8 +64,8 @@ function useMyUnread(pathname: string) {
  *  Re-counted on entering or leaving the tasks lane — where the number changes
  *  by the child's own hand — and slowly in the background for the teacher's. */
 function useOpenTasks(pathname: string) {
-  const [count, setCount] = useState(0)
   const onTasks = pathname.startsWith('/tasks')
+  const [count, setCount] = useState(() => fresh('tasks', onTasks) ?? 0)
 
   useEffect(() => {
     let active = true
@@ -53,13 +73,15 @@ function useOpenTasks(pathname: string) {
       listMyTasks()
         .then((result) => {
           if (!active) return
-          setCount(result.tasks.filter((task) => (
+          const open = result.tasks.filter((task) => (
             !task.closed && task.status !== 'submitted' && task.status !== 'graded'
-          )).length)
+          )).length
+          note('tasks', onTasks, open)
+          setCount(open)
         })
         .catch(() => { if (active) setCount(0) })
     }
-    read()
+    if (fresh('tasks', onTasks) === null) read()
     const timer = window.setInterval(read, 120_000)
     return () => { active = false; window.clearInterval(timer) }
   }, [onTasks])

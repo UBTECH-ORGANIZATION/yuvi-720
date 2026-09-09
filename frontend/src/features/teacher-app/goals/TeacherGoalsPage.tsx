@@ -23,9 +23,10 @@ import {
   EmptyState, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard,
 } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
+import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  approveStudentGoal, getGroupGoals, getGroupSnapshot,
+  approveStudentGoal, getGroupGoals,
   type GoalConversation, type StudentGoal,
 } from '../../../services/teacher'
 import { Modal } from '../../../components/primitives/Modal'
@@ -49,13 +50,21 @@ interface PendingRow {
 }
 
 export function TeacherGoalsPage() {
-  const { t, language } = useI18n()
+  const { t } = useI18n()
   const {
     groupId, isLoading: scopeLoading, subgroupId, subgroupLearnerIds,
   } = useTeacherScope()
 
   const [rows, setRows] = useState<LearnerGoals[] | null>(null)
-  const [names, setNames] = useState<Map<string, string | null>>(new Map())
+  /* Names are this class's slice of the roster the shell already holds. The
+     class snapshot used to be fetched here for its names alone — the slowest
+     teacher handler, paid for a lookup table. */
+  const { students: roster } = useTeacherRoster()
+  const names = useMemo(
+    () => new Map<string, string | null>(roster
+      .filter((row) => row.group_id === groupId)
+      .map((row) => [row.learner_id, row.display_name])),
+    [roster, groupId])
   const [error, setError] = useState(false)
   const [outcome, setOutcome] = useState<string | null>(null)
   /* One write-up at a time, kept on the server — see `teacherMentoringDraft`.
@@ -71,19 +80,14 @@ export function TeacherGoalsPage() {
   const load = useCallback(() => {
     if (!groupId) return
     let active = true
-    Promise.all([
-      getGroupGoals(groupId),
-      getGroupSnapshot(groupId, language),
-    ])
-      .then(([goals, snapshot]) => {
+    getGroupGoals(groupId)
+      .then((goals) => {
         if (!active) return
         setRows(goals.learners)
-        setNames(new Map(
-          (snapshot.students ?? []).map((row) => [row.learner_id, row.display_name])))
       })
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
-  }, [groupId, language])
+  }, [groupId])
 
   useEffect(() => { setRows(null); return load() }, [load])
 

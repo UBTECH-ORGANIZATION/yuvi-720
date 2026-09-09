@@ -37,7 +37,12 @@ type FrameState = 'loading' | 'ready' | 'error'
 const PROVIDER_READY_TIMEOUT_MS = 15000
 // How often to poll the catalog for a Kata-relayed completion while a lesson is
 // open (cross-origin content can't postMessage us — see the completion effect).
-const COMPLETION_POLL_MS = 5000
+// Completion arrives as a pushed `completion` trigger (CompanionProvider
+// re-dispatches it as `yuvilab:xapi-completion` below). This interval is
+// the fallback for a dropped frame, and it re-runs the heaviest handler in
+// the app: at five seconds that was 400 full projections a second across
+// two thousand open lessons. Thirty seconds is a safety net, not a signal.
+const COMPLETION_POLL_MS = 30_000
 
 function isProviderMessage(value: unknown): value is ProviderMessage {
   return typeof value === 'object' && value !== null

@@ -145,14 +145,17 @@ async def update_goal_status(
 async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depends(current_user)):
     """Return the F4 dashboard DTO projected from the brain (real numbers).
 
-    If mapping scores exist but the profile hasn't been derived yet (e.g. a
-    learner migrated from legacy state), seed it via the Onboarding agent so
-    competencies/strengths render (same behavior as POST /generate-dashboard).
+    Served from the cache under the learner's version: every brain write
+    (a fold on an answer, a goal, a pin) moves the version, so the projection
+    is recomputed exactly when its inputs changed and not on every mount,
+    focus and tab switch. Five minutes bounds whatever the version misses.
     """
     safe_id = await _authorized_id(actor, learner_id)
     # MoE 720 dashboard/viewed. This is the route the dashboard UI actually
     # calls — `POST /api/generate-dashboard` is the legacy twin, so reporting
     # only there meant a real student opening their board emitted nothing.
+    # It sits here and not in `_build_dashboard`, which is cached and would
+    # skip the report on every hit.
     if actor.get("sid"):
         await lrs_reporter.report_dashboard_viewed(
             actor["sub"],
@@ -161,6 +164,20 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
             None,
             subject_learner_id=safe_id,
         )
+    from app.services import cache_store
+    dashboard = await cache_store.remember(
+        "learner", safe_id, "dash", lang, 300, lambda: _build_dashboard(safe_id, lang),
+    )
+    return JSONResponse(content=dashboard)
+
+
+async def _build_dashboard(safe_id: str, lang: str) -> dict:
+    """The projection itself.
+
+    If mapping scores exist but the profile hasn't been derived yet (e.g. a
+    learner migrated from legacy state), seed it via the Onboarding agent so
+    competencies/strengths render (same behavior as POST /generate-dashboard).
+    """
     await kata_catalog.ensure_loaded()
     brain = await get_brain(safe_id)
     scores = (brain.get("profile") or {}).get("mapping_scores")
@@ -209,7 +226,9 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     ]
     if movement != ((brain.get("profile") or {}).get("activeness_drivers") or []):
         try:
-            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement})
+            # Derived from the brain and events that already bumped the cache;
+            # a bump here would evict the dashboard this read is about to cache.
+            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement}, touch=False)
         except Exception as exc:
             print(f"⚠️ activeness drivers not persisted: {exc}")
     from app.services.content_catalog import completed_component_ids
@@ -236,7 +255,7 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
             hero["illustration"] = None
     else:
         hero["illustration"] = None
-    return JSONResponse(content=dashboard)
+    return dashboard
 
 
 @router.get("/{learner_id}/context/coach")
