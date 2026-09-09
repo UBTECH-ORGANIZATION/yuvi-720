@@ -49,14 +49,6 @@
   direction: var(--game-dir, inherit);
 }
 
-/* While Yuvi builds, the page reads like vibe-coding-kids' code tab: the code
-   on top with its own scroller, the chat (build log) underneath. The game,
-   once ready, gets the wide stage with the chat at its side again. */
-.game-player.is-building {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) minmax(220px, 34vh);
-  grid-template-areas: 'stage' 'chat';
-}
 
 [dir='rtl'] .game-player {
   --game-dir: rtl;
@@ -945,5 +937,3 @@
   cursor: pointer;
 }
 .game-chat__bar-btn:hover { background: var(--sp-surface); }
-.game-player.is-building .game-chat__bar { border-bottom: 0; }
-.game-player.is-building .game-chat__head { display: none; }
