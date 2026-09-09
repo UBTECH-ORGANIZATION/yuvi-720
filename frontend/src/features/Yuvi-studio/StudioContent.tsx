@@ -12,8 +12,9 @@ import { normalizeDesign, type YuviColors, type YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
 import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
-import { MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, WALL_STYLES, type RoomItem, type StationId } from './RoomDesign'
+import { GAMING_ROOM_TITLE_IDS, MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, WALL_STYLES, type GamingRoomTitleId, type RoomItem, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
+import { playgroundGiftPosition } from './PlaygroundLayout.ts'
 import { roomStandingSpot } from './YuviLabRoom'
 import { StationPanel } from './panel/StationPanel'
 import { SegmentedNav } from './panel/SegmentedNav'
@@ -72,6 +73,7 @@ const FOCUS_BY_TAB: Record<Tab, string> = {
 
 type Filter = 'all' | 'owned' | 'new' | 'special'
 const FILTERS: Filter[] = ['all', 'owned', 'new', 'special']
+type PendingPurchase = Pick<YuviAsset, 'id' | 'labelKey'> & { slot?: YuviSlot; roomKind?: string }
 
 const COLOR_OPTIONS: Record<keyof YuviColors, string[]> = {
   body: ['#F1F2FB', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
@@ -97,7 +99,7 @@ export function StudioContent({
     wallet, priceOf, buy, buying, isRoomUnlocked,
   } = studio
   const thumbnails = useMemo(() => getThumbnails(), [])
-  const [pending, setPending] = useState<YuviAsset | null>(null)
+  const [pending, setPending] = useState<PendingPurchase | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   // Try-before-you-buy: a locked item can be worn on the stage without being
@@ -147,12 +149,17 @@ export function StudioContent({
   const [worldSwitchFailed, setWorldSwitchFailed] = useState(false)
   const [unplacedItems, setUnplacedItems] = useState<RoomItem[]>([])
   const [unplacedNoticeOpen, setUnplacedNoticeOpen] = useState(false)
+  const [gamingRoomTitlePrompt, setGamingRoomTitlePrompt] = useState(false)
+  const [gamingRoomTitleGuiding, setGamingRoomTitleGuiding] = useState(false)
+  const gamingRoomTitleApproaching = useRef(false)
+  const [savingGamingRoomTitle, setSavingGamingRoomTitle] = useState(false)
   const transitionCompleteRef = useRef(false)
   const pendingUnplacedItemsRef = useRef<RoomItem[] | null>(null)
   const [worldPurchaseError, setWorldPurchaseError] = useState<string | null>(null)
   const chooseWorld = async (layoutId: RoomLayoutId) => {
     if (worldSwitching || travelPhase !== 'idle') return
     if (roomState.room.activeLayoutId === layoutId) {
+      setWorldPickerOpen(false)
       return
     }
     setWorldSwitching(true)
@@ -230,14 +237,22 @@ export function StudioContent({
   const visibleRoomItems = useMemo(() => {
     const userItems = movingUid ? roomState.items.filter((item) => item.uid !== movingUid) : roomState.items
     if (weeklySurprise?.available && (weeklySurprise.state === 'covered' || weeklySurprise.state === 'ready')) {
+      const giftPosition = roomState.room.activeLayoutId === 'adventurePark'
+        ? playgroundGiftPosition([
+          ...roomState.items.filter((item) => roomItemSpec(item.kind)?.placement !== 'wall').map((item) => ({
+            x: item.x, z: item.z, radius: (roomItemSpec(item.kind)?.radius ?? 1) * 1.75,
+          })),
+          ...Object.values(roomState.room.stations).filter((station) => station.placed).map((station) => ({ ...station, radius: 2 })),
+          { x: 0, z: 0, radius: 2 },
+        ]) : WEEKLY_SURPRISE_POSITION
       return [...userItems, {
         uid: weeklyUid,
         kind: weeklySurprise.state === 'ready' ? WEEKLY_SURPRISE_READY : WEEKLY_SURPRISE_COVERED,
-        ...WEEKLY_SURPRISE_POSITION,
+        ...giftPosition,
       }]
     }
     return userItems
-  }, [roomState.items, movingUid, weeklySurprise, weeklyUid])
+  }, [roomState.items, roomState.room.activeLayoutId, roomState.room.stations, movingUid, weeklySurprise, weeklyUid])
   const visitorDesign = visitorRoom ? normalizeDesign(visitorRoom.yuvi_design) : null
   const visitorRoomDesign = visitorRoom ? normalizeRoom(visitorRoom.room) : null
   const activeDesign = design
@@ -247,6 +262,17 @@ export function StudioContent({
   const activeRoomStyle = visitorRoomDesign
     ? { floor: visitorRoomDesign.floor, wall: visitorRoomDesign.wall, mood: visitorRoomDesign.mood }
     : roomStyle
+  const gamingRoomTitle = (visitorRoomDesign ?? roomState.room).worlds.creatorLoft.gamingRoomTitle
+  const roomLabelOverrides = useMemo(() => gamingRoomTitle
+    ? { 'YuviStudio.loft.title': t(`YuviStudio.gamingRoom.name.${gamingRoomTitle}`) }
+    : undefined, [gamingRoomTitle, t])
+  const chooseGamingRoomTitle = async (title: GamingRoomTitleId) => {
+    if (savingGamingRoomTitle) return
+    setSavingGamingRoomTitle(true)
+    const saved = await roomState.setGamingRoomTitle(title)
+    setSavingGamingRoomTitle(false)
+    if (saved) setGamingRoomTitlePrompt(false)
+  }
   const menuItem = propMenu ? roomState.items.find((item) => item.uid === propMenu.uid) ?? null : null
   // Stations are addressed through the same menu, under a reserved uid.
   const menuStation: StationId | null = propMenu?.uid.startsWith('station:')
@@ -668,9 +694,34 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
+            worldPickerOpen={worldPickerOpen}
+            onOpenWorldPicker={() => setWorldPickerOpen(true)}
+            onCloseWorldPicker={() => setWorldPickerOpen(false)}
+            worldSelector={(
+              <HolographicWorldSelector
+                compact
+                open={worldPickerOpen}
+                busy={worldSwitching || buying === 'layout:sportsArena' || buying === 'layout:creatorLoft'}
+                activeLayoutId={activeLayoutId}
+                labels={{
+                  lab: t('YuviStudio.worlds.lab.title'),
+                  adventurePark: t('YuviStudio.worlds.adventurePark.title'),
+                  sportsArena: t('YuviStudio.worlds.sportsArena.title'),
+                  creatorLoft: t('YuviStudio.worlds.creatorLoft.title'),
+                }}
+                lockedIds={(['sportsArena', 'creatorLoft'] as RoomLayoutId[]).filter((layoutId) => !isRoomUnlocked(`layout:${layoutId}`))}
+                lockedLabel={t('YuviStudio.worlds.locked')}
+                currentLabel={t('YuviStudio.worlds.current')}
+                onSelect={(layoutId) => void ((layoutId === 'sportsArena' || layoutId === 'creatorLoft') && !isRoomUnlocked(`layout:${layoutId}`)
+                  ? unlockWorld(layoutId)
+                  : chooseWorld(layoutId))}
+              />
+            )}
             footer={introScene === 1 || introScene === 2 ? undefined : footerFor('room')}
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
+            priceOf={priceOf}
+            onBuyRoom={(kind) => { setPurchaseError(null); setPending({ id: kind, labelKey: `YuviStudio.room.item.${kind}`, roomKind: kind }) }}
             surpriseRewards={claimedRewards}
             t={t}
           />
@@ -812,41 +863,9 @@ export function StudioContent({
             title={t('YuviStudio.capsule.title')}
             closeLabel={t('YuviStudio.station.leave')}
             onClose={visitorRoom ? returnToOwnRoom : leaveStation}
-            nav={(
-              <SegmentedNav
-                label={t('YuviStudio.capsule.choice')}
-                items={[
-                  { id: 'friends', label: t('YuviStudio.capsule.visitFriend'), icon: 'people' },
-                  { id: 'worlds', label: t('YuviStudio.capsule.switchWorld'), icon: 'globe' },
-                ]}
-                value={worldPickerOpen ? 'worlds' : 'friends'}
-                onChange={(value) => setWorldPickerOpen(value === 'worlds')}
-              />
-            )}
           >
-            {!worldPickerOpen ? (
-              <FriendsRoomsPanel onVisit={(ownerId) => void startVisit(ownerId)}
-                visitingOwnerId={pendingVisitOwner} visitFailed={visitFailed} />
-            ) : (
-              <HolographicWorldSelector
-                compact
-                open
-                busy={worldSwitching || buying === 'layout:sportsArena' || buying === 'layout:creatorLoft'}
-                activeLayoutId={activeLayoutId}
-                labels={{
-                  lab: t('YuviStudio.worlds.lab.title'),
-                  adventurePark: t('YuviStudio.worlds.adventurePark.title'),
-                  sportsArena: t('YuviStudio.worlds.sportsArena.title'),
-                  creatorLoft: t('YuviStudio.worlds.creatorLoft.title'),
-                }}
-                lockedIds={(['sportsArena', 'creatorLoft'] as RoomLayoutId[]).filter((layoutId) => !isRoomUnlocked(`layout:${layoutId}`))}
-                lockedLabel={t('YuviStudio.worlds.locked')}
-                currentLabel={t('YuviStudio.worlds.current')}
-                onSelect={(layoutId) => void ((layoutId === 'sportsArena' || layoutId === 'creatorLoft') && !isRoomUnlocked(`layout:${layoutId}`)
-                  ? unlockWorld(layoutId)
-                  : chooseWorld(layoutId))}
-              />
-            )}
+            <FriendsRoomsPanel onVisit={(ownerId) => void startVisit(ownerId)}
+              visitingOwnerId={pendingVisitOwner} visitFailed={visitFailed} />
           </StationPanel>
         )}
 
@@ -872,6 +891,7 @@ export function StudioContent({
               roomId={currentRoomId}
               stations={activeStations}
               roomStyle={activeRoomStyle}
+              roomLabelOverrides={roomLabelOverrides}
               placing={visitorRoom ? null : placing}
               presenting={introScene !== null && introScene !== 4}
               presentingSide="left"
@@ -885,11 +905,42 @@ export function StudioContent({
                 else setSurpriseNotice(true)
                 return true
               } : undefined}
-              lockRoam={(!visitorRoom && mode !== 'roam') || introScene !== null || travelPhase !== 'idle'}
+              onGamingRoomAreaChange={!visitorRoom ? (near) => {
+                if (!near || gamingRoomTitlePrompt || gamingRoomTitleApproaching.current) return
+                gamingRoomTitleApproaching.current = true
+                setGamingRoomTitleGuiding(true)
+                setFirstPerson(false)
+                avatarRef.current?.focus('roam')
+                avatarRef.current?.walkToGamingRoomTitle(() => {
+                  gamingRoomTitleApproaching.current = false
+                  setGamingRoomTitleGuiding(false)
+                  setGamingRoomTitlePrompt(true)
+                })
+              } : undefined}
+              lockRoam={(!visitorRoom && mode !== 'roam') || gamingRoomTitleGuiding || gamingRoomTitlePrompt || introScene !== null || travelPhase !== 'idle'}
               label={t('YuviStudio.avatarAlt')}
             />
           )}
         </div>
+        {gamingRoomTitlePrompt && !visitorRoom && (
+          <div className="ys-shop-backdrop" role="presentation">
+            <section className="ys-shop ys-gaming-title-picker" role="dialog" aria-modal="true" aria-labelledby="yuvi-gaming-room-title-choice">
+              <div className="ys-gaming-title-picker__marquee" aria-hidden>
+                <span /><span /><span /><span /><span /><span />
+              </div>
+              <h2 id="yuvi-gaming-room-title-choice">{t('YuviStudio.gamingRoom.choose.title')}</h2>
+              <p className="ys-gaming-title-picker__prompt">{t('YuviStudio.gamingRoom.choose.body')}</p>
+              <div className="ys-gaming-title-picker__choices">
+                {GAMING_ROOM_TITLE_IDS.map((title) => (
+                  <button key={title} type="button" className={`ys-gaming-title-choice ys-gaming-title-choice--${title}`} disabled={savingGamingRoomTitle} onClick={() => void chooseGamingRoomTitle(title)}>
+                    <span className="ys-gaming-title-choice__number" aria-hidden>{GAMING_ROOM_TITLE_IDS.indexOf(title) + 1}</span>
+                    <span>{t(`YuviStudio.gamingRoom.name.${title}`)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
         {unplacedNoticeOpen && !visitorRoom && (
           <div className="ys-shop-backdrop" role="presentation">
             <section className="ys-shop ys-shop--confirm" role="dialog" aria-modal="true" aria-labelledby="yuvi-unplaced-items-title">
@@ -1132,7 +1183,10 @@ export function StudioContent({
             const result = await buy(pending.id)
             if (result?.ok) {
               setPreview(null)
-              equip(pending.slot, pending.id)
+              if (pending.roomKind) {
+                const spec = roomItemSpec(pending.roomKind)
+                setPlacing({ kind: pending.roomKind, tint: spec?.tintable ? spec.tint : undefined, rot: 0 })
+              } else if (pending.slot) equip(pending.slot, pending.id)
               setPending(null)
               return
             }
@@ -1215,7 +1269,7 @@ export function StudioContent({
 function PurchaseDialog({
   asset, price, balance, busy, error, thumb, t, onCancel, onConfirm,
 }: {
-  asset: YuviAsset
+  asset: PendingPurchase
   price: number
   balance: number
   busy: boolean
@@ -1344,16 +1398,22 @@ function RoomColorDialog({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, footer, isPropLocked, requirementFor, surpriseRewards, t,
+  state, placing, setPlacing, onLeave, worldPickerOpen, onOpenWorldPicker, onCloseWorldPicker, worldSelector, footer, isPropLocked, requirementFor, priceOf, onBuyRoom, surpriseRewards, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
   setPlacing: (next: YuviPlacing | null) => void
   onLeave: () => void
+  worldPickerOpen: boolean
+  onOpenWorldPicker: () => void
+  onCloseWorldPicker: () => void
+  worldSelector: React.ReactNode
   footer: React.ReactNode
   /** Furniture that has to be earned, and what earns it. */
   isPropLocked: (kind: string) => boolean
   requirementFor: (id: string) => string | undefined
+  priceOf: (id: string) => number | null
+  onBuyRoom: (kind: string) => void
   surpriseRewards: string[]
   t: (key: string) => string
 }) {
@@ -1390,6 +1450,12 @@ function RoomPanel({
       title={t('YuviStudio.room.title')}
       closeLabel={t('YuviStudio.station.leave')}
       onClose={onLeave}
+      wallet={(
+        <button type="button" className="ys-panel__world-switch" onClick={onOpenWorldPicker}>
+          <Icon name="globe" size={15} />
+          {t('YuviStudio.room.switchWorld')}
+        </button>
+      )}
       nav={(
         <SegmentedNav
           label={t('YuviStudio.room.title')}
@@ -1414,7 +1480,35 @@ function RoomPanel({
           : null}
       footer={footer}
     >
+      {worldPickerOpen && (
+        <div className="ys-room-world-dialog" role="dialog" aria-modal="true" aria-label={t('YuviStudio.worlds.choose')}>
+          <div className="ys-room-world-dialog__head">
+            <h2>{t('YuviStudio.worlds.choose')}</h2>
+            <button type="button" onClick={onCloseWorldPicker} aria-label={t('YuviStudio.worlds.close')} title={t('YuviStudio.worlds.close')}>
+              <Icon name="close" size={18} />
+            </button>
+          </div>
+          {worldSelector}
+        </div>
+      )}
       {placementHint && <p className="ys-note">{placementHint}</p>}
+      {isItemCategory && room.storedItems.length > 0 && <section className="ys-section">
+        <h2 className="ys-section__title">{t('YuviStudio.room.storage')}</h2>
+        <div className="ys-grid">
+          {room.storedItems.map((item) => (
+            <ItemCard
+              key={item.uid}
+              label={t(`YuviStudio.room.item.${item.kind}`)}
+              thumb={roomThumbnails[item.kind]}
+              dot={item.tint ?? 'var(--ys-accent)'}
+              selected={placing?.uid === item.uid}
+              locked={isPropLocked(item.kind)}
+              disabled={full || isPropLocked(item.kind)}
+              onClick={() => setPlacing({ uid: item.uid, kind: item.kind, tint: item.tint, rot: item.rot, rot0: item.rot })}
+            />
+          ))}
+        </div>
+      </section>}
       {isItemCategory && <section className="ys-section">
         <div className="ys-section__head">
           <h2 className="ys-section__title">{t(`YuviStudio.room.category.${category}`)}</h2>
@@ -1430,6 +1524,7 @@ function RoomPanel({
         <div className="ys-grid">
           {categoryItems.map((spec) => {
             const locked = isPropLocked(spec.id)
+            const price = locked ? priceOf(spec.id) : null
             return (
               <ItemCard
                 key={spec.id}
@@ -1438,9 +1533,10 @@ function RoomPanel({
                 dot={spec.tint ?? 'var(--ys-accent)'}
                 selected={!placing?.uid && placing?.kind === spec.id}
                 locked={locked}
-                tip={locked ? t(requirementFor(spec.id) ?? 'YuviStudio.unlock.achievement') : undefined}
-                disabled={full || locked}
-                onClick={() => pick(spec.id)}
+                price={price}
+                tip={locked && price === null ? t(requirementFor(spec.id) ?? 'YuviStudio.unlock.achievement') : undefined}
+                disabled={full}
+                onClick={() => locked ? (price === null ? undefined : onBuyRoom(spec.id)) : pick(spec.id)}
               />
             )
           })}

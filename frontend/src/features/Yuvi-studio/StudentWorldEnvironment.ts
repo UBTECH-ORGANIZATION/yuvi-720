@@ -1,5 +1,12 @@
 import * as THREE from 'three'
 import type { RoomLayoutId } from './RoomLayouts'
+import { createLoftSurfaceMaterials } from './LoftSurfaceMaterials.ts'
+import { createLoftLighting } from './LoftLighting.ts'
+import { createLoftFabrication, type LoftTranslator } from './LoftFabrication.ts'
+import { GAMING_ROOM_POSTERS } from './GamingRoomArtwork.ts'
+import { createSportsHallSurface } from './SportsHallSurfaces.ts'
+import { batchSportsMeshes } from './SportsMeshBatch.ts'
+import { createPlaygroundEnvironment } from './PlaygroundEnvironment.ts'
 
 type StudentWorldId = Exclude<RoomLayoutId, 'lab'>
 
@@ -13,6 +20,8 @@ interface EnvironmentOptions {
 export interface StudentWorldEnvironment {
   group: THREE.Group
   floorMaterial: THREE.MeshStandardMaterial
+  interact?: (raycaster: THREE.Raycaster) => boolean
+  setLabels: (translate: LoftTranslator) => void
   update: (elapsed: number) => void
   dispose: () => void
 }
@@ -24,20 +33,34 @@ const DEPTH = FRONT_Z - BACK_Z
 const MID_Z = (BACK_Z + FRONT_Z) / 2
 
 export function createStudentWorldEnvironment(options: EnvironmentOptions): StudentWorldEnvironment {
+  if (options.id === 'adventurePark') return createPlaygroundEnvironment(options)
+  return createIndoorWorldEnvironment(options)
+}
+
+function createIndoorWorldEnvironment(options: EnvironmentOptions): StudentWorldEnvironment {
   const { id, floorY, rich, reduceMotion } = options
   const group = new THREE.Group()
   group.name = `student-world-${id}`
   const resources = new Set<{ dispose: () => void }>()
   const track = <T extends { dispose: () => void }>(resource: T): T => { resources.add(resource); return resource }
   const animated: Array<(elapsed: number) => void> = []
+  let setLabels: (translate: LoftTranslator) => void = () => undefined
   const palette = id === 'adventurePark'
     ? { floor: 0x17222a, wall: 0x283640, accent: 0x66f28f, second: 0xffcf4a, dark: 0x10171c }
     : id === 'sportsArena'
-      ? { floor: 0x183332, wall: 0x4a2930, accent: 0x45d8df, second: 0xff625f, dark: 0x171315 }
-      : { floor: 0x17131f, wall: 0x2c2335, accent: 0xff4fa3, second: 0x54e6ff, dark: 0x0e0b13 }
-  const standard = (color: number, emissive = 0x000000) => track(new THREE.MeshStandardMaterial({
-    color, roughness: 0.72, metalness: 0.22, emissive, emissiveIntensity: emissive ? 0.7 : 0,
-  }))
+      ? { floor: 0xc3c9bd, wall: 0xe1e4df, accent: 0x388c85, second: 0xc86552, dark: 0x858e88 }
+      : { floor: 0x292e30, wall: 0x30383a, accent: 0xff725b, second: 0x54cfc1, dark: 0x171d20 }
+  const sportsMaterials = new Map<string, THREE.MeshStandardMaterial>()
+  const standard = (color: number, emissive = 0x000000) => {
+    const key = `${color}:${emissive}`
+    const cached = id === 'sportsArena' ? sportsMaterials.get(key) : undefined
+    if (cached) return cached
+    const material = track(new THREE.MeshStandardMaterial({
+      color, roughness: 0.72, metalness: 0.22, emissive, emissiveIntensity: emissive ? 0.7 : 0,
+    }))
+    if (id === 'sportsArena') sportsMaterials.set(key, material)
+    return material
+  }
   const glow = (color: number, opacity = 0.75) => track(new THREE.MeshBasicMaterial({
     color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
   }))
@@ -267,43 +290,67 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
   }
 
   if (id === 'sportsArena') {
+    const surfaces = track(createSportsHallSurface(rich))
+    surfaces.apply(floorMaterial)
+    floor.receiveShadow = true
+    const fabrication = track(createLoftFabrication(rich))
     const shell = new THREE.Group()
     shell.name = 'sports-arena-shell'
     group.add(shell)
     const courtZone = new THREE.Group()
     courtZone.name = 'sports-street-court'
     group.add(courtZone)
-    const steel = standard(0x172935)
-    const concrete = standard(0x304451)
-    const paleMetal = standard(0xd8edf2)
-    const rubber = standard(0x14242e)
-    const cyan = glow(palette.accent, 0.72)
-    const coral = glow(palette.second, 0.72)
+    const steel = fabrication.material('steel', 0x65736c)
+    const concrete = standard(0x7f8981)
+    const rubber = fabrication.material('rubber', 0x333b37)
+    const cyan = standard(palette.accent)
+    const coral = standard(palette.second)
 
     for (const x of [-23.2, -12, 0, 12, 23.2]) {
       const column = box(0.38, 11.3, 0.38, steel, x, floorY + 5.65, BACK_Z + 0.48)
       shell.attach(column)
     }
     for (const z of [BACK_Z + 1, MID_Z, FRONT_Z - 2]) {
-      const truss = box(HALF_X * 2 - 1.2, 0.24, 0.34, steel, 0, floorY + 11.15, z)
-      shell.attach(truss)
-    }
-    for (const x of [-23.75, 23.75]) {
-      for (let index = 0; index < 9; index += 1) {
-        const cagePost = box(0.1, 6.8, 0.1, paleMetal, x, floorY + 3.4, BACK_Z + 4 + index * 6.2)
-        shell.attach(cagePost)
+      for (const height of [10.65, 11.65]) shell.attach(box(HALF_X * 2 - 1.2, 0.16, 0.28, steel, 0, floorY + height, z))
+      for (let bay = 0; bay < 16; bay++) {
+        const brace = box(3.12, 0.08, 0.12, steel, -22.3 + bay * 2.97, floorY + 11.15, z)
+        brace.rotation.z = (bay % 2 ? 1 : -1) * Math.atan2(1, 2.97)
+        brace.name = 'sports-truss-brace'
+        shell.attach(brace)
+        const plate = box(0.23, 0.22, 0.045, steel, -23.78 + bay * 2.97, floorY + (bay % 2 ? 11.65 : 10.65), z + 0.17)
+        shell.attach(plate)
       }
-      for (const y of [1.2, 3.4, 5.6]) {
-        const cageRail = box(0.1, 0.08, DEPTH - 6, standard(0x64808d), x, floorY + y, MID_Z)
-        shell.attach(cageRail)
+    }
+    for (const side of [-1, 1]) for (const z of [-22, -8, 6, 20, 31]) {
+      shell.attach(box(0.28, 11.8, 0.35, steel, side * 24.15, floorY + 5.9, z))
+    }
+
+    const trainingZones = new THREE.Group()
+    trainingZones.name = 'sports-rubber-training-zones'
+    group.add(trainingZones)
+    for (const [index, [x, z]] of [[-14.5, 18.5], [14.5, 18.5], [-14.5, -15.5], [14.5, -15.5]].entries()) {
+      const zone = box(7.1, 0.035, 6.2, rubber, x, floorY + 0.025, z)
+      zone.name = `sports-training-zone-${index + 1}`
+      trainingZones.attach(zone)
+      for (const offset of [-3.5, 3.5]) trainingZones.attach(box(0.05, 0.025, 6.2, index % 2 ? cyan : coral, x + offset, floorY + 0.05, z))
+      for (let seam = -2.5; seam <= 2.5; seam++) trainingZones.attach(box(0.015, 0.008, 6.2, standard(0x252c29), x + seam, floorY + 0.047, z))
+    }
+    const acousticWalls = new THREE.Group()
+    acousticWalls.name = 'sports-acoustic-wall-panels'
+    group.add(acousticWalls)
+    for (const side of [-1, 1]) {
+      for (const z of [-20, -8, 4, 16, 28]) {
+        const panel = box(0.11, 2.1, 4.2, fabrication.material('cloth', 0x79847d), side * 24.18, floorY + 9.2, z)
+        acousticWalls.attach(panel)
+        for (const y of [-0.62, 0, 0.62]) acousticWalls.attach(box(0.04, 0.06, 3.6, standard(0x425c60), side * 24.1, floorY + 9.2 + y, z))
       }
     }
 
-    const lineMaterial = glow(0xeafcff, 0.62)
+    const lineMaterial = standard(0xf5f6ef)
     const courtOutlineGeometry = track(new THREE.BoxGeometry(30, 0.02, 44))
     const court = new THREE.LineSegments(
       track(new THREE.EdgesGeometry(courtOutlineGeometry)),
-      lineMaterial,
+      track(new THREE.LineBasicMaterial({ color: 0xf5f6ef })),
     )
     court.position.set(0, floorY + 0.04, 3)
     courtZone.add(court)
@@ -325,34 +372,13 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
       courtZone.add(arc)
     }
 
-    const hoops = new THREE.Group()
-    hoops.name = 'sports-mounted-hoops'
-    group.add(hoops)
-    for (const [index, z] of [BACK_Z + 1.25, FRONT_Z - 1.25].entries()) {
-      const towardCourt = index === 0 ? 1 : -1
-      const backboard = box(5.2, 3.2, 0.18, standard(0xbcd1d8), 0, floorY + 6.1, z)
-      hoops.attach(backboard)
-      const target = box(2.15, 1.25, 0.08, rubber, 0, floorY + 6.05, z + towardCourt * 0.14)
-      hoops.attach(target)
-      const rim = new THREE.Mesh(track(new THREE.TorusGeometry(0.78, 0.065, 10, 28)), index === 0 ? coral : cyan)
-      rim.rotation.x = Math.PI / 2
-      rim.position.set(0, floorY + 4.55, z + towardCourt * 0.78)
-      hoops.add(rim)
-      for (let netIndex = 0; netIndex < 8; netIndex += 1) {
-        const angle = netIndex / 8 * Math.PI * 2
-        const cord = box(0.025, 0.72, 0.025, paleMetal, Math.cos(angle) * 0.65, floorY + 4.18, z + towardCourt * (0.78 + Math.sin(angle) * 0.65))
-        cord.rotation.z = Math.cos(angle) * 0.18
-        hoops.attach(cord)
-      }
-    }
-
     const bleachers = new THREE.Group()
     bleachers.name = 'sports-climbable-bleachers'
     group.add(bleachers)
     for (const side of [-1, 1]) {
       for (let tier = 0; tier < 3; tier += 1) {
         const x = side * (20.4 + tier * 1.1)
-        const tierMesh = box(1.15, 0.32 + tier * 0.32, 24, tier === 2 ? concrete : standard(tier ? 0x29404d : 0x233944), x, floorY + (0.16 + tier * 0.16), 5)
+        const tierMesh = box(1.15, 0.32 + tier * 0.32, 24, tier === 2 ? concrete : standard(tier ? 0x9aaba0 : 0x929d96), x, floorY + (0.16 + tier * 0.16), 5)
         bleachers.attach(tierMesh)
         for (const z of [-5, 5, 15]) {
           const edge = box(0.06, 0.04, 6.8, side < 0 ? cyan : coral, x - side * 0.58, floorY + 0.34 + tier * 0.32, z)
@@ -361,41 +387,15 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
       }
     }
 
-    const scoreWall = new THREE.Group()
-    scoreWall.name = 'sports-score-wall'
-    group.add(scoreWall)
-    const scoreboardMaterial = glow(palette.accent, 0.7)
-    const scoreCase = box(10, 3.2, 0.35, standard(0x07131b), 0, floorY + 8.2, BACK_Z + 0.6)
-    scoreWall.attach(scoreCase)
-    const scoreBars: THREE.Mesh[] = []
-    for (let index = 0; index < 8; index += 1) {
-      const bar = box(0.55, 1.3, 0.12, index < 4 ? scoreboardMaterial : coral, -2.7 + index * 0.78, floorY + 8.2, BACK_Z + 0.82)
-      scoreWall.attach(bar)
-      scoreBars.push(bar)
-    }
-    const murals = new THREE.Group()
-    murals.name = 'sports-motion-murals'
-    group.add(murals)
-    for (const [index, z] of [-12, -4, 12, 20].entries()) {
-      const panel = box(0.14, 4.5, 5.6, standard(index % 2 ? 0x203c49 : 0x26333e), index % 2 ? 24.1 : -24.1, floorY + 5.1, z)
-      murals.attach(panel)
-      for (let stripe = 0; stripe < 4; stripe += 1) {
-        const mark = box(0.08, 0.18 + stripe * 0.07, 3.9 - stripe * 0.45, (index + stripe) % 2 ? cyan : coral, index % 2 ? 24.0 : -24.0, floorY + 3.7 + stripe * 0.82, z + (stripe % 2 ? 0.45 : -0.3))
-        mark.rotation.x = (stripe % 2 ? 1 : -1) * (0.12 + stripe * 0.07)
-        murals.attach(mark)
-      }
-    }
-
     const lighting = new THREE.Group()
     lighting.name = 'sports-arena-lighting'
     group.add(lighting)
-    const laneLights: THREE.MeshBasicMaterial[] = []
-    for (let index = 0; index < 12; index += 1) {
-      const material = glow(index % 2 ? palette.accent : palette.second, 0.24)
-      laneLights.push(material)
-      const laneLight = box(0.24, 0.04, 1.5, material, -13.2 + index * 2.4, floorY + 0.035, 26.5)
-      lighting.attach(laneLight)
-    }
+    const fill = track(new THREE.HemisphereLight(0xffffff, 0xabb2a5, 1.3))
+    lighting.add(fill)
+    const daylight = track(new THREE.DirectionalLight(0xfffaf1, 1.7))
+    daylight.position.set(-9, floorY + 11, -8)
+    daylight.target.position.set(0, floorY, 3)
+    lighting.add(daylight, daylight.target)
     const highBayGlow = glow(0xf4fff5, 0.78)
     for (const z of [-9, 15]) {
       for (const x of [-14, -4.7, 4.7, 14]) {
@@ -403,6 +403,8 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
         lighting.attach(housing)
         const panel = box(3.15, 0.035, 0.62, highBayGlow, x, floorY + 10.64, z)
         lighting.attach(panel)
+        for (const offset of [-1.4, 1.4]) lighting.attach(box(0.025, 1, 0.025, steel, x + offset, floorY + 11.36, z))
+        if (rich) for (let fin = -1.3; fin <= 1.3; fin += 0.22) lighting.attach(box(0.025, 0.12, 0.82, steel, x + fin, floorY + 10.95, z))
       }
     }
     const gymFans: THREE.Group[] = []
@@ -420,18 +422,23 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
       gymFans.push(fan)
     }
     animated.push((elapsed) => {
-      scoreBars.forEach((bar, index) => { bar.scale.y = 0.35 + Math.abs(Math.sin(elapsed * 1.8 + index)) * 0.65 })
-      laneLights.forEach((material, index) => { material.opacity = 0.18 + Math.max(0, Math.sin(elapsed * 1.35 - index * 0.42)) * 0.42 })
       gymFans.forEach((fan, index) => { fan.rotation.y = elapsed * (index ? -0.46 : 0.42) })
     })
+    for (const part of [shell, trainingZones, acousticWalls, lighting]) batchSportsMeshes(part, track)
   }
 
   if (id === 'creatorLoft') {
+    const graphics = track(createLoftFabrication(rich))
+    setLabels = graphics.setLabels
+    const lighting = track(createLoftLighting(floorY, rich))
+    group.add(lighting.group)
+    const surfaces = track(createLoftSurfaceMaterials(rich))
+    surfaces.apply(floorMaterial)
+    floor.receiveShadow = true
     const shell = new THREE.Group()
     shell.name = 'creator-arcade-shell'
     group.add(shell)
-    const darkMetal = standard(0x18131e)
-    const brushedMetal = standard(0x53475d)
+    const darkMetal = standard(0x20282b)
     for (const x of [-23.2, -11.6, 0, 11.6, 23.2]) {
       const column = box(0.36, 11.2, 0.36, darkMetal, x, floorY + 5.6, BACK_Z + 0.5)
       shell.attach(column)
@@ -445,56 +452,82 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
     stage.name = 'creator-led-stage'
     group.add(stage)
     const stageMaterial = standard(0x241a2b)
+    surfaces.apply(stageMaterial)
+    stageMaterial.color.setHex(0x35373b)
     const platform = box(18, 0.8, 7, stageMaterial, 0, floorY + 0.4, BACK_Z + 4)
+    platform.castShadow = rich
+    platform.receiveShadow = true
     stage.attach(platform)
-    const screenWall = box(18, 7, 0.5, standard(0x130f19), 0, floorY + 4.3, BACK_Z + 0.6)
+    const screenWall = box(18, 7, 0.5, standard(0x1b2225), 0, floorY + 4.3, BACK_Z + 0.6)
     stage.attach(screenWall)
-    const screenMaterials: THREE.MeshBasicMaterial[] = []
-    for (let index = 0; index < 10; index += 1) {
-      const screenMaterial = glow(index % 2 ? palette.accent : palette.second, 0.45)
-      screenMaterials.push(screenMaterial)
-      const screen = box(1.05, 2.4, 0.12, screenMaterial, -6.2 + index * 1.38, floorY + 3.5, BACK_Z + 0.9)
-      stage.attach(screen)
-    }
-    const equalizer: THREE.Mesh[] = []
-    for (let index = 0; index < 16; index += 1) {
-      const bar = box(0.3, 1, 0.25, glow(index % 3 ? palette.second : palette.accent, 0.72), -7.5 + index, floorY + 1.3, BACK_Z + 7.1)
-      stage.attach(bar)
-      equalizer.push(bar)
+    const stageSign = graphics.sign(15.8, 3.95, 'neonTitle', 'YuviStudio.loft.title')
+    stageSign.name = 'gaming-room-neon-title'
+    stageSign.position.set(0, floorY + 4.3, BACK_Z + 0.87)
+    stage.add(stageSign)
+    for (const x of [-7.5, -2.5, 2.5, 7.5]) {
+      const fixture = graphics.cylinder(0.2, 0.35, graphics.material('steel', 0x495359), x, floorY + 1.02, BACK_Z + 7.1)
+      fixture.rotation.x = -0.35
+      stage.add(fixture)
     }
 
     const wallBays = new THREE.Group()
     wallBays.name = 'creator-arcade-wall-bays'
     group.add(wallBays)
+    const neonSegments: { position: number[]; size: number[]; color: number }[] = []
+    const neon = (position: number[], size: number[], color: number) => neonSegments.push({ position, size, color })
     for (const side of [-1, 1]) {
       for (const [bayIndex, z] of [-12, -3, 8, 19].entries()) {
-        const panel = box(0.15, 5.3, 6.6, standard(bayIndex % 2 ? 0x2b2132 : 0x34243a), side * 24.08, floorY + 5.2, z)
+        const panel = box(0.15, 5.3, 6.6, standard(bayIndex % 2 ? 0x343e42 : 0x3d4244), side * 24.08, floorY + 5.2, z)
         wallBays.attach(panel)
-        for (let pixel = 0; pixel < 7; pixel += 1) {
-          const color = (pixel + bayIndex) % 2 ? palette.accent : palette.second
-          const tile = box(0.08, 0.48 + (pixel % 3) * 0.2, 0.62, glow(color, 0.38), side * 23.98, floorY + 2.8 + (pixel % 4) * 1.0, z - 2.2 + pixel * 0.72)
-          tile.rotation.x = (pixel % 2 ? -1 : 1) * 0.09
-          wallBays.attach(tile)
-        }
+        const posterId = GAMING_ROOM_POSTERS[(side === -1 ? 0 : 4) + bayIndex]
+        const poster = graphics.sign(5.9, 4.6, posterId, `YuviStudio.loft.poster.${posterId}`)
+        poster.name = `gaming-poster-${posterId}`
+        poster.position.set(side * 23.97, floorY + 5.2, z)
+        poster.rotation.y = -side * Math.PI / 2
+        wallBays.add(poster)
+        const color = [0xffdb58, 0x62eac2, 0xff6492, 0x66c9ff][bayIndex]
+        for (const offset of [-2.48, 2.48]) neon([side * 23.86, floorY + 5.2 + offset, z], [0.07, 0.055, 6.24], color)
+        for (const offset of [-3.12, 3.12]) neon([side * 23.86, floorY + 5.2, z + offset], [0.07, 5.02, 0.055], color)
+      }
+      for (const height of [0.3, 9.2, 10.9]) neon([side * 24.12, floorY + height, MID_Z], [0.07, 0.055, DEPTH - 1.5], height === 9.2 ? 0xff669b : 0x63e2ec)
+      for (const z of [-19, -7.5, 2.5, 13.5, 26]) {
+        neon([side * 24.03, floorY + 4.55, z], [0.07, 8.4, 0.07], 0x63e2ec)
+        neon([side * 21.6, floorY + 11.78, z], [5, 0.055, 0.07], 0xffb95f)
       }
     }
+    for (const offset of [-8.75, 8.75]) neon([offset, floorY + 4.3, BACK_Z + 0.91], [0.065, 6.6, 0.07], 0xff668e)
+    for (const height of [1.02, 7.58]) neon([0, floorY + height, BACK_Z + 0.91], [17.5, 0.065, 0.07], 0x60e3ed)
+    for (const height of [0.17, 0.65]) neon([0, floorY + height, BACK_Z + 7.52], [18, 0.055, 0.07], 0xffc15d)
+    const neonGeometry = track(new THREE.BoxGeometry(1, 1, 1))
+    const neonCore = new THREE.InstancedMesh(neonGeometry, glow(0xffffff, 0.95), neonSegments.length)
+    const neonHalo = new THREE.InstancedMesh(neonGeometry, glow(0xffffff, 0.1), neonSegments.length)
+    neonCore.name = 'gaming-room-neon-tubes'
+    neonHalo.name = 'gaming-room-neon-halos'
+    const neonTransform = new THREE.Object3D()
+    neonSegments.forEach(({ position, size, color }, index) => {
+      neonTransform.position.set(position[0], position[1], position[2])
+      neonTransform.scale.set(size[0], size[1], size[2])
+      neonTransform.updateMatrix()
+      neonCore.setMatrixAt(index, neonTransform.matrix)
+      neonCore.setColorAt(index, new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.3))
+      neonTransform.scale.set(...size.map((value) => value < 0.1 ? value * 3.5 : value) as [number, number, number])
+      neonTransform.updateMatrix()
+      neonHalo.setMatrixAt(index, neonTransform.matrix)
+      neonHalo.setColorAt(index, new THREE.Color(color))
+    })
+    group.add(track(neonCore), track(neonHalo))
 
     const tickets = new THREE.Group()
     tickets.name = 'creator-ticket-scatter'
     group.add(tickets)
-    const ticketMaterials = [standard(0xffd45c), standard(0xff7bbd), standard(0x63e9ff), standard(0x92f29d)]
+    const ticketMaterial = graphics.print('ticket', 'YuviStudio.loft.ticket')
     for (let index = 0; index < (rich ? 46 : 24); index += 1) {
       const x = -20 + ((index * 7.3) % 40)
       const z = -14 + ((index * 11.7) % 42)
       if (Math.abs(x) < 4.5 && Math.abs(z - 3) < 7) continue
-      const ticket = box(0.34, 0.012, 0.13, ticketMaterials[index % ticketMaterials.length], x, floorY + 0.018, z)
-      ticket.rotation.y = index * 0.91
-      tickets.attach(ticket)
-      if (index % 5 === 0) {
-        const notch = box(0.055, 0.014, 0.15, darkMetal, x + Math.cos(index) * 0.12, floorY + 0.022, z + Math.sin(index) * 0.04)
-        notch.rotation.y = ticket.rotation.y
-        tickets.attach(notch)
-      }
+      const ticket = graphics.mesh(new THREE.PlaneGeometry(0.34, 0.085), ticketMaterial, x, floorY + 0.018, z)
+      ticket.rotation.set(-Math.PI / 2, 0, index * 0.91)
+      tickets.add(ticket)
     }
 
     const ledAtmosphere = new THREE.Group()
@@ -522,8 +555,6 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
     }
 
     animated.push((elapsed) => {
-      equalizer.forEach((bar, index) => { bar.scale.y = 0.3 + Math.abs(Math.sin(elapsed * 2.2 + index * 0.65)) * 1.7 })
-      screenMaterials.forEach((entry, index) => { entry.opacity = 0.28 + Math.abs(Math.sin(elapsed * 0.9 + index * 0.4)) * 0.42 })
       ceilingMaterials.forEach((entry, index) => { entry.opacity = 0.22 + Math.abs(Math.sin(elapsed * 0.55 + index * 0.7)) * 0.25 })
       floorChaseMaterials.forEach((entry, index) => { entry.opacity = 0.16 + Math.max(0, Math.sin(elapsed * 1.4 - index * 0.35)) * 0.4 })
     })
@@ -532,7 +563,13 @@ export function createStudentWorldEnvironment(options: EnvironmentOptions): Stud
   return {
     group,
     floorMaterial,
+    setLabels: (translate) => setLabels(translate),
     update: (elapsed) => { if (!reduceMotion) animated.forEach((animate) => animate(elapsed)) },
-    dispose: () => resources.forEach((resource) => resource.dispose()),
+    dispose: () => {
+      resources.forEach((resource) => resource.dispose())
+      resources.clear()
+      sportsMaterials.clear()
+      animated.length = 0
+    },
   }
 }

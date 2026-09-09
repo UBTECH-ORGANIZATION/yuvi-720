@@ -324,6 +324,49 @@
 .ys-shop--confirm .ys-shop__balance { margin-block-start: 10px; line-height: 1.5; }
 .ys-shop__stay { display: block; inline-size: 100%; margin-block-start: 10px; }
 
+.ys-gaming-title-picker {
+  inline-size: min(480px, 100%); padding: 0 18px 18px; overflow: hidden;
+  border: 1px solid #4eeef0; border-radius: 8px;
+  background: #101727; color: #f4f7ff;
+  box-shadow: 0 0 0 4px rgba(78, 238, 240, .14), 0 28px 70px rgba(4, 8, 25, .7);
+}
+.ys-gaming-title-picker__marquee {
+  display: flex; justify-content: space-between; margin: 0 -18px 16px; padding: 7px 12px;
+  background: #172b43; border-block-end: 2px solid #ffcf5a;
+}
+.ys-gaming-title-picker__marquee span {
+  inline-size: 7px; block-size: 7px; border-radius: 50%; background: #ffcf5a;
+  box-shadow: 0 0 9px #ffcf5a; animation: ys-gaming-lamp 1.25s steps(2, jump-none) infinite;
+}
+.ys-gaming-title-picker__marquee span:nth-child(2n) { animation-delay: .3s; background: #ff628e; box-shadow: 0 0 9px #ff628e; }
+.ys-gaming-title-picker h2 { margin: 0; color: #f8fbff; font-size: 21px; text-align: center; }
+.ys-gaming-title-picker__prompt { margin: 7px 0 16px; color: #c5d8ec; font-size: 14px; text-align: center; }
+.ys-gaming-title-picker__choices { display: grid; gap: 9px; }
+.ys-gaming-title-choice {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px;
+  min-block-size: 54px; border: 2px solid currentColor; border-radius: 6px; padding: 7px 12px;
+  background: #152238; color: #86f7ff; cursor: pointer; font: inherit; font-weight: 800;
+  text-align: start; transition: transform .16s ease-out, background .16s ease-out, box-shadow .16s ease-out;
+}
+.ys-gaming-title-choice:hover:not(:disabled), .ys-gaming-title-choice:focus-visible {
+  transform: translateY(-2px); background: #203b59; box-shadow: 0 0 18px currentColor; outline: 0;
+}
+.ys-gaming-title-choice:disabled { cursor: wait; opacity: .65; }
+.ys-gaming-title-choice__number {
+  display: grid; place-items: center; inline-size: 30px; block-size: 30px; border: 2px solid currentColor;
+  border-radius: 50%; background: #0b1321; font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.ys-gaming-title-choice--babylon { color: #ffcf5a; }
+.ys-gaming-title-choice--playground { color: #ff7a9c; }
+@keyframes ys-gaming-lamp { 50% { opacity: .35; } }
+@media (max-width: 520px) {
+  .ys-shop-backdrop { align-items: end; padding: 12px; }
+  .ys-gaming-title-picker { padding-inline: 14px; }
+  .ys-gaming-title-picker__marquee { margin-inline: -14px; }
+  .ys-gaming-title-picker h2 { font-size: 19px; }
+  .ys-gaming-title-choice { font-size: 13px; }
+}
+
 /* Two-state control (Yuvi / Yuvi-Girl) — same grammar as the nav, inline. */
 .ys-variant-row { display: flex; gap: 8px; }
 .ys-variant {
@@ -451,6 +494,14 @@
 }
 .ys-world-card__state:empty { display: none; }
 .ys-world-projection__targets button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
+.ys-panel__world-switch { display: inline-flex; align-items: center; gap: 6px; margin-inline-end: 42px; border: 1px solid var(--ys-line); border-radius: 6px; padding: 6px 8px; background: var(--ys-surface); color: var(--ys-accent-ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; }
+.ys-panel__world-switch:hover { border-color: var(--ys-accent); background: var(--ys-accent-soft); }
+.ys-panel__world-switch:focus-visible, .ys-room-world-dialog__head button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
+.ys-room-world-dialog { position: absolute; z-index: 9; inset: 10px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--ys-line); border-radius: 8px; background: var(--ys-panel-bg); box-shadow: 0 16px 36px rgba(17, 20, 56, .24); }
+.ys-room-world-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ys-room-world-dialog__head h2 { margin: 0; color: var(--ys-ink); font-size: 15px; font-weight: 850; }
+.ys-room-world-dialog__head button { display: grid; place-items: center; flex: 0 0 auto; inline-size: 32px; block-size: 32px; border: 1px solid var(--ys-line); border-radius: 6px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; }
+.ys-room-world-dialog .ys-world-projection { block-size: min(359px, calc(100vh - 180px)); }
 @media (prefers-reduced-motion: reduce) {
   .ys-world-projection { transform: none; transition-duration: .14s; }
 }

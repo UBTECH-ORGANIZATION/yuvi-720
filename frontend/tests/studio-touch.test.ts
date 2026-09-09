@@ -87,10 +87,10 @@ test('globe and World Capsule furniture open hover menus with move and rotate on
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
   assert.match(studio, /onRemove=\{menuStation \? undefined/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
-  assert.equal(he['YuviStudio.zone.mission'], 'קפסולת עולם')
+  assert.equal(he['YuviStudio.zone.mission'], 'ביקור אצל חברים')
 })
 
-test('the World Capsule opens friend and world choices in the Studio side panel', () => {
+test('Visit Friends opens only friend choices while Room Design owns world switching', () => {
   assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(false\)[\s\S]{0,80}setMode\('roam'\)/)
   assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
   assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
@@ -100,12 +100,17 @@ test('the World Capsule opens friend and world choices in the Studio side panel'
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
   assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setWorldPickerOpen\(false\)\s+setMode\('friends'\)/)
   assert.match(studio, /\{mode === 'friends' && !visitorRoom && \(\s+<StationPanel\s+title=\{t\('YuviStudio\.capsule\.title'\)\}/)
-  assert.match(studio, /value=\{worldPickerOpen \? 'worlds' : 'friends'\}/)
+  assert.doesNotMatch(studio, /value=\{worldPickerOpen \? 'worlds' : 'friends'\}/)
+  assert.doesNotMatch(studio, /YuviStudio\.capsule\.switchWorld/)
+  assert.match(studio, /worldPickerOpen=\{worldPickerOpen\}/)
+  assert.match(studio, /onOpenWorldPicker=\{\(\) => setWorldPickerOpen\(true\)\}/)
+  assert.match(studio, /onCloseWorldPicker=\{\(\) => setWorldPickerOpen\(false\)\}/)
+  assert.match(studio, /ys-room-world-dialog/)
   assert.doesNotMatch(studio, /onClick=\{requestWorldPicker\}/)
   assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
-  assert.equal(he['YuviStudio.capsule.title'], 'קפסולת עולם')
+  assert.equal(he['YuviStudio.capsule.title'], 'ביקור אצל חברים')
   assert.equal(he['YuviStudio.capsule.visitFriend'], 'לבקר חבר')
-  assert.equal(he['YuviStudio.capsule.switchWorld'], 'לעבור עולם')
+  assert.equal(he['YuviStudio.room.switchWorld'], 'החלפת חדר')
 })
 
 test('room styles share the General Room tab', () => {
@@ -144,7 +149,7 @@ test('a first visit gets a five-step welcome that teaches catalog furniture plac
   assert.match(studio, /tutorialArmed\.current = false[\s\S]{0,260}\[user\?\.user_id\]/)
   assert.match(studio, /if \(!roomState\.room\.introDone\) \{ setIntroScene\(0\); return \}/)
   assert.doesNotMatch(studio, /setTutorial\(/)
-  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\) \|\| introScene !== null \|\| travelPhase !== 'idle'\}/)
+  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\) \|\| gamingRoomTitleGuiding \|\| gamingRoomTitlePrompt \|\| introScene !== null \|\| travelPhase !== 'idle'\}/)
   assert.match(studio, /<StudioWelcome/)
   assert.match(studio, /await roomState\.completeIntro\(\)/)
   assert.match(studio, /const \[introAvatarChanged, setIntroAvatarChanged\] = useState\(false\)/)

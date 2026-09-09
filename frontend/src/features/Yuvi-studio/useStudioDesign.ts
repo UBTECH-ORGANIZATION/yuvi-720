@@ -10,6 +10,7 @@ import {
   type YuviColors, type YuviDesign, type YuviSlot,
 } from './YuviDesign'
 import type { YuviAsset } from './YuviAssets'
+import { SPORTS_ARENA_STARTER_PROP_IDS, sportsPropLocked } from './SportsArenaCatalog'
 import { useYuviDesign } from './YuviDesignProvider'
 
 /**
@@ -75,7 +76,12 @@ export function useStudioDesign(autoLoad = true) {
 
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
   /** True when this room prop has to be earned and has not been. */
-  const isPropLocked = (kind: string) => kind in requirements && !propUnlocks.has(kind)
+  const isPropLocked = (kind: string) => {
+    if (kind in requirements) return !propUnlocks.has(kind)
+    const sportsLocked = sportsPropLocked(kind, propUnlocks)
+    if (sportsLocked !== undefined) return sportsLocked
+    return shop[kind]?.slot === 'room' && !propUnlocks.has(kind)
+  }
   const isRoomUnlocked = (id: string) => propUnlocks.has(id)
   const componentProgressFor = (assetId: string) => {
     const item = shop[assetId]
@@ -83,7 +89,7 @@ export function useStudioDesign(autoLoad = true) {
     return { completed: item.completedComponentsCurrent, required: item.completedComponents }
   }
   /** Locale key naming what earns an item, for the lock tooltip. */
-  const requirementFor = (id: string): string | undefined => requirements[id]
+  const requirementFor = (id: string): string | undefined => requirements[id] ?? (SPORTS_ARENA_STARTER_PROP_IDS.has(id) ? 'YuviStudio.unlock.sportsArena' : undefined)
   /** Sparks price for a locked item, or null when it can only be earned. */
   const priceOf = (assetId: string): number | null => shop[assetId]?.price ?? null
   const canAfford = (assetId: string) => {

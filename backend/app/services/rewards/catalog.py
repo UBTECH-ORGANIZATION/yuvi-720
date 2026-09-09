@@ -22,7 +22,36 @@ CATALOG: dict[str, dict[str, Any]] = {
     "dragonwings": {"price": 120, "slot": "back", "tier": 3},
     "layout:sportsArena": {"price": 900, "slot": "room", "tier": 3, "unlock": "room", "completed_components": 6},
     "layout:creatorLoft": {"price": 1500, "slot": "room", "tier": 4, "unlock": "room", "completed_components": 10},
+    "sportsJerseyDisplayAlt": {"price": 40, "slot": "room", "tier": 1, "unlock": "room"},
+    "sportsPortableScoreboard": {"price": 70, "slot": "room", "tier": 2, "unlock": "room"},
+    "sportsSeatingBench": {"price": 70, "slot": "room", "tier": 2, "unlock": "room"},
+    "sportsAdjustableBench": {"price": 120, "slot": "room", "tier": 3, "unlock": "room"},
+    "sportsRacketCorner": {"price": 120, "slot": "room", "tier": 3, "unlock": "room"},
+    "sportsLegPress": {"price": 200, "slot": "room", "tier": 4, "unlock": "room"},
+    "sportsCableMachine": {"price": 240, "slot": "room", "tier": 4, "unlock": "room"},
 }
+
+# These pieces ship with the Sports Arena. They are not separately persisted:
+# holding the layout entitlement is the authoritative proof that they are owned.
+SPORTS_ARENA_STARTER_PROP_IDS = frozenset({
+    "sportsDumbbellRack",
+    "sportsSquatRack",
+    "sportsBasketballHoop",
+    "sportsParkBench",
+    "sportsMiniGoal",
+    "sportsWallScoreboard",
+    "sportsJerseyDisplay",
+    "sportsArtworkBasketball",
+    "sportsArtworkSoccer",
+    "sportsArtworkRunners",
+    "sportsArtworkOlympic",
+    "sportsArtworkPadel",
+    "sportsArtworkBadminton",
+    "sportsArtworkTennis",
+    "sportsArtworkStrength",
+    "sportsArtworkTeamwork",
+    "sportsArtworkCycling",
+})
 
 
 def price_of(asset_id: str) -> int | None:

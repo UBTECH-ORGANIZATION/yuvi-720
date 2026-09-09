@@ -1,4 +1,5 @@
 import type { RoomItem, RoomStations, StationId, WallAnchor } from './RoomDesign.ts'
+import { PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BLOCKERS, PLAYGROUND_WALK_SURFACES } from './PlaygroundLayout.ts'
 
 export type RoomLayoutId = 'lab' | 'adventurePark' | 'sportsArena' | 'creatorLoft'
 
@@ -124,7 +125,7 @@ const rectangularWorld = (
 
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
   lab: rectangularWorld('lab'),
-  adventurePark: rectangularWorld('adventurePark', ADVENTURE_PARK_BLOCKERS, ADVENTURE_PARK_WALK_BLOCKERS, ADVENTURE_PARK_WALK_SURFACES),
+  adventurePark: rectangularWorld('adventurePark', PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BLOCKERS, PLAYGROUND_WALK_SURFACES),
   sportsArena: rectangularWorld('sportsArena', SPORTS_ARENA_BLOCKERS, [], SPORTS_ARENA_WALK_SURFACES),
   creatorLoft: rectangularWorld('creatorLoft', CREATOR_LOFT_BLOCKERS, [], CREATOR_LOFT_WALK_SURFACES),
 }

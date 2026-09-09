@@ -1,11 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ADVENTURE_PARK_DEFAULT_ITEMS, CREATOR_LOFT_DEFAULT_ITEMS, SPORTS_ARENA_DEFAULT_ITEMS, normalizeRoom, switchRoomWorld } from '../src/features/Yuvi-studio/RoomDesign.ts'
+import { ADVENTURE_PARK_DEFAULT_ITEMS, CREATOR_LOFT_DEFAULT_ITEMS, DEFAULT_ROOM, SPORTS_ARENA_DEFAULT_ITEMS, SPORTS_ARENA_STARTER_ITEMS, normalizeRoom, switchRoomWorld } from '../src/features/Yuvi-studio/RoomDesign.ts'
 import { FREE_ROOM_LAYOUTS, LAB_USABLE_AREA, ROOM_LAYOUTS, isRoomLayoutId, pointInLayout, polygonArea, reconcileItemsForLayout, reconcileStationsForLayout, walkSurfaceHeightAt, wallAnchorAt, wallAnchorTransform, type RoomLayout } from '../src/features/Yuvi-studio/RoomLayouts.ts'
 
 test('legacy rooms migrate to the unchanged Lab layout', () => {
   const room = normalizeRoom({ version: 1, items: [{ uid: 'desk', kind: 'desk', x: 2, z: -3, rot: 0.5 }] })
-  assert.equal(room.version, 6)
+  assert.equal(room.version, DEFAULT_ROOM.version)
   assert.equal(room.activeLayoutId, 'lab')
   assert.deepEqual(room.items, [{ uid: 'desk', kind: 'desk', x: 2, z: -3, rot: 0.5, tint: undefined }])
 })
@@ -186,10 +186,14 @@ test('Creator Loft protects its climbable stage and leaves the arcade floor edit
 test('version 4 rooms receive movable Sports Arena furniture exactly once', () => {
   const migrated = normalizeRoom({ version: 4, activeLayoutId: 'sportsArena', items: [] })
   const transforms = (items: typeof migrated.items) => items.map(({ uid, kind, x, z, rot }) => ({ uid, kind, x, z, rot }))
-  assert.deepEqual(transforms(migrated.items), SPORTS_ARENA_DEFAULT_ITEMS)
+  assert.deepEqual(transforms(migrated.items.slice(0, SPORTS_ARENA_DEFAULT_ITEMS.length)), SPORTS_ARENA_DEFAULT_ITEMS)
+  for (const starter of SPORTS_ARENA_STARTER_ITEMS) {
+    assert.equal([...migrated.items, ...migrated.storedItems].filter((item) => item.uid === starter.uid).length, 1)
+  }
   const savedItems = migrated.items.slice(1)
   const saved = normalizeRoom({ ...migrated, items: savedItems, worlds: { ...migrated.worlds, sportsArena: { ...migrated.worlds.sportsArena, items: savedItems } } })
-  assert.deepEqual(transforms(saved.items), SPORTS_ARENA_DEFAULT_ITEMS.slice(1))
+  assert.deepEqual(transforms(saved.items), transforms(savedItems))
+  assert.deepEqual(transforms(saved.storedItems), transforms(migrated.storedItems))
 })
 
 test('version 5 rooms receive movable Creator Loft furniture exactly once', () => {

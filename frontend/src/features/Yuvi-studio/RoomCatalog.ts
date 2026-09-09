@@ -3,7 +3,7 @@
 /**
  * Room prop catalog — everything a learner can put in their own room.
  *
- * Same contract as YuviAssets: each entry is a pure procedural builder that
+ * Same contract as YuviAssets: each entry is a resource-owned builder that
  * returns a self-contained THREE.Group authored in FLOOR-LOCAL space (origin on
  * the floor, +Z toward the front of the room). The room module positions and
  * rotates the group; a builder never touches the scene.
@@ -11,12 +11,23 @@
  * House rules:
  *  - geometry and materials come from the shared kit so 60 props do not
  *    allocate 600 GPU objects
- *  - nothing casts a shadow (the room has exactly one shadow-casting light and
- *    it belongs to Yuvi); props are grounded with a blob instead
+ *  - detailed loft meshes cast shadows in rich mode; simpler props use blobs
  *  - anything that glows is emissive/additive geometry, never a real light
  */
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { createRoomModelCache } from './RoomModelCache'
+import { createLoftFabrication, type LoftTranslator } from './LoftFabrication'
+import { buildLoftCabinet, LOFT_CABINET_BOUNDS } from './LoftCabinets'
+import { buildSportsEquipment } from './SportsEquipment'
+import { SPORTS_ARTWORK_KINDS, SPORTS_LEGACY_ARTWORK_KINDS, SPORTS_NEW_ITEM_BOUNDS } from './SportsArenaCatalog'
+import type { SportsArenaArtwork } from './SportsArtwork'
+import { batchSportsMeshes } from './SportsMeshBatch'
+import { createPlaygroundKit } from './PlaygroundKit'
+import { buildPlaygroundRide, PLAYGROUND_RIDE_BOUNDS, type PlaygroundRideKind } from './PlaygroundCatalog'
+import { buildPlaygroundEquipment } from './PlaygroundEquipment.ts'
+import { PLAYGROUND_EQUIPMENT, type PlaygroundEquipmentKind } from './PlaygroundItems.ts'
+export { SPORTS_ARENA_STARTER_PROP_IDS } from './SportsArenaCatalog'
 
 export type RoomItemCategory = 'seating' | 'desk' | 'play' | 'nature' | 'light' | 'tech' | 'wall'
 export type RoomItemPlacement = 'floor' | 'wall'
@@ -45,6 +56,14 @@ export type MatKind =
 
 export interface RoomKit {
   rich: boolean
+  playground: (kind: PlaygroundRideKind, tint: THREE.Color) => THREE.Group
+  playgroundEquipment: (kind: PlaygroundEquipmentKind) => THREE.Group
+  loft: (kind: string, tint: THREE.Color) => THREE.Group
+  sports: (kind: string, tint: THREE.Color) => THREE.Group
+  sportsPrint: (artwork: SportsArenaArtwork) => THREE.Material
+  gymSignPrint: () => THREE.Material
+  setLabels: (translate: LoftTranslator) => void
+  model: (id: 'gamepad' | 'gaming_console' | 'rubber_duck_toy' | 'digital_wrist_watch', size: readonly [number, number, number]) => THREE.Group
   mat: (kind: MatKind, color?: THREE.ColorRepresentation) => THREE.Material
   box: (w: number, h: number, d: number, mat: THREE.Material) => THREE.Mesh
   rbox: (w: number, h: number, d: number, r: number, mat: THREE.Material) => THREE.Mesh
@@ -62,10 +81,14 @@ export interface RoomKit {
 /* ── shared kit ─────────────────────────────────────────────────────────────
    One kit per room instance. It owns every geometry/material it hands out and
    returns a disposer, so the room's own dispose() stays a one-liner. */
-export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => void } {
+export function createRoomKit(rich: boolean): { kit: RoomKit; ready: () => Promise<void>; dispose: () => void } {
   const disposables: Array<{ dispose: () => void }> = []
+  const models = createRoomModelCache()
+  const fabrication = createLoftFabrication(rich)
+  let playground: ReturnType<typeof createPlaygroundKit> | undefined
   const geoCache = new Map<string, THREE.BufferGeometry>()
   const matCache = new Map<string, THREE.Material>()
+  const sportsCache = new Map<string, THREE.Group>()
 
   const geo = <T extends THREE.BufferGeometry>(key: string, make: () => T): T => {
     let cached = geoCache.get(key) as T | undefined
@@ -134,6 +157,29 @@ export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => voi
 
   const kit: RoomKit = {
     rich,
+    playground: (kind, tint) => buildPlaygroundRide(playground ??= createPlaygroundKit(rich), kind, tint),
+    playgroundEquipment: (kind) => buildPlaygroundEquipment(playground ??= createPlaygroundKit(rich), kind),
+    sportsPrint: (artwork) => fabrication.print(artwork),
+    gymSignPrint: () => fabrication.print('gymSign', 'YuviStudio.room.gymSign.title'),
+    loft: (kind, tint) => buildLoftCabinet(fabrication, kind, tint, kit.model),
+    sports: (kind, tint) => {
+      const key = `${kind}:${tint.getHexString()}`
+      let prototype = sportsCache.get(key)
+      if (!prototype) {
+        prototype = buildSportsEquipment(kind, {
+          ...kit,
+          mat: (finish, color) => {
+            const finishes = { metal: 'steel', gloss: 'paint', matte: 'rubber', dark: 'rubber', fabric: 'cloth', glass: 'glass' } as const
+            return finishes[finish] ? fabrication.material(finishes[finish], color ?? 0xffffff) : mat(finish, color)
+          },
+        }, tint)
+        batchSportsMeshes(prototype, (geometry) => disposables.push(geometry))
+        sportsCache.set(key, prototype)
+      }
+      return prototype.clone(true)
+    },
+    setLabels: fabrication.setLabels,
+    model: (id, size) => models.model(`/models/creator-loft/${id}/${id}.gltf`, size),
     mat,
     box: (w, h, d, material) => new THREE.Mesh(geo(`b${w}|${h}|${d}`, () => new THREE.BoxGeometry(w, h, d)), material),
     rbox: (w, h, d, r, material) => new THREE.Mesh(geo(`r${w}|${h}|${d}|${r}`, () => new RoundedBoxGeometry(w, h, d, rich ? 3 : 1, r)), material),
@@ -174,11 +220,19 @@ export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => voi
 
   return {
     kit,
+    ready: async () => {
+      await playground?.ready()
+      if (playground?.failures.length) throw new Error('Playground catalog assets unavailable')
+    },
     dispose: () => {
+      fabrication.dispose()
+      playground?.dispose()
+      models.dispose()
       for (const item of disposables) item.dispose?.()
       disposables.length = 0
       geoCache.clear()
       matCache.clear()
+      sportsCache.clear()
     },
   }
 }
@@ -1314,46 +1368,15 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
       return group
     },
   },
-  {
-    id: 'parkCoaster', category: 'play', placement: 'floor', radius: 3.55, height: 1.5,
-    walkSurfaces: [{ x: 0, z: 2.46, width: 2.51, depth: 1.83, height: 0.137 }],
-    walkBlockerRadius: 0.72,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const rail = kit.mat('emissive', 0x6cc7cf)
-      const steel = kit.mat('metal', 0x27343a)
-      for (const radius of [2.97, 2.64]) {
-        const track = at(kit.tor(radius, 0.043, rail), 0, 1.05, 0)
-        track.rotation.x = Math.PI / 2
-        track.scale.z = 0.78
-        group.add(track)
-      }
-      for (let index = 0; index < 16; index += 1) {
-        const angle = (index / 16) * Math.PI * 2
-        const x = Math.cos(angle) * 2.8
-        const z = Math.sin(angle) * 2.8 * 0.78
-        group.add(at(kit.cyl(0.052, 0.052, 1.05, steel, 8), x, 0.525, z))
-      }
-      group.add(at(kit.rbox(2.51, 0.137, 1.83, 0.04, kit.mat('dark', 0x252d31)), 0, 0.0685, 2.46))
-      for (const x of [-1.14, 1.14]) group.add(at(kit.box(0.09, 1.26, 0.09, rail), x, 0.63, 2.97))
-      group.add(at(kit.box(2.4, 0.09, 0.09, kit.mat('emissive', 0xff6f91)), 0, 1.23, 2.97))
-      const car = new THREE.Group()
-      car.name = 'park-coaster-car'
-      car.add(at(kit.rbox(0.71, 0.33, 0.51, 0.08, kit.mat('gloss', 0xe9516b)), 0, 0, 0))
-      const bar = at(kit.tor(0.24, 0.034, steel), 0, 0.24, 0)
-      bar.rotation.x = Math.PI / 2
-      car.add(bar)
-      group.add(car)
-      const placeCar = (elapsed: number) => {
-        const angle = elapsed * 0.35
-        car.position.set(Math.cos(angle) * 2.8, 1.05 + Math.sin(angle * 2) * 0.32, Math.sin(angle) * 2.8 * 0.78)
-        car.rotation.y = Math.atan2(-Math.sin(angle), Math.cos(angle) * 0.78)
-      }
-      placeCar(0)
-      group.userData.update = placeCar
-      return group
-    },
-  },
+  ...Object.entries(PLAYGROUND_EQUIPMENT).map(([id, bounds]): RoomItemSpec => ({
+    id, category: 'play', placement: 'floor', radius: bounds.radius, height: bounds.height,
+    build: (kit) => kit.playgroundEquipment(id as PlaygroundEquipmentKind),
+  })),
+  ...Object.entries(PLAYGROUND_RIDE_BOUNDS).map(([id, bounds]): RoomItemSpec => ({
+    id, category: 'play', placement: 'floor', ...bounds,
+    tintable: true, tint: '#258b82',
+    build: (kit, tint) => kit.playground(id as PlaygroundRideKind, tint),
+  })),
   {
     id: 'sportsBench', category: 'seating', placement: 'floor', radius: 1.65, height: 0.82,
     walkSurfaces: [{ width: 3.15, depth: 0.78, height: 0.28 }],
@@ -1412,172 +1435,77 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
   {
     id: 'sportsMiniGoal', category: 'play', placement: 'floor', radius: 1.8, height: 1.25,
     walkBlockerRadius: 0.52,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const frame = kit.mat('metal', 0xd7edf1)
-      for (const x of [-1.5, 1.5]) {
-        group.add(at(kit.cyl(0.055, 0.055, 1.22, frame, 10), x, 0.61, -0.42))
-        const foot = at(kit.cyl(0.05, 0.05, 1.15, frame, 10), x, 0.04, 0.1)
-        foot.rotation.x = Math.PI / 2
-        group.add(foot)
-      }
-      const crossbar = at(kit.cyl(0.055, 0.055, 3.1, frame, 10), 0, 1.22, -0.42)
-      crossbar.rotation.z = Math.PI / 2
-      group.add(crossbar)
-      const net = kit.sheer(0x8fc5d2, 0.28)
-      for (let index = 0; index < 7; index += 1) group.add(at(kit.box(0.018, 1.05, 0.018, net), -1.35 + index * 0.45, 0.62, -0.38))
-      for (let index = 0; index < 4; index += 1) group.add(at(kit.box(2.75, 0.018, 0.018, net), 0, 0.2 + index * 0.27, -0.38))
-      return group
-    },
+    build: (kit, tint) => kit.sports('sportsMiniGoal', tint),
   },
+  { id: 'sportsDumbbellRack', category: 'play', placement: 'floor', radius: 1.7, height: 1.45, tintable: true, tint: '#20a8a0', walkBlockerRadius: 1.35, build: (kit, tint) => kit.sports('sportsDumbbellRack', tint) },
+  { id: 'sportsSquatRack', category: 'play', placement: 'floor', radius: 2.1, height: 3.1, tintable: true, tint: '#e4564f', walkBlockerRadius: 1.5, build: (kit, tint) => kit.sports('sportsSquatRack', tint) },
+  { id: 'sportsCableMachine', category: 'play', placement: 'floor', radius: 1.8, height: 3.1, tintable: true, tint: '#20a8a0', walkBlockerRadius: 1.25, build: (kit, tint) => kit.sports('sportsCableMachine', tint) },
+  { id: 'sportsLegPress', category: 'play', placement: 'floor', radius: 1.7, height: 1.65, tintable: true, tint: '#e4564f', walkBlockerRadius: 1.25, build: (kit, tint) => kit.sports('sportsLegPress', tint) },
+  { id: 'sportsAdjustableBench', category: 'seating', placement: 'floor', radius: 1.2, height: 1.5, tintable: true, tint: '#20a8a0', walkBlockerRadius: 0.7, build: (kit, tint) => kit.sports('sportsAdjustableBench', tint) },
+  { id: 'sportsRacketCorner', category: 'play', placement: 'floor', radius: 1.05, height: 1.8, tintable: true, tint: '#e4564f', walkBlockerRadius: 0.55, build: (kit, tint) => kit.sports('sportsRacketCorner', tint) },
+  { id: 'sportsSeatingBench', category: 'seating', placement: 'floor', radius: 1.65, height: 0.68, walkSurfaces: [{ width: 3.05, depth: 0.76, height: 0.65 }], walkBlockerRadius: 0, build: (kit, tint) => kit.sports('sportsSeatingBench', tint) },
+  { id: 'sportsPortableScoreboard', category: 'tech', placement: 'floor', radius: 0.9, height: 2, tintable: true, tint: '#20a8a0', walkBlockerRadius: 0.55, build: (kit, tint) => kit.sports('sportsPortableScoreboard', tint) },
+  { id: 'sportsJerseyDisplay', category: 'wall', placement: 'wall', radius: 0.95, height: 1.9, tintable: true, tint: '#e4564f', build: (kit, tint) => kit.sports('sportsJerseyDisplay', tint) },
+  { id: 'sportsJerseyDisplayAlt', category: 'wall', placement: 'wall', radius: 0.95, height: 1.9, tintable: true, tint: '#20a8a0', build: (kit, tint) => kit.sports('sportsJerseyDisplayAlt', tint) },
   {
     id: 'loftArcadeCabinet', category: 'play', placement: 'floor', radius: 0.72, height: 2.05,
     tintable: true, tint: '#5de7ff',
-    build: (kit, tint) => {
-      const group = new THREE.Group()
-      const shell = kit.mat('gloss', tint)
-      const dark = kit.mat('dark', 0x17121f)
-      group.add(at(kit.rbox(1.05, 1.72, 0.86, 0.08, shell), 0, 0.86, 0))
-      group.add(at(kit.rbox(1.12, 0.36, 0.92, 0.07, shell), 0, 1.82, -0.03))
-      group.add(at(kit.plane(0.86, 0.24, kit.mat('emissive', 0xff5f8f)), 0, 1.83, 0.44))
-      group.add(at(kit.plane(0.78, 0.62, kit.mat('emissive', 0x59e8ff)), 0, 1.3, 0.435))
-      const controls = at(kit.rbox(0.9, 0.1, 0.4, 0.035, dark), 0, 0.91, 0.46)
-      controls.rotation.x = -0.28
-      group.add(controls)
-      group.add(at(kit.cyl(0.03, 0.03, 0.2, kit.mat('metal', 0xbac9d6), 8), -0.22, 1.02, 0.52))
-      group.add(at(kit.sph(0.075, kit.mat('gloss', 0xffd45c)), -0.22, 1.13, 0.52))
-      for (let index = 0; index < 3; index += 1) group.add(at(kit.cyl(0.055, 0.055, 0.035, kit.mat('emissive', [0xff5f8f, 0x5de7ff, 0x7cff8c][index]), 12), 0.1 + index * 0.18, 0.99, 0.53))
-      const pulse = at(kit.tor(0.39, 0.025, kit.mat('emissive', 0xffffff)), 0, 1.3, 0.45)
-      pulse.scale.setScalar(0.7)
-      group.add(pulse)
-      group.userData.update = (elapsed: number) => { pulse.scale.setScalar(0.68 + Math.sin(elapsed * 2.4) * 0.08) }
-      return group
-    },
+    build: (kit, tint) => kit.loft("loftArcadeCabinet", tint),
   },
   {
     id: 'loftClawMachine', category: 'play', placement: 'floor', radius: 0.9, height: 2.2,
     tintable: true, tint: '#ff70b7',
-    build: (kit, tint) => {
-      const group = new THREE.Group()
-      const frame = kit.mat('gloss', tint)
-      const metal = kit.mat('metal', 0x9fb2c3)
-      group.add(at(kit.rbox(1.45, 0.62, 1.15, 0.08, frame), 0, 0.31, 0))
-      group.add(at(kit.rbox(1.5, 0.28, 1.18, 0.07, frame), 0, 2.02, 0))
-      for (const x of [-0.67, 0.67]) for (const z of [-0.52, 0.52]) group.add(at(kit.box(0.08, 1.45, 0.08, frame), x, 1.25, z))
-      for (const z of [-0.54, 0.54]) group.add(at(kit.plane(1.3, 1.32, kit.sheer(0xbcecff, 0.2)), 0, 1.28, z))
-      const sideGlass = kit.sheer(0xbcecff, 0.18)
-      for (const x of [-0.69, 0.69]) {
-        const pane = at(kit.plane(1.02, 1.32, sideGlass), x, 1.28, 0)
-        pane.rotation.y = Math.PI / 2
-        group.add(pane)
-      }
-      const prizeColors = [0xffd45c, 0x67e8ff, 0xff79b8, 0x8cff9b]
-      for (let index = 0; index < 10; index += 1) group.add(at(kit.sph(0.16 + (index % 2) * 0.035, kit.mat('fabric', prizeColors[index % 4])), -0.48 + (index % 4) * 0.32, 0.68 + Math.floor(index / 4) * 0.22, -0.28 + (index % 3) * 0.27))
-      const carriage = new THREE.Group()
-      carriage.add(at(kit.box(0.56, 0.08, 0.08, metal), 0, 0, 0))
-      carriage.add(at(kit.cyl(0.025, 0.025, 0.68, metal, 8), 0, -0.34, 0))
-      const claw = at(kit.tor(0.18, 0.025, metal), 0, -0.68, 0)
-      claw.rotation.x = Math.PI / 2
-      carriage.add(claw)
-      carriage.position.set(0, 1.85, 0)
-      group.add(carriage)
-      group.add(at(kit.sph(0.09, kit.mat('emissive', 0x7cff8c)), -0.38, 0.42, 0.6))
-      group.userData.update = (elapsed: number) => { carriage.position.x = Math.sin(elapsed * 0.42) * 0.42 }
-      return group
-    },
+    build: (kit, tint) => kit.loft("loftClawMachine", tint),
   },
   {
     id: 'loftTokenPusher', category: 'play', placement: 'floor', radius: 0.92, height: 1.72,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const shell = kit.mat('gloss', 0x5f4bc8)
-      const gold = kit.mat('metal', 0xf1c75b)
-      group.add(at(kit.rbox(1.5, 0.7, 1.15, 0.08, shell), 0, 0.35, 0))
-      group.add(at(kit.rbox(1.48, 0.92, 1.08, 0.06, kit.sheer(0x9fe9ff, 0.22)), 0, 1.15, 0))
-      group.add(at(kit.rbox(1.55, 0.24, 1.18, 0.06, shell), 0, 1.64, 0))
-      for (const y of [0.91, 1.25]) group.add(at(kit.box(1.18, 0.055, 0.82, kit.mat('metal', 0x657789)), 0, y, 0))
-      for (let index = 0; index < 16; index += 1) {
-        const coin = at(kit.cyl(0.09, 0.09, 0.025, gold, 12), -0.48 + (index % 5) * 0.24, 0.95 + Math.floor(index / 8) * 0.34, -0.28 + (index % 3) * 0.22)
-        coin.rotation.z = Math.PI / 2
-        group.add(coin)
-      }
-      const pusher = at(kit.box(1.08, 0.3, 0.08, kit.mat('emissive', 0x64edff)), 0, 1.11, -0.3)
-      group.add(pusher)
-      group.userData.update = (elapsed: number) => { pusher.position.z = -0.3 + (Math.sin(elapsed * 1.1) + 1) * 0.18 }
-      return group
-    },
+    tint: '#507d79',
+    build: (kit, tint) => kit.loft("loftTokenPusher", tint),
   },
   {
     id: 'loftPinball', category: 'play', placement: 'floor', radius: 1.05, height: 1.72,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const frame = kit.mat('gloss', 0xe94e88)
-      for (const x of [-0.62, 0.62]) for (const z of [-0.62, 0.62]) group.add(at(kit.box(0.09, 0.78, 0.09, kit.mat('metal', 0x394252)), x, 0.39, z))
-      const table = at(kit.rbox(1.5, 0.32, 1.9, 0.07, frame), 0, 0.98, 0)
-      table.rotation.x = -0.12
-      group.add(table)
-      const playfield = at(kit.plane(1.22, 1.55, kit.mat('emissive', 0x42dbea)), 0, 1.17, 0.02)
-      playfield.rotation.x = -Math.PI / 2 - 0.12
-      group.add(playfield)
-      for (const [index, [x, z]] of [[-0.32, -0.3], [0.28, 0.05], [-0.18, 0.43]].entries()) group.add(at(kit.sph(0.11, kit.mat('emissive', [0xffd45c, 0xff70b7, 0x8cff9b][index])), x, 1.22, z))
-      group.add(at(kit.rbox(1.42, 0.85, 0.18, 0.05, frame), 0, 1.48, -0.86))
-      group.add(at(kit.plane(1.16, 0.58, kit.mat('emissive', 0x6b57ff)), 0, 1.5, -0.755))
-      return group
-    },
+    tint: '#b15c49',
+    build: (kit, tint) => kit.loft("loftPinball", tint),
   },
   {
     id: 'loftBasketballArcade', category: 'play', placement: 'floor', radius: 1.65, height: 2.45,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const frame = kit.mat('metal', 0x394252)
-      const orange = kit.mat('gloss', 0xf07845)
-      group.add(at(kit.rbox(2.2, 0.35, 2.9, 0.08, kit.mat('dark', 0x211a2b)), 0, 0.18, 0.2))
-      const ramp = at(kit.box(1.9, 0.12, 2.4, kit.mat('matte', 0x3c3150)), 0, 0.55, 0.15)
-      ramp.rotation.x = -0.12
-      group.add(ramp)
-      for (const x of [-1.02, 1.02]) {
-        group.add(at(kit.box(0.08, 2.2, 0.08, frame), x, 1.1, -1.15))
-        group.add(at(kit.box(0.08, 1.45, 0.08, frame), x, 0.73, 1.32))
-        const rail = at(kit.box(0.08, 0.08, 2.7, frame), x, 1.45, 0.05)
-        rail.rotation.x = -0.18
-        group.add(rail)
-      }
-      group.add(at(kit.rbox(2.15, 1.35, 0.14, 0.04, kit.mat('gloss', 0xede9ff)), 0, 1.75, -1.2))
-      group.add(at(kit.plane(0.72, 0.3, kit.mat('emissive', 0xff5f8f)), 0, 2.18, -1.12))
-      const rim = at(kit.tor(0.34, 0.035, orange), 0, 1.53, -0.82)
-      rim.rotation.x = Math.PI / 2
-      group.add(rim)
-      for (const [index, [x, z]] of [[-0.45, 0.55], [0.35, 0.8], [0, 0.3]].entries()) {
-        const ball = at(kit.sph(0.22, orange), x, 0.72 + index * 0.03, z)
-        group.add(ball)
-        const stripe = at(kit.tor(0.22, 0.012, kit.mat('dark', 0x3f2b24)), x, 0.72 + index * 0.03, z)
-        stripe.rotation.y = Math.PI / 2
-        group.add(stripe)
-      }
-      return group
-    },
+    tint: '#b87738',
+    build: (kit, tint) => kit.loft("loftBasketballArcade", tint),
   },
   {
     id: 'loftPrizeCounter', category: 'desk', placement: 'floor', radius: 2.1, height: 1.65,
-    build: (kit) => {
-      const group = new THREE.Group()
-      const frame = kit.mat('gloss', 0x4a3865)
-      group.add(at(kit.rbox(3.8, 0.95, 1.3, 0.09, frame), 0, 0.48, 0))
-      group.add(at(kit.rbox(4.05, 0.14, 1.48, 0.05, kit.mat('emissive', 0x5de7ff)), 0, 1.0, 0))
-      group.add(at(kit.rbox(3.35, 0.58, 0.18, 0.04, kit.sheer(0xd8f7ff, 0.24)), 0, 1.34, 0.46))
-      for (const x of [-1.2, -0.4, 0.4, 1.2]) group.add(at(kit.box(0.045, 0.52, 0.045, kit.mat('metal', 0xa6b5c5)), x, 1.34, 0.48))
-      const prizeColors = [0xffd45c, 0xff70b7, 0x6be9ff, 0x8cff9b]
-      for (let index = 0; index < 8; index += 1) {
-        const prize = index % 2
-          ? kit.sph(0.16, kit.mat('fabric', prizeColors[index % 4]))
-          : kit.rbox(0.28, 0.28, 0.28, 0.05, kit.mat('gloss', prizeColors[index % 4]))
-        group.add(at(prize, -1.38 + (index % 4) * 0.92, 1.33 + Math.floor(index / 4) * 0.18, 0.58))
-      }
-      for (const x of [-1.55, 1.55]) group.add(at(kit.box(0.08, 0.65, 0.08, kit.mat('metal', 0xa6b5c5)), x, 1.34, 0.48))
-      return group
-    },
+    build: (kit, tint) => kit.loft("loftPrizeCounter", tint),
   },
 ]
+
+for (const id of ['loftRacingSimulator', 'loftAirHockey', 'loftVrStation']) {
+  ROOM_ITEMS.push({
+    id, category: 'play', placement: 'floor', ...LOFT_CABINET_BOUNDS[id],
+    tintable: true, tint: id === 'loftRacingSimulator' ? '#b85848' : '#448b89',
+    build: (kit, tint) => kit.loft(id, tint),
+  })
+}
+
+for (const [id, bounds] of Object.entries(SPORTS_NEW_ITEM_BOUNDS)) {
+  ROOM_ITEMS.push({
+    id, category: id === 'sportsWallScoreboard' ? 'wall' : id === 'sportsParkBench' ? 'seating' : 'play',
+    placement: id === 'sportsWallScoreboard' ? 'wall' : 'floor', ...bounds,
+    tintable: id === 'sportsBasketballHoop', tint: '#d8654d',
+    build: (kit, tint) => kit.sports(id, tint),
+  })
+}
+
+for (const [id, artwork] of Object.entries({ ...SPORTS_ARTWORK_KINDS, ...SPORTS_LEGACY_ARTWORK_KINDS })) {
+  ROOM_ITEMS.push({
+    id, category: 'wall', placement: 'wall', radius: 1.8, height: 2.7,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(3.45, 2.7, 0.1, 0.02, kit.mat('metal', 0x454e49)), 0, 1.35, 0.04))
+      group.add(at(kit.plane(3.3, 2.574, kit.sportsPrint(artwork)), 0, 1.35, 0.1))
+      return group
+    },
+  })
+}
 
 export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', 'nature', 'light', 'tech', 'wall']
 

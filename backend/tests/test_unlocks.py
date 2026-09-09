@@ -87,6 +87,13 @@ class UnlockRuleTests(unittest.TestCase):
         self.assertFalse(unlocks.is_gated_prop("desk"))
         self.assertFalse(unlocks.is_gated_prop("laurel"))  # a cosmetic, not a prop
 
+    def test_sports_arena_props_are_gated_by_their_server_entitlements(self) -> None:
+        from app.services.rewards.catalog import CATALOG
+
+        self.assertTrue(unlocks.is_gated_prop("sportsDumbbellRack"))
+        self.assertTrue(unlocks.is_gated_prop("sportsCableMachine"))
+        self.assertEqual(CATALOG["sportsCableMachine"]["price"], 240)
+
     def test_every_earned_cosmetic_is_gated(self) -> None:
         """All three promises — sparks, badges and mapping sections — or the
         padlock the learner sees is the only thing enforcing any of them."""

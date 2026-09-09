@@ -94,6 +94,7 @@ export interface LabRoom {
   setTarget: (spot: { x: number; z: number; radius: number; aim?: number } | null) => void
   /** Floor, wall and lighting mood. */
   setRoomStyle: (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => void
+  setLabels: (translate: (key: string) => string) => void
   /** Footprints Yuvi must walk around. */
   blockers: () => LabRoomCircle[]
   /** Height above the room floor of permanent low scenery under Yuvi's feet. */
@@ -104,6 +105,7 @@ export interface LabRoom {
   setStations: (stations: RoomStations) => void
   /** uid of the placed prop under a ray, for right-click menus. */
   pickItem: (raycaster: THREE.Raycaster) => string | null
+  interactEnvironment: (raycaster: THREE.Raycaster) => boolean
   /** The station under a ray, for right-click menus. */
   pickStation: (raycaster: THREE.Raycaster) => StationId | null
   /** World point just above a placed prop, for anchoring UI to it. */
@@ -199,6 +201,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   scene.add(group)
 
   const disposables: Array<{ dispose: () => void }> = []
+  const labelSetters: Array<(translate: (key: string) => string) => void> = []
   const track = <T>(...items: T[]): T => {
     for (const item of items) disposables.push(item as any)
     return items[0]
@@ -394,13 +397,16 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   group.add(ceiling)
   legacyShell.push(ceiling)
 
+  let interactEnvironment: (raycaster: THREE.Raycaster) => boolean = () => false
   if (layoutId !== 'lab') {
     legacyShell.forEach((mesh) => { mesh.visible = false })
     const environment = createStudentWorldEnvironment({ id: layoutId, floorY: FLOOR_Y, rich, reduceMotion })
     group.add(environment.group)
     floorStyleMaterial = environment.floorMaterial
+    labelSetters.push(environment.setLabels)
     updaters.push((elapsed) => environment.update(elapsed))
     disposables.push(environment)
+    interactEnvironment = environment.interact ?? interactEnvironment
   }
 
   // The playable floor is deliberately bounded; this distant environment is
@@ -727,6 +733,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   let exploreShadow: THREE.Mesh | null = null
   let missionShadow: THREE.Mesh | null = null
   const { kit: itemKit, dispose: disposeItemKit } = createRoomKit(rich)
+  labelSetters.push(itemKit.setLabels)
   disposables.push({ dispose: disposeItemKit })
 
   if (rich) {
@@ -2064,7 +2071,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     // ring with nothing in it. The hologram is always of a visible thing.
     object.visible = true
     const meshes: any[] = []
-    object.traverse((obj: any) => { if (obj.isMesh) meshes.push(obj) })
+    object.traverse((obj: any) => {
+      if (obj.userData.roomModel) obj.userData.assetPreview = true
+      if (obj.isMesh) meshes.push(obj)
+    })
     for (const obj of meshes) {
       obj.material = ghostOkMat
       // Above every other transparent in the scene. Transparents sort by
@@ -2251,10 +2261,18 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
   let moodWarm = 1
   let moodAccent = 1
+  const defaultFloorMap = floorStyleMaterial.map
+  const defaultFloorNormal = floorStyleMaterial.normalMap
+  const defaultFloorRoughness = floorStyleMaterial.roughnessMap
 
   const setRoomStyle = (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => {
+    if (layoutId === 'adventurePark') return
     const texture = makeFloorTexture(style.floor)
-    floorStyleMaterial.map = texture ?? (layoutId === 'lab' ? floorTexture : null)
+    floorStyleMaterial.map = texture ?? defaultFloorMap
+    if (layoutId === 'creatorLoft') {
+      floorStyleMaterial.normalMap = texture ? null : defaultFloorNormal
+      floorStyleMaterial.roughnessMap = texture ? null : defaultFloorRoughness
+    }
     floorStyleMaterial.needsUpdate = true
 
     const tint = WALL_TINTS[style.wall] ?? WALL_TINTS.lab
@@ -2371,6 +2389,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   return {
     group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
     zones: ZONES, setZoneHighlight, setMissionTravel, missionPortalAnchor, missionPortalApproach, ambientWaypoints, setUserItems, setGhost, setTarget, setRoomStyle, blockers, walkSurfaceHeightAt, noBuildZones,
-    setStations, pickItem, pickStation, itemAnchor, stationAnchor,
+    setLabels: (translate) => labelSetters.forEach((setLabels) => setLabels(translate)),
+    setStations, pickItem, pickStation, interactEnvironment, itemAnchor, stationAnchor,
   }
 }

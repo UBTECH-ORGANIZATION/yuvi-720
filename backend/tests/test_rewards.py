@@ -22,6 +22,33 @@ RICH_GOAL = 80       # top of the band
 
 
 class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sports_furniture_prices_and_permanent_type_unlocks(self) -> None:
+        expected = {
+            "sportsJerseyDisplayAlt": 40, "sportsPortableScoreboard": 70,
+            "sportsSeatingBench": 70, "sportsAdjustableBench": 120,
+            "sportsRacketCorner": 120, "sportsLegPress": 200, "sportsCableMachine": 240,
+        }
+        await wallet._store_wallet(LEARNER, {"balance": 1000, "lifetime_spent": 0})
+        for kind, price in expected.items():
+            self.assertEqual(catalog.price_of(kind), price)
+            result = await rewards.purchase_asset(LEARNER, kind)
+            self.assertTrue(result["ok"], kind)
+            self.assertEqual(result["price"], price)
+            self.assertIn(kind, self._room_unlocks)
+            self.assertNotIn(kind, self._unlocks)
+            repeat = await rewards.purchase_asset(LEARNER, kind)
+            self.assertEqual(repeat["reason"], "owned")
+            self.assertEqual(repeat["wallet"]["balance"], result["wallet"]["balance"])
+        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 1000 - sum(expected.values()))
+        self.assertTrue(catalog.SPORTS_ARENA_STARTER_PROP_IDS.isdisjoint(expected))
+        for kind in catalog.SPORTS_ARENA_STARTER_PROP_IDS:
+            self.assertIsNone(catalog.price_of(kind))
+
+    async def test_unaffordable_furniture_never_grants_ownership(self) -> None:
+        result = await rewards.purchase_asset(LEARNER, "sportsCableMachine")
+        self.assertEqual(result["reason"], "insufficient")
+        self.assertNotIn("sportsCableMachine", self._room_unlocks)
+
     async def asyncSetUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self._unlocks: list[str] = []

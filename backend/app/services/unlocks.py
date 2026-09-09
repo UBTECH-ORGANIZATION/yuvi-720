@@ -130,7 +130,11 @@ def satisfied_ids(
 
 def is_gated_prop(kind: str) -> bool:
     """True when this room item may only be placed once it has been earned."""
-    return kind in PROP_IDS
+    from app.services.rewards.catalog import CATALOG, SPORTS_ARENA_STARTER_PROP_IDS
+
+    return kind in PROP_IDS or kind in SPORTS_ARENA_STARTER_PROP_IDS or (
+        kind in CATALOG and CATALOG[kind].get("slot") == "room"
+    )
 
 
 def ids_for_badge(subject: str) -> list[dict[str, str]]:

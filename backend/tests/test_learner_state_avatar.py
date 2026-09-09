@@ -201,6 +201,41 @@ class RoomLayoutsRequireTheirUnlock(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(world["storedItems"], [])
         self.assertEqual(screened["room"]["items"], [{"kind": "desk"}])
 
+    async def test_sports_paid_props_are_screened_in_every_room_item_list(self) -> None:
+        payload = {
+            "room": {
+                "items": [{"kind": "sportsCableMachine"}, {"kind": "desk"}],
+                "storedItems": [{"kind": "sportsLegPress"}],
+                "worlds": {"sportsArena": {
+                    "items": [{"kind": "sportsDumbbellRack"}, {"kind": "sportsCableMachine"}],
+                    "storedItems": [{"kind": "sportsDumbbellRack"}, {"kind": "sportsRacketCorner"}],
+                }},
+            },
+        }
+        screened = await _screen_room_items(payload, held={"sportsDumbbellRack"})
+        room = screened["room"]
+        self.assertEqual(room["items"], [{"kind": "desk"}])
+        self.assertEqual(room["storedItems"], [])
+        self.assertEqual(room["worlds"]["sportsArena"]["items"], [{"kind": "sportsDumbbellRack"}])
+        self.assertEqual(room["worlds"]["sportsArena"]["storedItems"], [{"kind": "sportsDumbbellRack"}])
+
+    async def test_all_sports_entitlements_screen_active_stored_and_inactive_items(self) -> None:
+        from app.services.rewards.catalog import CATALOG, SPORTS_ARENA_STARTER_PROP_IDS
+
+        kinds = SPORTS_ARENA_STARTER_PROP_IDS | {kind for kind in CATALOG if kind.startswith("sports")}
+        items = [{"uid": f"{kind}-{instance}", "kind": kind, "x": instance, "z": 0, "rot": 0.5} for kind in sorted(kinds) for instance in range(2)]
+        for held in (set(), set(kinds)):
+            payload = {"room": {
+                "items": list(items), "storedItems": list(items),
+                "worlds": {"lab": {"items": list(items), "storedItems": list(items)}},
+            }}
+            screened = (await _screen_room_items(payload, held=held))["room"]
+            expected = items if held else []
+            self.assertEqual(screened["items"], expected)
+            self.assertEqual(screened["storedItems"], expected)
+            self.assertEqual(screened["worlds"]["lab"]["items"], expected)
+            self.assertEqual(screened["worlds"]["lab"]["storedItems"], expected)
+
     async def test_the_old_field_is_not_a_way_around_the_screen(self) -> None:
         """A design written to `avatar` is still served back as the design (see
         `_legacy_design`), so it has to be screened as one."""

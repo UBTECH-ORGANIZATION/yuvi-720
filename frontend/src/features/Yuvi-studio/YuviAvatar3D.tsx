@@ -4,6 +4,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { createPlaygroundLighting } from './PlaygroundLighting.ts'
+import { canActivatePlayground } from './PlaygroundInteractions.ts'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import { TravelVisualFX } from './travel/TravelVisualFX'
 import type { TravelPhase } from './travel/TravelStateMachine'
@@ -11,6 +13,7 @@ import type { YuviColors, YuviDesign, YuviSlot } from './YuviDesign'
 import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
 import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
+import { useI18n } from '../../i18n/I18nProvider'
 import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
 import { pointInLayout, projectPointIntoLayout, roomLayout, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 
@@ -48,6 +51,8 @@ export interface YuviAvatarHandle {
   teleportToMissionPortal: (roomId?: string) => void
   /** Walk Yuvi back onto the upgrade platform. */
   recenter: () => void
+  /** Walk to the Creator Loft stage mark and turn Yuvi toward its neon title. */
+  walkToGamingRoomTitle: (onArrival?: () => void) => void
 }
 
 interface Props {
@@ -106,6 +111,8 @@ interface Props {
   firstPerson?: boolean
   /** Fires when Yuvi steps onto or off one of the room's stations. */
   onZoneChange?: (zone: LabRoomZoneId | null) => void
+  /** Fires once when Yuvi steps onto or off the Creator Loft stage. */
+  onGamingRoomAreaChange?: (near: boolean) => void
   /** Reports the explicit station destination of an automated walk. */
   onStationIntentChange?: (zone: LabRoomZoneId | null) => void
   /** The learner's placed props. A new array identity re-syncs the room. */
@@ -118,6 +125,8 @@ interface Props {
   stations?: RoomStations | null
   /** Floor, wall and lighting mood chosen by the learner. */
   roomStyle?: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null
+  /** Per-room wording applied to in-world canvas labels. */
+  roomLabelOverrides?: Record<string, string>
   /** Prop currently being positioned — shown as a hologram under the pointer. */
   placing?: YuviPlacing | null
   /** Walkthrough target: lights a patch of floor and makes it the only legal drop. */
@@ -160,10 +169,13 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, onReady, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, roomLayoutId = 'lab', roomId = 'home', stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
+  { initialDesign, label, onReady, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, travelPhase = 'idle', walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onGamingRoomAreaChange, onStationIntentChange, roomItems, roomLayoutId = 'lab', roomId = 'home', stations = null, roomStyle = null, roomLabelOverrides, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
+  const { t: translate } = useI18n()
+  const translateRef = useRef(translate)
+  useEffect(() => { translateRef.current = translate }, [translate])
   const onReadyRef = useRef(onReady)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<YuviAvatarHandle | null>(null)
@@ -190,11 +202,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const roamRef = useRef(roam)
   const firstPersonRef = useRef(firstPerson)
   const onZoneChangeRef = useRef(onZoneChange)
+  const onGamingRoomAreaChangeRef = useRef(onGamingRoomAreaChange)
   const onStationIntentChangeRef = useRef(onStationIntentChange)
   const roomItemsRef = useRef(roomItems)
   const stationsRef = useRef(stations)
   const roomIdRef = useRef(roomId)
   const roomStyleRef = useRef(roomStyle)
+  const roomLabelOverridesRef = useRef(roomLabelOverrides)
   const placingRef = useRef(placing)
   const placeTargetRef = useRef(placeTarget)
   const lockRoamRef = useRef(lockRoam)
@@ -233,11 +247,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { roamRef.current = roam }, [roam])
   useEffect(() => { firstPersonRef.current = firstPerson }, [firstPerson])
   useEffect(() => { onZoneChangeRef.current = onZoneChange }, [onZoneChange])
+  useEffect(() => { onGamingRoomAreaChangeRef.current = onGamingRoomAreaChange }, [onGamingRoomAreaChange])
   useEffect(() => { onStationIntentChangeRef.current = onStationIntentChange }, [onStationIntentChange])
   useEffect(() => { roomItemsRef.current = roomItems }, [roomItems])
   useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { roomIdRef.current = roomId }, [roomId])
   useEffect(() => { roomStyleRef.current = roomStyle }, [roomStyle])
+  useEffect(() => { roomLabelOverridesRef.current = roomLabelOverrides }, [roomLabelOverrides])
   useEffect(() => { placingRef.current = placing }, [placing])
   useEffect(() => { placeTargetRef.current = placeTarget }, [placeTarget])
   useEffect(() => { lockRoamRef.current = lockRoam }, [lockRoam])
@@ -258,6 +274,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     walkToMissionPortal: (onArrival) => controllerRef.current?.walkToMissionPortal(onArrival),
     teleportToMissionPortal: (targetRoomId) => controllerRef.current?.teleportToMissionPortal(targetRoomId),
     recenter: () => controllerRef.current?.recenter(),
+    walkToGamingRoomTitle: (onArrival) => controllerRef.current?.walkToGamingRoomTitle(onArrival),
   }), [])
 
   useEffect(() => {
@@ -340,7 +357,16 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // the view through the window reads as genuinely distant. Density is tied
       // to the room's depth — the same value in the enlarged hall would bury
       // the window in grey.
-      scene.fog = new THREE.FogExp2(0x05071a, 0.023)
+      scene.fog = roomLayoutId === 'creatorLoft'
+        ? new THREE.FogExp2(0x262c2e, 0.008)
+        : new THREE.FogExp2(0x05071a, 0.023)
+    }
+    const playgroundLighting = stage && roomLayoutId === 'adventurePark'
+      ? createPlaygroundLighting(scene, renderer, roomQuality === 'high') : null
+    if (playgroundLighting) {
+      for (const light of [hemi, key, fill, rim, rimCool, bounce]) light.intensity = 0
+      room.keyLight.castShadow = false
+      room.keyLight.intensity = 0
     }
     const roomBounds = room?.bounds ?? null
     const activeLayout = roomLayout(roomLayoutId)
@@ -408,6 +434,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // frame while he walks instead of being baked once into the target.
     let frameShot = openingShot
     let appliedRoomItems: RoomItem[] | undefined
+    let appliedTranslator: typeof translate | undefined
+    let appliedRoomLabelOverrides: Record<string, string> | undefined
     let appliedPlacing: YuviPlacing | null | undefined
     let appliedPlaceTarget: { x: number; z: number; radius: number; aim?: number } | null | undefined
     let appliedStations: RoomStations | null | undefined
@@ -520,12 +548,23 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       pendingMissionPortalRoomId = targetRoomId
     }
     const recenter = () => walkTo(0, 0)
+    const walkToGamingRoomTitle = (onArrival?: () => void) => {
+      if (activeLayout.id !== 'creatorLoft') return
+      // The rear-center stage mark keeps Yuvi clear of the neon wall while the
+      // camera and his gaze naturally frame the sign above it.
+      walkTo(0, -22.4, null, () => {
+        yawTarget = Math.PI
+        onArrival?.()
+      })
+    }
 
     // ── Floor picking ──
     // Both "walk here" and "drop the sofa here" are the same question: where
     // does the pointer meet the floor?
     const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(roomBounds?.floorY ?? -1.05))
     const floorHit = new THREE.Vector3()
+    const surfaceHit = new THREE.Vector3()
+    const walkSurfacePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0))
     const pickFloor = (event: { clientX: number; clientY: number }): { x: number; z: number } | null => {
       const rect = renderer.domElement.getBoundingClientRect()
       if (!rect.width || !rect.height) return null
@@ -533,6 +572,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera)
       if (!raycaster.ray.intersectPlane(floorPlane, floorHit)) return null
+      // A raised stage must win over the floor behind it. Intersecting only the
+      // floor plane sends a click through the stage to a point beyond its edge.
+      let closestSurface: THREE.Vector3 | null = null
+      let closestDistance = Infinity
+      for (const surface of activeLayout.walkSurfaces) {
+        walkSurfacePlane.constant = -((roomBounds?.floorY ?? -1.05) + surface.height)
+        if (!raycaster.ray.intersectPlane(walkSurfacePlane, surfaceHit)) continue
+        if (Math.abs(surfaceHit.x - surface.x) > surface.width / 2 || Math.abs(surfaceHit.z - surface.z) > surface.depth / 2) continue
+        const distance = raycaster.ray.origin.distanceToSquared(surfaceHit)
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestSurface = surfaceHit.clone()
+        }
+      }
+      if (closestSurface) return { x: closestSurface.x, z: closestSurface.z }
       return { x: floorHit.x, z: floorHit.z }
     }
 
@@ -1054,7 +1108,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // Choosing a category is a request for that exact shot.
       resetUserView()
     }
-    controllerRef.current = { equip, setColors, applyDesign, setVisitorHost, focus, walkTo, teleportTo, walkToMissionPortal, teleportToMissionPortal, recenter }
+    controllerRef.current = { equip, setColors, applyDesign, setVisitorHost, focus, walkTo, teleportTo, walkToMissionPortal, teleportToMissionPortal, recenter, walkToGamingRoomTitle }
     applyDesign(design, false)
     castShadows(robot)
     const travelFX = stage
@@ -1314,6 +1368,19 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       gestureConsumed = false
       renderer.domElement.style.cursor = 'grab'
       if (consumed || !wasOrbit || !roamRef.current) return
+      if (roomLayoutId === 'adventurePark' && canActivatePlayground({
+        placing: Boolean(placingRef.current), locked: Boolean(lockRoamRef.current), consumed,
+        distance: Math.hypot(event.clientX - pressX, event.clientY - pressY), slop: tapSlop, duration: performance.now() - pressAt,
+      })) {
+        const rect = renderer.domElement.getBoundingClientRect()
+        ndc.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1)
+        raycaster.setFromCamera(ndc, camera)
+        const previousFar = raycaster.far
+        if (firstPersonRef.current) raycaster.far = 5
+        const handled = !room.pickItem(raycaster) && !room.pickStation(raycaster) && room.interactEnvironment(raycaster)
+        raycaster.far = previousFar
+        if (handled) return
+      }
       // In first person the arrows are the whole vocabulary: a tap on the floor
       // would teleport the eyes the learner is looking through.
       if (firstPersonRef.current) return
@@ -1486,6 +1553,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     let frame = 0
     let firstFrameRendered = false
       let nearbyRoomItem: string | null = null
+    let nearGamingRoomArea = false
     let viewportVisible = true
     let contextAvailable = true
     let loop: () => void
@@ -1523,6 +1591,14 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         // The learner's room is data: re-sync only when the layout identity
         // changes, so dragging a sofa costs a transform and nothing else.
         if (room) {
+          if (appliedTranslator !== translateRef.current) {
+            appliedTranslator = translateRef.current
+            room.setLabels((key) => roomLabelOverridesRef.current?.[key] ?? appliedTranslator!(key))
+          }
+          if (roomLabelOverridesRef.current !== appliedRoomLabelOverrides) {
+            appliedRoomLabelOverrides = roomLabelOverridesRef.current
+            room.setLabels((key) => roomLabelOverridesRef.current?.[key] ?? translateRef.current(key))
+          }
           if (roomItemsRef.current !== appliedRoomItems) {
             appliedRoomItems = roomItemsRef.current
             room.setUserItems(appliedRoomItems ?? [])
@@ -1674,6 +1750,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           if (nearby !== nearbyRoomItem) {
             nearbyRoomItem = nearby
             if (nearby) onNearRoomItemRef.current?.(nearby)
+          }
+          const nextNearGamingRoomArea = activeLayout.id === 'creatorLoft'
+            && (room?.walkSurfaceHeightAt(roamPos.x, roamPos.y) ?? 0) > 0
+          if (nextNearGamingRoomArea !== nearGamingRoomArea) {
+            nearGamingRoomArea = nextNearGamingRoomArea
+            onGamingRoomAreaChangeRef.current?.(nearGamingRoomArea)
           }
           // Once he is parked, he turns to the learner — the walk itself keeps
           // overwriting the yaw with whatever direction he was heading in.
@@ -2078,6 +2160,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       controllerRef.current = null
       faceLight.texture.dispose()
       travelFX?.dispose()
+      playgroundLighting?.dispose()
       if (visitorHost) scene.remove(visitorHost)
       room?.dispose()
       renderer.dispose()

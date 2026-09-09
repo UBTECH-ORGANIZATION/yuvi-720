@@ -30,6 +30,16 @@ def _state_for_sections(*sections: int) -> dict:
 
 
 class MappingSectionUnlockSyncTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sports_starter_props_require_the_arena_entitlement(self) -> None:
+        with patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value={"room_unlocks": []})):
+            without_arena = await unlock_sync.held_props(LEARNER)
+        with patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value={"room_unlocks": ["layout:sportsArena"]})):
+            with_arena = await unlock_sync.held_props(LEARNER)
+
+        self.assertNotIn("sportsDumbbellRack", without_arena)
+        self.assertIn("sportsDumbbellRack", with_arena)
+        self.assertNotIn("sportsCableMachine", with_arena)
+
     async def test_incomplete_section_does_not_unlock_its_reward(self) -> None:
         state = _state_for_sections(4)
         state["mapping_progress"]["answers"].popitem()
