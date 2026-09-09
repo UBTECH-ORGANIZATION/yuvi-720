@@ -1378,3 +1378,20 @@
 .ys-gamelab-input:focus-visible { outline: 2px solid var(--ys-accent); outline-offset: 1px; }
 
 .ys-gamelab-card__usd { margin-inline-start: 4px; font-style: normal; font-weight: 700; color: var(--ys-ink); opacity: .75; }
+
+
+/* Poster loading: a shimmer under the image until it has decoded. */
+.ys-gamelab-card__thumbwrap {
+  position: absolute; inset: 0; display: block; overflow: hidden;
+  background: linear-gradient(100deg, rgba(120, 110, 220, .14) 20%, rgba(120, 110, 220, .32) 45%, rgba(120, 110, 220, .14) 70%);
+  background-size: 220% 100%;
+  animation: ys-gamelab-shimmer 1.4s ease-in-out infinite;
+}
+.ys-gamelab-card__thumbwrap.is-loaded { animation: none; background: transparent; }
+.ys-gamelab-card__thumbwrap .ys-gamelab-card__thumb { opacity: 0; transition: opacity .35s ease; }
+.ys-gamelab-card__thumbwrap.is-loaded .ys-gamelab-card__thumb { opacity: 1; }
+@keyframes ys-gamelab-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) { .ys-gamelab-card__thumbwrap { animation: none; } }
+.ys-gamelab-card__tile { position: relative; }
+.ys-gamelab-card__thumbwrap.is-loaded > .ys-gamelab-card__thumb { opacity: 1; }
+.ys-gamelab-card.is-building .ys-gamelab-card__thumbwrap.is-loaded > .ys-gamelab-card__thumb { opacity: .35; }

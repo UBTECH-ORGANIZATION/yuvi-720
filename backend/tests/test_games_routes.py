@@ -176,16 +176,22 @@ class GamesRoutesTest(unittest.TestCase):
         html = response.text
         self.assertIn("window.__YUVI_LEARN_DATA", html)
         self.assertIn("YuviLearn", html)
-        self.assertIn("item-2#q1", html)
+        # A blueprint game carries no questions in the page: the bridge asks
+        # `/next` for each draw, so neither the stems nor the answers ship.
+        self.assertIn('"mode": "blueprints"', html)
+        self.assertIn('"total": 6', html)
+        self.assertNotIn("item-2#q1", html)
+        self.assertNotIn("Balance", html)
         # The bridge source mentions the key variable; what must be absent is
         # the injected assignment that would hand the page an answer key.
         self.assertNotIn("window.__YUVI_LEARN_KEY = ", html)
         self.assertNotIn("correctAnswers", html)
         self.assertIn("<body>hi</body>", html)
-        # The open question was dropped from the pack, as in the worker.
         learn = html.split("window.__YUVI_LEARN_DATA = ")[1].split(";</script>")[0]
         data = json.loads(learn)
-        self.assertEqual([q["id"] for q in data["questions"]], ["item-1#q1", "item-2#q1", "item-2#q2"])
+        self.assertEqual(data["mode"], "blueprints")
+        self.assertEqual(data["questions"], [])
+        self.assertEqual(data["total"], 6)
         self.assertNotIn("correct", json.dumps(data))
 
     def test_html_version_parameter_selects_a_version(self):
@@ -285,8 +291,11 @@ class GamesRoutesTest(unittest.TestCase):
              patch("app.services.games.jobs._send_to_service_bus",
                    AsyncMock(side_effect=RuntimeError("down"))):
             response = self.client.post("/api/games", json=CREATE_BODY)
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()["detail"], "enqueue_failed")
+        # The card is answered before the queue send (blueprints are prepared
+        # behind it), so the failure lands on the game and the job, not on
+        # the response.
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(response.json()["job_id"])
         games, _ = self._run(store.list_games(LEARNER))
         self.assertEqual(games[0]["status"], "failed")
         job = self._run(store.latest_job(games[0]["_id"]))

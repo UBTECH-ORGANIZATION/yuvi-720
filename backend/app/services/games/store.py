@@ -50,6 +50,10 @@ ANSWERS = "learner_game_answers"
 #: Per-learner daily caps set by an admin; the row ``__defaults__`` holds the
 #: system-wide defaults that override the env values (see ``budget.py``).
 LIMITS = "learner_game_limits"
+BLUEPRINTS = "game_question_blueprints"
+INSTANCES = "game_question_instances"
+#: Instances when no database is configured (tests, JSON fallback): id → row.
+_memory_instances: dict[str, dict[str, Any]] = {}
 LIMITS_DEFAULTS_ID = "__defaults__"
 
 _FALLBACK_FILE = Path(__file__).resolve().parents[3] / ".runtime" / "games.json"
@@ -265,7 +269,7 @@ async def create_game(
     *, learner_id: str, objective_id: str, unit_id: str, component_id: str,
     title: str, genre: str, prompt: str = "", language: str = "he",
     device: str = "keyboard", path_node_id: Optional[str] = None,
-    title_by_learner: bool = False,
+    title_by_learner: bool = False, question_mode: str = "legacy", question_total: int = 0,
 ) -> dict[str, Any]:
     """Record what the learner asked for. The build is a separate job.
 
@@ -286,6 +290,11 @@ async def create_game(
         # typed questions existed only know buttons, and the served pack (and
         # any patch of them) must keep to that.
         "question_kinds": ["choice", "text"],
+        # "blueprints": questions are drawn per run from the component's
+        # blueprints (`/next`); "legacy": the catalog rows are baked into the
+        # served page. `question_total` sizes a blueprint run.
+        "question_mode": question_mode,
+        "question_total": int(question_total or 0),
         "genre": genre,
         "prompt": (prompt or "")[:600],
         "language": language,
@@ -510,6 +519,7 @@ async def count_fix_jobs_for_version(game_id: str, v: int) -> int:
 async def record_answer(
     *, game_id: str, learner_id: str, question_id: str, item_id: str,
     component_id: str, correct: bool, latency_ms: Optional[int] = None,
+    blueprint_id: str = "", instance_id: str = "",
 ) -> dict[str, Any]:
     """One graded answer. The sequence is per (game, learner), so a learner's
     play-through reads back in order without a timestamp sort.
@@ -528,6 +538,10 @@ async def record_answer(
         "latency_ms": int(latency_ms) if latency_ms is not None else None,
         "at": _now(),
     }
+    if blueprint_id:
+        # Blueprint games: which generator asked, and which draw of it.
+        document["blueprint_id"] = blueprint_id
+        document["instance_id"] = instance_id
     base = await _count(ANSWERS, {"game_id": game_id, "learner_id": learner_id})
     for offset in range(1, 6):
         seq = base + offset
@@ -599,6 +613,8 @@ async def ensure_indexes() -> None:
                [("game_id", 1), ("kind", 1), ("version", 1)]),
         ANSWERS: ([("game_id", 1), ("learner_id", 1), ("seq", 1)],
                   [("learner_id", 1), ("at", -1)]),
+        BLUEPRINTS: ([("component_id", 1)],),
+        INSTANCES: ([("game_id", 1), ("run_id", 1), ("index", 1)],),
     }
     for collection, indexes in plan.items():
         handle = _get_collection_named(collection)

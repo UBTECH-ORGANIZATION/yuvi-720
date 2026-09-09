@@ -85,6 +85,31 @@ def snapshot() -> dict[str, Any]:
     }
 
 
+BLUEPRINT = {
+    "skill": "read the mass off a balance", "topic": "mass", "level": "core", "interaction": "choice",
+    "params": {"m": {"int": [2, 9]}},
+    "stem": "מה המסה על המאזניים?", "answer": "{m} ק\"ג", "accept": ["{m}"],
+    "distractors": ["{m+1} ק\"ג", "{m-1} ק\"ג", "{m*10} ק\"ג"],
+    "figure": {"frame": {"axes": {"x": [0, 10], "y": [0, 10]}},
+               "items": [{"kind": "bar", "at": [5, 0], "value": "m", "label": "ק\"ג"}]},
+}
+BLUEPRINT_TEXT = {
+    "skill": "write a mass", "topic": "mass", "level": "easy", "interaction": "text",
+    "params": {"a": {"int": [1, 5]}, "b": {"int": [1, 5]}},
+    "stem": "כמה זה {a} ק\"ג ועוד {b} ק\"ג?", "answer": "{a+b}", "figure": None,
+}
+
+
+def blueprint_docs() -> list[dict[str, Any]]:
+    """Two usable blueprints for COMP, shaped like `blueprints._doc` output."""
+    return [
+        {"_id": f"bp:{COMP}|fp|v1.1|{i}", "component_id": COMP, "fingerprint": "fp", "index": i,
+         "skill": bp["skill"], "topic": bp["topic"], "level": bp["level"], "dsl_version": 1, "prompt_version": 1,
+         "blueprint": bp, "status": "ok", "errors": [], "judge": {"answerable": True, "agrees": True}}
+        for i, bp in enumerate((BLUEPRINT, BLUEPRINT_TEXT))
+    ]
+
+
 class GamesHarness(ExitStack):
     """Everything a games test needs, entered as one context.
 
@@ -107,6 +132,15 @@ class GamesHarness(ExitStack):
         self.enter_context(patch.object(kata_catalog, "ensure_loaded", AsyncMock()))
         self.enter_context(patch("app.services.events.get_recent_events",
                                  AsyncMock(return_value=[{"objective_id": OBJECTIVE, "launch": COMP}])))
+        # Blueprint games: no model call — a fixed, valid blueprint set stands
+        # in for generation, the create prepares inline so the job exists
+        # when the response comes back, and instances live in memory.
+        from app.routes import games as routes
+        from app.services.games import blueprints, store as games_store
+        self.enter_context(patch.object(routes, "INLINE_BACKGROUND", True))
+        self.enter_context(patch.object(blueprints, "ensure_blueprints", AsyncMock(return_value=blueprint_docs())))
+        self.enter_context(patch.object(blueprints, "cached_for_component", AsyncMock(return_value=blueprint_docs())))
+        games_store._memory_instances.clear()
         notifications.reset_for_tests()
         realtime.reset_for_tests()
         return self

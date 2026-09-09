@@ -11,7 +11,10 @@ Two processes. Start both, then drive the browser with Playwright.
 
 ```bash
 # backend — :8720  (do NOT use `server:app`; the app is a factory)
-cd backend && ./.venv/bin/python -m uvicorn server:create_app --factory --host 127.0.0.1 --port 8720
+# server.py does not read backend/.env, and `source .env` fails on an unquoted `&`,
+# so load it with python-dotenv. A bare uvicorn start silently runs with defaults
+# (GAME_JOBS_MODE=mongo → creates stay "queued"; GAMES_STORAGE=local → cloud games 404).
+cd backend && ./.venv/bin/python -c "from dotenv import load_dotenv; load_dotenv('.env'); import uvicorn; uvicorn.run('server:create_app', factory=True, host='127.0.0.1', port=8720)"
 
 # frontend — :5173, proxies /api → 127.0.0.1:8720
 cd frontend && npm run dev

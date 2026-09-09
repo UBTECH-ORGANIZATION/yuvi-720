@@ -39,6 +39,7 @@ SETTLE_TIMEOUT_MS = 4000          # wait after load for first-tick errors
 INTERACTION_SETTLE_MS = 3500      # wait after clicking Start
 PAGE_LOAD_TIMEOUT_MS = 15000
 CONTRACT_TIMEOUT_S = 20.0         # wait for learn.asked >= 1
+EARLY_SCREENSHOT_MS = 4000        # thumbnail: a few seconds of play, before the first question
 CONTRACT_POLL_MS = 250
 MIN_HEARTBEAT = 30                # rAF ticks the harness must have counted
 CHROMIUM_ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist"]
@@ -332,7 +333,20 @@ async def validate_html(
                 # ── Phase 2: interaction (Start button) ──
                 before = len(errors)
                 clicked = await _click_start_buttons(page)
-                await page.wait_for_timeout(interaction_settle_ms)
+                # The thumbnail is the game itself, not its first question:
+                # grab it a few seconds into play, before the first gate opens
+                # (the contract gives the kid ≥ 8 s of play first). The final
+                # screenshot below stays the fallback.
+                early_png: Optional[bytes] = None
+                if screenshot:
+                    await page.wait_for_timeout(min(EARLY_SCREENSHOT_MS, interaction_settle_ms))
+                    try:
+                        early_png = await page.screenshot(type="png", full_page=False)
+                    except Exception as e:  # noqa: BLE001
+                        log.warning("early screenshot failed: %s", e)
+                    await page.wait_for_timeout(max(0, interaction_settle_ms - EARLY_SCREENSHOT_MS))
+                else:
+                    await page.wait_for_timeout(interaction_settle_ms)
                 for err in errors[before:]:
                     err["source"] = "post-interaction"
 
@@ -378,6 +392,16 @@ async def validate_html(
                         except Exception:  # noqa: BLE001
                             break
 
+                    # A question that came with a figure the kid never saw is
+                    # unanswerable: the bridge counts those after each next().
+                    missing = int(((yuvi_state or {}).get("learn") or {}).get("figure_missing") or 0)
+                    if missing:
+                        errors.append({
+                            "source": "contract",
+                            "message": f"{missing} question(s) had a `figure` that never appeared on screen "
+                                       "(≥120×80px) — insert `q.figure` with innerHTML at the top of the "
+                                       "question overlay, or use `YuviLearn.mount(q, el)`",
+                        })
                     heartbeat = int((yuvi_state or {}).get("heartbeat") or 0)
                     if heartbeat < min_heartbeat:
                         errors.append({
@@ -409,6 +433,8 @@ async def validate_html(
                 if screenshot:
                     try:
                         png = await page.screenshot(type="png", full_page=False)
+                        if early_png and not await page.evaluate(_EMPTY_PAGE_JS):
+                            png = early_png
                     except Exception as e:  # noqa: BLE001
                         log.warning("screenshot failed: %s", e)
                         png = None

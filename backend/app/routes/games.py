@@ -27,6 +27,7 @@ answers 503 rather than serving a game without its bridge.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sys
@@ -41,7 +42,7 @@ from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current
 from app.services import content_filter, events, kata_catalog
 from app.services.llm import call_llm
 from app.services.ai_usage import UsageContext
-from app.services.games import budget, distractors, grading, html_store, jobs, store
+from app.services.games import blueprints, budget, distractors, grading, html_store, instances, jobs, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
 log = logging.getLogger(__name__)
@@ -122,6 +123,13 @@ class CheckRequest(BaseModel):
     question_id: str = Field(min_length=1, max_length=200)
     answer: int | str
     latency_ms: Optional[int] = Field(default=None, ge=0, le=3_600_000)
+
+
+class NextRequest(BaseModel):
+    """One draw of a blueprint game: the run (a fresh id per play-through)
+    and the question index inside it."""
+    run_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_\-]+$")
+    index: int = Field(ge=0, le=200)
 
 
 class RevertRequest(BaseModel):
@@ -208,6 +216,8 @@ def _public_game(game: dict[str, Any], *, lang: str = "he",
         "has_thumb": bool(game.get("thumb_blob_path")),
         "errors_last": list(game.get("errors_last") or [])[:5],
         "sparks_spent": int(game.get("sparks_spent") or 0),
+        "question_mode": str(game.get("question_mode") or "legacy"),
+        "question_total": int(game.get("question_total") or 0),
         "description": str(game.get("description") or ""),
         "created_at": game.get("created_at"),
         "updated_at": game.get("updated_at"),
@@ -335,22 +345,90 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
     game = await store.create_game(
         learner_id=learner_id, objective_id=data.objective_id, unit_id=data.unit_id,
         component_id=data.component_id, title=title, title_by_learner=bool(learner_title), genre=data.genre, prompt=data.vibe,
-        language=data.language, device=data.device,
+        language=data.language, device=data.device, question_mode="blueprints",
     )
+    # Questions come from blueprints (generated once per component, cached):
+    # every run draws fresh instances with the context the kid needs. The
+    # first pick of a component means a model call, so the card answers now
+    # and the build starts as soon as the blueprints are in.
+    work = _prepare_and_enqueue(
+        game, component, data, inspirations=inspirations, learner_title=learner_title, learner_id=learner_id,
+    )
+    job = None
+    if INLINE_BACKGROUND:
+        job = await work
+    else:
+        _spawn(work)
+    return JSONResponse(
+        status_code=201,
+        content={"game_id": game["_id"], "job_id": job["_id"] if job else None, "status": "queued"},
+        headers=_NO_STORE,
+    )
+
+
+#: Tests flip this so a create finishes its preparation before answering
+#: (TestClient cannot wait for a task on the app's loop).
+INLINE_BACKGROUND = False
+_background: set["asyncio.Task[Any]"] = set()
+
+
+def _spawn(coro: Any) -> None:
+    task = asyncio.create_task(coro)
+    _background.add(task)
+    task.add_done_callback(_background.discard)
+
+
+async def _prepare_and_enqueue(
+    game: dict[str, Any], component: dict[str, Any], data: CreateGameRequest, *,
+    inspirations: list[str], learner_title: str, learner_id: str,
+) -> Optional[dict[str, Any]]:
+    """Blueprints first, then the job. Returns the job, or None when the game
+    was marked failed instead."""
+    game_id = str(game["_id"])
     try:
-        job = await jobs.enqueue(
+        docs = await blueprints.ensure_blueprints(
+            component, kata_catalog.get_unit(data.unit_id), kata_catalog.get_objective(data.objective_id),
+            actor_id=learner_id, language=data.language,
+        )
+        usable_count = len(blueprints.usable(docs))
+        if usable_count == 0:
+            log.warning("game %s: no answerable questions for %s", game_id, data.component_id)
+            await store.update_status(game_id, "failed", errors_last=[{"message": "no_answerable_questions"}])
+            return None
+        game = await store.update_game(game_id, question_total=blueprints.run_total(usable_count)) or game
+        return await jobs.enqueue(
             game, "create", genre=data.genre, vibe=data.vibe, inspirations=inspirations,
             clarifications=data.clarifications, language=data.language,
             device=data.device, deep_thinking=data.deep_thinking,
             learner_title=learner_title,
         )
-    except jobs.EnqueueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from None
-    return JSONResponse(
-        status_code=201,
-        content={"game_id": game["_id"], "job_id": job["_id"], "status": "queued"},
-        headers=_NO_STORE,
-    )
+    except Exception as exc:
+        log.warning("game %s: prepare/enqueue failed: %s", game_id, type(exc).__name__)
+        try:
+            await store.update_status(game_id, "failed", errors_last=[{"message": f"enqueue_failed:{type(exc).__name__}"}])
+        except Exception:
+            pass
+        return None
+
+
+class PrepareRequest(BaseModel):
+    component_id: str = Field(min_length=1, max_length=160)
+
+
+@router.post("/prepare", status_code=202)
+async def prepare_component(data: PrepareRequest, learner_id: str = Depends(require_learner)):
+    """Warm a component's blueprints while the kid writes the brief. Answers
+    at once with what is cached; generation, if needed, runs behind."""
+    await kata_catalog.ensure_loaded()
+    component = kata_catalog.get_component(data.component_id)
+    if not component:
+        raise HTTPException(status_code=404, detail="component_not_found")
+    docs = await blueprints.cached_for_component(data.component_id, blueprints.profile_fingerprint(component))
+    if not docs:
+        unit = kata_catalog.get_unit(str(component.get("unit_id") or ""))
+        objective = kata_catalog.get_objective(str((unit or {}).get("objective_id") or component.get("objective_id") or ""))
+        _spawn(blueprints.ensure_blueprints(component, unit, objective, actor_id=learner_id))
+    return JSONResponse(status_code=202, content={"ready": bool(docs), "usable": len(blueprints.usable(docs))}, headers=_NO_STORE)
 
 
 @router.get("/{game_id}")
@@ -399,7 +477,15 @@ async def read_game_html(
         typed="text" in (game.get("question_kinds") or []),
     )
     # `answer_key` deliberately absent: the bridge grades through /check.
-    fragment = harness.build_harness(pack.to_learn_data())
+    learn_data = pack.to_learn_data()
+    if game.get("question_mode") == "blueprints":
+        # No questions in the page: the bridge asks `/next` for each draw.
+        learn_data = {
+            "mode": "blueprints", "total": int(game.get("question_total") or 0),
+            "language": learn_data.get("language"), "component": learn_data.get("component"),
+            "objective": learn_data.get("objective"), "questions": [],
+        }
+    fragment = harness.build_harness(learn_data)
     return HTMLResponse(
         content=harness.inject_harness(html, fragment),
         headers={
@@ -539,10 +625,27 @@ async def report_bug(game_id: str, data: BugReport, learner_id: str = Depends(re
 async def check_answer(game_id: str, data: CheckRequest, learner_id: str = Depends(require_learner)):
     game = await _owned_game(game_id, learner_id)
     try:
-        result = await grading.grade(game, data.question_id, data.answer, latency_ms=data.latency_ms)
-    except grading.GradingError as exc:
+        if instances.is_instance_id(data.question_id):
+            result = await instances.grade(game, data.question_id, data.answer, latency_ms=data.latency_ms)
+        else:
+            result = await grading.grade(game, data.question_id, data.answer, latency_ms=data.latency_ms)
+    except (grading.GradingError, instances.InstanceError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
     return JSONResponse(content={**result, "feedback": None}, headers=_NO_STORE)
+
+
+@router.post("/{game_id}/next")
+async def next_question(game_id: str, data: NextRequest, learner_id: str = Depends(require_learner)):
+    """The next question of a blueprint game: a fresh instance (text, options,
+    figure) whose answer stays here. `null` past the end of the run."""
+    game = await _owned_game(game_id, learner_id)
+    if game.get("question_mode") != "blueprints":
+        raise HTTPException(status_code=409, detail="not_a_blueprint_game")
+    try:
+        question = await instances.next_instance(game, run_id=data.run_id, index=data.index)
+    except instances.InstanceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    return JSONResponse(content={"question": question}, headers=_NO_STORE)
 
 
 @router.post("/{game_id}/revert")

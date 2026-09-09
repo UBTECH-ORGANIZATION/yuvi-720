@@ -139,6 +139,10 @@ class IndexBootstrap(unittest.TestCase):
             "reward_ledger": {"reward_ledger"},
             "tutor_decisions": {"tutor_decisions"},
             "weekly_studio_surprises": {"weekly_studio_surprises"},
+            # Game Lab: cards per learner, the job queue, graded answers, and
+            # the question blueprints/instances behind every `next()`.
+            "learner_games": {"learner_games", "learner_game_jobs", "learner_game_answers",
+                              "game_question_blueprints", "game_question_instances"},
         }
         self.assertEqual(
             steps, set(owned), "server.py index_steps changed — update `owned` here too")

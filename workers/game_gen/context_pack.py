@@ -44,6 +44,16 @@ class ContextPack:
     information_to_bot: str = ""
     questions: list[Question] = field(default_factory=list)
     device: str = "keyboard"  # keyboard | touch
+    # Blueprint games: the skills (with sample instances) replace the fixed
+    # question rows in the prompt; `fixtures` are pre-drawn instances the
+    # headless validator plays, and `question_total` sizes the run.
+    blueprints: list[dict[str, Any]] = field(default_factory=list)
+    fixtures: list[dict[str, Any]] = field(default_factory=list)
+    question_total: int = 0
+
+    @property
+    def blueprint_mode(self) -> bool:
+        return bool(self.blueprints)
 
     def to_prompt_json(self) -> str:
         """Compact JSON for the model prompt (no answer key)."""
@@ -60,18 +70,29 @@ class ContextPack:
             "language": self.language,
             "device": self.device,
             "teaching_notes": self.information_to_bot,
-            "questions": [asdict(q) for q in self.questions],
         }
+        if self.blueprint_mode:
+            payload["question_total"] = self.question_total
+            payload["skills"] = self.blueprints
+            payload["note"] = ("Questions are generated per run from these skills (numbers, names and figures change); "
+                               "`YuviLearn.next()` returns one at a time, some with a `figure`. Size the game by question_total.")
+        else:
+            payload["questions"] = [asdict(q) for q in self.questions]
         return json.dumps(payload, ensure_ascii=False, indent=1)
 
     def to_learn_data(self) -> dict[str, Any]:
         """The object the serve-time harness exposes as ``window.__YUVI_LEARN_DATA``."""
-        return {
+        data: dict[str, Any] = {
             "component": {"id": self.component_id, "title": self.component_title},
             "objective": {"id": self.objective_id, "title": self.objective_title},
             "language": self.language,
             "questions": [asdict(q) for q in self.questions],
         }
+        if self.blueprint_mode:
+            # Local (validator) runs play the fixtures; the app serves the
+            # same shape with an empty list and answers `learn.next` itself.
+            data.update({"mode": "blueprints", "total": self.question_total, "questions": list(self.fixtures)})
+        return data
 
 
 @dataclass

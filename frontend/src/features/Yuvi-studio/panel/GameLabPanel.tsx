@@ -4,8 +4,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
 import {
   GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames,
-  type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject,
-} from '../../../services/games'
+  type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject, prepareGame } from '../../../services/games'
 import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
 import { SegmentedNav } from './SegmentedNav'
@@ -64,6 +63,18 @@ export function GameLabPanel({
 }
 
 // ── My games ────────────────────────────────────────────────────────────────
+
+/** The poster, with a soft shimmer until the image is in. A thumbnail that
+ *  pops in late over an empty tile reads as a glitch; the shimmer says
+ *  "loading" without a spinner. */
+function CardThumb({ src }: { src: string }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <span className={`ys-gamelab-card__thumbwrap${loaded ? ' is-loaded' : ''}`}>
+      <img className="ys-gamelab-card__thumb" src={src} alt="" loading="lazy" onLoad={() => setLoaded(true)} onError={() => setLoaded(true)} />
+    </span>
+  )
+}
 
 function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: () => void }) {
   const { t } = useI18n()
@@ -227,7 +238,7 @@ function GameCard({
         aria-label={openable ? t(busy ? 'studio.gamelab.action.watch' : 'studio.gamelab.action.play') : undefined}
       >
         {game.has_thumb
-          ? <img className="ys-gamelab-card__thumb" src={gameThumbUrl(game)} alt="" loading="lazy" />
+          ? <CardThumb src={gameThumbUrl(game)} />
           : genreIcon(game.genre)}
         {/* While Yuvi builds, the tile becomes a small workshop: bars of code
             rising and a scan line, over the last thumbnail when there is one.
@@ -342,7 +353,7 @@ function CreateWizard({
     if (!found) return
     setObjective(found)
     const part = findComponent(found, preselect.component)
-    if (part && part.question_count > 0) setComponent(part)
+    if (part && part.question_count > 0) { setComponent(part); prepareGame(part.id).catch(() => {}) }
   }, [subjects, preselect])
 
   const step = !objective ? 1 : !component ? 2 : 3
@@ -442,7 +453,7 @@ function CreateWizard({
               const empty = row.question_count === 0
               return (
                 <li key={row.id}>
-                  <button type="button" className="ys-gamelab-pick" disabled={empty} onClick={() => setComponent(row)}>
+                  <button type="button" className="ys-gamelab-pick" disabled={empty} onClick={() => { setComponent(row); prepareGame(row.id).catch(() => {}) }}>
                     <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
                     {row.unit_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.unit_title}</bdi></span>}
                     {row.purpose && <span className="ys-gamelab-pick__purpose"><bdi dir="auto">{row.purpose}</bdi></span>}

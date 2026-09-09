@@ -38,7 +38,7 @@ import os
 from typing import Any, Optional
 
 from app.services import kata_catalog
-from app.services.games import distractors, store
+from app.services.games import blueprints, distractors, store
 
 log = logging.getLogger(__name__)
 
@@ -171,6 +171,17 @@ async def enqueue(
         "feature": FEATURE,
         "context": context,
     }
+    if game.get("question_mode") == "blueprints":
+        # Blueprint games: the builder sees skills with sample instances, the
+        # validator plays pre-drawn instances (with their key) offline.
+        docs = await blueprints.cached_for_component(str(game.get("component_id") or ""))
+        total = int(game.get("question_total") or blueprints.run_total(len(blueprints.usable(docs))))
+        theme = game.get("theme_vocab") if isinstance(game.get("theme_vocab"), dict) else None
+        questions, key = blueprints.fixtures(docs, total, theme)
+        payload["blueprints"] = {
+            "summaries": blueprints.summaries(docs, theme), "total": total,
+            "fixtures": questions, "key": key,
+        }
     job = await store.create_job(
         game_id=str(game["_id"]), learner_id=str(game["learner_id"]),
         kind=kind, payload=payload, version=version,

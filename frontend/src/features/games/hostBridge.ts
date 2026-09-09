@@ -42,7 +42,7 @@ export interface CheckResult {
   feedback: string | null
 }
 
-export interface HostReply {
+export interface HostAnswerReply {
   source: typeof HOST_SOURCE
   type: 'learn.answer.result'
   requestId: string
@@ -51,10 +51,21 @@ export interface HostReply {
   feedback?: string
 }
 
+export interface HostNextReply {
+  source: typeof HOST_SOURCE
+  type: 'learn.next.result'
+  requestId: string
+  question: unknown | null
+}
+
+export type HostReply = HostAnswerReply | HostNextReply
+
 export interface HostBridgeOptions {
   nonce: string
   /** `checkAnswer(gameId, …)` with the game already bound. */
   check: (questionId: string, answer: string | number) => Promise<CheckResult>
+  /** `nextQuestion(gameId, …)` bound to the game; blueprint games only. */
+  next?: (runId: string, index: number) => Promise<unknown | null>
   onReady?: (total: number) => void
   onAsked?: (questionId: string, index: number) => void
   onAnswered?: (questionId: string, correct: boolean) => void
@@ -136,6 +147,17 @@ export function createHostBridge(options: HostBridgeOptions): HostBridge {
           line: asNumber(frame.line),
           at: now() - attachedAt,
         })
+        return true
+      }
+      case 'learn.next': {
+        const requestId = asString(frame.requestId)
+        if (!requestId) return true
+        const runId = asString(frame.runId) ?? 'run'
+        const index = asNumber(frame.index) ?? 0
+        const draw = options.next ? options.next(runId, index) : Promise.resolve(null)
+        draw
+          .then((question) => reply({ source: HOST_SOURCE, type: 'learn.next.result', requestId, question }))
+          .catch(() => reply({ source: HOST_SOURCE, type: 'learn.next.result', requestId, question: null }))
         return true
       }
       case 'learn.answer': {

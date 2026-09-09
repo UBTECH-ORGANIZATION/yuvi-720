@@ -1,6 +1,6 @@
 # Game questions with full context — blueprints, figures, randomness
 
-Status: PLAN (2026-09-09), not built. Companion to
+Status: Phase 1 BUILT (2026-09-09) — DSL, figures, generation from the learning profile, instances, harness `learn.next` + `mount()`, validator figure rule; Phases 2–3 planned. Companion to
 [learning-game-lab.md](learning-game-lab.md) §2.6 (harness) and §2.5 (pipeline).
 Scope: every subject in the catalog (math, science, language, English,
 history, geography…), every game theme, every device. The coordinate example
@@ -33,19 +33,26 @@ Two facts shape the design:
 
 ## 1. What we build
 
-A **question blueprint** per Kata question: a small, declarative,
-code-validated generator that a game instantiates at run time with fresh
-parameters, themed wording, a figure when the question needs one, and a
-server-side answer. The Kata question remains the identity for telemetry; the
-blueprint is how it is played. Nothing subject-specific lives in the pipeline;
-subject knowledge enters only as data (blueprints) and as optional renderer
-kits registered behind one interface.
+**Blueprints are written from the learning, not from the questions.** The
+Kata texts are captions for screens we do not have ("now that you saw the
+chess board, can you…"), so they are never reused, quoted or referenced. What
+they tell us, together with the objective, unit and component titles, the
+grade and the teacher's notes, is the **learning profile**: the subject, the
+skill the component teaches, what its questions are about, and their level.
+From that profile the model writes 6–8 original **question blueprints**: small,
+declarative, code-validated generators that a game instantiates at run time
+with fresh parameters, themed wording, a figure when the skill is visual, and
+a server-side answer. Answers are attributed to the blueprint's skill for
+telemetry. Nothing subject-specific lives in the pipeline; subject knowledge
+enters only as data (blueprints) and as optional renderer kits registered
+behind one interface.
 
 ```
-Kata question + key + teaching notes
-        │  (once per component, LLM, cached, learner-independent)
+Learning profile: subject, objective/unit/component, grade, teacher notes,
+                  Kata question texts as evidence of scope and level ONLY
+        │  (once per component, LLM, cached by profile fingerprint)
         ▼
-Blueprint  {skill, interaction, wording, params | variants, answer, distractor rules, figure}
+Blueprints  6–8 × {skill, topic, level, interaction, wording, params | variants, answer, distractor rules, figure}
         │  (per game, mini LLM once)      ┌── theme vocab {slot role → themed noun/icon}
         │◄────────────────────────────────┘
         │  (per YuviLearn.next(), pure code, seeded)
@@ -142,14 +149,17 @@ the judge (1.3) marks those `needs_review` and they are not played.
 
 `backend/app/services/games/blueprints.py`:
 
-1. Input: normalised component rows (`questions_by_item`) + the item's
-   teaching notes + subject/grade. One standard-tier call per component, JSON
-   mode, ~$0.03–0.08, cached in `game_question_blueprints` keyed by
-   `component|item|question|fingerprint|DSL_VERSION`. The prompt is
-   subject-neutral: it describes the DSL, the interactions, the primitives,
-   the two randomisation modes, and the grounding rule (variants and word
-   banks come only from the question, its key and the notes; never invented
-   facts).
+1. Input: the learning profile (subject, grade, objective/unit/component
+   titles, purpose, teacher notes, and the Kata question texts marked
+   *evidence of scope and level only*). One strong-tier call per component,
+   JSON mode, ~$0.05–0.10, cached in `game_question_blueprints` keyed by
+   `component|profile fingerprint|DSL_VERSION.PROMPT_VERSION|index`. The
+   prompt is subject-neutral: it describes the DSL, the interactions, the
+   primitives, the two randomisation modes, the coverage rule (core several
+   ways, one easier, one per common mistake, one stretch, same level), the
+   no-reference rule (never "as you saw", never a screen the game lacks,
+   never a yes/no self-check) and the grounding rule (variants and word banks
+   come only from the profile; never invented facts).
 2. **Code validation, no LLM**: instantiate 50 seeds per blueprint and require
    a unique non-empty answer; distinct distractors ≠ answer; the option counts
    per interaction; every param in its domain after constraints; figure
@@ -221,7 +231,9 @@ sentence structure, it just talks about astronauts.
   `<svg data-yuvi-figure>` at that size and that `answer()` is called with
   the shape `mount()` produces.
 
-`workers/game_gen/prompts.py`: LEARNING_CONTRACT rule 5 becomes
+`workers/game_gen/prompts.py`: rule 3 changes timing — the kid sees and
+touches the field for a few seconds before the first question, and the field
+stays visible (dimmed) behind the overlay; LEARNING_CONTRACT rule 5 becomes
 interaction-driven (`mount()` first, custom overlay only for `choice`/`text`);
 LEARNING_CONTEXT shows, per blueprint, the skill line and two sample
 instances, so the model themes mechanics on the **skills** (rule 7) rather
@@ -276,7 +288,8 @@ than on three fixed strings; rule 6 sizes the game by `total` as before.
 - *Games that ignore `q.figure` or the richer interactions.* `mount()` is the
   easy path; the validator rule fails the build and the fix loop gets the text.
 - *Context that cannot be rebuilt* (a photo, a real map, an audio clip). The
-  judge marks `needs_review`; not played. Better than the status quo.
+  blueprint never depends on it: it draws its own. What the judge still finds
+  unanswerable is marked `needs_review` and not played.
 - *A subject nobody anticipated.* Nothing in the pipeline names a subject.
   A new subject needs at most a kit, and works without one through the
   generic primitives, `text` spans and tables.

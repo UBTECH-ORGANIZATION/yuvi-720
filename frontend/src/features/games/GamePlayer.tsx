@@ -32,8 +32,7 @@ import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
   askGame, checkAnswer, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
-  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport,
-} from '../../services/games'
+  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, nextQuestion } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
 import './games.css'
 
@@ -297,6 +296,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     const bridge = createHostBridge({
       nonce,
       check: (questionId, answer) => checkAnswer(game.game_id, questionId, answer),
+      next: (runId, index) => nextQuestion(game.game_id, runId, index),
       onReady: (count) => setTotal(count),
       onAsked: () => { questionOpenRef.current = true },
       onAnswered: () => { questionOpenRef.current = false },

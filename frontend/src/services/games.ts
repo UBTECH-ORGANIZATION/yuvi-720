@@ -203,6 +203,32 @@ export function gamePlayPath(gameId: string, from: 'studio' | 'lesson' | 'bell',
   return `/games/play?${q.toString()}`
 }
 
+/** One question of a blueprint game, drawn fresh for (run, index); null past
+ *  the end of the run. The figure is HTML the harness inserts as-is. */
+export interface GameQuestion {
+  id: string
+  text: string
+  type: 'choice' | 'text' | 'hotspot'
+  answers: string[]
+  figure: string | null
+  alt: string
+  targets: string[]
+  index: number
+  total: number
+}
+
+/** Warm a component's question blueprints while the kid is still writing
+ *  the brief, so the create itself does not wait for them. Fire-and-forget. */
+export function prepareGame(componentId: string) {
+  return apiPost<{ ready: boolean; usable: number }>('/api/games/prepare', { component_id: componentId })
+}
+
+export function nextQuestion(gameId: string, runId: string, index: number) {
+  return apiPost<{ question: GameQuestion | null }>(
+    `/api/games/${encodeURIComponent(gameId)}/next`, { run_id: runId, index },
+  ).then((r) => r.question)
+}
+
 export function checkAnswer(gameId: string, questionId: string, answer: string | number) {
   return apiPost<{ correct: boolean; correct_answer: string | null; feedback: string | null }>(
     `/api/games/${encodeURIComponent(gameId)}/check`, { question_id: questionId, answer },

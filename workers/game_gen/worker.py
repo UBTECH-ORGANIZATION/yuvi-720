@@ -77,6 +77,12 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         device=str(payload.get("device") or "keyboard"),
         typed="text" in (payload.get("question_kinds") or ["choice", "text"]),
     )
+    bundle = payload.get("blueprints") or {}
+    if bundle.get("summaries"):
+        pack.blueprints = list(bundle["summaries"])
+        pack.fixtures = list(bundle.get("fixtures") or [])
+        pack.question_total = int(bundle.get("total") or len(pack.fixtures))
+        key.correct = {str(k): [str(v) for v in vs] for k, vs in (bundle.get("key") or {}).items()}
     return JobSpec(
         job_id=str(job["_id"]),
         game_id=str(job["game_id"]),

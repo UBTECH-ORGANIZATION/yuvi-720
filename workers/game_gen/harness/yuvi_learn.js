@@ -8,12 +8,21 @@
  *   - "local": headless validation / preview; an answer key is injected as
  *     window.__YUVI_LEARN_KEY and graded here. Never used for served games.
  *
+ * Two question sources, chosen by the learn data:
+ *   - legacy: `__YUVI_LEARN_DATA.questions` is the whole list, walked in order.
+ *   - blueprints (`mode: "blueprints"`): each `next()` asks the parent
+ *     (`learn.next` → `learn.next.result`) for a fresh instance of the run;
+ *     locally the pre-drawn fixtures play that role. Questions may carry a
+ *     `figure` (HTML) the kid needs to see, and a `hotspot` kind answered by
+ *     clicking a `[data-target]` inside that figure.
+ *
  * API (all return Promises):
- *   YuviLearn.next()                 -> {id, text, answers:[...], index, total} | null when exhausted
+ *   YuviLearn.next()                 -> {id, text, type, answers:[...], figure?, targets?, index, total} | null when exhausted
  *   YuviLearn.answer(id, answer)     -> {correct:boolean, correctAnswer?:string, feedback?:string}
+ *   YuviLearn.mount(q, container)    -> renders figure + question + controls into `container`, waits for the kid, calls answer(); resolves with its result
  *   YuviLearn.progress()             -> {asked, answered, correct, total}
  *   YuviLearn.done(summary?)         -> void   (game finished; parent may show the celebration)
- *   YuviLearn.reset()                -> void   (start the question cycle again)
+ *   YuviLearn.reset()                -> void   (start the question cycle again — a new run)
  * Sync helpers: YuviLearn.total, YuviLearn.language, YuviLearn.componentTitle
  */
 (function () {
@@ -21,22 +30,34 @@
   var data = window.__YUVI_LEARN_DATA || { questions: [], language: 'he', component: {} };
   var key = window.__YUVI_LEARN_KEY || null; // local mode only
   var mode = key ? 'local' : (window.parent && window.parent !== window ? 'parent' : 'local');
+  var blueprints = data.mode === 'blueprints';
   var nonce = window.__YUVI_NONCE || '';
   var state = (window.__yuvi = window.__yuvi || {});
+  var total = blueprints ? (Number(data.total) || (data.questions || []).length) : (data.questions || []).length;
   state.learn = state.learn || { asked: 0, answered: 0, correct: 0, done: false };
-  state.learn.total = data.questions.length;
+  state.learn.total = total;
+  state.learn.figure_missing = 0;   // questions with a figure that never showed one
+  state.learn.figures_shown = 0;
   state.heartbeat = state.heartbeat || 0;
   state.errors = state.errors || [];
 
   var cursor = 0;
   var pending = {};
   var seq = 0;
+  var asked = {};        // id -> question, for index answers and figure checks
+  var runId = newRunId();
 
+  function newRunId() {
+    var s = '';
+    for (var i = 0; i < 12; i++) s += 'abcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(Math.random() * 36));
+    return 'run-' + s;
+  }
   function norm(s) {
     return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase();
   }
   function findQuestion(id) {
-    for (var i = 0; i < data.questions.length; i++) if (data.questions[i].id === id) return data.questions[i];
+    if (asked[id]) return asked[id];
+    for (var i = 0; i < (data.questions || []).length; i++) if (data.questions[i].id === id) return data.questions[i];
     return null;
   }
   function resolveAnswerText(q, answer) {
@@ -57,26 +78,132 @@
   if (mode === 'parent') {
     window.addEventListener('message', function (ev) {
       var m = ev && ev.data;
-      if (!m || m.source !== 'yuvi-host' || m.type !== 'learn.answer.result') return;
+      if (!m || m.source !== 'yuvi-host') return;
       var p = pending[m.requestId];
       if (!p) return;
-      delete pending[m.requestId];
-      p.resolve({ correct: !!m.correct, correctAnswer: m.correctAnswer, feedback: m.feedback });
+      if (m.type === 'learn.answer.result') {
+        delete pending[m.requestId];
+        p.resolve({ correct: !!m.correct, correctAnswer: m.correctAnswer, feedback: m.feedback });
+      } else if (m.type === 'learn.next.result') {
+        delete pending[m.requestId];
+        p.resolve(m.question || null);
+      }
+    });
+  }
+
+  function publish(q, index) {
+    var out = {
+      id: q.id, text: q.text, type: q.type || 'choice', answers: (q.answers || []).slice(),
+      figure: q.figure || null, alt: q.alt || '', targets: (q.targets || []).slice(),
+      index: index, total: total
+    };
+    asked[out.id] = out;
+    state.learn.asked += 1;
+    post('learn.asked', { questionId: out.id, index: index });
+    if (out.figure) scheduleFigureCheck(out);
+    return out;
+  }
+  // A figure the kid never saw makes the question unanswerable. Give the game
+  // a moment to open its overlay, then look for the figure on screen.
+  function scheduleFigureCheck(q) {
+    setTimeout(function () {
+      var shown = false;
+      var nodes = document.querySelectorAll('[data-yuvi-figure]');
+      for (var i = 0; i < nodes.length; i++) {
+        var r = nodes[i].getBoundingClientRect();
+        if (r.width >= 120 && r.height >= 80) { shown = true; break; }
+      }
+      if (shown) state.learn.figures_shown += 1; else state.learn.figure_missing += 1;
+    }, 2500);
+  }
+  function fetchNext(index) {
+    if (mode === 'local' || !blueprints) {
+      var list = data.questions || [];
+      return Promise.resolve(index < list.length ? list[index] : null);
+    }
+    var requestId = 'n' + (++seq);
+    return new Promise(function (resolve) {
+      pending[requestId] = { resolve: resolve };
+      post('learn.next', { requestId: requestId, runId: runId, index: index });
+      setTimeout(function () {
+        if (pending[requestId]) { delete pending[requestId]; resolve(null); }
+      }, 10000);
+    });
+  }
+
+  // ── the standard overlay body ──────────────────────────────────────────
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === 'style') node.style.cssText = attrs[k];
+      else if (k === 'text') node.textContent = attrs[k];
+      else node.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+  var rtl = (data.language === 'he' || data.language === 'ar');
+  var BTN = 'display:block;width:100%;min-height:48px;margin:8px 0;padding:10px 16px;font:inherit;font-size:1.1rem;font-weight:600;' +
+            'border-radius:12px;border:2px solid currentColor;background:rgba(255,255,255,.08);color:inherit;cursor:pointer;';
+  function mount(q, container) {
+    if (!q || !container) return Promise.resolve({ correct: false, feedback: 'nothing to mount' });
+    container.innerHTML = '';
+    var box = el('div', { style: 'display:flex;flex-direction:column;gap:10px;max-width:640px;margin:0 auto;font-size:1.1rem;' + (rtl ? 'direction:rtl;text-align:right' : 'direction:ltr;text-align:left') });
+    if (q.figure) {
+      var fig = el('div', { style: 'direction:ltr;min-height:220px;display:flex;align-items:center;justify-content:center' });
+      fig.innerHTML = q.figure;
+      box.appendChild(fig);
+    }
+    box.appendChild(el('div', { text: q.text, style: 'font-size:1.25rem;font-weight:700;line-height:1.4' }));
+    container.appendChild(box);
+    return new Promise(function (resolve) {
+      var settled = false;
+      function submit(value) {
+        if (settled) return;
+        settled = true;
+        window.YuviLearn.answer(q.id, value).then(function (r) {
+          var note = el('div', { style: 'font-weight:700;margin-top:6px', text: r && r.correct ? '✓' : ('✗ ' + (r && r.correctAnswer ? r.correctAnswer : '')) });
+          box.appendChild(note);
+          resolve(r);
+        });
+      }
+      if (q.type === 'hotspot') {
+        var targets = box.querySelectorAll('[data-target]');
+        for (var i = 0; i < targets.length; i++) {
+          targets[i].style.cursor = 'pointer';
+          targets[i].addEventListener('click', function (ev) { submit(ev.currentTarget.getAttribute('data-target')); });
+          targets[i].addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') submit(ev.currentTarget.getAttribute('data-target')); });
+        }
+        if (!targets.length) submit('');
+      } else if (q.type === 'text' || !(q.answers && q.answers.length)) {
+        var input = el('input', { type: 'text', autocomplete: 'off', dir: 'ltr', style: 'font:inherit;font-size:1.2rem;padding:10px 14px;border-radius:12px;border:2px solid currentColor;background:rgba(255,255,255,.1);color:inherit;width:100%;box-sizing:border-box' });
+        var send = el('button', { type: 'button', text: '➜', style: BTN });
+        send.addEventListener('click', function () { submit(input.value); });
+        input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(input.value); });
+        box.appendChild(input); box.appendChild(send);
+        setTimeout(function () { try { input.focus(); } catch (e) {} }, 50);
+      } else {
+        q.answers.forEach(function (a) {
+          var b = el('button', { type: 'button', text: a, style: BTN + (/^[\d\s(),.\-+]+$/.test(a) ? 'direction:ltr' : '') });
+          b.addEventListener('click', function () { submit(a); });
+          box.appendChild(b);
+        });
+      }
     });
   }
 
   window.YuviLearn = {
-    get total() { return data.questions.length; },
+    get total() { return total; },
     get language() { return data.language || 'he'; },
     get componentTitle() { return (data.component && data.component.title) || ''; },
     next: function () {
-      if (cursor >= data.questions.length) return Promise.resolve(null);
-      var q = data.questions[cursor];
-      var out = { id: q.id, text: q.text, answers: (q.answers || []).slice(), type: q.type, index: cursor, total: data.questions.length };
+      if (cursor >= total) return Promise.resolve(null);
+      var index = cursor;
       cursor += 1;
-      state.learn.asked += 1;
-      post('learn.asked', { questionId: q.id, index: out.index });
-      return Promise.resolve(out);
+      return fetchNext(index).then(function (q) {
+        if (!q) { cursor = total; return null; }
+        return publish(q, index);
+      });
     },
     answer: function (id, answer) {
       state.learn.answered += 1;
@@ -96,15 +223,16 @@
         }, 8000);
       });
     },
+    mount: mount,
     progress: function () {
-      return Promise.resolve({ asked: state.learn.asked, answered: state.learn.answered, correct: state.learn.correct, total: data.questions.length });
+      return Promise.resolve({ asked: state.learn.asked, answered: state.learn.answered, correct: state.learn.correct, total: total });
     },
     done: function (summary) {
       state.learn.done = true;
       post('learn.done', { summary: summary || null, progress: { asked: state.learn.asked, answered: state.learn.answered, correct: state.learn.correct } });
       return Promise.resolve();
     },
-    reset: function () { cursor = 0; return Promise.resolve(); }
+    reset: function () { cursor = 0; runId = newRunId(); return Promise.resolve(); }
   };
-  post('ready', { mode: mode, total: data.questions.length });
+  post('ready', { mode: mode, total: total });
 })();
