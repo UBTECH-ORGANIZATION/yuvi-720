@@ -30,6 +30,7 @@ export function emptyDraft(learnerId: string, draftId: string): TeacherMentoring
     notes: '',
     teacher_only_note: '',
     meeting_stage: '',
+    mentoring_phase: '',
     goals: [],
     qa: [],
   }

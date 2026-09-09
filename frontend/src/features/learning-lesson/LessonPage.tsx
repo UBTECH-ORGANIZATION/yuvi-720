@@ -11,6 +11,7 @@ import {
   getLearningCatalog,
   getLearningTiming,
   reportPathChoice,
+  skipComponent,
   type LearningComponentDTO,
   type LearningSessionDTO,
   type LearningTimingDTO,
@@ -514,6 +515,26 @@ export function LessonPage() {
               >
                 <Icon name="chevronLeft" size={15} />
                 {t('learning.lesson.previous')}
+              </button>
+            )}
+            {/* 720 §דילוג — the route is a suggestion. A learner who already
+                knows this step may move on, and saying so is an event: it is
+                reported as `skipped` and the next re-plan stops re-offering it.
+                Quietest control on the bar, and only where there is somewhere
+                to go. */}
+            {session && nextComponent && (
+              <button
+                className="learning-lesson-skip"
+                type="button"
+                onClick={() => {
+                  const current = session.component.id
+                  void skipComponent(current)
+                  openRoadmapComponent(nextComponent)
+                }}
+                title={`${t('learning.lesson.skip')} · ${nextComponent.title}`}
+              >
+                {t('learning.lesson.skip')}
+                <Icon name="chevronRight" size={15} />
               </button>
             )}
           </nav>

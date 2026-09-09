@@ -26,7 +26,12 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from app.services.lrs import config
-from app.services.lrs.context import CONTENT_VENDOR_BASE, MEDIA_ACTIVITY_TYPES, activity
+from app.services.lrs.context import (
+    CONTENT_VENDOR_BASE,
+    MEDIA_ACTIVITY_TYPES,
+    activity,
+    resolve_media_format,
+)
 
 
 def _iri(kind: str, identifier: str) -> str:
@@ -42,14 +47,25 @@ def component_activity(component_id: str, name_he: Optional[str] = None) -> dict
 
 
 def item_activity(
-    item_id: str, name_he: Optional[str] = None, media_format: Optional[str] = None
+    item_id: str,
+    name_he: Optional[str] = None,
+    media_format: Optional[str] = None,
+    content_type: Optional[str] = None,
 ) -> dict[str, Any]:
     """The Activity type of an item FOLLOWS ITS MEDIA where it has one — the
     spec's own item example types a video item `activities/video`. Anything
-    outside the published media dictionary stays `item`."""
-    return activity(_iri("item", item_id), MEDIA_ACTIVITY_TYPES.get(
-        str(media_format or "").lower(), "item"
-    ), name_he)
+    outside the published media dictionary stays `item`.
+
+    `content_type` is consulted second because Kata types clip screens
+    `mediaFormat: "interactive-content"` and names the real kind there instead —
+    which is how a video reached the ministry typed `item`.
+    """
+    resolved = resolve_media_format(media_format, content_type)
+    return activity(
+        _iri("item", item_id),
+        MEDIA_ACTIVITY_TYPES.get(resolved or "", "item"),
+        name_he,
+    )
 
 
 # ── Catalog → 720 metadata extensions (short keys; `extensions()` adds the IRI) ─
@@ -152,12 +168,23 @@ def item_metadata(
         "itemId": item_id,
         "itemTitle": item.get("title"),
         "contentType": item.get("content_type"),
-        "mediaFormat": item.get("media_format"),
+        # Only the ministry's three kinds. Kata's `interactive-content` is a
+        # contentType and was rejected as a mediaFormat; it is already reported
+        # above, under the field that means it.
+        "mediaFormat": resolve_media_format(
+            item.get("media_format"), item.get("content_type")
+        ),
         "componentId": (component or {}).get("id"),
-        "informationToBot": ((component or {}).get("information_by_item") or {}).get(item_id),
+        # Per-screen bot notes when the vendor wrote them, else the component's
+        # own aggregate — still the vendor's text about this exact component,
+        # which is what the extension is for. Nothing is composed here.
+        "informationToBot": ((component or {}).get("information_by_item") or {}).get(item_id)
+        or (component or {}).get("information_to_bot")
+        or None,
         "questions": _question_digest(
             ((component or {}).get("questions_by_item") or {}).get(item_id)
-        ),
+        )
+        or [],
     })
 
 
@@ -169,6 +196,9 @@ _ALWAYS_REPORTED: tuple[str, ...] = (
     "prerequisiteLearningObjective",
     "recommendedAfterFail",
     "skills",
+    # A video legitimately asks nothing; `[]` says so, an absent key reads as
+    # "not implemented" — which is what the review wrote against it.
+    "questions",
 )
 
 
@@ -262,7 +292,10 @@ def build(
             grouping.append(entry)
     if item_id and level == "item":
         self_activity = item_activity(
-            item_id, (item or {}).get("title"), (item or {}).get("media_format")
+            item_id,
+            (item or {}).get("title"),
+            (item or {}).get("media_format"),
+            (item or {}).get("content_type"),
         )
 
     parent: list[dict[str, Any]] = []

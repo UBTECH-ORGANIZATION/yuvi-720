@@ -41,6 +41,19 @@ export interface MentoringConversation {
   reward?: RewardGrant
 }
 
+/** One step of the ministry's ten-step mentoring ladder. */
+export interface MentoringPhase {
+  sorting: number
+  mentoringPhase: string
+  phaseName: string
+}
+
+/** The ladder, in order. Fetched rather than hard-coded so the form and the
+ *  reported `mentoringPhase` can never drift apart. */
+export function listMentoringPhases() {
+  return apiGet<{ phases: MentoringPhase[] }>('/api/mentoring/phases')
+}
+
 export function createMentoring(conv: MentoringConversation) {
   return apiPost<MentoringConversation>('/api/mentoring', conv)
 }

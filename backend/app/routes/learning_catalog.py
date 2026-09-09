@@ -160,6 +160,45 @@ async def record_path_choice(
     return {"ok": True}
 
 
+class SkipComponentRequest(BaseModel):
+    component_id: str = Field(min_length=1, max_length=160)
+
+
+@router.post("/skip-component")
+async def skip_component(
+    data: SkipComponentRequest, learner_id: str = Depends(require_learner),
+) -> dict:
+    """The learner chose to move past this component without finishing it.
+
+    720 §דילוג defines a `skipped` on a component, and it only exists as an
+    event because the platform gives the learner the choice — that is the
+    פעלנות side of the same principle `path-choice` serves. The decision is
+    stored as our own evidence (so the path engine and the teacher view can see
+    it) and reported to the ministry LRS as `skipped` on the component.
+    """
+    from app.services import kata_catalog
+    from app.services.events import record_path_choice as store
+
+    await kata_catalog.ensure_loaded()
+    component = kata_catalog.get_component(data.component_id) or {}
+    if not component:
+        raise HTTPException(status_code=404, detail="unknown_component")
+    await store(learner_id, data.component_id, component.get("unit_id"), "skip")
+    try:
+        from app.auth.repository import get_user_by_id
+        from app.services.lrs import reporter as lrs_reporter
+
+        user = await get_user_by_id(learner_id)
+        session_id = (user or {}).get("current_moe_session_id")
+        if session_id:
+            await lrs_reporter.report_component_skipped(
+                learner_id, session_id, data.component_id
+            )
+    except Exception as exc:  # reporting never breaks the learner's flow
+        print(f"⚠️ component skip report skipped: {type(exc).__name__}")
+    return {"ok": True, "skipped": data.component_id}
+
+
 @router.get("/units/{unit_id}/path")
 async def explain_unit_path(
     unit_id: str,

@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named, apply_brain_updates, get_brain
 from app.services import goal_progress, rewards
+from app.services.lrs.statements import MENTORING_PHASES, normalize_mentoring_phase
 from learner_state import normalize_learner_id  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "mentoring.json"
@@ -207,7 +208,7 @@ async def _load_conversation(lid: str, conversation_id: str) -> Optional[dict[st
 # legacy record missing `notes` is never overwritten with null.
 _PERSISTED_FIELDS = (
     "goals", "deleted", "deleted_at",
-    "notes", "teacher_only_note", "meeting_stage",
+    "notes", "teacher_only_note", "meeting_stage", "mentoring_phase",
     "visibility", "teacher_id", "source",
 )
 
@@ -313,6 +314,14 @@ async def create_conversation(data: dict[str, Any]) -> dict[str, Any]:
         "teacher_name": data.get("teacher_name", ""),
         "learner_name": data.get("learner_name", ""),
         "meeting_stage": data.get("meeting_stage", ""),
+        # WHERE ON THE LADDER this talk was, in the ministry's own closed list
+        # (`phase1`…`phase10`). Deliberately not `meeting_stage`: on the
+        # learner's own wizard that field holds how they FELT, and a feeling is
+        # not a mentoring phase. Anything off the list normalizes to None and is
+        # simply not reported.
+        "mentoring_phase": normalize_mentoring_phase(
+            data.get("mentoring_phase") or data.get("meeting_stage")
+        ),
         # Bounded to what the composer's own counter promises (#503) — a
         # body this size is a pasted document, not a talk summary.
         "notes": str(data.get("notes", ""))[:4000],

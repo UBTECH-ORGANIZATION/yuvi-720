@@ -202,6 +202,19 @@ export function reportPathChoice(componentId: string | null, choice: 'more_pract
   }).catch(() => null)
 }
 
+/** The learner choosing to move past a component without finishing it.
+ *
+ *  The other half of פעלנות: the route is a suggestion, and a learner who
+ *  already knows this step may say so. Reported to the ministry LRS as
+ *  `skipped` on the component, and kept as our own evidence so the next
+ *  re-plan does not simply offer the same step again. */
+export function skipComponent(componentId: string | null) {
+  if (!componentId) return Promise.resolve(null)
+  return apiPost<{ ok: boolean }>('/api/learning/skip-component', {
+    component_id: componentId,
+  }).catch(() => null)
+}
+
 export function getLearningTiming(session: LearningSessionDTO, signal?: AbortSignal) {
   return apiGet<LearningTimingDTO>(session.timing_url, {
     signal,

@@ -1123,6 +1123,7 @@ async def document_mentoring(
             notes=str(data.get("notes") or ""),
             goals=data.get("goals") or [],
             meeting_stage=str(data.get("meeting_stage") or ""),
+            mentoring_phase=str(data.get("mentoring_phase") or ""),
             teacher_only_note=str(data.get("teacher_only_note") or ""),
             visibility=str(data.get("visibility") or "shared"),
             draft_id=str(data.get("draft_id") or ""),

@@ -140,6 +140,31 @@
    opposite of the arrow glyph it replaced, so the flip is the other way round. */
 .learning-lesson-prev .sp-icon { flex: 0 0 auto; opacity: .75; }
 html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
+
+/* "I already know this" borrows the quiet-link shape of its neighbour — a skip
+   is a real choice, not a call to action, and it must never out-shout the
+   lesson it sits above. Its chevron points FORWARD, so it is the mirror of the
+   previous-activity one in both directions. */
+.learning-lesson-skip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+  min-block-size: 34px;
+  padding-inline: var(--sp-2) 0;
+  border: 0;
+  border-inline-start: 1px solid var(--sp-border);
+  background: none;
+  color: var(--sp-ink-400);
+  font: var(--sp-fw-semibold) var(--sp-fs-xs, 12.5px)/1 var(--sp-font);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.learning-lesson-skip:hover { color: var(--sp-primary-700); }
+.learning-lesson-skip .sp-icon { flex: 0 0 auto; opacity: .75; }
+html[dir='rtl'] .learning-lesson-skip .sp-icon { transform: scaleX(-1); }
+.learning-lesson-skip:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
 .learning-lesson-back:focus-visible,
 .learning-lesson-prev:focus-visible,
 .learning-secondary-button:focus-visible,

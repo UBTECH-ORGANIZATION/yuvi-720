@@ -37,6 +37,37 @@ _LEGACY_CONTENT_VENDOR_BASE = f"{MOE}/content-vendor"
 # worse failure than a generic-but-valid one.
 MEDIA_ACTIVITY_TYPES = {"video": "video", "audio": "audio", "animation": "animation"}
 
+# Vendor spellings for the SAME three kinds. Kata types a clip screen
+# `mediaFormat: "interactive-content"` and puts the real kind in `contentType`,
+# which is why the ministry saw `object.type = item` on a video and a
+# `mediaFormat` value that is not in their list at all. These are the vendor's
+# own words for the ministry's three kinds — a translation, not a guess.
+# Anything not listed here resolves to nothing and is simply not reported.
+_MEDIA_FORMAT_ALIASES = {
+    "video": "video", "movie": "video", "clip": "video", "video-clip": "video",
+    "youtube": "video", "mp4": "video", "סרטון": "video", "וידאו": "video",
+    "audio": "audio", "sound": "audio", "podcast": "audio", "mp3": "audio",
+    "שמע": "audio",
+    "animation": "animation", "animated": "animation", "gif": "animation",
+    "אנימציה": "animation",
+}
+
+
+def resolve_media_format(*candidates: Optional[str]) -> Optional[str]:
+    """The 720 `mediaFormat` for a screen, from whatever the catalog spelled it.
+
+    Candidates are tried in order (mediaFormat first, then contentType) and the
+    first one that maps onto the ministry's closed list wins. A screen that is
+    not one of the three kinds returns None — `interactive-content` is a
+    contentType, and reporting it as a mediaFormat is what the review rejected.
+    """
+    for candidate in candidates:
+        key = str(candidate or "").strip().lower()
+        resolved = _MEDIA_FORMAT_ALIASES.get(key)
+        if resolved:
+            return resolved
+    return None
+
 
 def verb(slug: str) -> dict[str, Any]:
     return {"id": f"{VERB}/{slug}"}
