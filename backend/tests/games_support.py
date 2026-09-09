@@ -103,8 +103,8 @@ BLUEPRINT_TEXT = {
 def blueprint_docs() -> list[dict[str, Any]]:
     """Two usable blueprints for COMP, shaped like `blueprints._doc` output."""
     return [
-        {"_id": f"bp:{COMP}|fp|v1.1|{i}", "component_id": COMP, "fingerprint": "fp", "index": i,
-         "skill": bp["skill"], "topic": bp["topic"], "level": bp["level"], "dsl_version": 1, "prompt_version": 1,
+        {"_id": f"bp:{COMP}|fp|v1.2|{i}", "component_id": COMP, "fingerprint": "fp", "index": i,
+         "skill": bp["skill"], "topic": bp["topic"], "level": bp["level"], "dsl_version": 1, "prompt_version": 2,
          "blueprint": bp, "status": "ok", "errors": [], "judge": {"answerable": True, "agrees": True}}
         for i, bp in enumerate((BLUEPRINT, BLUEPRINT_TEXT))
     ]

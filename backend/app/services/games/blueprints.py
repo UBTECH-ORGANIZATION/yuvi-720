@@ -38,7 +38,7 @@ from app.services.llm import call_llm
 log = logging.getLogger(__name__)
 
 COLLECTION = "game_question_blueprints"
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 STATUS_OK = "ok"
 STATUS_REVIEW = "needs_review"
 STATUS_UNUSABLE = "unusable"
@@ -81,10 +81,11 @@ Rules:
  1. Every instance must be answerable from stem + figure alone. When the skill is about something visual (positions, shapes, graphs, a sentence, a table), DRAW it in the figure.
  2. Prefer parametric randomness (numbers, positions, words from a bank) over variants. Use variants only for facts; never invent facts, dates or definitions that are not in the profile.
  3. Ranges must keep every figure position inside its frame. Integers unless the level clearly uses decimals.
- 4. Stems ≤ 160 characters, in the students' language, friendly, no answer leak in the stem. Never a yes/no self-check ("can you now…").
+ 4. PHRASING: every stem is ONE short, plain question with ONE answer — at most one "?", no fill-in templates ("x=?", "___", lists of items to complete), no "mark two", no "in the picture" unless there is a figure. A 12-year-old reads it once and knows exactly what to answer. Every number the answer needs is in the stem or drawn in the figure. Never a yes/no self-check ("can you now…").
+ 5. Stems ≤ 140 characters, in the students' language, friendly, no answer leak in the stem.
 Reply with JSON only: {"blueprints": [ … ]}"""
 
-_JUDGE = """You check whether a quiz question is answerable and unambiguous from what a student sees. You get the question text, a description of the figure shown (if any) and the options (if any). First solve it yourself as a student would; then you are told the expected answer. Reply JSON only: {"answer": "<your answer>", "answerable": true|false, "reason": "<one short sentence>"}. "answerable" is false when the question refers to things that are not shown, has several defensible answers, or the expected answer contradicts what is shown."""
+_JUDGE = """You check whether a quiz question is answerable, unambiguous and cleanly phrased from what a student sees. You get the question text, a description of the figure shown (if any) and the options (if any). First solve it yourself as a student would; then you are told the expected answer. Reply JSON only: {"answer": "<your answer>", "answerable": true|false, "clean": true|false, "reason": "<one short sentence>"}. "answerable" is false when the question refers to things that are not shown, needs numbers that are not given, has several defensible answers, or the expected answer contradicts what is shown. "clean" is false when the wording is not ONE plain question with ONE answer (several blanks, "x=?" templates, lists to complete, "mark two", clumsy or ambiguous phrasing a 12-year-old would have to re-read)."""
 
 
 # ── ids and rows ─────────────────────────────────────────────────────────────
@@ -227,8 +228,9 @@ async def _judge(blueprint: dict[str, Any], *, actor_id: str) -> dict[str, Any]:
         data = {}
     answer = str((data or {}).get("answer") or "").strip()
     answerable = bool((data or {}).get("answerable"))
+    clean = (data or {}).get("clean", True) is not False
     agrees = _same(answer, inst["accept"])
-    return {"answer": answer, "answerable": answerable, "agrees": agrees,
+    return {"answer": answer, "answerable": answerable, "clean": clean, "agrees": agrees,
             "reason": str((data or {}).get("reason") or "")[:300]}
 
 
@@ -241,7 +243,7 @@ def _doc(component_id: str, fingerprint: str, index: int, blueprint: dict[str, A
          errors: list[str], judge: Optional[dict[str, Any]]) -> dict[str, Any]:
     if errors:
         status = STATUS_UNUSABLE
-    elif judge is None or (judge.get("answerable") and judge.get("agrees")):
+    elif judge is None or (judge.get("answerable") and judge.get("agrees") and judge.get("clean", True)):
         status = STATUS_OK
     else:
         status = STATUS_REVIEW

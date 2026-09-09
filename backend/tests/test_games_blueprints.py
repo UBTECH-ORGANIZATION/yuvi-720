@@ -80,6 +80,27 @@ class DslTests(unittest.TestCase):
         self.assertTrue(any("not a target" in e for e in dsl.validate_blueprint(bad_target)))
 
 
+class PhrasingTests(unittest.TestCase):
+    def test_messy_stems_are_rejected_by_code(self):
+        cases = {
+            "השלימו לפי נטו + טרה = ברוטו: צנצנת ברוטו=?, בקבוק טרה=?, מזוודה נטו=?": "fill-in",
+            "מהי טרה? סמנו את שני הפריטים שהם טרה בלבד.": "several",
+            "מה רואים בתמונה?": "picture",
+            "מהו הנטו? ומהו הברוטו?": "more than one question",
+        }
+        for stem, expected in cases.items():
+            problems = dsl.stem_problems(stem, has_figure=False)
+            self.assertTrue(any(expected in p for p in problems), (stem, problems))
+        self.assertEqual(dsl.stem_problems("מהם שיעורי הנקודה A?", has_figure=True), [])
+        self.assertEqual(dsl.stem_problems("בתמונה רואים צנצנת. מהי הטרה?", has_figure=True), [])
+
+    def test_numeric_text_answers_need_numbers_on_screen(self):
+        guess = {"interaction": "text", "params": {"a": {"int": [1, 9]}}, "stem": "מהו הברוטו?", "answer": "{a}", "figure": None}
+        self.assertTrue(any("no numbers" in e for e in dsl.validate_blueprint(guess)))
+        shown = dict(guess, stem="הטרה {a} ק\"ג והנטו 2 ק\"ג. מהו הברוטו?", answer="{a+2}")
+        self.assertEqual(dsl.validate_blueprint(shown), [])
+
+
 class FigureTests(unittest.TestCase):
     def test_graphic_renders_svg_with_targets_and_alt(self):
         inst = dsl.instantiate(COORDS, "s1")

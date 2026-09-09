@@ -39,6 +39,7 @@ SETTLE_TIMEOUT_MS = 4000          # wait after load for first-tick errors
 INTERACTION_SETTLE_MS = 3500      # wait after clicking Start
 PAGE_LOAD_TIMEOUT_MS = 15000
 CONTRACT_TIMEOUT_S = 20.0         # wait for learn.asked >= 1
+FIGURE_CHECK_GRACE_MS = 3000      # the bridge's figure check fires 2.5 s after next()
 POSTER_STEP_MS = 1500             # thumbnail: sample play every 1.5 s while no question is open
 POSTER_WINDOW_MS = 9000           # …for this long after Start (the contract asks after ≥ 8 s of play)
 CONTRACT_POLL_MS = 250
@@ -409,7 +410,13 @@ async def validate_html(
                             break
 
                     # A question that came with a figure the kid never saw is
-                    # unanswerable: the bridge counts those after each next().
+                    # unanswerable: the bridge counts those 2.5 s after each
+                    # next(), so give that timer time to fire before reading.
+                    await page.wait_for_timeout(FIGURE_CHECK_GRACE_MS)
+                    try:
+                        yuvi_state = await page.evaluate(_YUVI_STATE_JS) or yuvi_state
+                    except Exception:  # noqa: BLE001
+                        pass
                     missing = int(((yuvi_state or {}).get("learn") or {}).get("figure_missing") or 0)
                     if missing:
                         errors.append({

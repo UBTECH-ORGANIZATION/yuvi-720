@@ -338,6 +338,36 @@ def instantiate(blueprint: dict[str, Any], seed: Any, theme_vocab: Optional[dict
     raise DslError(str(last_error) if last_error else "constraints never satisfied")
 
 
+# ── phrasing ─────────────────────────────────────────────────────────────────
+
+_MULTI_ASK = re.compile(r"(שני|שתי|שלוש|two|three|both|כל ה)\s*\S*\s*(פריטים|תשובות|items|answers)", re.IGNORECASE)
+_LIST_ASK = re.compile(r"(סמנו|בחרו|mark|select|choose)\s+(את\s+)?(שני|שתי|כל|two|all|both)", re.IGNORECASE)
+
+
+def stem_problems(stem: str, *, has_figure: bool) -> list[str]:
+    """What makes a stem hard to read or impossible to answer as ONE
+    question with ONE answer. Plain rules, no model."""
+    text = str(stem or "")
+    problems: list[str] = []
+    if text.count("?") > 1:
+        problems.append("stem asks more than one question (several '?')")
+    if re.search(r"=\s*\?|\?\s*=|_{2,}|\.{3,}\s*=", text):
+        problems.append("stem is a fill-in template ('x=?', '___'); ask one plain question instead")
+    if text.count(":") >= 2 or text.count(",") >= 4:
+        problems.append("stem lists several items to complete; ask about ONE value")
+    if _MULTI_ASK.search(text) or _LIST_ASK.search(text):
+        problems.append("stem asks for several answers; a question has exactly one")
+    if not has_figure and re.search(r"בתמונה|באיור|בציור|בתרשים|בגרף|in the (picture|figure|diagram|graph)|shown", text, re.IGNORECASE):
+        problems.append("stem refers to a picture but the blueprint has no figure")
+    if len(text) > MAX_STEM_CHARS:
+        problems.append(f"stem too long ({len(text)} chars)")
+    return problems
+
+
+def _needs_numbers(answer: str) -> bool:
+    return bool(re.fullmatch(r"[\s\d.,()\-+×x*/=%]+", answer or "")) and any(ch.isdigit() for ch in answer or "")
+
+
 # ── validation ───────────────────────────────────────────────────────────────
 
 def validate_blueprint(blueprint: dict[str, Any], *, seeds: int = 50) -> list[str]:
@@ -376,8 +406,15 @@ def validate_blueprint(blueprint: dict[str, Any], *, seeds: int = 50) -> list[st
         return errors
 
     for inst in instances[:seeds]:
-        if len(inst["text"]) > MAX_STEM_CHARS:
-            errors.append(f"stem too long ({len(inst['text'])} chars)")
+        problems = stem_problems(inst["text"], has_figure=bool(inst["figure"]))
+        if problems:
+            errors.extend(problems)
+            break
+        # A numeric answer must be computable from what is shown: digits in
+        # the stem or in the figure, or the question is a guess.
+        if inst["interaction"] == "text" and _needs_numbers(inst["answer"]) \
+                and not any(ch.isdigit() for ch in inst["text"] + (inst["alt"] or "")):
+            errors.append("numeric answer but no numbers in the stem or the figure")
             break
     if interaction == "hotspot":
         for inst in instances:
