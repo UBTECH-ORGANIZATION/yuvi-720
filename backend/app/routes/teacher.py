@@ -41,7 +41,8 @@ async def agent_insights(data: dict, session=Depends(require_teacher_session)):
             # MoE 720: teacher viewed one student → dashboard/student-view.
             if session.get("sid"):
                 await lrs_reporter.report_dashboard_viewed(
-                    teacher_id, session["sid"], "student-view", None
+                    teacher_id, session["sid"], "student-view", None,
+                    subject_learner_id=normalize_learner_id(data["learner_id"]),
                 )
             return JSONResponse(content=view)
     except AccessDenied as exc:

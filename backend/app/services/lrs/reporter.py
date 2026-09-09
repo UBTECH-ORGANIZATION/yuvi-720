@@ -125,9 +125,22 @@ async def report_dashboard_viewed(
     learner_id: str,
     session_id: str,
     dashboard_type: str,
-    dashboard_id: str,
+    dashboard_id: Optional[str] = None,
     duration_seconds: Optional[float] = None,
+    *,
+    subject_learner_id: Optional[str] = None,
 ) -> None:
+    """`learner_id` is the *viewer* (the actor); `subject_learner_id` is whose
+    dashboard is on screen.
+
+    The spec wants `dashboardId` to name the thing being looked at, so a teacher
+    opening one student's board must stamp that student's exidentifier — not
+    their own. Resolving it here keeps the exidentifier inside `lrs/`: callers
+    pass a plain learner id and never touch PII.
+    """
+    if dashboard_id is None and subject_learner_id and subject_learner_id != learner_id:
+        subject = await identity_mod.resolve_reporting_identity(subject_learner_id)
+        dashboard_id = subject["exidentifier"] if subject else None
     await _report(
         statements.dashboard_viewed,
         learner_id,
