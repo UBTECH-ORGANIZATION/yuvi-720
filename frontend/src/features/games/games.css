@@ -239,8 +239,6 @@
 @media (prefers-reduced-motion: reduce) {
   .game-player__bot-face, .game-player__bot-ring, .game-player__bot-ring::after, .game-player__bot-orbit { animation: none; }
 }
-  50% { transform: scale(1.08); filter: brightness(1.15); }
-}
 
 
 /* The HUD floats over the stage; the back button is the way out. */
