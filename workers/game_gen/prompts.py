@@ -72,14 +72,16 @@ LEARNING_CONTRACT = """
 LEARNING CONTRACT (non-negotiable — a game that breaks it is rejected)
 1. The game is a LEARNING game about the component described in LEARNING_CONTEXT. Fun mechanics are welcome, but progress MUST be gated by answering the component's questions.
 2. Questions come ONLY from the `YuviLearn` bridge (injected for you, always present):
-     const q = await YuviLearn.next();      // {id, text, answers:[...], index, total} or null when all were asked
+     const q = await YuviLearn.next();      // {id, text, type:"choice"|"text", answers:[...], index, total} or null when all were asked
      const r = await YuviLearn.answer(q.id, chosenAnswerText);   // {correct, correctAnswer?, feedback?}
      const p = await YuviLearn.progress();  // {asked, answered, correct, total}
      await YuviLearn.done({score});         // when the run ends
    Never invent questions, never hard-code answers, never grade yourself — `answer()` decides.
 3. Ask the FIRST question within 10 seconds of pressing Start — open with a short warm-up gate (e.g. "answer to power up your ship", "unlock the first door") BEFORE the first wave/level, then keep a rhythm: one question every 20-40 seconds of play (wave end, checkpoint, boss phase), until `next()` returns null; then a victory/summary screen with `progress()`.
 4. A correct answer rewards (power-up, heal, speed, points); a wrong answer costs something small AND shows `correctAnswer` with one friendly sentence, then play continues. Never punish harshly; never lock the kid out.
-5. Render the question in a DOM overlay: the question text + one button per answer (shuffle order each time). Pause the action while the overlay is open. Buttons ≥ 44px tall, big readable font.
+5. Render the question in a DOM overlay and pause the action while it is open. Two kinds, by `q.type`:
+     - `choice`: the question text + one button per entry of `q.answers` (shuffle the order each time; there are always several). Buttons ≥ 44px tall, big readable font.
+     - `text`: `q.answers` is empty — show a text input (direction ltr for numbers and coordinates), a submit button, and Enter to submit; pass the typed string to `answer()`. Expected forms include a number, a pair like (4,3), or a short word.
 6. Use `YuviLearn.total` to size the game (waves/levels ≈ number of questions). If `total` is 0, show a friendly "no questions yet" message instead of a game.
 7. THEME THE MECHANICS ON THE TOPIC, not just the questions: the objects, enemies, pickups, HUD labels, level names and win condition come from LEARNING_CONTEXT (for "mass": crates with kg labels, a balance scale, gross/net/tare as game concepts; for "coordinates": the play field IS a grid with axes and targets at (x, y)). A kid should absorb the vocabulary just by playing between questions. Reviewers reject games whose core loop could belong to any topic.
 8. Content stays age-appropriate: cartoon targets, no blood, no real-world weapons, no scary imagery. Positive tone.

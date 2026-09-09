@@ -125,7 +125,7 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertTrue(objective["visited"])
         components = objective["components"]
         self.assertEqual([row["id"] for row in components], [COMP])
-        self.assertEqual(components[0]["question_count"], 2, "the open question has no options")
+        self.assertEqual(components[0]["question_count"], 3, "the keyed open question is typed, not dropped")
         self.assertTrue(components[0]["visited"])
         self.assertNotIn("questions_by_item", json.dumps(body))
 
@@ -185,7 +185,7 @@ class GamesRoutesTest(unittest.TestCase):
         # The open question was dropped from the pack, as in the worker.
         learn = html.split("window.__YUVI_LEARN_DATA = ")[1].split(";</script>")[0]
         data = json.loads(learn)
-        self.assertEqual([q["id"] for q in data["questions"]], ["item-1#q1", "item-2#q1"])
+        self.assertEqual([q["id"] for q in data["questions"]], ["item-1#q1", "item-2#q1", "item-2#q2"])
         self.assertNotIn("correct", json.dumps(data))
 
     def test_html_version_parameter_selects_a_version(self):

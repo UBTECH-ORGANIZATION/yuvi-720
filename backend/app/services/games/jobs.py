@@ -38,7 +38,7 @@ import os
 from typing import Any, Optional
 
 from app.services import kata_catalog
-from app.services.games import store
+from app.services.games import distractors, store
 
 log = logging.getLogger(__name__)
 
@@ -97,22 +97,25 @@ async def build_context(
         objective_id or component.get("objective_id") or (unit or {}).get("objective_id") or ""
     )
     return {
-        "component": dict(component),
+        "component": await distractors.enrich_component(component),
         "unit": _unit_without_components(unit),
         "objective": dict(objective) if objective else None,
     }
 
 
 def gradeable_question_count(component: dict[str, Any]) -> int:
-    """How many questions the context pack will keep: text + options + a key.
-    The same rule as ``context_pack.build_context_pack``, so the picker's count
-    is the count the game will be built on."""
+    """How many questions the game will get: text + a key, any type but
+    matching (drag pairs cannot be buttons). Choice questions that ship with
+    the key as their only option get distractors at build time
+    (``distractors.enrich_component``); typed answers (fill-in, numeric) need
+    no options at all. Mirrors ``context_pack.build_context_pack``."""
     total = 0
     for rows in (component.get("questions_by_item") or {}).values():
         for row in rows or []:
             if (isinstance(row, dict) and row.get("questionId")
                     and str(row.get("questionText") or "").strip()
-                    and row.get("answers") and row.get("correctAnswers")):
+                    and row.get("correctAnswers")
+                    and str(row.get("questionType") or "") not in distractors.DROPPED_TYPES):
                 total += 1
     return total
 

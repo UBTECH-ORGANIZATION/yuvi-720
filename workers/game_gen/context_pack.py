@@ -90,6 +90,25 @@ def _clean(text: Any, limit: int) -> str:
     return _WS.sub(" ", str(text or "")).strip()[:limit]
 
 
+#: What a game can render: `choice` (buttons) or `text` (an input box).
+DROPPED_TYPES = ("matching",)
+
+
+def question_kind(row: dict[str, Any], answers: list[str], correct: list[str]) -> str | None:
+    """`choice` needs at least one wrong option among the answers (a lone
+    correct option is a give-away, and a dict-shaped answer is a drag item
+    in disguise); anything else that has a key is typed by the kid."""
+    qtype = str(row.get("questionType") or "choice")
+    if qtype in DROPPED_TYPES or not correct:
+        return None
+    if any(a.startswith("{") for a in answers + correct):
+        return None
+    if qtype in ("choice", "true-false"):
+        wrong = [a for a in answers if a not in correct]
+        return "choice" if wrong else None
+    return "text"
+
+
 def _iter_question_rows(component: dict[str, Any]) -> Iterable[tuple[str, dict[str, Any]]]:
     by_item = component.get("questions_by_item") or {}
     for item_id, rows in by_item.items():
@@ -120,7 +139,8 @@ def build_context_pack(
         text = _clean(row.get("questionText"), MAX_QUESTION_CHARS)
         answers = [_clean(a, MAX_ANSWER_CHARS) for a in (row.get("answers") or []) if _clean(a, MAX_ANSWER_CHARS)]
         correct = [_clean(a, MAX_ANSWER_CHARS) for a in (row.get("correctAnswers") or []) if _clean(a, MAX_ANSWER_CHARS)]
-        if not text or not answers or not correct:
+        qtype = question_kind(row, answers, correct)
+        if not text or not correct or qtype is None:
             continue
         # Kata question ids repeat across sub-content items ("q1" on every
         # screen), so the pack id is item-scoped; grading splits it on "#".
@@ -128,9 +148,9 @@ def build_context_pack(
         questions.append(Question(
             id=qid,
             item_id=item_id,
-            type=str(row.get("questionType") or "choice"),
+            type=qtype,
             text=text,
-            answers=answers,
+            answers=answers if qtype == "choice" else [],
         ))
         key.correct[qid] = correct
         if len(questions) >= max_questions:
