@@ -384,3 +384,11 @@ def test_edit_streams_the_summary_and_patching_progress_before_the_first_operati
     assert "patching" in kinds  # progress even before the summary line is complete
     patched = [extra for event, extra in fakes.notify.extras if event == "code" and extra.get("changed")]
     assert patched and patched[-1]["chunk"] == "<html>\nB\nc\n</html>" and patched[-1]["changed"] == [(2, 2)]
+
+
+def test_a_running_job_with_a_fresh_row_is_a_live_duplicate():
+    now = 1_000_000.0
+    assert worker._job_is_live({"status": "running", "updated_at": now - 10}, now)
+    assert not worker._job_is_live({"status": "running", "updated_at": now - 600}, now), "a stale row is a dead run"
+    assert not worker._job_is_live({"status": "queued", "updated_at": now - 1}, now)
+    assert not worker._job_is_live({"status": "running"}, now)

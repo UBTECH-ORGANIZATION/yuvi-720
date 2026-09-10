@@ -645,6 +645,10 @@ async def run_mongo_loop(once: bool = False) -> int:
 # OperationTimeoutError; that is the idle case, not a failure.
 
 SESSION_IDLE_WAIT_S = 30
+SESSION_RENEW_EVERY_S = 20
+#: A running job whose snapshot moved within this window is alive on some
+#: replica: a redelivery of its message is a duplicate, not a retry.
+LIVE_JOB_FRESH_S = 90.0
 
 
 async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
@@ -680,10 +684,28 @@ async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
                 await asyncio.sleep(5)
 
 
+def _job_is_live(job: dict[str, Any], now: Optional[float] = None) -> bool:
+    """True when the job is running and its row moved recently: another
+    replica (or an earlier delivery in this one) is building it right now.
+    A lost session lock re-delivers the message; running the job twice
+    streamed two games into one page (seen 2026-09-10)."""
+    if job.get("status") != "running":
+        return False
+    seen = _parse_ts(job.get("updated_at"))
+    if seen is None:
+        return False
+    return (now if now is not None else time.time()) - seen < LIVE_JOB_FRESH_S
+
+
 async def _handle_servicebus_message(receiver: Any, msg: Any, store: Any) -> None:  # pragma: no cover
     body = json.loads(str(msg))
     job = await store.get_job(str(body.get("job_id") or ""))
     if not job or job.get("status") in ("done",):
+        await receiver.complete_message(msg)
+        return
+    if _job_is_live(job):
+        log.warning("job %s: redelivered while a run is live (delivery %s); skipping the duplicate",
+                    job.get("_id"), getattr(msg, "delivery_count", "?"))
         await receiver.complete_message(msg)
         return
     renew = asyncio.create_task(_renew_session(receiver))
@@ -698,13 +720,19 @@ async def _handle_servicebus_message(receiver: Any, msg: Any, store: Any) -> Non
 
 
 async def _renew_session(receiver: Any) -> None:  # pragma: no cover
+    """Keeps the session lock while the build runs. A transient AMQP timeout
+    (the bus link drops while Chromium saturates the CPU) is retried on the
+    next tick; giving up on the first one let the lock expire and the job be
+    delivered again mid-build. Only a lock already lost ends the renewer."""
     while True:
-        await asyncio.sleep(30)
+        await asyncio.sleep(SESSION_RENEW_EVERY_S)
         try:
             await receiver.session.renew_lock()
         except Exception as exc:
-            log.warning("session lock renew failed: %s", exc)
-            return
+            name = type(exc).__name__
+            log.warning("session lock renew failed (%s): %s", name, exc)
+            if "LockLost" in name or "lock" in str(exc).lower() and "lost" in str(exc).lower():
+                return
 
 
 async def _with_realtime_bridge(coro: Any) -> Any:

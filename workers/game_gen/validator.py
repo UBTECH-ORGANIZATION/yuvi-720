@@ -373,7 +373,10 @@ async def _shared_browser():  # noqa: ANN202
         from playwright.async_api import async_playwright
 
         pw = await async_playwright().start()
-        browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS)
+        # CHROMIUM_EXECUTABLE (the image sets a `nice` wrapper) keeps a software
+        # WebGL render from starving the worker's own event loop and bus link.
+        executable = (os.environ.get("CHROMIUM_EXECUTABLE") or "").strip() or None
+        browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS, executable_path=executable)
         _shared.update({"pw": pw, "browser": browser, "loop": loop})
         return browser
 

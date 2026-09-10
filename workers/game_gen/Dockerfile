@@ -21,7 +21,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY workers/game_gen/requirements.txt workers/game_gen/requirements-backend.txt workers/game_gen/
 RUN pip install -r workers/game_gen/requirements.txt -r workers/game_gen/requirements-backend.txt \
-    && python -m playwright install --with-deps chromium
+    && python -m playwright install --with-deps chromium \
+    # Chromium runs at a lower CPU priority than the worker: a 3D game rendered in
+    # software must not starve the Service Bus keepalives and lock renewals.
+    && bin="$(ls -d /ms-playwright/chromium_headless_shell-*/chrome-linux/headless_shell 2>/dev/null | head -1)" \
+    && [ -n "$bin" ] || bin="$(ls -d /ms-playwright/chromium-*/chrome-linux/chrome | head -1)" \
+    && printf '#!/bin/sh\nexec nice -n 10 %s "$@"\n' "$bin" > /usr/local/bin/chromium-nice \
+    && chmod +x /usr/local/bin/chromium-nice
+ENV CHROMIUM_EXECUTABLE=/usr/local/bin/chromium-nice
 
 # backend/app plus the root modules it imports (learner_state & co.); no server.py.
 COPY backend/app backend/app
