@@ -805,6 +805,7 @@
 .game-chat__log-foot { border-top: 1px solid rgba(124, 108, 255, .12); padding-top: 8px; }
 
 .game-chat__log-steps {
+  margin-block-start: 10px;
   margin: 0;
   padding: 0 13px 9px;
   list-style: none;
@@ -1069,6 +1070,7 @@
   border: 1px solid rgba(124, 108, 255, .10);
 }
 .game-chat__log-lines li:first-child { border-color: rgba(124, 108, 255, .28); background: color-mix(in srgb, #7c6cff 8%, var(--sp-surface)); }
+.game-chat__log-lines li > span:last-child { min-inline-size: 0; max-block-size: 9.8em; overflow: auto; white-space: pre-wrap; }
 .game-chat__log-lines .game-chat__log-ico { flex: none; font-size: 14px; line-height: 1.4; }
 .game-chat__log-lines li:last-child { animation: game-player-rise .35s ease both; }
 

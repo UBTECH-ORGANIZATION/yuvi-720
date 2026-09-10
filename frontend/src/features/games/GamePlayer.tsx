@@ -221,8 +221,18 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   // The build log in the chat: closed by default, opened by its own button.
   const [logOpen, setLogOpen] = useState(false)
   const wasBusyRef = useRef(false)
+  const logRef = useRef<HTMLDivElement>(null)
   // What Yuvi did so far, one line per phase, for the collapsible log in the chat.
   const [buildLog, setBuildLog] = useState<{ phase: BuildPhase; at: number; times: number }[]>([])
+  // An opened log sits at the bottom of the thread: bring it into view, and
+  // keep its tail in view while it grows, or the click looks like nothing.
+  useEffect(() => {
+    if (!logOpen) return
+    const panel = logRef.current
+    if (!panel) return
+    const raf = requestAnimationFrame(() => panel.scrollIntoView({ block: 'end', behavior: 'smooth' }))
+    return () => cancelAnimationFrame(raf)
+  }, [logOpen, narration.length, buildLog.length])
   const [now, setNow] = useState(() => Date.now())
   const [isFull, setIsFull] = useState(false)
 
@@ -755,11 +765,11 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         </header>
 
         <div className="game-chat__thread" role="log" aria-live="polite" aria-relevant="additions text">
-          {game.description && (
+          {!busy && game.description && (
             <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--brief" dir="auto">{game.description}</div>
           )}
           {busy || buildLog.length > 0 ? (
-            <div className={`game-chat__msg game-chat__msg--yuvi game-chat__log${logOpen ? ' is-open' : ''}${busy ? '' : ' is-done'}`} dir="auto">
+            <div ref={logRef} className={`game-chat__msg game-chat__msg--yuvi game-chat__log${logOpen ? ' is-open' : ''}${busy ? '' : ' is-done'}`} dir="auto">
               <button type="button" className="game-chat__log-head" aria-expanded={logOpen} onClick={() => setLogOpen((open) => !open)}>
                 <span className="game-chat__log-orb" aria-hidden="true" />
                 <strong>
