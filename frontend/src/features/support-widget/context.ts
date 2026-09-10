@@ -13,8 +13,14 @@ interface RecentError {
 const MAX_RECENT = 8
 
 const recentErrors: RecentError[] = []
-const slowCalls: { at: string; path: string; ms: number }[] = []
-const failedCalls: { at: string; path: string; status: number }[] = []
+const slowCalls: { at: string; url: string; duration_ms: number; correlation_id: string | null }[] =
+  []
+const failedCalls: {
+  at: string
+  url: string
+  status: number
+  correlation_id: string | null
+}[] = []
 const correlationIds: string[] = []
 
 let installed = false
@@ -67,15 +73,37 @@ export function installContextProbes(): void {
     try {
       const response = await originalFetch(input as RequestInfo, init)
       const ms = Math.round(performance.now() - started)
-      if (ms > 2500) remember(slowCalls, { at: new Date().toISOString(), path, ms })
-      if (!response.ok) {
-        remember(failedCalls, { at: new Date().toISOString(), path, status: response.status })
+      // Same value as `operation_Id` in Application Insights, stamped by the backend.
+      const correlation =
+        response.headers.get('x-correlation-id') ?? response.headers.get('request-id') ?? null
+      if (ms > 2500) {
+        remember(slowCalls, {
+          at: new Date().toISOString(),
+          url: path,
+          duration_ms: ms,
+          correlation_id: correlation,
+        })
       }
-      const correlation = response.headers.get('x-correlation-id') ?? response.headers.get('request-id')
-      if (correlation && !correlationIds.includes(correlation)) remember(correlationIds, correlation)
+      if (!response.ok) {
+        remember(failedCalls, {
+          at: new Date().toISOString(),
+          url: path,
+          status: response.status,
+          correlation_id: correlation,
+        })
+      }
+      // Only ids worth searching for: a healthy request leaves nothing to look up.
+      if (correlation && (ms > 2500 || !response.ok) && !correlationIds.includes(correlation)) {
+        remember(correlationIds, correlation)
+      }
       return response
     } catch (error) {
-      remember(failedCalls, { at: new Date().toISOString(), path, status: 0 })
+      remember(failedCalls, {
+        at: new Date().toISOString(),
+        url: path,
+        status: 0,
+        correlation_id: null,
+      })
       throw error
     }
   }

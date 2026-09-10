@@ -261,6 +261,9 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Without this the browser hides both headers from our own code, and the
+        # support widget has nothing to hand the developer.
+        expose_headers=["x-correlation-id", "server-timing"],
     )
 
     # The built bundle and stylesheet are ~3.7MB of text, and nothing was

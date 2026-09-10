@@ -145,3 +145,28 @@ class SocketUrlTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_every_response_carries_a_searchable_correlation_id():
+    """A developer reading a filed bug must be able to find the request in the logs."""
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.core.telemetry import RequestTimingMiddleware
+
+    app = FastAPI()
+    app.add_middleware(RequestTimingMiddleware)
+
+    @app.get("/ping")
+    def ping() -> dict[str, bool]:
+        return {"ok": True}
+
+    with TestClient(app) as client:
+        first = client.get("/ping")
+        second = client.get("/ping")
+
+    assert first.headers["x-correlation-id"]
+    # 32 hex characters, the same shape Application Insights stores as operation_Id.
+    assert len(first.headers["x-correlation-id"]) == 32
+    assert first.headers["x-correlation-id"] != second.headers["x-correlation-id"]
