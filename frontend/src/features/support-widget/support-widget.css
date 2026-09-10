@@ -1,10 +1,13 @@
-/* The floating support companion. Logical properties throughout so the layout flips
-   with the document direction instead of needing an RTL override sheet. */
+/* The floating support companion. Logical properties inside, so the content flips with
+   the document direction instead of needing an RTL override sheet. The outer corner is
+   deliberately physical: Yuvi is pinned bottom-right in every language. */
 
 .support-widget-launcher {
   position: fixed;
   inset-block-end: 20px;
-  inset-inline-start: 20px;
+  /* Physical corner in every language: Yuvi owns the bottom-right, help owns the bottom-left. */
+  left: 20px;
+  right: auto;
   z-index: 1200;
   display: inline-flex;
   align-items: center;
@@ -85,7 +88,8 @@
 .support-widget-panel {
   position: fixed;
   inset-block-end: 84px;
-  inset-inline-start: 20px;
+  left: 20px;
+  right: auto;
   z-index: 1200;
   inline-size: min(360px, calc(100vw - 32px));
   max-block-size: min(70vh, 560px);
