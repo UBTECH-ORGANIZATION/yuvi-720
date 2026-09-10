@@ -126,7 +126,7 @@ export const SPORTS_ARENA_STARTER_ITEMS: RoomItem[] = [
   { uid: 'arena-jersey-away', kind: 'sportsJerseyDisplay', x: 24.34, z: 27, rot: -Math.PI / 2, tint: '#287f83', wallAnchor: { wallId: 'east', offset: (27 + 25.8) / 58.5, height: 2.6 } },
   { uid: 'arena-basketball-hoop', kind: 'sportsBasketballHoop', x: 0, z: -22, rot: 0 },
   { uid: 'arena-wall-scoreboard', kind: 'sportsWallScoreboard', x: 0, z: 32.64, rot: Math.PI, wallAnchor: { wallId: 'south', offset: 0.5, height: 3 } },
-  ...Object.keys(SPORTS_ARTWORK_KINDS).map((kind, index): RoomItem => {
+  ...Object.keys(SPORTS_ARTWORK_KINDS).map((kind, index): RoomItem | null => {
     if (kind === 'sportsArtworkRunners' || kind === 'sportsArtworkStrength') return null
     const west = index < 4
     const z = [-12, -3, 8, 19][index % 4]
@@ -171,7 +171,7 @@ export const DEFAULT_WORLDS: Record<RoomLayoutId, RoomWorldDesign> = {
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
-  version: 9,
+  version: 10,
   activeLayoutId: 'lab',
   worlds: DEFAULT_WORLDS,
   floor: 'lab',

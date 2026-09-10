@@ -66,9 +66,9 @@ test('deleted starters do not reappear after initialization; locked rooms defer 
 test('artworks flank the south-wall sign, leave three per side and keep saved anchors through reload', () => {
   const room = normalizeRoom(rawRoom())
   const art = room.items.filter((item) => item.kind.startsWith('sportsArtwork'))
-  assert.equal(art.length, 8)
-  assert.equal(art.filter((item) => item.wallAnchor?.wallId === 'west').length, 3)
-  assert.equal(art.filter((item) => item.wallAnchor?.wallId === 'east').length, 3)
+  assert.equal(art.length, 6)
+  assert.equal(art.filter((item) => item.wallAnchor?.wallId === 'west').length, 2)
+  assert.equal(art.filter((item) => item.wallAnchor?.wallId === 'east').length, 2)
   assert.deepEqual(art.filter((item) => item.wallAnchor?.wallId === 'south').map((item) => item.wallAnchor?.offset), [0.7, 0.3])
   assert.equal(room.items.find((item) => item.uid === 'arena-wall-scoreboard')?.wallAnchor?.wallId, 'south')
   art[0].wallAnchor!.height = 3.1

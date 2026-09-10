@@ -50,7 +50,7 @@ test('personal world changes use the same capsule transition and save only at wo
   assert.match(studio, /const chooseWorld = async \(layoutId: RoomLayoutId\) => \{[\s\S]{0,280}travelPhase !== 'idle'/)
   assert.match(studio, /controller\.play\(\{[\s\S]{0,500}void roomState\.setActiveLayout\(layoutId\)/)
   assert.match(studio, /onComplete: \(\) => \{[\s\S]{0,180}setMode\('roam'\)[\s\S]{0,100}focus\('roam'\)/)
-  assert.match(studio, /onFailure: \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(true\)/)
+  assert.match(studio, /onFailure: \(\) => \{[\s\S]{0,180}setWorldSwitchFailed\(true\)/)
 })
 
 test('Studio opens through a cinematic loader after data and the first WebGL frame are ready', () => {

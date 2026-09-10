@@ -28,6 +28,7 @@ export const SPORTS_PAID_PROP_IDS = new Set([
 ])
 
 export function sportsPropLocked(kind: string, owned: ReadonlySet<string>): boolean | undefined {
+  if (SPORTS_ARENA_STARTER_PROP_IDS.has(kind)) return !owned.has('layout:sportsArena')
   if (SPORTS_PAID_PROP_IDS.has(kind)) return !owned.has(kind)
   return undefined
 }

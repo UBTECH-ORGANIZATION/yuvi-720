@@ -129,8 +129,8 @@ const rectangularWorld = (
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
   lab: rectangularWorld('lab'),
   adventurePark: rectangularWorld('adventurePark', PLAYGROUND_DECOR_BLOCKERS, [], PLAYGROUND_WALK_BARRIERS, PLAYGROUND_WALK_SURFACES),
-  sportsArena: rectangularWorld('sportsArena', SPORTS_ARENA_BLOCKERS, [], SPORTS_ARENA_WALK_SURFACES),
-  creatorLoft: rectangularWorld('creatorLoft', CREATOR_LOFT_BLOCKERS, [], CREATOR_LOFT_WALK_SURFACES),
+  sportsArena: rectangularWorld('sportsArena', SPORTS_ARENA_BLOCKERS, [], [], SPORTS_ARENA_WALK_SURFACES),
+  creatorLoft: rectangularWorld('creatorLoft', CREATOR_LOFT_BLOCKERS, [], [], CREATOR_LOFT_WALK_SURFACES),
 }
 
 export const FREE_ROOM_LAYOUTS: RoomLayoutId[] = ['lab', 'adventurePark']

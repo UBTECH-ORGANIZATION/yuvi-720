@@ -69,9 +69,9 @@ test('tintable furniture offers colours only through its hover menu', () => {
   assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
 })
 
-test('hovering Yuvi station offers only the Design Yuvi action', () => {
+test('hovering Yuvi station offers Design Yuvi and Move actions', () => {
   assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
-  assert.match(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
+  assert.match(studio, /onMove=\{\(\) => startMove\(propMenu\.uid\)\}/)
   assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
   assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
 })
@@ -91,21 +91,18 @@ test('globe and World Capsule furniture open hover menus with move and rotate on
 })
 
 test('Visit Friends opens only friend choices while Room Design owns world switching', () => {
-  assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setWorldPickerOpen\(false\)[\s\S]{0,80}setMode\('roam'\)/)
+  assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setPlacing\(null\)[\s\S]{0,160}setMode\('roam'\)/)
   assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
   assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
   assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[[\s\S]{0,180}roomLayout\(layoutId\)\.walkBlockers/)
   assert.match(labRoom, /noBuildZones[\s\S]{0,700}roomLayout\(layoutId\)\.decorBlockers/)
   assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
   assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
-  assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setWorldPickerOpen\(false\)\s+setMode\('friends'\)/)
+  assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
   assert.match(studio, /\{mode === 'friends' && !visitorRoom && \(\s+<StationPanel\s+title=\{t\('YuviStudio\.capsule\.title'\)\}/)
   assert.doesNotMatch(studio, /value=\{worldPickerOpen \? 'worlds' : 'friends'\}/)
   assert.doesNotMatch(studio, /YuviStudio\.capsule\.switchWorld/)
-  assert.match(studio, /worldPickerOpen=\{worldPickerOpen\}/)
-  assert.match(studio, /onOpenWorldPicker=\{\(\) => setWorldPickerOpen\(true\)\}/)
-  assert.match(studio, /onCloseWorldPicker=\{\(\) => setWorldPickerOpen\(false\)\}/)
-  assert.match(studio, /ys-room-world-dialog/)
+  assert.match(studio, /worldSelector=\{\(/)
   assert.doesNotMatch(studio, /onClick=\{requestWorldPicker\}/)
   assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
   assert.equal(he['YuviStudio.capsule.title'], 'ביקור אצל חברים')

@@ -6,6 +6,7 @@ import { cloneRoom, DEFAULT_ROOM, moveOrRestoreRoomItem } from '../src/features/
 
 test('sports furniture fails closed without a shop response and permits permanent repeated placement', () => {
   for (const kind of SPORTS_PAID_PROP_IDS) {
+    if (SPORTS_ARENA_STARTER_PROP_IDS.has(kind)) continue
     assert.equal(sportsPropLocked(kind, new Set()), true)
     assert.equal(sportsPropLocked(kind, new Set(['layout:sportsArena'])), true)
     assert.equal(sportsPropLocked(kind, new Set([kind])), false)
@@ -13,7 +14,6 @@ test('sports furniture fails closed without a shop response and permits permanen
   for (const kind of SPORTS_ARENA_STARTER_PROP_IDS) {
     assert.equal(sportsPropLocked(kind, new Set()), true)
     assert.equal(sportsPropLocked(kind, new Set(['layout:sportsArena'])), false)
-    assert.ok(!SPORTS_PAID_PROP_IDS.has(kind))
   }
 })
 

@@ -13,7 +13,7 @@ test('new machines are stored without moving a customized version-six loft', () 
   assert.equal(room.floor, 'wood')
   assert.equal(room.wall, 'warm')
   assert.equal(room.mood, 'night')
-  assert.equal(normalizeRoom(room).storedItems.length, 3)
+  assert.equal(normalizeRoom(room).storedItems.length, CREATOR_LOFT_NEW_MACHINES.length)
   room.storedItems = []
   room.worlds.creatorLoft.storedItems = []
   assert.equal(normalizeRoom(room).storedItems.length, 0)
