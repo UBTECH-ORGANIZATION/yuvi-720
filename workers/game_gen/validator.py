@@ -37,11 +37,11 @@ except ImportError:  # pragma: no cover
     HAS_PLAYWRIGHT = False
 
 # ── Configuration ────────────────────────────────────────────────────────────
-SETTLE_TIMEOUT_MS = 4000          # wait after load for first-tick errors
-INTERACTION_SETTLE_MS = 3500      # wait after clicking Start
+SETTLE_TIMEOUT_MS = 2500          # wait after load for first-tick errors (was 4000; first-tick errors land within 1 s)
+INTERACTION_SETTLE_MS = 2000      # wait after clicking Start (was 3500)
 PAGE_LOAD_TIMEOUT_MS = 15000
 POSTER_STEP_MS = 1500             # thumbnail: sample play every 1.5 s while no question is open
-POSTER_WINDOW_MS = 6000           # …for this long after Start
+POSTER_WINDOW_MS = 4500           # …for this long after Start (three samples)
 PLAY_INPUT_MS = 700               # play score: hold the pointer / keys this long
 PLAY_SAMPLE_MS = 600              # play score: idle frames counted over this long
 MIN_HEARTBEAT = 30                # rAF ticks the harness must have counted
@@ -344,6 +344,48 @@ async def _play_score(page) -> dict[str, Any]:  # noqa: ANN001
     return score
 
 
+_shared: dict[str, Any] = {"pw": None, "browser": None, "loop": None}
+_shared_lock: Optional[asyncio.Lock] = None
+
+
+async def _shared_browser():  # noqa: ANN202
+    """One Chromium per worker process, launched on first use and relaunched
+    when it dies or the event loop changed (the sync wrapper runs its own).
+    Launching was 2-4 s of every validation the kid waited through."""
+    global _shared_lock
+    loop = asyncio.get_running_loop()
+    if _shared_lock is None or _shared["loop"] is not loop:
+        _shared_lock = asyncio.Lock()
+    async with _shared_lock:
+        browser = _shared["browser"]
+        if browser is not None and _shared["loop"] is loop:
+            try:
+                if browser.is_connected():
+                    return browser
+            except Exception:  # noqa: BLE001
+                pass
+        await close_shared_browser()
+        from playwright.async_api import async_playwright
+
+        pw = await async_playwright().start()
+        browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS)
+        _shared.update({"pw": pw, "browser": browser, "loop": loop})
+        return browser
+
+
+async def close_shared_browser() -> None:
+    """Shut the shared Chromium (worker exit, tests, or a relaunch)."""
+    browser, pw = _shared.get("browser"), _shared.get("pw")
+    _shared.update({"pw": None, "browser": None, "loop": None})
+    for closer in ((browser.close if browser is not None else None), (pw.stop if pw is not None else None)):
+        if closer is None:
+            continue
+        try:
+            await closer()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 async def validate_html(
     html: str,
     *,
@@ -385,12 +427,14 @@ async def validate_html(
             tmp_path = f.name
         file_url = f"file://{tmp_path}"
 
-        from playwright.async_api import async_playwright
-
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=CHROMIUM_ARGS)
+        browser = await _shared_browser()
+        if True:
             try:
-                page = await browser.new_page(viewport={"width": viewport_width, "height": viewport_height})
+                # A fresh context per run keeps runs isolated; the browser
+                # itself lives as long as the process (launching Chromium
+                # was 2-4 s of every "checking" the kid waited through).
+                context = await browser.new_context(viewport={"width": viewport_width, "height": viewport_height})
+                page = await context.new_page()
 
                 def _on_console(msg) -> None:  # noqa: ANN001
                     text = msg.text
@@ -530,7 +574,10 @@ async def validate_html(
                         log.warning("screenshot failed: %s", e)
                         png = None
             finally:
-                await browser.close()
+                try:
+                    await context.close()
+                except Exception:  # noqa: BLE001
+                    pass
 
     except Exception as e:  # noqa: BLE001
         log.error("runtime validation failed unexpectedly: %s", e)

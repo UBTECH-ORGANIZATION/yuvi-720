@@ -166,6 +166,23 @@ export interface GameNarration {
   pitch?: string
 }
 
+export interface GameJobRow {
+  job_id: string
+  kind: 'edit' | 'fix'
+  status: 'queued' | 'running' | 'done' | 'failed'
+  instruction: string
+  auto: boolean
+  created_at?: string | number | null
+  finished_at?: string | number | null
+  error_class?: string | null
+}
+
+/** The chat's memory: every edit and fix asked on a game, oldest first. */
+export async function listGameJobs(gameId: string) {
+  const page = await apiGet<{ jobs?: GameJobRow[] }>(`/api/games/${encodeURIComponent(gameId)}/jobs`)
+  return page.jobs ?? []
+}
+
 export function getGameNarration(gameId: string) {
   return apiGet<GameNarration>(`/api/games/${encodeURIComponent(gameId)}/narration`)
 }

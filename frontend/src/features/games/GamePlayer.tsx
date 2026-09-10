@@ -32,7 +32,7 @@ import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
   askGame, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
-  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, getGameNarration } from '../../services/games'
+  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, getGameNarration, listGameJobs } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
 import './games.css'
 
@@ -62,9 +62,29 @@ interface PlayerJob {
   step?: string
   /** Yuvi's answer, for a question. */
   reply?: string
+  /** When it was asked (ms); orders a thread rebuilt from history. */
+  at?: number
 }
 
 type BuildPhase = 'thinking' | 'writing' | 'validating' | 'judging'
+
+const PHASE_ICON: Record<BuildPhase, string> = { thinking: '🧠', writing: '✍️', validating: '🧪', judging: '⚖️' }
+
+/** Questions and answers are not jobs; the browser remembers them per game. */
+const askStoreKey = (gameId: string) => `yuvi.game.asks.${gameId}`
+function loadAsks(gameId: string): PlayerJob[] {
+  try {
+    const raw = localStorage.getItem(askStoreKey(gameId))
+    const rows = raw ? (JSON.parse(raw) as PlayerJob[]) : []
+    return Array.isArray(rows) ? rows.filter((r) => r && r.kind === 'ask' && typeof r.text === 'string') : []
+  } catch { return [] }
+}
+function saveAsk(gameId: string, job: PlayerJob) {
+  try {
+    const rows = loadAsks(gameId).filter((r) => r.id !== job.id)
+    localStorage.setItem(askStoreKey(gameId), JSON.stringify([...rows, job].slice(-40)))
+  } catch { /* private mode, quota: the thread is still on screen */ }
+}
 
 interface GamePlayerProps {
   game: LearnerGame
@@ -112,6 +132,29 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [jobs, setJobs] = useState<PlayerJob[]>([])
+  // The thread outlives the page: edits and fixes come back from the
+  // server's job history, questions from the browser. Loaded once per game.
+  useEffect(() => {
+    let active = true
+    listGameJobs(game.game_id).then((rows) => {
+      if (!active) return
+      const fromServer: PlayerJob[] = rows.map((row) => ({
+        id: `srv-${row.job_id}`,
+        kind: row.kind,
+        auto: row.auto,
+        text: row.auto ? t('games.bug.auto') : (row.instruction || t('games.bug.sent')),
+        status: row.status === 'done' ? 'done' : row.status === 'failed' ? 'failed' : row.status === 'running' ? 'running' : 'queued',
+        at: row.created_at ? Date.parse(String(row.created_at)) : 0,
+      }))
+      const asks = loadAsks(game.game_id)
+      const merged = [...fromServer, ...asks].sort((a, b) => (a.at ?? 0) - (b.at ?? 0))
+      setJobs((current) => {
+        const known = new Set(current.map((j) => j.id))
+        return [...merged.filter((j) => !known.has(j.id)), ...current]
+      })
+    }).catch(() => {})
+    return () => { active = false }
+  }, [game.game_id, t])
   const [notice, setNotice] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [leaveConfirm, setLeaveConfirm] = useState(false)
@@ -175,7 +218,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const [phase, setPhase] = useState<BuildPhase>('thinking')
   const [startedAt, setStartedAt] = useState<number | null>(null)
   // What Yuvi did so far, one line per phase, for the collapsible log in the chat.
-  const [buildLog, setBuildLog] = useState<{ phase: BuildPhase; at: number }[]>([])
+  const [buildLog, setBuildLog] = useState<{ phase: BuildPhase; at: number; times: number }[]>([])
   const [now, setNow] = useState(() => Date.now())
   const [isFull, setIsFull] = useState(false)
 
@@ -289,7 +332,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const submitBug = useCallback(async (note: string, auto: boolean) => {
     const errors = caughtErrors()
     const job: PlayerJob = {
-      id: nextJobId(), kind: 'fix', auto, status: 'queued',
+      id: nextJobId(), kind: 'fix', auto, status: 'queued', at: Date.now(),
       text: auto ? t('games.bug.auto') : (note.trim() || t('games.bug.sent')),
     }
     setJobs((current) => [...current, job])
@@ -436,13 +479,14 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     if (sending || busy) return
     if (mode === 'ask') {
       if (!text) return
-      const job: PlayerJob = { id: nextJobId(), kind: 'ask', text, status: 'running' }
+      const job: PlayerJob = { id: nextJobId(), kind: 'ask', text, status: 'running', at: Date.now() }
       setJobs((current) => [...current, job])
       setDraft('')
       setSending(true)
       try {
         const { answer } = await askGame(game.game_id, text)
         setJobs((current) => current.map((row) => row.id === job.id ? { ...row, status: 'done', reply: answer } : row))
+        saveAsk(game.game_id, { ...job, status: 'done', reply: answer })
       } catch {
         setJobs((current) => current.map((row) => row.id === job.id ? { ...row, status: 'failed', reply: t('games.chat.askError') } : row))
       } finally {
@@ -453,7 +497,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     // Words go as an edit that carries the caught errors; no words with
     // errors caught is a plain fix request.
     if (!text) { if (errorCount > 0) await submitBug('', false); return }
-    const job: PlayerJob = { id: nextJobId(), kind: 'edit', text, status: 'queued' }
+    const job: PlayerJob = { id: nextJobId(), kind: 'edit', text, status: 'queued', at: Date.now() }
     setJobs((current) => [...current, job])
     setDraft('')
     setNotice(null)
@@ -526,9 +570,18 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const codeLines = liveCode ? liveCode.split('\n').length : 0
   useEffect(() => {
     if (!busy) return
-    setBuildLog((current) => (current.length && current[current.length - 1].phase === phase)
-      ? current
-      : [...current, { phase, at: Date.now() }])
+    // One line per phase: a phase Yuvi comes back to (a fix after the
+    // check) bumps its count instead of repeating the line.
+    setBuildLog((current) => {
+      const last = current[current.length - 1]
+      if (last && last.phase === phase) return current
+      const seen = current.findIndex((entry) => entry.phase === phase)
+      if (seen >= 0) {
+        const bumped = { ...current[seen], times: current[seen].times + 1 }
+        return [...current.filter((_, i) => i !== seen), bumped]
+      }
+      return [...current, { phase, at: Date.now(), times: 1 }]
+    })
   }, [busy, phase])
   useEffect(() => { if (!busy) setBuildLog([]) }, [busy])
   useEffect(() => {
@@ -591,7 +644,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                 )}
               </div>
             )}
-            {liveCode && <CodeView code={liveCode} label={t('games.build.title')} changed={changed} focusLine={focusLine} />}
+            {liveCode && <CodeView code={liveCode} label={t('games.build.title')} changed={changed} focusLine={focusLine} live={phase === 'writing'} />}
           </section>
         ) : status === 'ready' && html ? (
           <iframe
@@ -707,13 +760,18 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
             <details className="game-chat__msg game-chat__msg--yuvi game-chat__log" dir="auto">
               <summary>
                 <span className="game-chat__log-orb" aria-hidden="true" />
-                <strong>{t(`games.build.phase.${phase}`)}</strong>
+                <strong>{PHASE_ICON[phase]} {t(`games.build.phase.${phase}`)}</strong>
                 <span className="game-chat__log-stat">{buildStat}</span>
                 <Icon name="chevronDown" size={14} />
               </summary>
               {narration.length > 0 ? (
                 <ol ref={thinkRef} className="game-chat__log-lines" dir="auto" aria-label={t('games.build.phase.thinking')}>
-                  {narration.map((line, i) => <li key={i}>{line}</li>)}
+                  {narration.map((line, i) => (
+                    <li key={i}>
+                      <span className="game-chat__log-ico" aria-hidden="true">{i === 0 ? '💡' : i === narration.length - 1 && phase === 'writing' ? '✍️' : '🧠'}</span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
                 </ol>
               ) : (
                 <p className="game-chat__log-detail">
@@ -723,10 +781,12 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                 </p>
               )}
               <ol className="game-chat__log-steps">
-                {buildLog.map((entry) => (
-                  <li key={`${entry.phase}-${entry.at}`}>
+                {buildLog.map((entry, i) => (
+                  <li key={entry.phase} className={i === buildLog.length - 1 ? 'is-current' : 'is-done'}>
+                    <span className="game-chat__log-ico" aria-hidden="true">{PHASE_ICON[entry.phase]}</span>
                     <time>{clock(entry.at)}</time>
                     <span>{t(`games.build.phase.${entry.phase}`)}</span>
+                    {entry.times > 1 && <small>×{entry.times}</small>}
                   </li>
                 ))}
               </ol>

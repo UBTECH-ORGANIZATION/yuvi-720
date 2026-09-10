@@ -16,6 +16,7 @@ can continue a block cut by the output cap. The judge never fails a job.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -171,6 +172,12 @@ class _State:
         self.timings = _new_timings()
         self.last_model_s = 0.0
         self.last_output_tokens = 0
+        # The judge reads the same HTML the validator runs, so it starts the
+        # moment a candidate arrives and runs alongside Playwright instead of
+        # after it: ~15 s less "checking" for the kid. A failed validation
+        # cancels it; the next candidate starts a fresh one.
+        self.totals: Optional[UsageTotals] = None
+        self.judge_task: Optional["asyncio.Task[Optional[dict[str, Any]]]"] = None
 
     def note_turn(self, turn: Any) -> None:
         self.last_model_s = float(getattr(turn, "elapsed_s", 0.0) or 0.0)
@@ -203,6 +210,29 @@ def _facts_from(result: ValidationResult, html: str) -> dict[str, Any]:
     }
 
 
+def _cancel_judge(state: _State) -> None:
+    task = state.judge_task
+    state.judge_task = None
+    if task is not None and not task.done():
+        task.cancel()
+
+
+async def _await_judge(state: _State, spec: JobSpec, totals: UsageTotals, progress: ProgressFn,
+                       facts: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """The verdict for the accepted HTML: the task that ran alongside the
+    validator when there is one, else a fresh judge."""
+    task = state.judge_task
+    state.judge_task = None
+    if task is not None:
+        try:
+            return await task
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:  # noqa: BLE001
+            log.warning("concurrent judge failed: %s", exc)
+    return await _run_judge(spec, state.accepted_html or "", totals, progress, facts)
+
+
 async def _validate_candidate(state: _State, html: str) -> ValidationResult:
     fixed = validate_and_fix_code(html)
     harness = build_harness(state.spec.pack.to_learn_data(), nonce=state.nonce)
@@ -226,10 +256,15 @@ async def _submit(state: _State, progress: ProgressFn, html: str, title: str, su
         return _Outcome(False, "No submissions left. Stop.", "max_submissions")
     progress({"type": "validate", "attempt": idx, "tool": tool_name})
     html_lines = html.count("\n") + 1
+    _cancel_judge(state)
+    if state.spec.judge and state.totals is not None:
+        state.judge_task = asyncio.create_task(_run_judge(
+            state.spec, html, state.totals, progress, {"title": title, "brief": brief}))
     try:
         result = await _validate_candidate(state, html)
     except Exception as exc:  # validator crash must not kill the job silently
         log.exception("validator crashed")
+        _cancel_judge(state)
         elapsed = time.perf_counter() - started
         state.timings["validate_s"].append(round(elapsed, 3))
         state.attempts.append(Attempt(idx, tool_name, False, [{"message": str(exc)}], "validator_error", elapsed,
@@ -240,6 +275,8 @@ async def _submit(state: _State, progress: ProgressFn, html: str, title: str, su
     elapsed = time.perf_counter() - started
     state.timings["validate_s"].append(round(elapsed, 3))
     ok = bool(result.ok)
+    if not ok:
+        _cancel_judge(state)
     classes = sorted({categorize_error(str(e.get("message") or ""))[0] for e in result.errors})
     if ok:
         reason = "ok"
@@ -548,6 +585,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
     state = _State(spec)
     timings = state.timings
     totals = UsageTotals()
+    state.totals = totals
     language = spec.pack.language
 
     design_doc = spec.design_doc
@@ -605,8 +643,8 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         if state.accepted_html and spec.judge and error is None:
             t0 = time.perf_counter()
             facts = {**state.accepted_facts, "title": state.accepted_title, "brief": state.accepted_brief}
-            verdict = await _run_judge(spec, state.accepted_html, totals, progress, facts)
-            timings["judge_s"] = round(time.perf_counter() - t0, 3)
+            verdict = await _await_judge(state, spec, totals, progress, facts)
+            timings["judge_s"] = round(time.perf_counter() - t0, 3)  # the wait left after validation
             judge = judge_record(verdict, spec.run_judge_model)
             if spec.kind == "create" and needs_revision(judge["scores"]):
                 t0 = time.perf_counter()
@@ -615,7 +653,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
                 if revised:
                     t0 = time.perf_counter()
                     facts = {**state.accepted_facts, "title": state.accepted_title, "brief": state.accepted_brief}
-                    verdict2 = await _run_judge(spec, state.accepted_html, totals, progress, facts)
+                    verdict2 = await _await_judge(state, spec, totals, progress, facts)
                     timings["rejudge_s"] = round(time.perf_counter() - t0, 3)
                     before = {k: judge[k] for k in ("scores", "notes", "top_fix")}
                     judge = {**judge_record(verdict2, spec.run_judge_model), "revised": True, "before": before}

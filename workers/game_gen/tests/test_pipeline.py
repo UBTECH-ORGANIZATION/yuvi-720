@@ -260,7 +260,10 @@ def test_judge_verdict_lands_on_result(stub_validator):
     }
     assert len(FakeSession.prompts) == 1  # no revision for a good verdict
     facts = FakeSession.judge_prompts[0]
-    assert "CHECKER FACTS" in facts and '"frames": 40' in facts and "TITLE: משחק" in facts and "BRIEF: עולם" in facts
+    # The judge runs alongside the validator (it starts the moment a
+    # candidate arrives), so it sees the title and brief but not the play
+    # score, which only exists once Playwright is done.
+    assert "CHECKER FACTS" in facts and "TITLE: משחק" in facts and "BRIEF: עולם" in facts
     assert result.timings["judge_s"] >= 0 and result.timings["revise_s"] == 0.0
     assert [e["status"] for e in events if e["type"] == "judge"] == ["start", "done"]
 

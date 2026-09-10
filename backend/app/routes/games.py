@@ -543,6 +543,31 @@ async def read_game_live(game_id: str, learner_id: str = Depends(_reader)):
     }, headers=_NO_STORE)
 
 
+@router.get("/{game_id}/jobs")
+async def read_game_jobs(game_id: str, learner_id: str = Depends(_reader)):
+    """The chat's memory: every edit and fix asked on this game, oldest
+    first, so the thread survives leaving the page. Payloads stay private;
+    only what the kid wrote and what became of it."""
+    await _owned_game(game_id, learner_id)
+    rows = await store.list_jobs(game_id)
+    items = []
+    for job in reversed(rows):
+        if job.get("kind") not in ("edit", "fix"):
+            continue
+        payload = job.get("payload") or {}
+        items.append({
+            "job_id": str(job.get("_id") or ""),
+            "kind": job.get("kind"),
+            "status": job.get("status"),
+            "instruction": str(payload.get("instruction") or "")[:1200],
+            "auto": job.get("kind") == "fix" and not payload.get("instruction"),
+            "created_at": job.get("created_at"),
+            "finished_at": job.get("finished_at"),
+            "error_class": job.get("error_class"),
+        })
+    return JSONResponse(content={"jobs": items}, headers=_NO_STORE)
+
+
 @router.get("/{game_id}/narration")
 async def read_game_narration(game_id: str, learner_id: str = Depends(_reader)):
     """What Yuvi is doing right now, one short sentence per stretch of
