@@ -402,10 +402,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         // the narrator's cache; the narrator's own lines never repeat.
         .then((n) => {
           if (stopped) return
-          if (n.pitch) {
-            const pitch = n.pitch
-            setNarration((current) => (current.includes(pitch) ? current : [pitch, ...current]))
-          }
           if (n.lines.length) setNarration((current) => [...n.lines, ...current.filter((l) => !n.lines.includes(l))])
         })
         .catch(() => {})
@@ -446,10 +442,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.chunk) setThinkingText((current) => (current + live.chunk).slice(-THINK_TEXT_MAX))
         return
       }
-      if ((live.event === 'summary' || live.event === 'plan') && typeof live.detail === 'string' && live.detail) {
+      if (live.event === 'summary' && typeof live.detail === 'string' && live.detail) {
         // Yuvi's own line, in the kid's language: an edit's one-line summary,
-        // or the pitch the plan pass wrote before any code moves. On screen
-        // the moment it is written.
+        // on screen the moment it is written. The plan pass's pitch is not
+        // shown: the log carries the one-line narration only.
         const detail = live.detail
         setNarration((current) => (current[current.length - 1] === detail ? current : [...current, detail]))
       }
