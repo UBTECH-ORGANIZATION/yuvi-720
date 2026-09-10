@@ -35,6 +35,7 @@ import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage
 import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { SupportWidget } from '../features/support-widget/SupportWidget'
 import { LearnerMessageToast } from '../components/LearnerMessageToast'
 import { CheckinGate } from '../features/checkin/CheckinDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
@@ -490,6 +491,8 @@ export function App() {
           over the page. Reporting a fault covers the same need without
           standing on the screen. */}
       {user && <ReportIssueDialog />}
+      {/* Live human support: students and teachers alike, on every screen. */}
+      {user && <SupportWidget />}
     </TourProvider>
   )
 }
