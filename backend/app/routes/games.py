@@ -546,6 +546,10 @@ async def read_game_narration(game_id: str, learner_id: str = Depends(_reader)):
     job = await store.latest_job(game_id)
     live = dict(job.get("live") or {}) if job and job.get("status") in ("queued", "running") else None
     result = await narration.narrate(game, live, actor_id=learner_id)
+    # The plan pass writes its pitch on the game row; serving it here too
+    # means a lost `plan` frame still reaches the page on the next poll.
+    if live is not None and game.get("description"):
+        result["pitch"] = str(game.get("description"))[:600]
     return JSONResponse(content=result, headers=_NO_STORE)
 
 

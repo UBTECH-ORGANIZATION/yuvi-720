@@ -132,12 +132,19 @@ class _Bridge:
     async def _publish(self, topic: str, event: dict[str, Any]) -> None:
         if self._client is None:
             return
-        try:
-            payload = json.dumps({"o": _ORIGIN, "t": topic, "e": event}, ensure_ascii=False, default=str)
-            await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=_RELAY_TIMEOUT_S)
-            self.relayed += 1
-        except Exception as exc:  # the local delivery already happened; the relay is best effort
-            print(f"⚠️ realtime relay failed: {type(exc).__name__}")
+        payload = json.dumps({"o": _ORIGIN, "t": topic, "e": event}, ensure_ascii=False, default=str)
+        # One retry: a cold pool connection or a Redis hiccup costs a frame
+        # otherwise, and a lost `plan`/`ready` frame is a blank page for the
+        # kid until the next poll. Still best effort: the local delivery
+        # already happened.
+        for attempt in (1, 2):
+            try:
+                await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=_RELAY_TIMEOUT_S)
+                self.relayed += 1
+                return
+            except Exception as exc:
+                if attempt == 2:
+                    print(f"⚠️ realtime relay failed: {type(exc).__name__}")
 
     def on_message(self, raw: Any) -> int:
         """Deliver a frame another instance published. Returns local deliveries."""

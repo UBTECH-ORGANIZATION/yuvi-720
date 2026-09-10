@@ -162,6 +162,8 @@ export interface GameNarration {
   lines: string[]
   chars: number
   phase: string
+  /** The plan pass's pitch, when the build is still running (a fallback for a lost `plan` frame). */
+  pitch?: string
 }
 
 export function getGameNarration(gameId: string) {

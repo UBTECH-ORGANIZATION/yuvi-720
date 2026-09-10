@@ -343,7 +343,15 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       getGameNarration(game.game_id)
         // Keep lines that arrived live (an edit's summary) and are not in
         // the narrator's cache; the narrator's own lines never repeat.
-        .then((n) => { if (!stopped && n.lines.length) setNarration((current) => [...n.lines, ...current.filter((l) => !n.lines.includes(l))]) })
+        .then((n) => {
+          if (stopped) return
+          if (n.pitch) {
+            const pitch = n.pitch
+            setNarration((current) => (current.includes(pitch) ? current : [pitch, ...current]))
+            setGame((current) => (current.description === pitch ? current : { ...current, description: pitch }))
+          }
+          if (n.lines.length) setNarration((current) => [...n.lines, ...current.filter((l) => !n.lines.includes(l))])
+        })
         .catch(() => {})
     }
     tick()
