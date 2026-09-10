@@ -22,10 +22,12 @@ import {
 } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
+import { gamePlayPath } from '../services/games'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { useTour } from './tour/TourProvider'
 import SceneRenderer from '../features/visuals/SceneRenderer'
+import { GamesTab, type GameOpenRequest } from '../features/games/GamesTab'
 import './companion.css'
 
 /* The dock is mounted on every screen, but both of these render only inside a
@@ -239,7 +241,57 @@ export function CompanionChat() {
   const [settleHeaderYuvi, setSettleHeaderYuvi] = useState(false)
   const [expandedVisual, setExpandedVisual] = useState<CoachVisual | null>(null)
   const [isResizing, setIsResizing] = useState(false)
-  const [taskView, setTaskView] = useState<'chat' | 'roadmap'>('chat')
+  const [taskView, setTaskView] = useState<'chat' | 'roadmap' | 'games'>('chat')
+  // The Games tab (Learning Game Lab): games made for this component, then the
+  // objective. Its player has two doors from outside the tab — the studio's
+  // `yuvilab:open-game` event and the bell's `?game=` deep link — and both
+  // become one request handed down. The param is cleared with a silent
+  // `replaceState`: `navigate` no-ops on an unchanged URL, so the same bell
+  // row must leave the address different from its route to work twice, and a
+  // routed navigation would remount the lesson div (keyed on the full route).
+  const [gameOpenRequest, setGameOpenRequest] = useState<GameOpenRequest | null>(null)
+  const gameRequestSeq = useRef(0)
+  // The tab unmounts when the learner switches views, so it cannot remember
+  // which request it already opened; the request is cleared here once served.
+  const gameRequestHandled = useCallback((seq: number) => {
+    setGameOpenRequest((current) => (current && current.seq === seq ? null : current))
+  }, [])
+  const lessonParams = useMemo(() => {
+    const params = new URLSearchParams(window.location.search)
+    return { unitId: params.get('unit'), componentId: params.get('component') }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+  useEffect(() => {
+    if (!isTaskMode) return
+    const request = (gameId: string) => {
+      gameRequestSeq.current += 1
+      setGameOpenRequest({ gameId, seq: gameRequestSeq.current })
+      setTaskView('games')
+    }
+    const fromUrl = () => {
+      if (!window.location.pathname.startsWith('/learning/lesson')) return
+      const params = new URLSearchParams(window.location.search)
+      const gameId = params.get('game')
+      if (!gameId) return
+      // Older links still carry `?game=` on the lesson; the game page is the
+      // one door now, and it knows the way back to this lesson.
+      params.delete('game')
+      const extra: Record<string, string> = {}
+      for (const key of ['unit', 'component']) { const value = params.get(key); if (value) extra[key] = value }
+      navigate(gamePlayPath(gameId, 'lesson', extra), { replace: true })
+    }
+    const fromStudio = (event: Event) => {
+      const gameId = (event as CustomEvent<{ gameId?: string }>).detail?.gameId
+      if (typeof gameId === 'string' && gameId) request(gameId)
+    }
+    fromUrl()
+    window.addEventListener('popstate', fromUrl)
+    window.addEventListener('yuvilab:open-game', fromStudio)
+    return () => {
+      window.removeEventListener('popstate', fromUrl)
+      window.removeEventListener('yuvilab:open-game', fromStudio)
+    }
+  }, [isTaskMode])
   // Raise-hand (#249): the child asks for a person, from inside a lesson only.
   // Confirmed in a dialog inside the panel — a hand raised to the whole staff
   // room must not be a slip of the finger — and a 5-minute client cooldown
@@ -1098,6 +1150,16 @@ export function CompanionChat() {
                 <Icon name="spark" size={16} />
                 <span>{t('companion.task.tabRoadmap')}</span>
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={taskView === 'games'}
+                className={taskView === 'games' ? 'is-active' : ''}
+                onClick={() => setTaskView('games')}
+              >
+                <Icon name="gamepad" size={16} />
+                <span>{t('companion.task.tabGames')}</span>
+              </button>
             </div>
           )}
 
@@ -1244,6 +1306,14 @@ export function CompanionChat() {
                     />
                   </Suspense>
                 </div>
+              ) : isTaskMode && taskView === 'games' ? (
+                <GamesTab
+                  componentId={lessonParams.componentId}
+                  unitId={lessonParams.unitId}
+                  objectiveId={lessonRoadmap?.unit.objective_id ?? null}
+                  openRequest={gameOpenRequest}
+                  onRequestHandled={gameRequestHandled}
+                />
               ) : taskView === 'chat' && <div
                 className="sp-companion__body"
                 ref={bodyRef}

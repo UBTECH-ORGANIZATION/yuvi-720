@@ -1,6 +1,6 @@
 /* Admin console (F8, plan A9b) — the control plane.
  *
- * One route, four tabs. The admin does NOT get a parallel dashboard: they use
+ * One route, five tabs. The admin does NOT get a parallel dashboard: they use
  * the ordinary teacher app with the group switcher unlocked to every group
  * (`org.groups_for_teacher` already returns all groups for an admin), which is
  * what satisfies "למנהל צריכה להיות גישה להצגת כל התלמידים וקבוצות הלימוד
@@ -24,18 +24,20 @@ import { ErrorState, Icon, LoadingState } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { getOrg, listPeople, type OrgSnapshot, type Person } from '../../services/admin'
 import { AdminAuditTab } from './AdminAuditTab'
+import { AdminGamesTab } from './AdminGamesTab'
 import { AdminGroupsTab } from './AdminGroupsTab'
 import { AdminOverviewTab } from './AdminOverviewTab'
 import { AdminPeopleTab } from './AdminPeopleTab'
 import './admin-console.css'
 
-const TABS = ['overview', 'people', 'groups', 'audit'] as const
+const TABS = ['overview', 'people', 'groups', 'games', 'audit'] as const
 export type AdminTab = (typeof TABS)[number]
 
-const TAB_ICON: Record<AdminTab, 'pulse' | 'users' | 'teacher' | 'clock'> = {
+const TAB_ICON: Record<AdminTab, 'pulse' | 'users' | 'teacher' | 'gamepad' | 'clock'> = {
   overview: 'pulse',
   people: 'users',
   groups: 'teacher',
+  games: 'gamepad',
   audit: 'clock',
 }
 
@@ -123,6 +125,7 @@ export function AdminConsolePage() {
       {tab === 'overview' ? <AdminOverviewTab data={data} /> : null}
       {tab === 'people' ? <AdminPeopleTab data={data} /> : null}
       {tab === 'groups' ? <AdminGroupsTab data={data} /> : null}
+      {tab === 'games' ? <AdminGamesTab data={data} /> : null}
       {tab === 'audit' ? <AdminAuditTab data={data} /> : null}
     </div>
   )

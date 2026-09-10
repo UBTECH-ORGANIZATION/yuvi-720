@@ -8,7 +8,7 @@ import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import type { YuviColors, YuviDesign, YuviSlot } from './YuviDesign'
 import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
-import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
+import { createYuviLabRoom, detectLabQuality, gameLabStandingSpot, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type GameLabState, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
 import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
 
 /** Camera framings the studio can request when the learner switches category. */
@@ -37,6 +37,8 @@ export interface YuviAvatarHandle {
   walkTo: (x: number, z: number, station?: LabRoomZoneId | null) => void
   /** Walk Yuvi back onto the upgrade platform. */
   recenter: () => void
+  /** Drive the Game Lab desk's status light (pulse while building, flash on ready). */
+  setGameLabState: (state: GameLabState) => void
 }
 
 interface Props {
@@ -229,6 +231,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     focus: (view) => controllerRef.current?.focus(view),
     walkTo: (x, z, station = null) => controllerRef.current?.walkTo(x, z, station),
     recenter: () => controllerRef.current?.recenter(),
+    setGameLabState: (state) => controllerRef.current?.setGameLabState(state),
   }), [])
 
   useEffect(() => {
@@ -493,8 +496,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (target && Math.hypot(x - target.x, z - target.z) > target.radius) return false
       // The bench is only a valid spot if the floor in front of it — where the
       // learner has to stand to use it — is inside the room too.
-      if (station === 'room') {
-        const stand = roomStandingSpot({ x, z, rot })
+      if (station === 'room' || station === 'gamelab') {
+        const stand = station === 'room' ? roomStandingSpot({ x, z, rot }) : gameLabStandingSpot({ x, z, rot })
         if (stand.x < walkLimits.minX || stand.x > walkLimits.maxX) return false
         if (stand.z < walkLimits.minZ || stand.z > walkLimits.maxZ) return false
       }
@@ -814,7 +817,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // Choosing a category is a request for that exact shot.
       resetUserView()
     }
-    controllerRef.current = { equip, setColors, applyDesign, focus, walkTo, recenter }
+    const setGameLabState = (state: GameLabState) => room?.setGameLabState(state)
+    controllerRef.current = { equip, setColors, applyDesign, focus, walkTo, recenter, setGameLabState }
     applyDesign(design, false)
     castShadows(robot)
 
@@ -1233,8 +1237,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             const next = stationsRef.current
             let shiftX = 0, shiftZ = 0
             if (previous && roamZone) {
-              const from = roamZone === 'avatar' ? previous.avatar : roomStandingSpot(previous.room)
-              const to = roamZone === 'avatar' ? next.avatar : roomStandingSpot(next.room)
+              const standAt = (layout: RoomStations, zone: LabRoomZoneId) => (
+                zone === 'avatar' ? layout.avatar
+                  : zone === 'room' ? roomStandingSpot(layout.room)
+                    : gameLabStandingSpot(layout.gamelab)
+              )
+              const from = standAt(previous, roamZone)
+              const to = standAt(next, roamZone)
               shiftX = to.x - from.x
               shiftZ = to.z - from.z
             }

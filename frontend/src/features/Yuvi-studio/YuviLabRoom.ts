@@ -19,7 +19,8 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
-import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
+import yuviMarkUrl from '../../assets/yuvi-favicon.png'
+import { DEFAULT_STATIONS, STATION_IDS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
 export type LabRoomQuality = 'high' | 'low'
 
 export interface LabRoomOptions {
@@ -40,7 +41,15 @@ export interface LabRoomBounds {
 }
 
 /** The stations a learner walks into to open a panel. */
-export type LabRoomZoneId = 'avatar' | 'room'
+export type LabRoomZoneId = 'avatar' | 'room' | 'gamelab'
+
+/**
+ * What the Game Lab desk is doing. `building` pulses the mark on the desk
+ * monitor while a
+ * game is being generated; `ready` is a one-shot flash and then the desk
+ * settles back into whichever base state it is next given.
+ */
+export type GameLabState = 'idle' | 'building' | 'ready'
 
 export interface LabRoomZone {
   id: LabRoomZoneId
@@ -96,6 +105,8 @@ export interface LabRoom {
   itemAnchor: (uid: string) => THREE.Vector3 | null
   /** World point just above a station, for anchoring UI to it. */
   stationAnchor: (id: StationId) => THREE.Vector3
+  /** Drive the Game Lab desk: idle code rain, a building pulse, a ready flash. */
+  setGameLabState: (state: GameLabState) => void
   dispose: () => void
 }
 
@@ -127,8 +138,20 @@ export function roomStandingSpot(bench: { x: number; z: number; rot?: number }):
   }
 }
 
+/** How far in front of the Game Lab desk the learner stands to use it. */
+const GAMELAB_STAND_OFFSET = 1.6
+
+/** The spot a learner occupies to use the Game Lab desk at `desk`. */
+export function gameLabStandingSpot(desk: { x: number; z: number; rot?: number }): { x: number; z: number } {
+  const rot = desk.rot ?? DEFAULT_STATIONS.gamelab.rot
+  return {
+    x: desk.x + Math.sin(rot) * GAMELAB_STAND_OFFSET,
+    z: desk.z + Math.cos(rot) * GAMELAB_STAND_OFFSET,
+  }
+}
+
 /** Footprint each station needs clear around it. */
-export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.4, explore: 1.4, mission: 1.0 }
+export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.4, explore: 1.4, mission: 1.0, gamelab: 1.1 }
 
 /**
  * Placed props are built at catalog scale and then grown, so one number covers
@@ -619,6 +642,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     room: { ...DEFAULT_STATIONS.room },
     explore: { ...DEFAULT_STATIONS.explore },
     mission: { ...DEFAULT_STATIONS.mission },
+    gamelab: { ...DEFAULT_STATIONS.gamelab },
   }
   // The bench and its floor shadow move as one.
   const bench = new THREE.Group()
@@ -627,6 +651,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   let mission: THREE.Group | null = null
   let exploreShadow: THREE.Mesh | null = null
   let missionShadow: THREE.Mesh | null = null
+  let gamelabShadow: THREE.Mesh | null = null
 
   if (rich) {
     // ── MAKE ───────────────────────────────────────────────────────────────
@@ -759,6 +784,144 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     totem.add(kioskGlow)
     updaters.push(missionScreen.update)
   }
+
+  // ── GAME LAB ───────────────────────────────────────────────────────────
+  // A desk computer, built in every quality tier because it is a walk-in
+  // station rather than scenery: the child creates learning games here. The
+  // floating Yuvi mark above the screen is the desk's status light — it pulses
+  // while a game is being built and flashes once when one is ready.
+  const gamelab = new THREE.Group()
+  gamelab.position.set(stations.gamelab.x, FLOOR_Y, stations.gamelab.z)
+  gamelab.rotation.y = stations.gamelab.rot
+  group.add(gamelab)
+  gamelabShadow = addPropShadow(2.6, 2.2, stations.gamelab.x, stations.gamelab.z)
+
+  // Desk: a brushed top on two dark side panels, cyan trim along the front lip.
+  addRounded(gamelab, brushedMat, [1.7, 0.08, 0.82], [0, 0.78, 0], 0.03)
+  for (const sx of [-0.78, 0.78]) addRounded(gamelab, darkMat, [0.08, 0.74, 0.72], [sx, 0.37, 0], 0.03)
+  addRounded(gamelab, darkMat, [1.4, 0.36, 0.06], [0, 0.56, -0.34], 0.02)
+  addBox(gamelab, coolStripMat, [1.6, 0.014, 0.02], [0, 0.745, 0.41])
+
+  // Monitor on a stand, keyboard and mouse.
+  const monitorFoot = new THREE.Mesh(cylGeo, darkMat)
+  monitorFoot.scale.set(0.34, 0.05, 0.34)
+  monitorFoot.position.set(0, 0.845, -0.16)
+  gamelab.add(monitorFoot)
+  addRounded(gamelab, darkMat, [0.07, 0.24, 0.05], [0, 0.98, -0.2], 0.015)
+  addRounded(gamelab, darkMat, [1.02, 0.64, 0.05], [0, 1.38, -0.22], 0.03)
+  addBox(gamelab, dimStripMat, [1.0, 0.008, 0.012], [0, 1.062, -0.19])
+  addRounded(gamelab, darkMat, [0.64, 0.03, 0.22], [0, 0.835, 0.14], 0.012)
+  addBox(gamelab, coolStripMat, [0.56, 0.004, 0.012], [0, 0.852, 0.04])
+  addRounded(gamelab, brushedMat, [0.09, 0.03, 0.13], [0.44, 0.835, 0.12], 0.015)
+
+  // Screen: the Yuvi mark (the same PNG as the avatar's chest badge) over a
+  // quiet code rain — bars, not glyphs, so it never needs translating.
+  const rain = (() => {
+    const W = 256, H = 160
+    const { canvas, ctx } = canvasOf(W, H)
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    track(texture)
+    const material = track(new THREE.MeshBasicMaterial({
+      map: texture, transparent: true, opacity: 0.94, toneMapped: false, side: THREE.DoubleSide,
+    }))
+    const COLS = 18
+    const colW = W / COLS
+    // Each column falls at its own pace from its own start, so the rain never
+    // reads as a single repeating wipe.
+    const speed = Array.from({ length: COLS }, (_, i) => 22 + ((i * 7919) % 23))
+    const offset = Array.from({ length: COLS }, (_, i) => (i * 104729) % H)
+    const mark = new Image()
+    mark.src = yuviMarkUrl
+    mark.onload = () => { markReady = true }
+    let markReady = false
+    const paint = (t: number, energy: number, wash: number, pulse: number) => {
+      ctx.fillStyle = 'rgba(6,9,30,1)'
+      ctx.fillRect(0, 0, W, H)
+      for (let c = 0; c < COLS; c++) {
+        const head = (offset[c] + t * speed[c] * (1 + energy * 1.6)) % (H + 60)
+        for (let k = 0; k < 9; k++) {
+          const y = head - k * 9
+          if (y < 0 || y > H) continue
+          const a = (1 - k / 9) * (0.14 + energy * 0.4)
+          ctx.fillStyle = k === 0 ? `rgba(210,250,255,${0.55 + energy * 0.45})` : `rgba(78,238,240,${a})`
+          ctx.fillRect(c * colW + 3, y, colW - 6, 5)
+        }
+      }
+      // The mark: centred, breathing while a game builds, with a soft cyan
+      // halo behind it so it reads as lit from within, not pasted on.
+      if (markReady) {
+        const size = 104 * (1 + pulse * 0.08 + wash * 0.1)
+        const cx = W / 2, cy = H / 2
+        const halo = ctx.createRadialGradient(cx, cy, size * 0.15, cx, cy, size * 0.7)
+        halo.addColorStop(0, `rgba(120,245,255,${0.22 + pulse * 0.25})`)
+        halo.addColorStop(1, 'rgba(120,245,255,0)')
+        ctx.fillStyle = halo
+        ctx.fillRect(0, 0, W, H)
+        ctx.globalAlpha = 0.96
+        ctx.drawImage(mark, cx - size / 2, cy - size / 2, size, size)
+        ctx.globalAlpha = 1
+      }
+      if (wash > 0) {
+        ctx.fillStyle = `rgba(150,245,255,${wash * 0.75})`
+        ctx.fillRect(0, 0, W, H)
+      }
+      // Corner ticks, same language as the bench readout.
+      ctx.strokeStyle = 'rgba(160,188,255,0.4)'
+      ctx.lineWidth = 1.5
+      const arm = 10, inset = 10
+      for (const [x, y, sx, sy] of [
+        [inset, inset, 1, 1], [W - inset, inset, -1, 1],
+        [inset, H - inset, 1, -1], [W - inset, H - inset, -1, -1],
+      ] as Array<[number, number, number, number]>) {
+        ctx.beginPath(); ctx.moveTo(x + sx * arm, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * arm); ctx.stroke()
+      }
+      texture.needsUpdate = true
+    }
+    paint(0, 0, 0, 0)
+    return { material, paint }
+  })()
+  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), rain.material)
+  screen.position.set(0, 1.38, -0.19)
+  gamelab.add(screen)
+  const screenGlowMat = track(new THREE.MeshBasicMaterial({
+    map: radialTexture('rgba(78,238,240,0.35)', 'rgba(78,238,240,0)'),
+    transparent: true, opacity: 0.45, depthWrite: false,
+    blending: THREE.AdditiveBlending, toneMapped: false,
+  }))
+  const screenGlow = new THREE.Mesh(track(new THREE.PlaneGeometry(1.6, 1.1)), screenGlowMat)
+  screenGlow.position.set(0, 1.38, -0.14)
+  gamelab.add(screenGlow)
+
+  // The mark lives on the monitor (painted into the screen texture, above);
+  // a point light in front of the screen carries its pulse into the room.
+  const screenLight = rich ? new THREE.PointLight(CYAN, 1.2, 4.5, 2) : null
+  if (screenLight) { screenLight.position.set(0, 1.45, 0.3); gamelab.add(screenLight) }
+
+  let gameLabMode: 'idle' | 'building' = 'idle'
+  let gameLabFlashAt = -10
+  let gameLabNow = 0
+  let gameLabLastPaint = -1
+  const setGameLabState = (state: GameLabState) => {
+    if (state === 'ready') { gameLabFlashAt = gameLabNow; return }
+    gameLabMode = state
+  }
+  updaters.push((t) => {
+    gameLabNow = t
+    const building = gameLabMode === 'building'
+    // Flash: a bright bloom that decays over about a second.
+    const flash = Math.max(0, 1 - (t - gameLabFlashAt) / 1.1)
+    const pulse = building ? Math.sin(t * 4.2) * 0.5 + 0.5 : 0
+    if (screenLight) screenLight.intensity = 1.2 + pulse * 2.2 + flash * 6
+    screenGlowMat.opacity = 0.4 + pulse * 0.3 + flash * 0.5
+    screenGlow.scale.setScalar(1 + (reduceMotion ? 0 : pulse * 0.1) + flash * 0.6)
+    // The rain repaints at 10 fps (static on weak machines), never per frame.
+    const fps = rich ? 10 : 3
+    if (t - gameLabLastPaint >= 1 / fps) {
+      gameLabLastPaint = t
+      rain.paint(t, building ? 1 : 0, flash, reduceMotion ? (building ? 0.5 : 0) : pulse)
+    }
+  })
 
   // ────────────────────────────────────────────────────────────────────────
   // The window — the room's primary element
@@ -1521,6 +1684,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const ZONES: LabRoomZone[] = [
     { id: 'avatar', x: stations.avatar.x, z: stations.avatar.z, radius: 1.45 },
     { id: 'room', x: 0, z: 0, radius: 1.25 },
+    { id: 'gamelab', x: 0, z: 0, radius: 1.15 },
   ]
 
   // A station's pad is not always under the learner's feet: the room station is
@@ -1529,13 +1693,19 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const ZONE_PADS: Record<LabRoomZoneId, { radius: number; color: number; markerY: number }> = {
     avatar: { radius: 1.45, color: VIOLET, markerY: FLOOR_Y + 2.1 },
     room: { radius: 1.75, color: AMBER, markerY: FLOOR_Y + 2.45 },
+    gamelab: { radius: 1.5, color: CYAN, markerY: FLOOR_Y + 2.75 },
   }
-  /** Where each station's ring and sign live — under the feet, or on the bench. */
-  const padSpot = (id: LabRoomZoneId) => (id === 'avatar' ? stations.avatar : stations.room)
+  /** Where each station's ring and sign live — under the feet, or on the bench / desk. */
+  const padSpot = (id: LabRoomZoneId) => (id === 'avatar' ? stations.avatar : id === 'room' ? stations.room : stations.gamelab)
+  /** Where the learner stands to use a station — on it, or in front of it. */
+  const zoneSpot = (id: LabRoomZoneId) => (
+    id === 'avatar' ? stations.avatar : id === 'room' ? roomStandingSpot(stations.room) : gameLabStandingSpot(stations.gamelab)
+  )
 
   const decorBlockers = (): LabRoomCircle[] => [
     { x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore },
     { x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission },
+    ...(stations.gamelab.placed ? [{ x: stations.gamelab.x, z: stations.gamelab.z, radius: STATION_RADIUS.gamelab }] : []),
   ]
 
   const zonePads = new Map<LabRoomZoneId, {
@@ -1583,6 +1753,17 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       halo.rotation.x = Math.PI / 2
       halo.position.y = 0.3
       marker.add(halo)
+    } else if (zone.id === 'gamelab') {
+      // A little monitor: "this is where you make games". The desk's own
+      // floating mark is the status light; this sign only says the place exists.
+      const slab = new THREE.Mesh(track(new THREE.BoxGeometry(0.4, 0.26, 0.04)), markerMat)
+      slab.position.y = 0.16
+      marker.add(slab)
+      const foot = new THREE.Mesh(track(new THREE.BoxGeometry(0.16, 0.03, 0.1)), markerMat)
+      marker.add(foot)
+      const neck = new THREE.Mesh(track(new THREE.BoxGeometry(0.04, 0.06, 0.03)), markerMat)
+      neck.position.y = 0.035
+      marker.add(neck)
     } else {
       // A little house: "this is where you change the room".
       const walls = new THREE.Mesh(track(new THREE.BoxGeometry(0.34, 0.26, 0.34)), markerMat)
@@ -1614,6 +1795,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     stations.room = { ...next.room }
     stations.explore = { ...next.explore }
     stations.mission = { ...next.mission }
+    stations.gamelab = { ...next.gamelab }
     platform.position.set(stations.avatar.x, 0, stations.avatar.z)
     platform.rotation.y = stations.avatar.rot
     platform.visible = stations.avatar.placed
@@ -1626,10 +1808,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     if (mission) mission.rotation.y = stations.mission.rot
     exploreShadow?.position.set(stations.explore.x, FLOOR_Y + 0.006, stations.explore.z)
     missionShadow?.position.set(stations.mission.x, FLOOR_Y + 0.006, stations.mission.z)
+    gamelab.position.set(stations.gamelab.x, FLOOR_Y, stations.gamelab.z)
+    gamelab.rotation.y = stations.gamelab.rot
+    gamelab.visible = stations.gamelab.placed
+    gamelabShadow?.position.set(stations.gamelab.x, FLOOR_Y + 0.006, stations.gamelab.z)
+    if (gamelabShadow) gamelabShadow.visible = stations.gamelab.placed
 
-    const stand = roomStandingSpot(stations.room)
     for (const zone of ZONES) {
-      const spot = zone.id === 'avatar' ? stations.avatar : stand
+      const spot = zoneSpot(zone.id)
       zone.x = spot.x
       zone.z = spot.z
       zone.radius = stations[zone.id].placed ? ZONE_PADS[zone.id].radius : 0
@@ -1736,13 +1922,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     if (stations.room.placed && raycaster.intersectObject(bench, true).length) return 'room'
     if (explore && raycaster.intersectObject(explore, true).length) return 'explore'
     if (mission && raycaster.intersectObject(mission, true).length) return 'mission'
+    if (stations.gamelab.placed && raycaster.intersectObject(gamelab, true).length) return 'gamelab'
     return null
   }
 
   /** A world point just above a station, so UI can be pinned to it. */
   const stationAnchor = (id: StationId): THREE.Vector3 => {
     const spot = stations[id]
-    const height = id === 'avatar' ? 0.9 : id === 'room' ? 2.3 : id === 'explore' ? 2.1 : 1.8
+    const height = id === 'avatar' ? 0.9 : id === 'room' ? 2.3 : id === 'explore' ? 2.1 : id === 'gamelab' ? 2.6 : 1.8
     return new THREE.Vector3(spot.x, FLOOR_Y + height, spot.z)
   }
 
@@ -1770,7 +1957,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
    * so a station is never blocked by the hole it just left.
    */
   const noBuildZones = (exclude?: StationId): LabRoomCircle[] => [
-    ...(['avatar', 'room', 'explore', 'mission'] as StationId[])
+    ...STATION_IDS
       .filter((id) => id !== exclude && stations[id].placed)
       .map((id) => ({ x: stations[id].x, z: stations[id].z, radius: STATION_RADIUS[id] })),
     ...ZONES.filter((zone) => zone.id !== exclude).map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
@@ -1866,6 +2053,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     return object
   }
 
+  /** A hologram is meshes only: a cloned point light would light the room twice. */
+  const withoutLights = (object: THREE.Object3D) => {
+    const lights: THREE.Object3D[] = []
+    object.traverse((node) => { if ((node as THREE.Light).isLight) lights.push(node) })
+    for (const light of lights) light.parent?.remove(light)
+    return object
+  }
   const setGhost = (kind: string | null, x = 0, z = 0, rot = 0, valid = true, tint?: string) => {
     if (!kind) {
       ghostGroup.visible = false
@@ -1880,11 +2074,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       const station = kind.startsWith('station:') ? (kind.slice(8) as StationId) : null
       const spec = station ? null : roomItemSpec(kind)
       ghostBody = spec ? makeHologram(spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff'))) : null
-      // Both movable stations are shown at their actual size while being
-      // carried. Other stations are not learner-movable from this flow.
+      // The walk-in stations are shown at their actual size while being
+      // carried; the globe and the kiosk only show their footprint.
       ghostStation = station === 'avatar'
         ? makeHologram(platform.clone(true))
-        : station === 'room' ? makeHologram(bench.clone(true)) : null
+        : station === 'room' ? makeHologram(bench.clone(true))
+          : station === 'gamelab' ? makeHologram(withoutLights(gamelab.clone(true))) : null
       if (ghostStation) {
         ghostStation.position.set(0, 0, 0)
         ghostStation.rotation.set(0, 0, 0)
@@ -2157,6 +2352,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   return {
     group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
     zones: ZONES, setZoneHighlight, setUserItems, setGhost, setTarget, setRoomStyle, blockers, noBuildZones,
-    setStations, pickItem, pickStation, itemAnchor, stationAnchor,
+    setStations, pickItem, pickStation, itemAnchor, stationAnchor, setGameLabState,
   }
 }
