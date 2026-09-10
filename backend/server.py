@@ -56,6 +56,7 @@ from app.routes.static_pages import (
     install_spa_fallback, mount_static_assets, router as static_pages_router,
 )
 from app.routes.support import internal_router as support_internal_router, router as support_router
+from app.routes.support_widget import router as support_widget_router
 from app.routes.telemetry import router as telemetry_router
 from app.routes.xapi import router as xapi_router
 from app.core.telemetry import configure_telemetry
@@ -260,6 +261,9 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Without this the browser hides both headers from our own code, and the
+        # support widget has nothing to hand the developer.
+        expose_headers=["x-correlation-id", "server-timing"],
     )
 
     # The built bundle and stylesheet are ~3.7MB of text, and nothing was
@@ -309,6 +313,7 @@ def create_app() -> FastAPI:
     app.include_router(campaign_router)
     app.include_router(support_router)
     app.include_router(support_internal_router)
+    app.include_router(support_widget_router)
     app.include_router(checkin_router)
     app.include_router(telemetry_router)
 

@@ -1,0 +1,219 @@
+/* The floating support companion. Logical properties inside, so the content flips with
+   the document direction instead of needing an RTL override sheet. The outer corner is
+   deliberately physical: Yuvi is pinned bottom-right in every language. */
+
+.support-widget-launcher {
+  position: fixed;
+  inset-block-end: 20px;
+  /* Physical corner in every language: Yuvi owns the bottom-right, help owns the bottom-left. */
+  left: 20px;
+  right: auto;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand, #4c6ef5);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 22%);
+  cursor: pointer;
+}
+
+.support-widget-launcher:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.support-widget-badge {
+  min-inline-size: 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand, #4c6ef5);
+  font-size: 12px;
+  padding: 1px 6px;
+}
+
+.support-widget-indicator {
+  position: fixed;
+  inset-block-start: 12px;
+  inset-inline: 0;
+  z-index: 1300;
+  margin-inline: auto;
+  inline-size: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #b4232c;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+.support-widget-indicator button {
+  border: 1px solid #fff;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.support-widget-dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: #fff;
+  animation: support-widget-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes support-widget-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-widget-dot {
+    animation: none;
+  }
+}
+
+.support-widget-panel {
+  position: fixed;
+  inset-block-end: 84px;
+  left: 20px;
+  right: auto;
+  z-index: 1200;
+  inline-size: min(360px, calc(100vw - 32px));
+  max-block-size: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e2e5ea);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
+}
+
+.support-widget-panel header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.support-widget-panel h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.support-widget-panel header button {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.support-widget-status,
+.support-widget-privacy,
+.support-widget-typing,
+.support-widget-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.support-widget-consent {
+  border: 1px solid var(--brand, #4c6ef5);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.support-widget-consent p {
+  margin: 0;
+}
+
+.support-widget-consent div,
+.support-widget-voice {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.support-widget-consent button,
+.support-widget-voice button,
+.support-widget-composer button {
+  border: 1px solid var(--line, #e2e5ea);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.support-widget-consent .primary,
+.support-widget-composer .primary {
+  background: var(--brand, #4c6ef5);
+  border-color: transparent;
+  color: #fff;
+}
+
+.support-widget-log {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding-inline-end: 4px;
+}
+
+.support-widget-message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  max-inline-size: 85%;
+  overflow-wrap: anywhere;
+}
+
+.support-widget-message.mine {
+  justify-self: end;
+  background: var(--brand, #4c6ef5);
+  color: #fff;
+}
+
+.support-widget-message.theirs {
+  justify-self: start;
+  background: var(--bg, #f2f4f7);
+}
+
+.support-widget-composer {
+  display: flex;
+  gap: 8px;
+}
+
+.support-widget-composer input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 1px solid var(--line, #e2e5ea);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+}
+
+.support-widget-composer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
