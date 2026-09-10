@@ -23,6 +23,9 @@ export interface VoiceState {
 
 const APP_VERSION = (import.meta.env.VITE_APP_VERSION as string | undefined) ?? 'dev'
 
+/** Sharing stops by itself after this long without any interaction. */
+const IDLE_STOP_MS = 5 * 60 * 1000
+
 /**
  * Owns one support session: the token, the socket, chat, screen sharing and voice.
  *
@@ -247,6 +250,24 @@ export function useSupportSession() {
     }
     window.addEventListener('pagehide', onLeave)
     return () => window.removeEventListener('pagehide', onLeave)
+  }, [share.active, stopSharing])
+
+  // Nor may a forgotten tab keep sharing. Five minutes without a keystroke, a click or
+  // a scroll ends the share by itself; the chat stays open.
+  useEffect(() => {
+    if (!share.active) return
+    let timer = 0
+    const arm = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => stopSharing(), IDLE_STOP_MS)
+    }
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'scroll', 'focus']
+    for (const event of events) window.addEventListener(event, arm, { passive: true })
+    arm()
+    return () => {
+      window.clearTimeout(timer)
+      for (const event of events) window.removeEventListener(event, arm)
+    }
   }, [share.active, stopSharing])
 
   // Refresh the technical context while the session is open, so the supporter sees the
