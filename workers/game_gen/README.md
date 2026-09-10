@@ -15,9 +15,9 @@ Design: `docs/design/learning-game-lab.md`. ADO: #545.
 |---|---|
 | `config.py` | env, model, Copilot CLI resolution, language rule |
 | `copilot_session.py` | `HeadlessCopilotSession` on SDK 1.0.13: usage capture, credit cap, `list_model_ids()` |
-| `prompts.py` | builder/editor system messages (identity → learning stance → bridge helper → ambition → tech rules → delivery), `PLAN_SYSTEM`/`plan_prompt`, `JUDGE_SYSTEM`/`judge_prompt`, `REVISION_PROMPT`, `SHRINK_PROMPT` |
+| `prompts.py` | builder/editor system messages (identity → learning stance → the kit → ambition → tech rules → delivery), `PLAN_SYSTEM`/`plan_prompt`, `JUDGE_SYSTEM`/`judge_prompt`, `REVISION_PROMPT`, `SHRINK_PROMPT` |
 | `context_pack.py` | `ContextPack` from the job payload's `context` (titles, subject, grade, purpose, `learning_description`); no answers anywhere |
-| `harness.py`, `harness/*.js` | storage shim, fit-to-frame, error reporter, the thin `YuviLearn` bridge |
+| `harness.py`, `harness/*.js` | storage shim, fit-to-frame, error reporter, the thin `YuviLearn` bridge, the `YuviKit` runtime |
 | `pipeline.py` | `run_job(JobSpec)`: plan → build → validate → judge → (revise → re-judge) → `JobResult{timings, judge}` |
 | `validator.py` | Playwright validator: load, Start + poster, harness state, play score, heartbeat, canvas, screenshot |
 | `patch_engine.py`, `html_utils.py`, `code_utils.py`, `libraries.py` | edit DSL, extraction, deterministic fixes, curated CDNs |
@@ -90,6 +90,32 @@ by the validator): `window.__yuvi.learn = {asked, answered, correct, done}`;
 `{text, answers?, correct, type?, figure?}` and grades locally against
 `q.correct`; `YuviLearn.progress(patch?)`; `YuviLearn.done(summary?)`; legacy
 no-ops `next()` / `answer()` / `reset()`. Posts `ready {mode:'free'}` on load.
+
+**The kit** (`harness/yuvi_kit.js`, injected last): the boilerplate every game
+used to re-implement — start screen, HUD, pause, game-over / win, WebAudio
+synth + music loop with a mute button, particles / shake / floating text /
+flash, keyboard + touch input, tweens, best score — is one runtime configured
+by one spec, so the model spends its output tokens on the world, the mechanic
+and the levels (fewer lines = faster, cheaper builds):
+
+```js
+YuviKit.init({
+  title, subtitle, controls: [{keys, does}],            // the start screen; the kit renders the Start button ("התחל" / "Start" / "ابدأ" by YuviLearn.language)
+  palette: ["#bg", "#accent", …],                       // → CSS vars --yk-1..n, YuviKit.palette
+  hud: [{id: "score", label: "ניקוד", value: 0}, …],     // YuviKit.hud.set({score: 10}) / .add("score", 1) / .get("score")
+  sounds: {hit: "blip", …}, music: {bpm, notes} | "none",  // YuviKit.audio.play("hit") / .mute() / .toggle(); the AudioContext is created on the Start click
+  touch: {joystick: true, buttons: [{id, label, key}]},  // rendered on coarse pointers (or touch.always); YuviKit.input.axis() / .pressed(code) / .on(id, fn)
+                                                        // YuviKit.input.pointerLock(canvas) from onStart for mouse-look (a lost lock pauses behind "click to aim"); YuviKit.input.look → {dx, dy} since the last read
+  storage: {best: "key"}, onStart, onPause, onRetry
+});
+YuviKit.fx.particles({x, y, color, el}) / .shake() / .float(text, {x, y}) / .flash();  YuviKit.screens.gameOver({score, reason}) / .win() / .message(text, ms);
+YuviKit.loop(dt => …) / .tick() / .tween(obj, props, ms, easing) / .best.get() / .set(n) / .paused
+```
+
+Its DOM lives outside `<body>` (appended to `<html>`), so `fit_to_frame`'s body
+transform and MutationObserver never touch it; the fx canvas is zero-sized when
+idle so the validator's canvas checks only see the game's canvas. Every API is a
+no-op before `init`. Tests: `tests/test_harness.py`.
 
 **What the validator holds a game to**: it loads without errors, Start works,
 the rAF heartbeat runs (≥ 30 ticks), the canvas is not blank, `window.__yuvi`

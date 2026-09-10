@@ -379,9 +379,13 @@ async def _shared_browser():  # noqa: ANN202
 
 
 async def close_shared_browser() -> None:
-    """Shut the shared Chromium (worker exit, tests, or a relaunch)."""
-    browser, pw = _shared.get("browser"), _shared.get("pw")
+    """Shut the shared Chromium (worker exit, tests, or a relaunch). A browser
+    bound to another (closed) event loop cannot be awaited from this one —
+    its handles are dropped and the driver dies with that loop."""
+    browser, pw, owner = _shared.get("browser"), _shared.get("pw"), _shared.get("loop")
     _shared.update({"pw": None, "browser": None, "loop": None})
+    if owner is not None and owner is not asyncio.get_running_loop():
+        return
     for closer in ((browser.close if browser is not None else None), (pw.stop if pw is not None else None)):
         if closer is None:
             continue
@@ -629,7 +633,12 @@ async def validate_html(
 
 def validate_html_sync(html: str, **kwargs: Any) -> ValidationResult:
     """Blocking wrapper around ``validate_html`` (must not be called inside a running loop)."""
-    return asyncio.run(validate_html(html, **kwargs))
+    async def run() -> ValidationResult:
+        try:
+            return await validate_html(html, **kwargs)
+        finally:
+            await close_shared_browser()  # the browser belongs to this one-off loop
+    return asyncio.run(run())
 
 
 # ── Error categorisation for the fix prompt ──────────────────────────────────

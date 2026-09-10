@@ -1,11 +1,13 @@
 """Serve-time harness injection.
 
-The model never writes storage, scaling, error-reporting or learning-bridge
-code: those four scripts live here and are prepended to every game, both when
-the Yuvi app serves it and when the headless validator runs it.
+The model never writes storage, scaling, error-reporting, learning-bridge or
+game-boilerplate code: those five scripts live here and are prepended to every
+game, both when the Yuvi app serves it and when the headless validator runs it.
 
 Order matters: storage shim → fit-to-frame → error reporter → learning data →
-YuviLearn bridge. Everything is inlined (the sandboxed iframe has no
+YuviLearn bridge → YuviKit (start screen, HUD, pause, end screens, audio, fx,
+input, best score — configured by one ``YuviKit.init({...})`` spec; it reads
+the language from YuviLearn, so it goes last). Everything is inlined (the sandboxed iframe has no
 same-origin access and a strict CSP). No answer key exists anywhere: the
 bridge grades the game's own questions locally against ``q.correct``.
 """
@@ -48,6 +50,7 @@ def build_harness(learn_data: dict[str, Any], *, nonce: str | None = None) -> st
         _script(_read("error_reporter.js")),
         _json_script("__YUVI_LEARN_DATA", learn_data),
         _script(_read("yuvi_learn.js")),
+        _script(_read("yuvi_kit.js")),
     ]
     return "\n".join(parts)
 

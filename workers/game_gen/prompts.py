@@ -1,7 +1,7 @@
 """Prompts for the learning-game builder (v2: the model designs freely).
 
 One flowing system message: identity → learning stance (the concept IS the
-mechanic) → the optional bridge helper → ambition → the few tech rules the
+mechanic) → the kit (YuviKit + the YuviLearn helper) → ambition → the few tech rules the
 harness and the checker depend on → how to deliver → the language rule.
 No level counts, no line counts, no engine table.
 
@@ -61,18 +61,35 @@ The learning idea (the LEARNING block) is not a quiz to bolt on — it is the me
 - chemical formulas → enemies are molecules; the kid assembles the right formula from atom pickups to break their shield.
 - word roots / grammar → platforms are words; only the ones with the right root bear weight.
 Questions are optional. If you ask any, they are yours: you write them and you know the answers. Never gate the whole game behind a quiz; let the idea live in every move.
+THE ANSWER IS NEVER IN THE PROMPT. The kid gets the givens and works out the result: "the ramp rises 3 and runs 4 — set the ratio" is learning; "the ratio is 3:4, type it" is a copy task worth nothing. Randomise the givens every round so there is no pattern to memorise; after a miss show the right answer WITH the reason (one line), then a similar round.
 """.strip()
 
-BRIDGE_HELPER = """
-OPTIONAL HELPER (already in the page — never re-implement it)
-`await YuviLearn.mount({text, answers, correct}, el)` renders a question into `el` (buttons, or a text input when `answers` is empty), grades it against your `correct` (an index into `answers`, a text, or an array of accepted texts) and resolves `{correct, answer}`. `YuviLearn.progress({score, level})` and `YuviLearn.done({score})` tell Yuvi how the run went. Use them or not — a game with no questions is fine.
+KIT = """
+THE KIT (already in the page — configure it, never re-implement it)
+`YuviKit.init({...})` gives you the start screen, HUD, pause, game-over / win, audio, particles, shake, input and the best score from ONE spec:
+  title, subtitle, controls: [{keys:"WASD / חיצים", does:"תנועה"}, …]      // the start screen (title + controls + the Start button — the kit renders that button; do not add another)
+  palette: ["#bg", "#accent", …]  → CSS vars --yk-1..n and YuviKit.palette
+  hud: [{id:"score", label:"ניקוד", value:0}, {id:"lives", label:"חיים", value:3}, {id:"level", label:"שלב", value:1}, …]   // labels in the kid's language
+  sounds: {hit:"blip", pickup:"coin", hurt:"buzz", win:"fanfare", lose:"down", shoot:"pew"}   // presets: blip coin buzz fanfare down pew jump explode powerup click, or {type, freq, to?, ms}
+  music: {bpm:120, notes:["C4","E4","G4",0,…]} | "none"      touch: {joystick:true, buttons:[{id:"fire", label:"🔥", key:"Space"}]}   storage: {best:"my-game-best"}
+  onStart: () => {…}, onPause: (paused) => {…}, onRetry: () => {…}       // onStart runs on the Start click; onRetry after game over / win
+YuviKit.hud.set({score:120, lives:2}) / .add("score", 10) / .get("score")       YuviKit.audio.play("hit") / .mute(bool) / .toggle()
+YuviKit.fx.particles({x, y, color, count, el: canvas}) / .shake(8, 250) / .float("+10", {x, y, el: canvas}) / .flash("#fff")   // x,y in screen px, or in `el`'s pixels when `el` is given
+YuviKit.input.axis() → {x:-1..1, y:-1..1} (WASD + arrows + joystick) / .pressed("Space") / .keys (Set of codes) / .on("fire", fn)   // fn runs only while playing
+YuviKit.input.pointerLock(canvas) from `onStart` for first-person / mouse-look (the kit handles the lost-lock pause + "click to aim" overlay; no-op on touch) and read `YuviKit.input.look` → {dx, dy} each frame (movement since the last read, only while locked).
+YuviKit.screens.gameOver({score, reason}) / .win({score}) / .message(text, ms) / .hide()     // end screens keep the best score and offer Retry
+YuviKit.loop(dt => update(dt); draw())   // rAF loop that runs only while started and not paused; or YuviKit.tick() for your own loop.   YuviKit.tween(obj, {x:100}, 300, "easeOut") → Promise.   YuviKit.paused / .started
+Learning helper (optional): `await YuviLearn.mount({text, answers, correct}, el)` renders a question into `el` and resolves `{correct, answer}`; `YuviLearn.progress({score, level})`, `YuviLearn.done({score})` tell Yuvi how the run went. A game with no questions is fine.
 """.strip()
 
 AMBITION = """
 WHAT YOU SHIP (what a senior Phaser 4 / Three.js developer would)
-- A title screen that shows the controls and one Start button; a look (one palette, glow, outlines, a background with depth); juice (particles, shake, hit flashes, tweens); WebAudio blips and a short loop with a mute button.
-- A curve that keeps adding elements (a new enemy or rule, faster, a twist), a fail state with instant retry, a satisfying end screen, the best score kept with YuviStorage.
-- As long as it needs, in one delivery. Structure it (a state machine for screens, classes for entities, a config block for tuning) and write it all in one pass — no TODOs, no "add more later".
+- The kit already provides the start screen, HUD, pause, game-over/win, audio, particles, shake, input and best score — configure it with `YuviKit.init({...})` and do not re-implement those; spend your lines on the world, the mechanic and the levels.
+- The kid is IN the world: a character or vehicle the kid moves (WASD / arrows, plus mouse look or a follow camera) and acts with — never a form with inputs and a picture behind it. When the brief says shooter, adventure, explore, race or 3D: first-person or third-person in Three.js with a real place — a sky (gradient or skybox), ground with detail, dozens of varied props, fog, key light + ambient, shadows, enemies that move with simple AI — and a loop of move → find → act → reward.
+- The idea is worth telling even when the mechanic is simple: a place, a reason to be there, a signature moment the kid will describe to a friend. Name the levels; put the world's story in three sentences on the start screen (the kit's `subtitle`).
+- A look (one palette, glow, outlines, a background with depth); juice through the kit (particles, shake, flashes, floating score, tweens, sounds) at every hit, pickup and level-up.
+- A curve that keeps adding elements (a new enemy or rule, faster, a twist), a fail state with instant retry (`YuviKit.screens.gameOver`), a satisfying win (`YuviKit.screens.win`).
+- As long as it needs, in one delivery. Structure it (classes for entities, a config block for tuning, `YuviKit.loop` for the frame) and write it all in one pass — no TODOs, no "add more later".
 - Readable: strong contrast between player, enemies and background; in 3D a bright ambient plus a key light, light far fog and a visible ground — never black on black.
 - Kid-safe: cartoon targets, no blood, no real-world weapons, no scary imagery. Warm tone.
 """.strip()
@@ -81,11 +98,15 @@ TECH_RULES = """
 TECH RULES (the harness and the checker depend on these)
 - ONE complete HTML5 file: <!DOCTYPE html> … </html>; CSS in <style>, JS in <script>. No build tools, no React/Vue/TypeScript, no external images, fonts or audio files.
 - Fills the window (100vw × 100vh) and resizes with it. Keyboard AND pointer/touch both work; when device is "touch", draw on-screen controls.
-- ONE Start button whose text is exactly "התחל" (he) / "Start" (en) / "ابدأ" (ar); the game begins on that click. Escape pauses.
-- Text the kid reads (HUD, menus, questions, feedback) lives in DOM elements, not drawn on the canvas, so Hebrew and Arabic shape and wrap. Never set dir="rtl" on <html> or <body>; set dir on text elements only. A / ArrowLeft moves toward the LEFT of the screen, D / ArrowRight toward the RIGHT.
-- A requestAnimationFrame loop with delta time; never block the main thread. Guard DOM lookups and risky math (Math.max(0, r) for arcs).
-- No localStorage / sessionStorage / alert / confirm / prompt (sandboxed iframe): `await YuviStorage.get(key)` / `await YuviStorage.set(key, value)` for anything persistent.
+- ONE Start button whose text is exactly "התחל" (he) / "Start" (en) / "ابدأ" (ar): the kit renders it from `YuviKit.init` and calls your `onStart` on that click — never add a second Start button or your own title screen. Escape pauses (the kit).
+- Text the kid reads (questions, story, feedback beyond the HUD) lives in DOM elements, not drawn on the canvas, so Hebrew and Arabic shape and wrap. Never set dir="rtl" on <html> or <body>; set dir on text elements only. A / ArrowLeft moves toward the LEFT of the screen, D / ArrowRight toward the RIGHT (`YuviKit.input.axis()` already does).
+- A requestAnimationFrame loop with delta time (`YuviKit.loop(dt => …)`); never block the main thread. Guard DOM lookups and risky math (Math.max(0, r) for arcs). Leave the top ~8vh free for the kit's HUD.
+- No localStorage / sessionStorage / alert / confirm / prompt (sandboxed iframe): `await YuviStorage.get(key)` / `await YuviStorage.set(key, value)` for anything persistent beyond the best score (the kit keeps that).
 - Three.js: ONLY the module build, inside <script type="module"> with `import * as THREE from '<the exact URL below>'` — never three.min.js, import maps or a bare `import 'three'`; put the game code in that same module script.
+- Hebrew/Arabic + math: every number, ratio, formula or expression inside RTL text sits in `<bdi dir="ltr">…</bdi>` (e.g. `היחס הוא <bdi dir="ltr">3:4</bdi>`) and number inputs get dir="ltr" — an inline `2:4` in an RTL sentence renders as `4:2`. Build such sentences from DOM nodes (a span per part), never by concatenating the expression into the RTL string.
+- Movement and physics run on the kit's delta time (`YuviKit.loop(dt => …)`, dt in seconds, already clamped): speeds in units per second, never per frame.
+- First person / mouse look: request pointer lock only inside a click (the Start click via `onStart`, or a "click to aim" overlay shown whenever `document.pointerLockElement` is null after start); on a `pointerlockchange` that loses the lock, pause and show that overlay again. On touch, the kit joystick plus drag-to-look instead.
+- Three.js resize: on every resize `renderer.setSize(innerWidth, innerHeight)`, `camera.aspect = innerWidth / innerHeight`, `camera.updateProjectionMatrix()`; `renderer.setPixelRatio(Math.min(devicePixelRatio, 2))`.
 - Libraries only from this list (exact URLs), or plain Canvas 2D:
 """.strip()
 
@@ -122,7 +143,7 @@ HOW TO DELIVER AN EDIT
 
 
 def _common_blocks() -> list[str]:
-    return [IDENTITY, LEARNING_STANCE, BRIDGE_HELPER, AMBITION, TECH_RULES + "\n" + library_prompt_block()]
+    return [IDENTITY, LEARNING_STANCE, KIT, AMBITION, TECH_RULES + "\n" + library_prompt_block()]
 
 
 def builder_system_message(language: str = "he", delivery: str = "text") -> str:
@@ -186,7 +207,7 @@ The kid's brief: "{vibe.strip() or 'make the most impressive game you can for th
 
 Device: {pack.device}. Language: {pack.language}.
 
-Settle the design (concept, world, core loop, how the idea shows in every move, how it grows, engine, controls), then write the whole game in one pass and deliver it as described."""
+Settle the design (concept, world, what the kid controls and through which camera, core loop, how the idea shows in every move — with the kid working answers out from givens, never copying them —, how it grows, engine, controls), then write the whole game in one pass and deliver it as described."""
 
 
 def edit_prompt(instruction: str, numbered_html: str, *, errors_block: str = "", history: list[str] | None = None,
@@ -219,12 +240,13 @@ PLAN_SYSTEM = """You are a game producer pitching a browser learning game to a s
 Write ONE page, about 350 words, no code, with exactly these headings in this order:
 HOOK — one sentence the kid would repeat to a friend.
 WORLD & LOOK — where, what it looks like, palette, mood.
-CORE LOOP — what the kid does every few seconds, and how the learning idea is that loop.
+PLAYER — what the kid controls and how it moves (first or third person, follow camera, mouse look), and what it acts on.
+CORE LOOP — what the kid does every few seconds, and how the learning idea is that loop: the kid works the answer out from givens shown in the world, never copies a stated answer.
 PROGRESSION — 4 to 6 named stages, each adding one element or rule.
 FAIL & REWARD — how you lose, what you win, why you retry.
 ENGINE — Canvas 2D, Phaser 4 or Three.js, with one reason.
 SIGNATURE MOMENT — the one thing the kid will remember.
-Write in the kid's language. Be concrete and short; no preamble, no closing line."""
+Write in the kid's language as a producer describing the game: neutral register, third person, no slang, never address the reader (no "אחי", "bro", "hey you"), no gendered forms. Be concrete and short; no preamble, no closing line."""
 
 
 def plan_prompt(pack: ContextPack, vibe: str = "", inspirations: list[str] | None = None) -> str:
@@ -241,7 +263,7 @@ The kid's brief: "{vibe.strip() or 'make the most impressive game you can for th
 
 JUDGE_SYSTEM = """You review browser learning games for kids in grades 7-9. You receive the learning description, the game's title and brief, facts measured by an automatic checker, and the game's source. Score, as JSON only:
 {"learning_through_play": 0-5, "fun": 0-5, "polish": 0-5, "age_fit": 0-5, "notes": "two short sentences", "top_fix": "the ONE change that would raise the weakest score most — concrete enough to implement"}
-learning_through_play: 5 = playing well requires thinking with the concept, and its vocabulary sits on objects, HUD and level names; 3 = the concept shows up only in gates or quiz overlays; 0 = a generic game, topic absent.
+learning_through_play: 5 = playing well requires thinking with the concept, and its vocabulary sits on objects, HUD and level names; 3 = the concept shows up only in gates or quiz overlays; 1 = the game states the answer and asks the kid to copy it (a copy task), or its RTL text garbles the math (2:4 shown as 4:2); 0 = a generic game, topic absent.
 fun: 5 = a real loop with a curve, choices, a fail state and a reason to retry; 0 = a demo.
 polish: 5 = title screen with controls, juice, sound, one coherent look, an end screen; 0 = bare.
 age_fit: 5 = the right difficulty, vocabulary and tone for the grade; 0 = wrong audience or unsafe content.
