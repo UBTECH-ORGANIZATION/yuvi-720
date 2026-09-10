@@ -31,6 +31,7 @@ import { RoomLikeButton } from './community/RoomLikeButton'
 import { getCommunityRoom, removeRoomLike, setRoomLike, type CommunityRoom } from '../../services/api'
 import { FriendTravelController } from './travel/FriendTravelController'
 import type { TravelPhase } from './travel/TravelStateMachine'
+import { useStudioTransition } from './StudioTransitionProvider'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
@@ -56,6 +57,7 @@ type StudioMode = 'roam' | 'avatar' | 'room' | 'friends'
 // Where Yuvi is sent when the learner closes a station panel — clear of every
 // station ring and of the three fixed lab props.
 const STEP_OFF: [number, number] = [0, 4.5]
+const TIME_REMINDER_SECONDS = new Set([15 * 60, 10 * 60, 5 * 60, 60])
 
 // Anything the learner can recolour uses the same friendly palette.
 const ITEM_TINTS = ['#7C6BFF', '#4eeef0', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0', '#4cc9f0', '#ff7a3d', '#f3ecdd', '#9a6b40']
@@ -91,6 +93,9 @@ export function StudioContent({
   onClose: () => void
 }) {
   const { t } = useI18n()
+  const transition = useStudioTransition()
+  const studioTime = transition?.studioTime
+  const setActiveStudioRemainingSeconds = transition?.setActiveStudioRemainingSeconds
   const { user } = useAuth()
   const { isTouch } = useResponsive()
   const {
@@ -144,7 +149,6 @@ export function StudioContent({
   const roomState = useRoomDesign(true, user?.user_id)
   const [stageRendered, setStageRendered] = useState(false)
   const [showLoadingExperience, setShowLoadingExperience] = useState(true)
-  const [worldPickerOpen, setWorldPickerOpen] = useState(false)
   const [worldSwitching, setWorldSwitching] = useState(false)
   const [worldSwitchFailed, setWorldSwitchFailed] = useState(false)
   const [unplacedItems, setUnplacedItems] = useState<RoomItem[]>([])
@@ -156,15 +160,55 @@ export function StudioContent({
   const transitionCompleteRef = useRef(false)
   const pendingUnplacedItemsRef = useRef<RoomItem[] | null>(null)
   const [worldPurchaseError, setWorldPurchaseError] = useState<string | null>(null)
+  const [remainingSeconds, setRemainingSeconds] = useState(studioTime?.remaining_seconds ?? 0)
+  const [timeExpired, setTimeExpired] = useState(false)
+  const [timeReminder, setTimeReminder] = useState(false)
+  const reminderDismissTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!studioTime) return
+    setRemainingSeconds(studioTime.remaining_seconds)
+  }, [studioTime])
+
+  useEffect(() => {
+    if (!studioTime?.allowed) return
+    const tick = window.setInterval(() => setRemainingSeconds((seconds) => Math.max(0, seconds - 1)), 1000)
+    return () => window.clearInterval(tick)
+  }, [studioTime?.allowed])
+
+  useEffect(() => {
+    if (!TIME_REMINDER_SECONDS.has(remainingSeconds)) return
+    setTimeReminder(true)
+    if (reminderDismissTimer.current) window.clearTimeout(reminderDismissTimer.current)
+    reminderDismissTimer.current = window.setTimeout(() => {
+      setTimeReminder(false)
+      reminderDismissTimer.current = null
+    }, 4000)
+  }, [remainingSeconds])
+
+  useEffect(() => () => {
+    if (reminderDismissTimer.current) window.clearTimeout(reminderDismissTimer.current)
+  }, [])
+
+  useEffect(() => {
+    if (remainingSeconds === 0 && studioTime?.allowed) setTimeExpired(true)
+  }, [remainingSeconds, studioTime?.allowed])
+
+  const clock = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`
+
+  useEffect(() => {
+    if (!setActiveStudioRemainingSeconds) return
+    setActiveStudioRemainingSeconds(remainingSeconds)
+    return () => setActiveStudioRemainingSeconds(null)
+  }, [remainingSeconds, setActiveStudioRemainingSeconds])
+
   const chooseWorld = async (layoutId: RoomLayoutId) => {
     if (worldSwitching || travelPhase !== 'idle') return
     if (roomState.room.activeLayoutId === layoutId) {
-      setWorldPickerOpen(false)
       return
     }
     setWorldSwitching(true)
     setWorldSwitchFailed(false)
-    setWorldPickerOpen(false)
     transitionCompleteRef.current = false
     pendingUnplacedItemsRef.current = null
     const controller = travelControllerRef.current ?? new FriendTravelController()
@@ -175,7 +219,6 @@ export function StudioContent({
         void roomState.setActiveLayout(layoutId).then((result) => {
           if (!result.ok) {
             setWorldSwitchFailed(true)
-            setWorldPickerOpen(true)
             return
           }
           if (result.hiddenItems.length === 0) return
@@ -188,7 +231,6 @@ export function StudioContent({
       onComplete: () => {
         transitionCompleteRef.current = true
         setWorldSwitching(false)
-        setWorldPickerOpen(false)
         setMode('roam')
         requestAnimationFrame(() => avatarRef.current?.focus('roam'))
         const hiddenItems = pendingUnplacedItemsRef.current
@@ -201,12 +243,10 @@ export function StudioContent({
       onFailure: () => {
         setWorldSwitching(false)
         setWorldSwitchFailed(true)
-        setWorldPickerOpen(true)
       },
     })
     if (!started) {
       setWorldSwitching(false)
-      setWorldPickerOpen(true)
     }
   }
   const unlockWorld = async (layoutId: Extract<RoomLayoutId, 'sportsArena' | 'creatorLoft'>) => {
@@ -400,7 +440,6 @@ export function StudioContent({
     if (zone === 'mission') {
       setPlacing(null)
       setFirstPerson(false)
-      setWorldPickerOpen(false)
       setMode('friends')
       avatarRef.current?.focus('roam')
       return
@@ -425,7 +464,6 @@ export function StudioContent({
   const leaveStation = () => {
     setPlacing(null)
     setPropMenu(null)
-    setWorldPickerOpen(false)
     setMode('roam')
     avatarRef.current?.focus('roam')
     avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
@@ -694,13 +732,10 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
-            worldPickerOpen={worldPickerOpen}
-            onOpenWorldPicker={() => setWorldPickerOpen(true)}
-            onCloseWorldPicker={() => setWorldPickerOpen(false)}
             worldSelector={(
               <HolographicWorldSelector
                 compact
-                open={worldPickerOpen}
+                open
                 busy={worldSwitching || buying === 'layout:sportsArena' || buying === 'layout:creatorLoft'}
                 activeLayoutId={activeLayoutId}
                 labels={{
@@ -721,6 +756,8 @@ export function StudioContent({
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
             priceOf={priceOf}
+            hasSportsArena={isRoomUnlocked('layout:sportsArena')}
+            hasCreatorLoft={isRoomUnlocked('layout:creatorLoft')}
             onBuyRoom={(kind) => { setPurchaseError(null); setPending({ id: kind, labelKey: `YuviStudio.room.item.${kind}`, roomKind: kind }) }}
             surpriseRewards={claimedRewards}
             t={t}
@@ -941,6 +978,22 @@ export function StudioContent({
             </section>
           </div>
         )}
+        {timeExpired && (
+          <div className="ys-shop-backdrop ys-timeout-backdrop" role="presentation">
+            <section className="ys-shop ys-timeout-dialog" role="dialog" aria-modal="true" aria-labelledby="yuvi-studio-timeout-title">
+              <h2 id="yuvi-studio-timeout-title">{t('YuviStudio.time.expired.title')}</h2>
+              <p>{t('YuviStudio.time.expired.body')}</p>
+              <div className="ys-shop__actions">
+                <button type="button" className="ys-btn ys-btn--primary" onClick={() => {
+                  void transition?.leaveStudio()
+                  window.location.assign('/student-dashboard')
+                }}>
+                  {t('YuviStudio.time.expired.dashboard')}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
         {unplacedNoticeOpen && !visitorRoom && (
           <div className="ys-shop-backdrop" role="presentation">
             <section className="ys-shop ys-shop--confirm" role="dialog" aria-modal="true" aria-labelledby="yuvi-unplaced-items-title">
@@ -1059,6 +1112,11 @@ export function StudioContent({
               <Icon name={firstPerson ? 'orbit' : 'eye'} size={18} />
             </button>
           )}
+          {timeReminder && (
+            <div className="ys-time-reminder" role="status">
+              {t('YuviStudio.time.reminder').replace('{time}', clock)}
+            </div>
+          )}
           {visitorRoom && (
             <RoomLikeButton liked={visitorRoom.liked_by_me} pending={likingRoom || returning || travelPhase !== 'idle'}
               onToggle={() => void toggleVisitorRoomLike()} />
@@ -1143,7 +1201,7 @@ export function StudioContent({
           primaryAction={menuStation === 'avatar'
             ? { label: t('YuviStudio.zone.avatar'), icon: 'spark', onClick: () => { setPropMenu(null); goToStation('avatar') } }
             : undefined}
-          onMove={menuStation === 'avatar' ? undefined : () => startMove(propMenu.uid)}
+          onMove={() => startMove(propMenu.uid)}
           onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
@@ -1398,33 +1456,38 @@ function RoomColorDialog({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, worldPickerOpen, onOpenWorldPicker, onCloseWorldPicker, worldSelector, footer, isPropLocked, requirementFor, priceOf, onBuyRoom, surpriseRewards, t,
+  state, placing, setPlacing, onLeave, worldSelector, footer, isPropLocked, requirementFor, priceOf, hasSportsArena, hasCreatorLoft, onBuyRoom, surpriseRewards, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
   setPlacing: (next: YuviPlacing | null) => void
   onLeave: () => void
-  worldPickerOpen: boolean
-  onOpenWorldPicker: () => void
-  onCloseWorldPicker: () => void
   worldSelector: React.ReactNode
   footer: React.ReactNode
   /** Furniture that has to be earned, and what earns it. */
   isPropLocked: (kind: string) => boolean
   requirementFor: (id: string) => string | undefined
   priceOf: (id: string) => number | null
+  hasSportsArena: boolean
+  hasCreatorLoft: boolean
   onBuyRoom: (kind: string) => void
   surpriseRewards: string[]
   t: (key: string) => string
 }) {
-  const [category, setCategory] = useState<RoomTab>('seating')
+  const [category, setCategory] = useState<RoomTab>('general')
   const { room, items, full, selected, setSelectedUid } = state
   const isItemCategory = ROOM_CATEGORIES.includes(category as RoomItemCategory) || category === 'surprises'
   const categoryItems = useMemo(
     () => category === 'surprises'
       ? claimedSurpriseItems(surpriseRewards)
-      : ROOM_CATEGORIES.includes(category as RoomItemCategory) ? itemsInCategory(category as RoomItemCategory) : [],
-    [category, surpriseRewards],
+      : ROOM_CATEGORIES.includes(category as RoomItemCategory)
+        ? itemsInCategory(category as RoomItemCategory).filter((item) => {
+          if (item.id.startsWith('sports')) return hasSportsArena
+          if (item.id.startsWith('loft')) return hasCreatorLoft
+          return true
+        })
+        : [],
+    [category, hasCreatorLoft, hasSportsArena, surpriseRewards],
   )
   const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
   const placementHint = placing && !placing.station && roomItemSpec(placing.kind)?.placement === 'wall'
@@ -1450,21 +1513,15 @@ function RoomPanel({
       title={t('YuviStudio.room.title')}
       closeLabel={t('YuviStudio.station.leave')}
       onClose={onLeave}
-      wallet={(
-        <button type="button" className="ys-panel__world-switch" onClick={onOpenWorldPicker}>
-          <Icon name="globe" size={15} />
-          {t('YuviStudio.room.switchWorld')}
-        </button>
-      )}
       nav={(
         <SegmentedNav
           label={t('YuviStudio.room.title')}
           items={[
+            ...ROOM_STYLE_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey), icon: tab.icon })),
             ...ROOM_CATEGORIES.map((id) => ({
               id, label: t(`YuviStudio.room.category.${id}`), icon: ROOM_ICONS[id],
             })),
             { id: 'surprises', label: t('YuviStudio.room.category.surprises'), icon: 'spark' },
-            ...ROOM_STYLE_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey), icon: tab.icon })),
           ]}
           value={category}
           onChange={setCategory}
@@ -1480,17 +1537,6 @@ function RoomPanel({
           : null}
       footer={footer}
     >
-      {worldPickerOpen && (
-        <div className="ys-room-world-dialog" role="dialog" aria-modal="true" aria-label={t('YuviStudio.worlds.choose')}>
-          <div className="ys-room-world-dialog__head">
-            <h2>{t('YuviStudio.worlds.choose')}</h2>
-            <button type="button" onClick={onCloseWorldPicker} aria-label={t('YuviStudio.worlds.close')} title={t('YuviStudio.worlds.close')}>
-              <Icon name="close" size={18} />
-            </button>
-          </div>
-          {worldSelector}
-        </div>
-      )}
       {placementHint && <p className="ys-note">{placementHint}</p>}
       {isItemCategory && room.storedItems.length > 0 && <section className="ys-section">
         <h2 className="ys-section__title">{t('YuviStudio.room.storage')}</h2>
@@ -1565,6 +1611,10 @@ function RoomPanel({
               </div>
             </div>
           ))}
+          <div className="ys-general-style">
+            <h2 className="ys-section__title">{t('YuviStudio.room.switchWorld')}</h2>
+            {worldSelector}
+          </div>
         </section>
       )}
 

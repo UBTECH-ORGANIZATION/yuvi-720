@@ -1,5 +1,5 @@
 import type { RoomItem, RoomStations, StationId, WallAnchor } from './RoomDesign.ts'
-import { PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BLOCKERS, PLAYGROUND_WALK_SURFACES } from './PlaygroundLayout.ts'
+import { PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BARRIERS, PLAYGROUND_WALK_SURFACES } from './PlaygroundLayout.ts'
 
 export type RoomLayoutId = 'lab' | 'adventurePark' | 'sportsArena' | 'creatorLoft'
 
@@ -29,6 +29,7 @@ export interface RoomLayout {
   walls: RoomLayoutWall[]
   decorBlockers: Array<{ x: number; z: number; radius: number }>
   walkBlockers: Array<{ x: number; z: number; radius: number }>
+  walkBarriers: Array<{ minX: number; maxX: number; frontZ: number }>
   walkSurfaces: RoomWalkSurface[]
   defaultStations: RoomStations
   camera: { x: number; y: number; z: number; targetX: number; targetY: number; targetZ: number }
@@ -111,6 +112,7 @@ const rectangularWorld = (
   id: RoomLayoutId,
   decorBlockers: RoomLayout['decorBlockers'] = [],
   walkBlockers: RoomLayout['walkBlockers'] = decorBlockers,
+  walkBarriers: RoomLayout['walkBarriers'] = [],
   walkSurfaces: RoomLayout['walkSurfaces'] = [],
 ): RoomLayout => ({
   id,
@@ -118,6 +120,7 @@ const rectangularWorld = (
   walls: LAB_WALLS,
   decorBlockers,
   walkBlockers,
+  walkBarriers,
   walkSurfaces,
   defaultStations: LAB_STATIONS,
   camera: WORLD_CAMERA,
@@ -125,7 +128,7 @@ const rectangularWorld = (
 
 export const ROOM_LAYOUTS: Record<RoomLayoutId, RoomLayout> = {
   lab: rectangularWorld('lab'),
-  adventurePark: rectangularWorld('adventurePark', PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BLOCKERS, PLAYGROUND_WALK_SURFACES),
+  adventurePark: rectangularWorld('adventurePark', PLAYGROUND_DECOR_BLOCKERS, [], PLAYGROUND_WALK_BARRIERS, PLAYGROUND_WALK_SURFACES),
   sportsArena: rectangularWorld('sportsArena', SPORTS_ARENA_BLOCKERS, [], SPORTS_ARENA_WALK_SURFACES),
   creatorLoft: rectangularWorld('creatorLoft', CREATOR_LOFT_BLOCKERS, [], CREATOR_LOFT_WALK_SURFACES),
 }

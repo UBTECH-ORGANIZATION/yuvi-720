@@ -106,6 +106,7 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "room_unlocks": [],
         "badges": [],
         "room": None,
+        "studio_time": None,
         "activeness_map": None,
         "mentoring_draft": None,
     }
@@ -148,7 +149,7 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     allowed = {
         "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
         "profile_cache", "dashboard_cache", "game_progress", "avatar", "yuvi_design", "room",
-        "activeness_map", "mentoring_draft",
+        "studio_time", "activeness_map", "mentoring_draft",
     }
     now = datetime.now(timezone.utc).isoformat()
     set_data = {key: value for key, value in updates.items() if key in allowed}

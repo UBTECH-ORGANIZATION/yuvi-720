@@ -140,20 +140,21 @@ test('version 3 rooms receive movable Adventure Park furniture exactly once', ()
 
 test('Adventure Park architecture protects its perimeter and leaves the centre editable', () => {
   const layout = ROOM_LAYOUTS.adventurePark
-  assert.equal(layout.decorBlockers.length, 5)
-  assert.equal(layout.walkBlockers.length, 2)
-  assert.equal(layout.walkSurfaces.length, 6)
-  const item = { uid: 'clubhouse-chair', kind: 'chair', x: -20.2, z: 21.5, rot: 0 }
+  assert.equal(layout.decorBlockers.length, 148)
+  assert.equal(layout.walkBlockers.length, 0)
+  assert.deepEqual(layout.walkBarriers, [{ minX: -22.2, maxX: 22.2, frontZ: -23.65 }])
+  assert.equal(layout.walkSurfaces.length, 1)
+  const item = { uid: 'traffic-chair', kind: 'chair', x: 21.2, z: 21.5, rot: 0 }
   const result = reconcileItemsForLayout(layout, [item], [], { radiusFor: () => 0.7, gridStep: 1 })
-  assert.deepEqual(result.relocatedUids, ['clubhouse-chair'])
+  assert.deepEqual(result.relocatedUids, ['traffic-chair'])
   assert.equal(result.items.some((entry) => entry.x === 0 && entry.z === 4), false)
   assert.equal(layout.decorBlockers.some((blocker) => Math.hypot(blocker.x, blocker.z - 4) <= blocker.radius + 0.7), false)
 })
 
 test('Adventure Park exposes fixed climb heights only for architecture', () => {
   const layout = ROOM_LAYOUTS.adventurePark
-  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: -22.8 }), 0.34)
-  assert.equal(walkSurfaceHeightAt(layout, { x: -20.1, z: 21.3 }), 1.34)
+  assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: -22.8 }), 0.24)
+  assert.equal(walkSurfaceHeightAt(layout, { x: -20.1, z: 21.3 }), 0)
   assert.equal(walkSurfaceHeightAt(layout, { x: 0, z: 4 }), 0)
 })
 

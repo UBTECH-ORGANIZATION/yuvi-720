@@ -518,6 +518,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         point.x = circle.x + (dx / distance) * minimum
         point.y = circle.z + (dz / distance) * minimum
       }
+      for (const barrier of activeLayout.walkBarriers) {
+        if (point.x >= barrier.minX && point.x <= barrier.maxX && point.y < barrier.frontZ) {
+          point.y = barrier.frontZ
+        }
+      }
       const projected = projectPointIntoLayout(activeLayout, { x: point.x, z: point.y }, BODY_RADIUS)
       point.set(projected.x, projected.z)
     }
@@ -1703,12 +1708,17 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
               arrived?.()
             }
           }
-          const moving = roamStep.lengthSq() > 1e-8
-          if (moving) {
+          const hasStep = roamStep.lengthSq() > 1e-8
+          let moving = false
+          if (hasStep) {
+            const previousX = roamPos.x
+            const previousZ = roamPos.y
             roamPos.add(roamStep)
             resolveCollisions(roamPos)
+            moving = Math.hypot(roamPos.x - previousX, roamPos.y - previousZ) > 1e-6
+            if (!moving) roamTarget.copy(roamPos)
             // Face where he is actually going, not where he was asked to go.
-            yawTarget = Math.atan2(roamStep.x, roamStep.y)
+            if (moving) yawTarget = Math.atan2(roamStep.x, roamStep.y)
           }
           // In first person the body follows the gaze, so walking backwards
           // does not spin the camera the learner is looking through.

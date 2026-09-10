@@ -50,11 +50,14 @@ class UnlockRuleTests(unittest.TestCase):
         self.assertIn("rocketModel", got)
         self.assertNotIn("mathBoard", got)
 
-    def test_free_catalog_props_are_never_gated(self) -> None:
-        # Gating an id that already ships free would retroactively lock a prop a
-        # learner has placed, and the room screen would then strip it.
-        for free_id in ("desk", "telescope", "plant", "banner", "frames", "bookshelf"):
-            self.assertNotIn(free_id, unlocks.PROP_IDS, free_id)
+    def test_regular_catalog_props_can_be_priced_or_starter_free(self) -> None:
+        from app.services.rewards.catalog import CATALOG
+
+        for asset_id in ("telescope", "storage", "cactus", "bonsai"):
+            self.assertEqual(CATALOG[asset_id]["slot"], "room", asset_id)
+            self.assertGreater(CATALOG[asset_id]["price"], 0, asset_id)
+        for asset_id in ("desk", "bookshelf", "plant", "banner", "frames"):
+            self.assertNotIn(asset_id, CATALOG, asset_id)
 
     def test_unearned_badge_grants_nothing(self) -> None:
         self.assertEqual(unlocks.satisfied_ids([badge("world", earned=False)], 0), set())
@@ -83,7 +86,6 @@ class UnlockRuleTests(unittest.TestCase):
 
     def test_gated_props_are_exactly_the_prop_rules(self) -> None:
         self.assertTrue(unlocks.is_gated_prop("trophyShelf"))
-        # An ordinary catalog prop stays free for everyone.
         self.assertFalse(unlocks.is_gated_prop("desk"))
         self.assertFalse(unlocks.is_gated_prop("laurel"))  # a cosmetic, not a prop
 

@@ -25,6 +25,8 @@
 .studio-launch:active { transform: translateY(0); }
 .studio-launch:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 .studio-launch.is-active { border-color: rgba(124, 108, 255, .6); }
+.studio-launch:disabled { cursor: not-allowed; opacity: .68; }
+.studio-launch:disabled:hover { transform: none; box-shadow: none; border-color: rgba(124, 108, 255, .28); }
 
 .studio-launch__head {
   display: inline-flex;
@@ -33,6 +35,7 @@
 }
 
 .studio-launch__head svg { inline-size: 100%; block-size: 100%; }
+.studio-launch__label { font-variant-numeric: tabular-nums; }
 
 /* A slow shimmer sweeping across the pill: enough to read as "something fun
    lives here" without turning the app bar into an ad. */
@@ -66,5 +69,6 @@
 
 @media (max-width: 720px) {
   .studio-launch__label { display: none; }
+  .studio-launch.is-active .studio-launch__label { display: inline; }
   .studio-launch { padding-inline: 10px; }
 }

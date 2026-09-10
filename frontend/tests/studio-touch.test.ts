@@ -115,12 +115,20 @@ test('Visit Friends opens only friend choices while Room Design owns world switc
 
 test('room styles share the General Room tab', () => {
   assert.match(studio, /type RoomTab = RoomItemCategory \| 'general' \| 'surprises'/)
+  assert.match(studio, /const \[category, setCategory\] = useState<RoomTab>\('general'\)/)
   assert.match(studio, /YuviStudio\.room\.general/)
   assert.match(studio, /category === 'general'/)
   assert.match(studio, /key: 'floor', options: ROOM_STYLES/)
   assert.match(studio, /key: 'wall', options: WALL_STYLES/)
   assert.match(studio, /key: 'mood', options: MOODS/)
   assert.equal(he['YuviStudio.room.general'], 'חדר כללי')
+})
+
+test('room time reminders fire at the requested countdown thresholds', () => {
+  assert.match(studio, /const TIME_REMINDER_SECONDS = new Set\(\[15 \* 60, 10 \* 60, 5 \* 60, 60\]\)/)
+  assert.match(studio, /TIME_REMINDER_SECONDS\.has\(remainingSeconds\)/)
+  assert.match(studio, /setTimeout\(\(\) => \{\s+setTimeReminder\(false\)/)
+  assert.doesNotMatch(studio, /5 \* 60 \* 1000/)
 })
 
 test('an approved gift opens only from a deliberate item tap', () => {

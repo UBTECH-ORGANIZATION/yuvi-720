@@ -127,6 +127,24 @@ export function updateLearnerState(updates: Partial<LearnerState>) {
   return apiPatch<LearnerState>('/api/learner-state', updates)
 }
 
+export interface StudioTimeBudget {
+  allowed: boolean
+  remaining_seconds: number
+  available_at: string
+}
+
+export function getStudioTime() {
+  return apiGet<StudioTimeBudget>('/api/studio-time')
+}
+
+export function enterStudio() {
+  return apiPost<StudioTimeBudget>('/api/studio-time/enter', {})
+}
+
+export function leaveStudio() {
+  return apiPost<StudioTimeBudget>('/api/studio-time/leave', {})
+}
+
 export interface CommunityRoom {
   owner_id: string
   display_name: string

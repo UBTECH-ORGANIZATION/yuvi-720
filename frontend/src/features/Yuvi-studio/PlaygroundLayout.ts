@@ -20,7 +20,9 @@ export const PLAYGROUND_DECOR_BLOCKERS = PLAYGROUND_ZONES.flatMap((zone) => {
   }))
 })
 
-export const PLAYGROUND_WALK_BLOCKERS: Array<{ x: number; z: number; radius: number }> = []
+export const PLAYGROUND_WALK_BARRIERS = [
+  { minX: -22.2, maxX: 22.2, frontZ: -23.65 },
+]
 
 export const PLAYGROUND_WALK_SURFACES = [
   { x: 0, z: -22.7, width: 44, depth: 5.6, height: 0.24 },

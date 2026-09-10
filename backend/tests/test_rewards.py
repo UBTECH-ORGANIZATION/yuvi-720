@@ -19,16 +19,19 @@ from app.services.rewards import catalog, pricing, wallet
 LEARNER = "test-learner-rewards"
 GOAL_VALUE = 40      # a mid-band goal: started pays 10, finishing settles the rest
 RICH_GOAL = 80       # top of the band
+SHOPPING_BALANCE = 3_000
 
 
 class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
     async def test_sports_furniture_prices_and_permanent_type_unlocks(self) -> None:
         expected = {
+            "sportsArtworkBasketball": 40, "sportsMiniGoal": 100,
+            "sportsDumbbellRack": 180, "sportsSquatRack": 220,
             "sportsJerseyDisplayAlt": 40, "sportsPortableScoreboard": 70,
             "sportsSeatingBench": 70, "sportsAdjustableBench": 120,
             "sportsRacketCorner": 120, "sportsLegPress": 200, "sportsCableMachine": 240,
         }
-        await wallet._store_wallet(LEARNER, {"balance": 1000, "lifetime_spent": 0})
+        await wallet._store_wallet(LEARNER, {"balance": SHOPPING_BALANCE, "lifetime_spent": 0})
         for kind, price in expected.items():
             self.assertEqual(catalog.price_of(kind), price)
             result = await rewards.purchase_asset(LEARNER, kind)
@@ -39,10 +42,9 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
             repeat = await rewards.purchase_asset(LEARNER, kind)
             self.assertEqual(repeat["reason"], "owned")
             self.assertEqual(repeat["wallet"]["balance"], result["wallet"]["balance"])
-        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 1000 - sum(expected.values()))
-        self.assertTrue(catalog.SPORTS_ARENA_STARTER_PROP_IDS.isdisjoint(expected))
-        for kind in catalog.SPORTS_ARENA_STARTER_PROP_IDS:
-            self.assertIsNone(catalog.price_of(kind))
+        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], SHOPPING_BALANCE - sum(expected.values()))
+        for kind in ("parkSwings", "parkTree", "loftArcadeCabinet", "loftRacingSimulator"):
+            self.assertIsNotNone(catalog.price_of(kind), kind)
 
     async def test_unaffordable_furniture_never_grants_ownership(self) -> None:
         result = await rewards.purchase_asset(LEARNER, "sportsCableMachine")
@@ -257,19 +259,19 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
     async def test_catalog_exposes_both_world_progress_requirements(self) -> None:
         worlds = {item["id"]: item for item in catalog.catalog_for_client(completed_components=6) if item["id"].startswith("layout:")}
         self.assertEqual(worlds["layout:sportsArena"]["completedComponents"], 6)
-        self.assertEqual(worlds["layout:sportsArena"]["price"], 900)
+        self.assertEqual(worlds["layout:sportsArena"]["price"], 1000)
         self.assertEqual(worlds["layout:creatorLoft"]["completedComponents"], 10)
         self.assertEqual(worlds["layout:creatorLoft"]["completedComponentsCurrent"], 6)
-        self.assertEqual(worlds["layout:creatorLoft"]["price"], 1500)
+        self.assertEqual(worlds["layout:creatorLoft"]["price"], 1000)
 
     async def test_creator_loft_spends_server_price_and_grants_a_room_unlock(self) -> None:
         wallet_state = await wallet._load_wallet(LEARNER)
-        wallet_state["balance"] = 1500
+        wallet_state["balance"] = 1000
         await wallet._store_wallet(LEARNER, wallet_state)
         with patch.object(wallet, "count_distinct_completed_components", return_value=10):
             result = await rewards.purchase_asset(LEARNER, "layout:creatorLoft")
         self.assertTrue(result["ok"])
-        self.assertEqual(result["price"], 1500)
+        self.assertEqual(result["price"], 1000)
         self.assertIn("layout:creatorLoft", self._room_unlocks)
         self.assertEqual(result["wallet"]["balance"], 0)
 

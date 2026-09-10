@@ -494,14 +494,6 @@
 }
 .ys-world-card__state:empty { display: none; }
 .ys-world-projection__targets button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
-.ys-panel__world-switch { display: inline-flex; align-items: center; gap: 6px; margin-inline-end: 42px; border: 1px solid var(--ys-line); border-radius: 6px; padding: 6px 8px; background: var(--ys-surface); color: var(--ys-accent-ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; }
-.ys-panel__world-switch:hover { border-color: var(--ys-accent); background: var(--ys-accent-soft); }
-.ys-panel__world-switch:focus-visible, .ys-room-world-dialog__head button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
-.ys-room-world-dialog { position: absolute; z-index: 9; inset: 10px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--ys-line); border-radius: 8px; background: var(--ys-panel-bg); box-shadow: 0 16px 36px rgba(17, 20, 56, .24); }
-.ys-room-world-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ys-room-world-dialog__head h2 { margin: 0; color: var(--ys-ink); font-size: 15px; font-weight: 850; }
-.ys-room-world-dialog__head button { display: grid; place-items: center; flex: 0 0 auto; inline-size: 32px; block-size: 32px; border: 1px solid var(--ys-line); border-radius: 6px; background: var(--ys-surface); color: var(--ys-ink); cursor: pointer; }
-.ys-room-world-dialog .ys-world-projection { block-size: min(359px, calc(100vh - 180px)); }
 @media (prefers-reduced-motion: reduce) {
   .ys-world-projection { transform: none; transition-duration: .14s; }
 }
@@ -574,6 +566,19 @@
   box-shadow: 0 12px 26px rgba(255, 93, 115, .34);
 }
 .ys-iconbtn--exit:hover { background: linear-gradient(140deg, #ff8a6c, #ff6f83); }
+.ys-time-reminder {
+  position: absolute; inset-block-start: 48px; inset-inline-start: 50%; transform: translateX(-50%);
+  inline-size: max-content; max-inline-size: min(260px, calc(100vw - 32px));
+  padding: 10px 13px; border-radius: 8px; background: #fff; color: var(--sp-primary-700, #5a45f0);
+  box-shadow: 0 10px 24px rgba(20, 12, 60, .25); font-size: 13px; font-weight: 700;
+  animation: ys-time-reminder-in .2s ease-out;
+}
+@keyframes ys-time-reminder-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.ys-timeout-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; }
+.ys-timeout-dialog { max-inline-size: 430px; text-align: center; }
+.ys-timeout-dialog p { margin: 0 0 20px; color: var(--ys-ink-soft); line-height: 1.55; }
+.ys-timeout-dialog .ys-shop__actions { justify-content: center; }
+[data-theme='dark'] .ys-time-reminder { background: #242b52; color: #d9faff; }
 
 /* Unsaved work follows the learner out onto the floor, where there is no panel
    footer to hold the save button. */

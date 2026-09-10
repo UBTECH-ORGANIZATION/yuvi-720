@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { PLAYGROUND_BOUNDS, PLAYGROUND_ZONES, PLAYGROUND_WALK_BLOCKERS, PLAYGROUND_GIFT_POSITION, playgroundGiftPosition } from '../src/features/Yuvi-studio/PlaygroundLayout.ts'
+import { PLAYGROUND_BOUNDS, PLAYGROUND_ZONES, PLAYGROUND_WALK_BARRIERS, PLAYGROUND_GIFT_POSITION, playgroundGiftPosition } from '../src/features/Yuvi-studio/PlaygroundLayout.ts'
 import { PLAYGROUND_EQUIPMENT, PLAYGROUND_EDITABLE_DEFAULTS } from '../src/features/Yuvi-studio/PlaygroundItems.ts'
 
 test('every playground zone fits the unchanged room footprint', () => {
@@ -13,9 +13,8 @@ test('every playground zone fits the unchanged room footprint', () => {
 })
 
 test('playground preserves the spawn and central approach', () => {
-  for (let z = -18; z <= 14; z += 0.5) {
-    assert.ok(PLAYGROUND_WALK_BLOCKERS.every((blocker) => Math.hypot(blocker.x, blocker.z - z) > blocker.radius + 0.7), `central route at ${z}`)
-  }
+  assert.deepEqual(PLAYGROUND_WALK_BARRIERS, [{ minX: -22.2, maxX: 22.2, frontZ: -23.65 }])
+  assert.ok(PLAYGROUND_WALK_BARRIERS.every((barrier) => barrier.frontZ < -18))
 })
 
 test('zones have unique identities and nonoverlapping equipment envelopes', () => {
@@ -31,7 +30,7 @@ test('zones have unique identities and nonoverlapping equipment envelopes', () =
 test('removed fixed rides leave no reserved zones or walk blockers', () => {
   assert.ok(PLAYGROUND_ZONES.every((zone) => !['swings', 'train', 'roundabout', 'towers', 'zipline', 'ropes', 'sand'].includes(zone.id)))
   for (const [x, z] of [[-15.5, 8.7], [-2, 20], [9, 24.5]]) {
-    assert.ok(PLAYGROUND_WALK_BLOCKERS.every((blocker) => Math.hypot(blocker.x - x, blocker.z - z) > blocker.radius))
+    assert.ok(PLAYGROUND_WALK_BARRIERS.every((barrier) => x < barrier.minX || x > barrier.maxX || z >= barrier.frontZ))
   }
 })
 

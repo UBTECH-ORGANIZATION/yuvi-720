@@ -22,12 +22,12 @@ export const SPORTS_NEW_ITEM_BOUNDS = {
 }
 
 export const SPORTS_PAID_PROP_IDS = new Set([
+  ...SPORTS_ARENA_STARTER_PROP_IDS,
   'sportsJerseyDisplayAlt', 'sportsPortableScoreboard', 'sportsSeatingBench',
   'sportsAdjustableBench', 'sportsRacketCorner', 'sportsLegPress', 'sportsCableMachine',
 ])
 
 export function sportsPropLocked(kind: string, owned: ReadonlySet<string>): boolean | undefined {
-  if (SPORTS_ARENA_STARTER_PROP_IDS.has(kind)) return !owned.has(kind) && !owned.has('layout:sportsArena')
   if (SPORTS_PAID_PROP_IDS.has(kind)) return !owned.has(kind)
   return undefined
 }

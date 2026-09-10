@@ -116,8 +116,6 @@ export const ADVENTURE_PARK_DEFAULT_ITEMS: RoomItem[] = [
 export const SPORTS_ARENA_DEFAULT_ITEMS: RoomItem[] = [
   { uid: 'arena-bench', kind: 'sportsBench', x: -16.5, z: 15, rot: Math.PI / 2 },
   { uid: 'arena-ball-rack', kind: 'sportsBallRack', x: 16.5, z: 15, rot: -Math.PI / 2 },
-  { uid: 'arena-training-box-low', kind: 'sportsTrainingBox', x: -11.5, z: 22, rot: 0 },
-  { uid: 'arena-training-box-high', kind: 'sportsTrainingBox', x: -6, z: 24, rot: Math.PI / 2 },
   { uid: 'arena-mini-goal', kind: 'sportsMiniGoal', x: 13, z: 22, rot: Math.PI },
 ]
 
@@ -127,10 +125,9 @@ export const SPORTS_ARENA_STARTER_ITEMS: RoomItem[] = [
   { uid: 'arena-jersey-home', kind: 'sportsJerseyDisplay', x: -24.34, z: -20, rot: Math.PI / 2, wallAnchor: { wallId: 'west', offset: (32.7 + 20) / 58.5, height: 2.6 } },
   { uid: 'arena-jersey-away', kind: 'sportsJerseyDisplay', x: 24.34, z: 27, rot: -Math.PI / 2, tint: '#287f83', wallAnchor: { wallId: 'east', offset: (27 + 25.8) / 58.5, height: 2.6 } },
   { uid: 'arena-basketball-hoop', kind: 'sportsBasketballHoop', x: 0, z: -22, rot: 0 },
-  { uid: 'arena-park-bench-west', kind: 'sportsParkBench', x: -16, z: -6, rot: Math.PI / 2 },
-  { uid: 'arena-park-bench-east', kind: 'sportsParkBench', x: 16, z: 5, rot: -Math.PI / 2 },
   { uid: 'arena-wall-scoreboard', kind: 'sportsWallScoreboard', x: 0, z: 32.64, rot: Math.PI, wallAnchor: { wallId: 'south', offset: 0.5, height: 3 } },
   ...Object.keys(SPORTS_ARTWORK_KINDS).map((kind, index): RoomItem => {
+    if (kind === 'sportsArtworkRunners' || kind === 'sportsArtworkStrength') return null
     const west = index < 4
     const z = [-12, -3, 8, 19][index % 4]
     if (index === 3 || index === 7) return {
@@ -141,20 +138,17 @@ export const SPORTS_ARENA_STARTER_ITEMS: RoomItem[] = [
       uid: `arena-art-${kind}`, kind, x: west ? -24.34 : 24.34, z, rot: west ? Math.PI / 2 : -Math.PI / 2,
       wallAnchor: { wallId: west ? 'west' : 'east', offset: west ? (32.7 - z) / 58.5 : (z + 25.8) / 58.5, height: 2.8 },
     }
-  }),
+  }).filter((item): item is RoomItem => item !== null),
 ]
 
 export const CREATOR_LOFT_NEW_MACHINES: RoomItem[] = [
   { uid: 'loft-racing-simulator', kind: 'loftRacingSimulator', x: -8, z: -10, rot: 0 },
   { uid: 'loft-air-hockey', kind: 'loftAirHockey', x: 0, z: 13, rot: 0 },
-  { uid: 'loft-vr-station', kind: 'loftVrStation', x: -17, z: 5, rot: Math.PI / 2 },
 ]
 
 export const CREATOR_LOFT_DEFAULT_ITEMS: RoomItem[] = [
   { uid: 'loft-arcade-cyan', kind: 'loftArcadeCabinet', x: -18, z: -10, rot: Math.PI / 2 },
-  { uid: 'loft-arcade-coral', kind: 'loftArcadeCabinet', x: -18, z: -5, rot: Math.PI / 2, tint: '#ff5f8f' },
   { uid: 'loft-claw-machine', kind: 'loftClawMachine', x: 18, z: -10, rot: -Math.PI / 2 },
-  { uid: 'loft-token-pusher', kind: 'loftTokenPusher', x: 18, z: -4, rot: -Math.PI / 2 },
   { uid: 'loft-pinball', kind: 'loftPinball', x: -16, z: 15, rot: Math.PI / 2 },
   { uid: 'loft-basketball-arcade', kind: 'loftBasketballArcade', x: 14, z: 17, rot: -Math.PI / 2 },
   { uid: 'loft-prize-counter', kind: 'loftPrizeCounter', x: 0, z: 23, rot: Math.PI },
@@ -469,7 +463,22 @@ export function normalizeRoom(raw: unknown, options: { sportsArenaOwned?: boolea
     base.worlds.sportsArena.sportsStarterVersion = 2
     if (base.activeLayoutId === 'sportsArena') base.worlds.sportsArena = activeWorldSnapshot(base)
   }
-  base.version = 9
+  if (sourceVersion < 10) {
+    const removedDefaultUids = new Set([
+      'arena-training-box-low', 'arena-training-box-high',
+      'arena-park-bench-west', 'arena-park-bench-east',
+      'arena-art-sportsArtworkRunners', 'arena-art-sportsArtworkStrength',
+      'loft-arcade-coral', 'loft-token-pusher', 'loft-vr-station',
+    ])
+    const removeRetiredDefaults = (world: Pick<RoomWorldDesign, 'items' | 'storedItems'>) => {
+      world.items = world.items.filter((item) => !removedDefaultUids.has(item.uid))
+      world.storedItems = world.storedItems.filter((item) => !removedDefaultUids.has(item.uid))
+    }
+    removeRetiredDefaults(base.worlds.sportsArena)
+    removeRetiredDefaults(base.worlds.creatorLoft)
+    if (base.activeLayoutId === 'sportsArena' || base.activeLayoutId === 'creatorLoft') removeRetiredDefaults(base)
+  }
+  base.version = 10
   if (!options.nested && options.boundsFor) reconcilePlayground(base, options.boundsFor)
   return base
 }

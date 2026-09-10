@@ -98,12 +98,7 @@ async def sync_unlocks(learner_id: str) -> dict[str, Any]:
 async def held_props(learner_id: str) -> set[str]:
     """Room items this learner has earned. Used to screen room writes."""
     state = await get_learner_state(learner_id)
-    held = set(state.get("room_unlocks") or [])
-    if "layout:sportsArena" in held:
-        from app.services.rewards.catalog import SPORTS_ARENA_STARTER_PROP_IDS
-
-        held.update(SPORTS_ARENA_STARTER_PROP_IDS)
-    return held
+    return set(state.get("room_unlocks") or [])
 
 
 async def held_cosmetics(learner_id: str) -> set[str]:

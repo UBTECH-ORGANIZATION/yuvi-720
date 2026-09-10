@@ -7,40 +7,6 @@ export function buildPlaygroundWalls(root: THREE.Group, kit: PlaygroundKit, moti
   const dark = kit.material('rubber', 0x293230)
   const pale = kit.material('stone', 0xdadbd1)
   const colors = [0xc85a42, 0x338b80, 0xe2b93f, 0x426aa8, 0x729b45, 0x99639b]
-  const redraws: Array<(translate: (key: string) => string) => void> = []
-  const label = (parent: THREE.Object3D, key: string, width: number, height: number, x: number, y: number, z: number, background = '#eef0e7', foreground = '#253f38') => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1024; canvas.height = Math.round(1024 * height / width)
-    const context = canvas.getContext('2d')!
-    const texture = kit.own(new THREE.CanvasTexture(canvas))
-    texture.colorSpace = THREE.SRGBColorSpace
-    const material = kit.own(new THREE.MeshStandardMaterial({ map: texture, roughness: 0.68 }))
-    kit.mesh(parent, kit.geometry(`board/${width}/${height}`, () => new THREE.PlaneGeometry(width, height)), material, [x, y, z])
-    redraws.push((translate) => {
-      context.fillStyle = background; context.fillRect(0, 0, canvas.width, canvas.height)
-      context.fillStyle = foreground
-      context.textAlign = 'center'; context.textBaseline = 'middle'
-      context.direction = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'
-      const text = translate(key)
-      const words = text.split(' ')
-      let fontSize = Math.min(84, canvas.height * 0.27)
-      let lines: string[] = []
-      do {
-        context.font = `600 ${fontSize}px sans-serif`
-        lines = ['']
-        for (const word of words) {
-          const last = lines.length - 1
-          const candidate = `${lines[last]} ${word}`.trim()
-          if (context.measureText(candidate).width > 900 && lines[last]) lines.push(word)
-          else lines[last] = candidate
-        }
-        if (lines.length * fontSize * 1.35 <= canvas.height * 0.8) break
-        fontSize -= 2
-      } while (fontSize > 14)
-      lines.forEach((line, index) => context.fillText(line, 512, canvas.height / 2 + (index - (lines.length - 1) / 2) * fontSize * 1.35, 900))
-      texture.needsUpdate = true
-    })
-  }
   const climbing = kit.group(root, 'playground-climbing-wall')
   for (let panel = 0; panel < 11; panel++) {
     const x = -20 + panel * 4
@@ -98,10 +64,6 @@ export function buildPlaygroundWalls(root: THREE.Group, kit: PlaygroundKit, moti
       kit.beam(wall, [0, 9.3, 0.6], [0.3, 0.45, 0.9], 0.021, kit.material('rope', 0xada16a))
       kit.box(wall, [0.24, 0.5, 0.18], dark, [0.3, 0.7, 0.9], 0.08)
     }
-  }
-  for (let route = 0; route < 6; route++) {
-    kit.box(climbing, [1.9, 0.48, 0.08], kit.material('paint', colors[route]), [-17 + route * 6.8, 0.65, -24.55])
-    label(climbing, `YuviStudio.playground.route.${route}`, 1.8, 0.38, -17 + route * 6.8, 0.65, -24.5)
   }
   kit.batch(climbing)
 
@@ -184,5 +146,5 @@ export function buildPlaygroundWalls(root: THREE.Group, kit: PlaygroundKit, moti
     pedestrian.color.setHex(phase === 'pedestrians' ? 0x22b77c : 0xad3228)
   })
   kit.batch(traffic); kit.batch(road)
-  return { label, setLabels: (translate: (key: string) => string) => redraws.forEach((redraw) => redraw(translate)) }
+  return { setLabels: (_translate: (key: string) => string) => {} }
 }

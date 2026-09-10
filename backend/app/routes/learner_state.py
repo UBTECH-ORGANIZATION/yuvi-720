@@ -213,6 +213,9 @@ async def _screen_equipped(learner_id: str, data: dict) -> None:
 async def patch_learner_state(data: dict, session=Depends(require_learner_session)):
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
+    # Studio time is derived from the server clock; accepting it here would let
+    # a browser reset its own hourly allowance.
+    data.pop("studio_time", None)
     await _screen_room_items(learner_id, data)
     await _screen_room_layout(learner_id, data)
     await _screen_equipped(learner_id, data)
