@@ -117,6 +117,9 @@ class GamesRoutesTest(unittest.TestCase):
         created = self._create(deep_thinking=True)
         job = self._run(store.get_job(created["job_id"]))
         self.assertEqual(job["payload"]["reasoning_effort"], "medium")
+        # …and switches to the premium model (the bake-off's only cell that scored higher).
+        self.assertEqual(job["payload"]["model"], "claude-opus-4.8")
+        self.assertEqual(self._run(store.get_game(created["game_id"]))["model"], "claude-opus-4.8")
         self.assertEqual(job["reasoning_effort"], "medium")
         self.assertEqual(self._run(store.get_game(created["game_id"]))["reasoning_effort"], "medium")
         self.assertEqual(self.client.get(f"/api/games/{created['game_id']}").json()["reasoning_effort"], "medium")

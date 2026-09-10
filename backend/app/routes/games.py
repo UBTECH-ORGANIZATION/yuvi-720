@@ -363,7 +363,12 @@ async def create_game(
     title = learner_title or (kata_catalog.component_title(data.component_id, data.language)
                               or component.get("title") or data.component_id)
     requested_model = " ".join((data.model or "").split())[:80]
-    model = requested_model if (requested_model and _is_admin(session)) else jobs.default_model()
+    if requested_model and _is_admin(session):
+        model = requested_model
+    else:
+        # Deep thinking = the premium model at medium effort; everything else
+        # = the fleet default at low.
+        model = jobs.deep_model() if data.deep_thinking else jobs.default_model()
     game = await store.create_game(
         learner_id=learner_id, objective_id=data.objective_id, unit_id=data.unit_id,
         component_id=data.component_id, title=title, title_by_learner=bool(learner_title), genre=data.genre, prompt=data.vibe,

@@ -91,6 +91,18 @@ def default_model() -> Optional[str]:
     return (os.environ.get("GAME_MODEL_DEFAULT") or "").strip() or None
 
 
+#: Deep thinking is a different model, not just more effort: the bake-off
+#: (2026-09-10) showed Sonnet at medium scores like Sonnet at low, while an
+#: Opus at medium is the only cell that scored higher. Gal asked for Opus 4.6;
+#: it is not on the Copilot catalog, so Opus 4.8 stands in.
+DEEP_MODEL_FALLBACK = "claude-opus-4.8"
+
+
+def deep_model() -> str:
+    """The model behind the "deep thinking" toggle (``GAME_MODEL_DEEP``)."""
+    return (os.environ.get("GAME_MODEL_DEEP") or "").strip() or DEEP_MODEL_FALLBACK
+
+
 # ── context ──────────────────────────────────────────────────────────────────
 
 async def build_context(

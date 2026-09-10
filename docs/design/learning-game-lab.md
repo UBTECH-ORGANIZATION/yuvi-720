@@ -198,7 +198,7 @@ Questions were the part the kids met first and the part that felt broken ("what 
 | claude-opus-5 | low | 7 | 325 / 444 | $0.53 / $0.82 | 4.4 · 4.3 · 4.7 · 5.0 |
 | claude-opus-5 | medium | 6 | 546 / 791 | $1.02 / $1.50 | 5.0 · 4.5 · 4.5 · 4.8 |
 
-Decision: **`claude-sonnet-5`, effort `low`** is the default (`GAME_MODEL_DEFAULT`, worker `COPILOT_MODEL`); "deep thinking" runs Sonnet at `medium`. Medium effort bought no judge points on any model and cost 55-90 % more time. Opus 4.6 is not on the Copilot catalog (Opus 4.8 stood in). Where the seconds go at Sonnet low: model turn ≈ 160 s p50, validate ≈ 35 s, plan ≈ 17 s, judge ≈ 15 s, queue+wake < 5 s. Next weak spot: the second delivery after a validator error (Opus/Sol spent 60-90 s there); the play-score and poster windows are the next 20 s.
+Decision: **`claude-sonnet-5`, effort `low`** is the default (`GAME_MODEL_DEFAULT`, worker `COPILOT_MODEL`); "deep thinking" runs **`claude-opus-4.8` at `medium`** (`GAME_MODEL_DEEP`; Gal asked for Opus 4.6, which the catalog does not carry) — a different model, not just more effort, because Sonnet at medium bought nothing. Medium effort bought no judge points on any model and cost 55-90 % more time. Opus 4.6 is not on the Copilot catalog (Opus 4.8 stood in). Where the seconds go at Sonnet low: model turn ≈ 160 s p50, validate ≈ 35 s, plan ≈ 17 s, judge ≈ 15 s, queue+wake < 5 s. Next weak spot: the second delivery after a validator error (Opus/Sol spent 60-90 s there); the play-score and poster windows are the next 20 s.
 
 ### Game page (revised 2026-09-08)
 
