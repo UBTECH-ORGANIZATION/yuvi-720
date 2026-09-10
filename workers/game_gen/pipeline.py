@@ -73,7 +73,7 @@ OUTPUT_CAP_HINT_TOKENS = 30_000
 DEFAULT_MODEL = "claude-sonnet-5"  # bake-off 2026-09-10: 48 games, see docs/design/learning-game-lab.md
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or "gpt-5.4-mini"
 PLAN_MODEL = os.environ.get("PLAN_MODEL") or "gpt-5.4-mini"
-PLAN_TIMEOUT_S = 20
+PLAN_TIMEOUT_S = 45.0  # the pitch took 18-19 s at 20 s; a timeout means no pitch for the kid, so give it room
 #: A create is revised once when learning_through_play < 3 or fun + polish < 5.
 JUDGE_REVISE_IF = {"learning_through_play_below": 3, "fun_plus_polish_below": 5}
 JUDGE_SCORE_KEYS = ("learning_through_play", "fun", "polish", "age_fit")
