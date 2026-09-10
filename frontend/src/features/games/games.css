@@ -749,19 +749,30 @@
   overflow: hidden;
 }
 
-.game-chat__log summary {
+.game-chat__log-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  inline-size: 100%;
   padding: 9px 13px;
   cursor: pointer;
-  list-style: none;
   user-select: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
 }
-.game-chat__log summary::-webkit-details-marker { display: none; }
-.game-chat__log summary strong { flex: 1; min-inline-size: 0; }
-.game-chat__log summary svg { flex: none; transition: transform .2s var(--sp-ease); color: var(--sp-ink-400); }
-.game-chat__log[open] summary svg { transform: rotate(180deg); }
+.game-chat__log-head:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: -2px; border-radius: 12px; }
+.game-chat__log-head strong { flex: 1; min-inline-size: 0; }
+.game-chat__log-head svg { flex: none; transition: transform .2s var(--sp-ease); color: var(--sp-ink-400); }
+.game-chat__log.is-open .game-chat__log-head svg { transform: rotate(180deg); }
+/* A finished build: the orb settles, green. */
+.game-chat__log.is-done .game-chat__log-orb {
+  animation: none;
+  box-shadow: none;
+  background: radial-gradient(circle at 35% 35%, #c7f5dc, #22c55e);
+}
 
 .game-chat__log-stat {
   flex: none;

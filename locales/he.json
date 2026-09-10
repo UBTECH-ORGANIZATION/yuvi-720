@@ -3877,6 +3877,8 @@
   "games.build.thoughtWords": "כבר כ־{count} מילות מחשבה. הקוד יופיע כאן ברגע שיובי יתחיל לכתוב",
   "games.build.words": "כ־{count} מילים",
   "games.build.writingBrief": "יובי כותב את תיאור המשחק… הקוד מגיע מיד אחריו",
+  "games.build.done": "המשחק מוכן · {time}",
+  "games.build.log": "יומן הבנייה",
   "games.chat.building": "יובי עסוק בבנייה. הצ'אט יחזור כשהמשחק יהיה מוכן",
   "games.chat.mode.label": "סוג ההודעה",
   "games.chat.mode.change": "שינוי",

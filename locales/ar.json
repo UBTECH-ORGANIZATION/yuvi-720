@@ -3877,6 +3877,8 @@
   "games.build.thoughtWords": "نحو {count} كلمة من التفكير حتى الآن. سيظهر الكود هنا حالما يبدأ يوفي بالكتابة",
   "games.build.words": "نحو {count} كلمة",
   "games.build.writingBrief": "يوفي يكتب وصف اللعبة… الكود يأتي بعده مباشرة",
+  "games.build.done": "اللعبة جاهزة · {time}",
+  "games.build.log": "سجل البناء",
   "games.chat.building": "يوفي مشغول بالبناء. تعود الدردشة عندما تجهز اللعبة",
   "games.chat.mode.label": "نوع الرسالة",
   "games.chat.mode.change": "تغيير",

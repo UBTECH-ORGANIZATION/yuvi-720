@@ -186,7 +186,7 @@ def test_edit_job_loads_current_html(fakes, monkeypatch):
     assert fakes.notify.bells == [("game_edit_ready", "g1", 2)]
 
 
-def test_plan_frame_is_published_and_the_description_written(fakes, monkeypatch):
+def test_plan_frame_is_published_and_the_pitch_written(fakes, monkeypatch):
     pitch = "HOOK: ספינת מטען שחייבת לזרוק אריזה, לא מטען.\n" + ("WORLD & LOOK: חלל. " * 60)
 
     async def fake_run_job(spec, progress):
@@ -200,7 +200,8 @@ def test_plan_frame_is_published_and_the_description_written(fakes, monkeypatch)
     asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
     plan = [extra for event, extra in fakes.notify.extras if event == "plan"]
     assert len(plan) == 1 and plan[0]["detail"] == pitch[:600] and len(plan[0]["detail"]) == 600
-    assert fakes.store.games["g1"]["description"] == pitch[:600]
+    assert fakes.store.games["g1"]["pitch"] == pitch[:600]
+    assert "description" not in fakes.store.games["g1"] or fakes.store.games["g1"]["description"] != pitch[:600]
 
 
 def test_plan_frame_tolerates_a_store_without_update_game(fakes, monkeypatch):

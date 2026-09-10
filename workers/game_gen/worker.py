@@ -426,7 +426,7 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
                 notify.publish_progress(learner_id, game_id, "plan", status=last_status["value"] or "building", detail=text)
                 update_game = getattr(store, "update_game", None)
                 if text and update_game is not None:
-                    pending.append(asyncio.get_event_loop().create_task(update_game(game_id, description=text)))
+                    pending.append(asyncio.get_event_loop().create_task(update_game(game_id, pitch=text)))
             return
         if kind == "revise":
             # The judge asked for one fix: from here the reply streams like an

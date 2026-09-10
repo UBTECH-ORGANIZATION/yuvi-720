@@ -217,6 +217,10 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const thinkRef = useRef<HTMLOListElement>(null)
   const [phase, setPhase] = useState<BuildPhase>('thinking')
   const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [finishedAt, setFinishedAt] = useState<number | null>(null)
+  // The build log in the chat: closed by default, opened by its own button.
+  const [logOpen, setLogOpen] = useState(false)
+  const wasBusyRef = useRef(false)
   // What Yuvi did so far, one line per phase, for the collapsible log in the chat.
   const [buildLog, setBuildLog] = useState<{ phase: BuildPhase; at: number; times: number }[]>([])
   const [now, setNow] = useState(() => Date.now())
@@ -380,7 +384,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
 
   // ── What Yuvi is doing, in the kid's words ─────────────────────────────
   useEffect(() => {
-    if (!busy) { setNarration([]); return }
+    if (!busy) return
     let stopped = false
     const tick = () => {
       getGameNarration(game.game_id)
@@ -391,7 +395,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
           if (n.pitch) {
             const pitch = n.pitch
             setNarration((current) => (current.includes(pitch) ? current : [pitch, ...current]))
-            setGame((current) => (current.description === pitch ? current : { ...current, description: pitch }))
           }
           if (n.lines.length) setNarration((current) => [...n.lines, ...current.filter((l) => !n.lines.includes(l))])
         })
@@ -439,8 +442,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         // the moment it is written.
         const detail = live.detail
         setNarration((current) => (current[current.length - 1] === detail ? current : [...current, detail]))
-        // The pitch is the game's description until the brief replaces it.
-        if (live.event === 'plan') setGame((current) => (current.description === detail ? current : { ...current, description: detail }))
       }
       if (live.event === 'patching') setPhase('writing')
       if (live.event === 'validate' || live.event === 'validated') setPhase('validating')
@@ -569,10 +570,15 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   })()
   const codeLines = liveCode ? liveCode.split('\n').length : 0
   useEffect(() => {
+    const fresh = busy && !wasBusyRef.current
+    wasBusyRef.current = busy
     if (!busy) return
+    // A new build starts its own log; the previous one is gone from the chat.
+    if (fresh) { setNarration([]); setLogOpen(false) }
     // One line per phase: a phase Yuvi comes back to (a fix after the
     // check) bumps its count instead of repeating the line.
-    setBuildLog((current) => {
+    setBuildLog((current0) => {
+      const current = fresh ? [] : current0
       const last = current[current.length - 1]
       if (last && last.phase === phase) return current
       const seen = current.findIndex((entry) => entry.phase === phase)
@@ -583,7 +589,8 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
       return [...current, { phase, at: Date.now(), times: 1 }]
     })
   }, [busy, phase])
-  useEffect(() => { if (!busy) setBuildLog([]) }, [busy])
+  // The log stays in the chat after the build, collapsed, with the time it took.
+  useEffect(() => { setFinishedAt(busy ? null : Date.now()) }, [busy])
   useEffect(() => {
     const box = thinkRef.current
     if (box) box.scrollTop = box.scrollHeight
@@ -637,11 +644,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                   </span>
                 </span>
                 <strong>{t(`games.build.phase.${phase}`)}</strong>
-                {narration.length > 0 && (
-                  <p key={narration.length} className="game-player__narration" dir="auto" aria-live="polite">
-                    {narration[narration.length - 1]}
-                  </p>
-                )}
               </div>
             )}
             {liveCode && <CodeView code={liveCode} label={t('games.build.title')} changed={changed} focusLine={focusLine} live={phase === 'writing'} />}
@@ -756,15 +758,19 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
           {game.description && (
             <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--brief" dir="auto">{game.description}</div>
           )}
-          {busy ? (
-            <details className="game-chat__msg game-chat__msg--yuvi game-chat__log" dir="auto">
-              <summary>
+          {busy || buildLog.length > 0 ? (
+            <div className={`game-chat__msg game-chat__msg--yuvi game-chat__log${logOpen ? ' is-open' : ''}${busy ? '' : ' is-done'}`} dir="auto">
+              <button type="button" className="game-chat__log-head" aria-expanded={logOpen} onClick={() => setLogOpen((open) => !open)}>
                 <span className="game-chat__log-orb" aria-hidden="true" />
-                <strong>{PHASE_ICON[phase]} {t(`games.build.phase.${phase}`)}</strong>
-                <span className="game-chat__log-stat">{buildStat}</span>
+                <strong>
+                  {busy
+                    ? `${PHASE_ICON[phase]} ${t(`games.build.phase.${phase}`)}`
+                    : `✅ ${t('games.build.done', { time: finishedAt ? clock(finishedAt) : '' })}`}
+                </strong>
+                <span className="game-chat__log-stat">{busy ? buildStat : t('games.build.log')}</span>
                 <Icon name="chevronDown" size={14} />
-              </summary>
-              {narration.length > 0 ? (
+              </button>
+              {!logOpen ? null : narration.length > 0 ? (
                 <ol ref={thinkRef} className="game-chat__log-lines" dir="auto" aria-label={t('games.build.phase.thinking')}>
                   {narration.map((line, i) => (
                     <li key={i}>
@@ -780,18 +786,18 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
                     : t(`games.build.phase.${phase}`)}
                 </p>
               )}
-              <ol className="game-chat__log-steps">
+              {logOpen && <ol className="game-chat__log-steps">
                 {buildLog.map((entry, i) => (
-                  <li key={entry.phase} className={i === buildLog.length - 1 ? 'is-current' : 'is-done'}>
+                  <li key={entry.phase} className={busy && i === buildLog.length - 1 ? 'is-current' : 'is-done'}>
                     <span className="game-chat__log-ico" aria-hidden="true">{PHASE_ICON[entry.phase]}</span>
                     <time>{clock(entry.at)}</time>
                     <span>{t(`games.build.phase.${entry.phase}`)}</span>
                     {entry.times > 1 && <small>×{entry.times}</small>}
                   </li>
                 ))}
-              </ol>
-              <p className="game-chat__log-foot">{t('games.chat.building')}</p>
-            </details>
+              </ol>}
+              {logOpen && busy && <p className="game-chat__log-foot">{t('games.chat.building')}</p>}
+            </div>
           ) : jobs.length === 0 && (
             <div className="game-chat__msg game-chat__msg--yuvi game-chat__msg--hint" dir="auto">{t('games.chat.hint')}</div>
           )}

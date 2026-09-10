@@ -3877,6 +3877,8 @@
   "games.build.thoughtWords": "About {count} words of thought so far. The code shows up here the moment Yuvi starts writing",
   "games.build.words": "~{count} words",
   "games.build.writingBrief": "Yuvi is writing the game's brief… the code comes right after",
+  "games.build.done": "Game ready · {time}",
+  "games.build.log": "Build log",
   "games.chat.building": "Yuvi is busy building. The chat comes back when the game is ready",
   "games.chat.mode.label": "Message type",
   "games.chat.mode.change": "Change",
