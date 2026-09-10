@@ -215,12 +215,17 @@ async def _send_to_service_bus(job: dict[str, Any]) -> None:
     connection = (os.environ.get("GAME_JOBS_SERVICEBUS_CONNECTION_STRING")
                   or os.environ.get("SERVICEBUS_CONNECTION_STRING") or "").strip()
     namespace = (os.environ.get("GAME_JOBS_SERVICEBUS_NAMESPACE") or "").strip()
+    credential = None
     if connection:
         client = ServiceBusClient.from_connection_string(connection)
     elif namespace:
         from azure.identity.aio import DefaultAzureCredential
 
-        client = ServiceBusClient(namespace, credential=DefaultAzureCredential())
+        # The credential owns an aiohttp session; closing it below is what
+        # keeps a long-lived backend (and the bake-off script) from leaking
+        # one per enqueue.
+        credential = DefaultAzureCredential()
+        client = ServiceBusClient(namespace, credential=credential)
     else:
         raise EnqueueError("servicebus_not_configured")
 
@@ -228,9 +233,13 @@ async def _send_to_service_bus(job: dict[str, Any]) -> None:
         "job_id": job["_id"], "game_id": job["game_id"],
         "learner_id": job["learner_id"], "kind": job["kind"],
     })
-    async with client:
-        sender = client.get_queue_sender(queue_name=_queue_name())
-        async with sender:
-            await sender.send_messages(ServiceBusMessage(
-                body, session_id=str(job["game_id"]), content_type="application/json",
-            ))
+    try:
+        async with client:
+            sender = client.get_queue_sender(queue_name=_queue_name())
+            async with sender:
+                await sender.send_messages(ServiceBusMessage(
+                    body, session_id=str(job["game_id"]), content_type="application/json",
+                ))
+    finally:
+        if credential is not None:
+            await credential.close()
