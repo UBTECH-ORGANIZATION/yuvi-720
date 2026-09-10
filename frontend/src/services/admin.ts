@@ -330,3 +330,37 @@ export function setLearnerGameCaps(learnerId: string, body: GameCapsBody): Promi
 export function resetLearnerGameCaps(learnerId: string): Promise<GameCaps> {
   return adminPost(`/api/admin/games/limits/${encodeURIComponent(learnerId)}/reset`, {})
 }
+
+// ── Learning Game Lab: per-job timings and quality ──────────────────────────
+
+export interface GameJobJudge {
+  scores: { learning_through_play?: number; fun?: number; polish?: number; age_fit?: number }
+  notes?: string
+  top_fix?: string
+  revised?: boolean
+  model?: string
+}
+
+/** One build as the worker measured it: what it cost, how long each stage
+ *  took, and what the judge thought. */
+export interface GameJobRow {
+  job_id: string
+  game_id: string
+  learner_id: string
+  kind: 'create' | 'edit' | 'fix' | string
+  status: 'queued' | 'running' | 'done' | 'failed' | string
+  model: string | null
+  reasoning_effort: string | null
+  started_at: number | string | null
+  finished_at: number | string | null
+  error_class: string | null
+  usage_summary: { cost_usd?: number } | null
+  timings: { total_s?: number; model_s?: number[]; validate_s?: number[]; judge_s?: number; plan_s?: number } | null
+  attempts_detail: unknown[] | null
+  judge: GameJobJudge | null
+  title: string | null
+}
+
+export function getGamesJobs(limit = 200, sinceHours = 168): Promise<{ items: GameJobRow[] }> {
+  return apiGet(`/api/admin/games/jobs?limit=${limit}&since_hours=${sinceHours}`)
+}

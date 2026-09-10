@@ -1,6 +1,6 @@
 # Game questions with full context — blueprints, figures, randomness
 
-Status: Phase 1 BUILT (2026-09-09) — DSL, figures, generation from the learning profile, instances, harness `learn.next` + `mount()`, validator figure rule; Phases 2–3 planned. Companion to
+Status: **SUPERSEDED 2026-09-10** — blueprints, figures, instances and server-side grading were removed; games carry the learning in their mechanics and the model writes any question it wants itself (see [learning-game-lab.md](learning-game-lab.md) §1.2, §2.5, §2.6). Kept for the record. Companion to
 [learning-game-lab.md](learning-game-lab.md) §2.6 (harness) and §2.5 (pipeline).
 Scope: every subject in the catalog (math, science, language, English,
 history, geography…), every game theme, every device. The coordinate example

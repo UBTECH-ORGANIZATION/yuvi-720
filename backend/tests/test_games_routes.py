@@ -1,15 +1,16 @@
-"""The /api/games routes: scoping, caps, the picker, and — above all — that no
-response ever carries a correct answer.
+"""The /api/games routes: scoping, caps, the picker, the model policy, and —
+above all — that no response and no job ever carries a correct answer.
 
-The job payload is the one document that holds `correctAnswers`; these tests
-create real jobs through the route and then assert that the game read, the
-list, and the picker are clean, and that the served HTML has the harness
-without `__YUVI_LEARN_KEY`.
+The catalog snapshot still holds `correctAnswers`; these tests create real
+jobs through the route and then assert that the job, the game read, the list,
+and the picker are clean, and that the served HTML has the harness with
+titles and the language only.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -17,7 +18,8 @@ from fastapi.testclient import TestClient
 
 from app.services.games import html_store, store
 from tests.games_support import (
-    COMP, COMP_EMPTY, CREATE_BODY, GamesHarness, LEARNER, OBJECTIVE, OTHER, TEACHER, UNIT, app_for,
+    COMP, COMP_EMPTY, CREATE_BODY, DESCRIPTION, GamesHarness, LEARNER, OBJECTIVE, OTHER, TEACHER, UNIT,
+    app_for,
 )
 
 
@@ -66,22 +68,43 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertEqual(payload["device"], "touch")
         self.assertEqual(payload["language"], "he")
         self.assertEqual(payload["reasoning_effort"], "low")
+        self.assertIsNone(payload["model"], "no GAME_MODEL_DEFAULT → the worker's default")
+        self.assertTrue(payload["judge"])
+        self.assertTrue(payload["plan"], "creates run the pitch pre-pass")
         self.assertEqual(payload["feature"], "feature_7_learning_games")
         for key in ("clarifications", "instruction", "runtime_errors", "history"):
             self.assertIn(key, payload)
         context = payload["context"]
-        self.assertEqual(context["component"]["id"], COMP)
-        self.assertEqual(context["unit"]["id"], UNIT)
-        self.assertNotIn("components", context["unit"])
-        self.assertEqual(context["objective"]["id"], OBJECTIVE)
-        # The worker needs the key; this is the one place it lives.
-        self.assertEqual(context["component"]["questions_by_item"]["item-1"][0]["correctAnswers"], ["קילוגרם"])
+        self.assertEqual(context["component"], {
+            "id": COMP, "title": f"Title of {COMP}", "purpose": "practice", "relative_difficulty": 2,
+        })
+        self.assertEqual(context["unit"], {"id": UNIT, "title": "מסה", "subject": "science"})
+        self.assertEqual(context["objective"], {
+            "id": OBJECTIVE, "title": "מדידת מסה",
+            "description": "Students measure mass with a balance and tell mass from weight.",
+            "curriculum_title": "Science for 7th Grade",
+        })
+        self.assertEqual(context["learning_description"], DESCRIPTION)
+        # The job mirrors the model/effort for the admin report.
+        self.assertIsNone(job["model"])
+        self.assertEqual(job["reasoning_effort"], "low")
+        self.assertIsNone(job["timings"])
+        self.assertIsNone(job["judge"])
+        # No question rows, no answers, no teacher notes — anywhere in the job.
+        text = json.dumps(job, ensure_ascii=False)
+        for forbidden in ("correctAnswers", "questions_by_item", "information_to_bot",
+                          "Balance", "קילוגרם", "Which tool measures mass"):
+            self.assertNotIn(forbidden, text)
 
-    def test_create_refuses_unknown_and_questionless_components(self):
+    def test_create_refuses_unknown_components_but_not_questionless_ones(self):
         self.assertEqual(self.client.post("/api/games", json={**CREATE_BODY, "component_id": "nope"}).status_code, 404)
-        self.assertEqual(self.client.post("/api/games", json={**CREATE_BODY, "component_id": COMP_EMPTY}).status_code, 404)
         self.assertEqual(self.client.post("/api/games", json={**CREATE_BODY, "genre": "gambling"}).status_code, 422)
         self.assertEqual(self.client.post("/api/games", json={**CREATE_BODY, "unit_id": "other-unit"}).status_code, 422)
+        # A lesson without authored questions is still a lesson.
+        created = self._create(component_id=COMP_EMPTY)
+        job = self._run(store.get_job(created["job_id"]))
+        self.assertEqual(job["payload"]["context"]["component"]["id"], COMP_EMPTY)
+        self.assertEqual(job["payload"]["context"]["learning_description"], DESCRIPTION)
 
     def test_daily_create_cap(self):
         for _ in range(3):
@@ -94,6 +117,95 @@ class GamesRoutesTest(unittest.TestCase):
         created = self._create(deep_thinking=True)
         job = self._run(store.get_job(created["job_id"]))
         self.assertEqual(job["payload"]["reasoning_effort"], "medium")
+        self.assertEqual(job["reasoning_effort"], "medium")
+        self.assertEqual(self._run(store.get_game(created["game_id"]))["reasoning_effort"], "medium")
+        self.assertEqual(self.client.get(f"/api/games/{created['game_id']}").json()["reasoning_effort"], "medium")
+
+    # ── model policy ─────────────────────────────────────────────────────────
+
+    def test_learner_cannot_pick_a_model_but_an_admin_can(self):
+        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5"}):
+            created = self._create(model="gpt-5.6-sol")
+            game = self._run(store.get_game(created["game_id"]))
+            self.assertEqual(game["model"], "claude-opus-5", "a learner's pick is ignored, not refused")
+            self.assertEqual(self._run(store.get_job(created["job_id"]))["payload"]["model"], "claude-opus-5")
+
+            admin = TestClient(app_for(LEARNER, roles=("learner", "admin")))
+            picked = admin.post("/api/games", json={**CREATE_BODY, "model": "gpt-5.6-sol"})
+            self.assertEqual(picked.status_code, 201, picked.text)
+            game = self._run(store.get_game(picked.json()["game_id"]))
+            self.assertEqual(game["model"], "gpt-5.6-sol")
+            job = self._run(store.get_job(picked.json()["job_id"]))
+            self.assertEqual(job["payload"]["model"], "gpt-5.6-sol")
+            self.assertEqual(job["model"], "gpt-5.6-sol")
+            # An admin without a pick gets the default like everyone else.
+            plain = admin.post("/api/games", json=CREATE_BODY).json()
+            self.assertEqual(self._run(store.get_game(plain["game_id"]))["model"], "claude-opus-5")
+
+    def test_edits_reuse_the_create_model_and_effort(self):
+        admin = TestClient(app_for(LEARNER, roles=("learner", "admin")))
+        created = admin.post("/api/games", json={**CREATE_BODY, "model": "claude-sonnet-5", "deep_thinking": True})
+        self.assertEqual(created.status_code, 201, created.text)
+        gid = created.json()["game_id"]
+        self._run(self._ready(gid))
+        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5"}):
+            edited = self.client.post(f"/api/games/{gid}/edit", json={"instruction": "more cats"})
+        self.assertEqual(edited.status_code, 200, edited.text)
+        job = self._run(store.get_job(edited.json()["job_id"]))
+        self.assertEqual(job["payload"]["model"], "claude-sonnet-5", "the default moved; the game did not")
+        self.assertEqual(job["payload"]["reasoning_effort"], "medium")
+        self.assertFalse(job["payload"]["plan"], "only creates run the pitch pre-pass")
+        self.assertTrue(job["payload"]["judge"])
+        self._run(store.update_status(gid, "ready"))
+        fixed = self.client.post(f"/api/games/{gid}/report-bug", json={"errors": [{"message": "TypeError"}]})
+        self.assertEqual(fixed.status_code, 200, fixed.text)
+        fix = self._run(store.get_job(fixed.json()["job_id"]))
+        self.assertEqual((fix["payload"]["model"], fix["payload"]["reasoning_effort"]), ("claude-sonnet-5", "medium"))
+
+    def test_job_instrumentation_is_shown_to_admins_only(self):
+        created = self._create()
+        gid, job_id = created["game_id"], created["job_id"]
+        self._run(store.update_job(job_id, timings={"total_s": 91.2}, attempts_detail=[{"n": 1, "ok": True}],
+                                   judge={"scores": {"fun": 4}, "revised": False}, model="claude-opus-5"))
+        learner_view = self.client.get(f"/api/games/{gid}").json()
+        self.assertEqual(learner_view["model"], None)
+        for key in ("timings", "judge", "model", "reasoning_effort", "attempts_detail"):
+            self.assertNotIn(key, learner_view["last_job"])
+        admin = TestClient(app_for(LEARNER, roles=("learner", "admin")))
+        admin_view = admin.get(f"/api/games/{gid}").json()
+        self.assertEqual(admin_view["last_job"]["timings"], {"total_s": 91.2})
+        self.assertEqual(admin_view["last_job"]["judge"]["scores"]["fun"], 4)
+        self.assertEqual(admin_view["last_job"]["model"], "claude-opus-5")
+        self.assertEqual(admin_view["last_job"]["reasoning_effort"], "low")
+        self.assertNotIn("payload", admin_view["last_job"])
+
+    # ── prepare ──────────────────────────────────────────────────────────────
+
+    def test_prepare_reports_cached_and_spawns_generation(self):
+        from app.routes import games as routes
+        from app.services.games import learning_descriptions
+
+        spawned: list = []
+
+        def fake_spawn(coro):
+            spawned.append(coro)
+            coro.close()
+
+        with patch.object(routes, "_spawn", fake_spawn), \
+             patch.object(learning_descriptions, "cached", AsyncMock(return_value=None)) as cached:
+            cold = self.client.post("/api/games/prepare", json={"component_id": COMP, "language": "he"})
+        self.assertEqual(cold.status_code, 202)
+        self.assertEqual(cold.json(), {"ready": False})
+        self.assertEqual(len(spawned), 1, "a miss starts the generation behind the response")
+        self.assertTrue(cached.await_args.kwargs.get("fingerprint"), "the cache is fingerprint-gated")
+        learning_descriptions.ensure_description.assert_called_once()
+        self.assertEqual(learning_descriptions.ensure_description.call_args.kwargs["actor_id"], LEARNER)
+
+        with patch.object(routes, "_spawn", fake_spawn):
+            warm = self.client.post("/api/games/prepare", json={"component_id": COMP})
+        self.assertEqual(warm.json(), {"ready": True})
+        self.assertEqual(len(spawned), 1, "a hit spawns nothing")
+        self.assertEqual(self.client.post("/api/games/prepare", json={"component_id": "nope"}).status_code, 404)
 
     # ── reads never leak ─────────────────────────────────────────────────────
 
@@ -114,7 +226,7 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertFalse(_has_answers(many.json()))
         self.assertEqual([row["game_id"] for row in many.json()["games"]], [created["game_id"]])
 
-    def test_picker_lists_gradeable_components_without_answers(self):
+    def test_picker_lists_every_component_without_answers(self):
         response = self.client.get("/api/games/objectives")
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -124,10 +236,12 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertEqual(objective["id"], OBJECTIVE)
         self.assertTrue(objective["visited"])
         components = objective["components"]
-        self.assertEqual([row["id"] for row in components], [COMP])
-        self.assertEqual(components[0]["question_count"], 3, "the keyed open question is typed, not dropped")
+        self.assertEqual([row["id"] for row in components], [COMP, COMP_EMPTY], "visited first, questionless included")
+        self.assertNotIn("question_count", components[0])
         self.assertTrue(components[0]["visited"])
+        self.assertFalse(components[1]["visited"])
         self.assertNotIn("questions_by_item", json.dumps(body))
+        self.assertNotIn("information_to_bot", json.dumps(body))
 
     def test_list_filters_and_pages(self):
         ids = [self._create()["game_id"] for _ in range(3)]
@@ -176,22 +290,18 @@ class GamesRoutesTest(unittest.TestCase):
         html = response.text
         self.assertIn("window.__YUVI_LEARN_DATA", html)
         self.assertIn("YuviLearn", html)
-        # A blueprint game carries no questions in the page: the bridge asks
-        # `/next` for each draw, so neither the stems nor the answers ship.
-        self.assertIn('"mode": "blueprints"', html)
-        self.assertIn('"total": 6', html)
+        # The page carries titles and the language — no questions, no key.
         self.assertNotIn("item-2#q1", html)
         self.assertNotIn("Balance", html)
-        # The bridge source mentions the key variable; what must be absent is
-        # the injected assignment that would hand the page an answer key.
         self.assertNotIn("window.__YUVI_LEARN_KEY = ", html)
         self.assertNotIn("correctAnswers", html)
         self.assertIn("<body>hi</body>", html)
         learn = html.split("window.__YUVI_LEARN_DATA = ")[1].split(";</script>")[0]
         data = json.loads(learn)
-        self.assertEqual(data["mode"], "blueprints")
-        self.assertEqual(data["questions"], [])
-        self.assertEqual(data["total"], 6)
+        self.assertEqual(set(data), {"component", "objective", "language"})
+        self.assertEqual(data["component"], {"id": COMP, "title": f"Title of {COMP}"})
+        self.assertEqual(data["objective"], {"id": OBJECTIVE, "title": "מדידת מסה"})
+        self.assertEqual(data["language"], "he")
         self.assertNotIn("correct", json.dumps(data))
 
     def test_html_version_parameter_selects_a_version(self):
@@ -202,19 +312,10 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertIn("one", self.client.get(f"/api/games/{gid}/html", params={"v": 1}).text)
         self.assertEqual(self.client.get(f"/api/games/{gid}/html", params={"v": 9}).status_code, 404)
 
-    # ── check ────────────────────────────────────────────────────────────────
-
-    def test_check_grades_and_records(self):
+    def test_check_and_next_are_gone(self):
         gid = self._create()["game_id"]
-        right = self.client.post(f"/api/games/{gid}/check", json={"question_id": "item-1#q1", "answer": 0})
-        self.assertEqual(right.json(), {"correct": True, "correct_answer": None, "feedback": None})
-        wrong = self.client.post(f"/api/games/{gid}/check", json={"question_id": "item-2#q1", "answer": "Ruler"})
-        self.assertEqual(wrong.json()["correct"], False)
-        self.assertEqual(wrong.json()["correct_answer"], "Balance  Scale")
-        missing = self.client.post(f"/api/games/{gid}/check", json={"question_id": "item-7#q1", "answer": "x"})
-        self.assertEqual(missing.status_code, 404)
-        rows = self._run(store.list_answers(gid, LEARNER))
-        self.assertEqual([row["correct"] for row in rows], [True, False])
+        self.assertEqual(self.client.post(f"/api/games/{gid}/check", json={"question_id": "item-1#q1", "answer": 0}).status_code, 404)
+        self.assertEqual(self.client.post(f"/api/games/{gid}/next", json={"run_id": "r", "index": 0}).status_code, 404)
 
     # ── edit / fix / revert / delete ─────────────────────────────────────────
 
@@ -291,9 +392,9 @@ class GamesRoutesTest(unittest.TestCase):
              patch("app.services.games.jobs._send_to_service_bus",
                    AsyncMock(side_effect=RuntimeError("down"))):
             response = self.client.post("/api/games", json=CREATE_BODY)
-        # The card is answered before the queue send (blueprints are prepared
-        # behind it), so the failure lands on the game and the job, not on
-        # the response.
+        # The card is answered before the queue send (the description is
+        # prepared behind it), so the failure lands on the game and the job,
+        # not on the response.
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.json()["job_id"])
         games, _ = self._run(store.list_games(LEARNER))

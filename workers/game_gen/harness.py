@@ -6,7 +6,8 @@ the Yuvi app serves it and when the headless validator runs it.
 
 Order matters: storage shim → fit-to-frame → error reporter → learning data →
 YuviLearn bridge. Everything is inlined (the sandboxed iframe has no
-same-origin access and a strict CSP).
+same-origin access and a strict CSP). No answer key exists anywhere: the
+bridge grades the game's own questions locally against ``q.correct``.
 """
 from __future__ import annotations
 
@@ -34,16 +35,11 @@ def _json_script(var: str, payload: Any) -> str:
     return f"<script>window.{var} = {blob};</script>"
 
 
-def build_harness(
-    learn_data: dict[str, Any],
-    *,
-    answer_key: dict[str, list[str]] | None = None,
-    nonce: str | None = None,
-) -> str:
+def build_harness(learn_data: dict[str, Any], *, nonce: str | None = None) -> str:
     """Return the HTML fragment to place at the top of ``<head>``.
 
-    ``answer_key`` must be given ONLY for headless validation / local preview.
-    The Yuvi app serves games without it and grades through the parent bridge.
+    ``learn_data`` is ``ContextPack.to_learn_data()``:
+    ``{component: {id, title}, objective: {id, title}, language}``.
     """
     parts = [
         _json_script("__YUVI_NONCE", nonce or secrets.token_hex(8)),
@@ -51,10 +47,8 @@ def build_harness(
         _script(_read("fit_to_frame.js")),
         _script(_read("error_reporter.js")),
         _json_script("__YUVI_LEARN_DATA", learn_data),
+        _script(_read("yuvi_learn.js")),
     ]
-    if answer_key is not None:
-        parts.append(_json_script("__YUVI_LEARN_KEY", answer_key))
-    parts.append(_script(_read("yuvi_learn.js")))
     return "\n".join(parts)
 
 

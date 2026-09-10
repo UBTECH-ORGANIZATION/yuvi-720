@@ -26,10 +26,10 @@ Tabs: **My games** | **Create**.
 **Create** wizard, three steps, all mandatory:
 
 1. **Learning objective** — picker over the learner's own path (units grouped by MoE objective; objectives with visited or on-path components first, then the rest of the subject catalog).
-2. **Learning component** — the component inside that objective (title, purpose, difficulty, question count). This is the "learning context": the game is built around this component's questions and `informationToBot`.
+2. **Learning component** — the component inside that objective (title, purpose, difficulty). This is the "learning context": one paragraph, the **learning description**, written once per component by the mini model (what is learned, the 2-4 facts/rules/vocabulary, typical mistakes, the level) and cached; picking a component warms it.
 3. **The game** — a free-text **brief** (up to 600 chars: world, hero, what you do, what is exciting) is the one design input. Optional **inspiration chips** (3D, shooting, running, platforms, boss, puzzle, tower, story, open world) are flavour for the designer, never a constraint: Yuvi owns genre, engine and form (revised 2026-09-08 after the first playthrough — the genre step boxed the model into toy games). Optional "deep thinking". The build card shows live steps; the finished game carries Yuvi's `design_brief` (shown in the player's console).
 
-Hard rule shown in the UI and enforced in the pipeline: **every game is a learning game**. Fun mechanics are welcome, but progress in the game must be gated by answering this component's questions.
+Hard rule shown in the UI and scored in the pipeline (revised 2026-09-10): **every game is a learning game — the learning lives in the mechanics.** The concept IS the core loop (mass → a cargo shooter where you hit the crates whose net weight matches the manifest; coordinates → the map is the grid and every jump is typed as (x, y)); the vocabulary is on the objects, the HUD and the level names. Questions are the model's choice, never a requirement; the learning judge scores learning-through-play and asks for one revision when it is weak.
 
 ### 1.3 In the lesson page
 
@@ -71,8 +71,8 @@ Bell + chime   ◀── notifications                                          
 Collections (Mongo, via `_get_collection_named`):
 
 - `learner_games` — `_id: game_id`, `learner_id`, `objective_id`, `unit_id`, `component_id`, `path_node_id`, `title`, `genre`, `prompt`, `language`, `status` (`queued|planning|building|validating|fixing|ready|failed`), `current_version`, `versions[] {v, blob_path, sha256, created_at, source: create|edit|fix, summary}`, `thumb_blob_path`, `errors_last[]`, `sparks_spent`, `created_at`, `updated_at`, `deleted_at`.
-- `learner_game_jobs` — `_id: job_id`, `game_id`, `learner_id`, `kind` (`create|edit|fix`), `payload` (instruction, error report, clarifications), `status`, `attempts`, `worker_replica`, `started_at`, `finished_at`, `error_class`, `usage_summary` (tokens in/out/cache, cost snapshot).
-- `learner_game_answers` — one row per graded answer: `game_id`, `learner_id`, `question_id`, `item_id`, `component_id`, `correct`, `latency_ms`, `at`. Feeds learner_signals / helped-attribution later.
+- `learner_game_jobs` — `_id: job_id`, `game_id`, `learner_id`, `kind` (`create|edit|fix`), `payload` (instruction, error report, the trimmed context + learning description, `model`, `reasoning_effort`), `status`, `attempts`, `worker_replica`, `started_at`, `finished_at`, `error_class`, `usage_summary` (tokens in/out/cache, cost snapshot), `timings` (queued / wake / session_start / plan / model[] / validate[] / judge / revise / persist / total, seconds), `attempts_detail[]`, `judge` (the verdict, see §2.5 step 6).
+- `game_learning_descriptions` — `_id: {component_id}|{language}|{prompt_version}`, `text`, `fingerprint` (title, purpose, teacher notes, question texts as evidence, unit/objective titles + description), `generated_at`. Written once per component; regenerated only when the fingerprint drifts. (2026-09-10: replaced `learner_game_answers`, `game_question_blueprints`, `game_question_instances`, `game_question_options`, which nothing reads any more.)
 
 HTML never goes into Mongo (vibe rule). Blob layout: `games/{learner_id}/{game_id}/v{n}/index.html`, `thumb.png`.
 
@@ -86,10 +86,11 @@ HTML never goes into Mongo (vibe rule). Blob layout: `games/{learner_id}/{game_i
 | GET | `/api/games/{id}/html?v=` | authenticated; returns HTML with the runtime harness injected at serve time |
 | POST | `/api/games/{id}/edit` | `{instruction}` → `edit` job |
 | POST | `/api/games/{id}/report-bug` | `{errors[], note}` → `fix` job (auto path capped at 2 per version) |
-| POST | `/api/games/{id}/check` | `{question_id, answer}` → server grades from Kata snapshot, writes `learner_game_answers`, returns `{correct, feedback?}` |
+| POST | `/api/games/prepare` | `{component_id, language}` → 202 `{ready}`; warms the learning description on pick |
 | POST | `/api/games/{id}/revert` | `{v}` |
 | DELETE | `/api/games/{id}` | soft delete |
-| GET | `/api/games/objectives` | picker data: objectives → components for the learner's subject/path |
+| GET | `/api/games/objectives` | picker data: objectives → components for the learner's subject/path (every component is offered) |
+| GET | `/api/admin/games/jobs` | admin: recent jobs with timings, judge verdict, model, cost — the weak-spot finder (`workers/game_gen/scripts/games_report.py` prints the same as a table) |
 
 Daily caps (config): 3 creates, 10 edits, per learner; teachers/admin can raise per group later.
 
@@ -103,20 +104,20 @@ Local dev: `GAME_JOBS_MODE=inline` runs the worker pipeline in-process inside th
 
 - Code: `workers/game_gen/` in this repo, Python 3.11, imports `backend/app` for `ai_usage`, `notifications`, `realtime`, `kata_client` snapshot readers.
 - Image: `workers/game_gen/Dockerfile` — python slim + Copilot CLI binary (official backend-services Dockerfile pattern) + Playwright Chromium + Noto fonts (Hebrew/Arabic).
-- Scaling: KEDA `azure-servicebus` rule, `messageCount: "1"` (one Opus build per replica), `minReplicas 0`, `maxReplicas` 2 (dev) / 10 (prod), CPU 1 / 2 GiB, `activeRevisionsMode single`, managed identity with *Service Bus Data Receiver* + *Storage Blob Data Contributor* + *AcrPull*. Cold start from zero ≈ 30–60 s; the UI shows "in queue".
+- Scaling: KEDA `azure-servicebus` rule, `messageCount: "1"` (one build per replica), **`minReplicas 1`** (2026-09-10: one replica always warm — the 30–60 s cold start was the single largest fixed wait; ~1 vCPU/2 GiB of idle spend is a few Opus builds a month), `maxReplicas` 2 (dev) / 10 (prod), CPU 1 / 2 GiB, `activeRevisionsMode single`, managed identity with *Service Bus Data Receiver* + *Storage Blob Data Contributor* + *AcrPull*.
 - Resources (rg-yuvi-720, North Europe): Service Bus Standard namespace `sb-yuvi-720` with queues `game-jobs-dev` / `game-jobs-prod` (sessions, maxDeliveryCount 3, lock 5 min); Container Apps environment `cae-yuvi-720` on `law-yuvi-720`; apps `ca-game-gen-dev` / `ca-game-gen-prod`; blob containers `games-dev` / `games-prod` in `yuvi720blobstorage`. The App Service (`ubi-yuvi-720`, prod + `dev` slot) got system identities with *Service Bus Data Sender* + *Blob Data Contributor* and the matching slot settings (`GAME_JOBS_MODE=servicebus`, `GAME_JOBS_QUEUE`, `GAME_JOBS_SERVICEBUS_NAMESPACE`, `GAMES_STORAGE=blob`, `GAMES_BLOB_CONTAINER`, `GAMES_STORAGE_ACCOUNT_URL`).
 - Environment contract: `backend/env.template` (backend keys) and `workers/game_gen/env.template` (worker keys = the Container App env vars in `infra/game-gen/main.bicep`). Secrets on the apps: `copilot-github-token` (the vibe-coding-kids Copilot token, per Gal 2026-09-08), `mongodb-connection-string`, `redis-connection-string`.
 - Deploy: `.github/workflows/deploy-game-gen.yml` — `az acr build` → Bicep to dev on every push touching the worker; prod only on manual dispatch with `confirm=prod`. Needs repo secrets `AZURE_CREDENTIALS` and `COPILOT_GITHUB_TOKEN`.
 
-### 2.5 Pipeline (per job)
+### 2.5 Pipeline (per job) — revised 2026-09-10
 
-1. **Context pack** (built at enqueue time on the Yuvi side, stored with the job): component title, objective, sub-topic, subject, grade band, `informationToBot` (≤1800 chars), up to 12 questions as `{question_id, item_id, type, text, answers[]}` — **without correct answers**, learner language, device hints (touch/keyboard). Learner name and PII never enter the prompt. Always built from the **live** Kata catalog snapshot (`kata_catalog`), never from a stored file, so it is as fresh as the catalog. Enrichment: when the nightly content-intelligence config (`content/context/<subject>/<objective>.json`) has per-slide teaching texts whose `source_fingerprint` matches the live component, they are added as `slide_notes`; on any mismatch the pack falls through to catalog-only (same freshness rule as the coach). The spike's `fixtures/sample_components.json` is a gitignored local dump for running without the backend and holds correct answers, so it must never be committed.
-2. **Plan prepass** (mini tier, `gpt-5.4-mini` via existing APIM gateway, ≤2k tokens): genre → mechanics → where questions gate progress → asset plan. Output is a short plan text handed to the builder (vibe's "thinking prepass" pattern; keeps Opus at `reasoning_effort=low`).
-3. **Build** — Copilot SDK session, model `claude-opus-5`, `reasoning_effort` **high** (xhigh if "deep thinking"; raised from low/medium on 2026-09-08 — ambition over cost, per Gal), design-led prompt (the model decides concept/world/engine, then writes 900-2000 lines in one pass; Three.js module build allowed for 3D, Phaser 4 for 2D), `available_tools=["ask_user"]` disabled for headless, `infinite_sessions` off. System message = vibe `BUILDER_SYSTEM_MESSAGE` (identity customize) + **Learning contract** + **Runtime harness API** + language rule. Output: one ```html``` file.
-4. **Deterministic post-processing** — vibe `code_utils._validate_and_fix_code` (viewport/charset/doctype, arc radius guard, audio fallback, module scripts) + `libraries.normalize_cdn_urls` against the curated CDN list (Phaser 4.2.x, Kaplay, PixiJS 8, Matter, Howler, nipplejs, canvas-confetti…).
-5. **Validate** — Playwright headless (SwiftShader): load, no `pageerror` for 4 s, click Start (multilingual button heuristics), 3.5 s more, canvas non-blank, ≥ 60 rAF ticks, then **learning-contract assertions** via the harness state `window.__yuvi`: at least one `learn.ask` within 20 s of play, `learn.answer` advances the game, score reflects correctness. Structured errors go back for up to **2 repair rounds** (patch mode); then fail. Research (self-repair 2026) shows gains concentrate in the first two rounds.
-6. **Learning judge** — mini model, ~500 tokens, scores "learning is integral, not decorative" 0–5 and "age-appropriate". < 3 → one revision round with the judge notes; still < 3 → fail with reason.
-7. **Persist** — upload HTML + Playwright thumbnail to Blob, bump version, write job usage summary, `notify()` + `realtime.publish(user:{learner_id}, {type:'game', ...})`.
+1. **Context** (built at enqueue time on the Yuvi side, stored with the job): component / unit / objective titles, subject, grade (parsed from the objective's curriculum title), purpose, and the **learning description** — one paragraph per component from `game_learning_descriptions` (mini model, cached, fingerprint-gated; a deterministic fallback from the objective description if the model is unreachable). No question rows, no teacher notes, no answers travel with the job. Learner name and PII never enter the prompt.
+2. **Plan pass** (`gpt-5.4-mini`, ~350 words, ≤20 s): a producer's one-page pitch in the kid's language — hook, world & look, core loop (how the learning idea IS the mechanic), 4-6 named stages, fail & reward, engine, signature moment. Streamed to the kid as the first narration line and written to the game's `description` at once. It is a starting point for the builder, never a spec.
+3. **Build** — Copilot SDK session, model from the job (`payload.model`, default `GAME_MODEL_DEFAULT`, chosen by the bake-off in `workers/game_gen/scripts/bakeoff.py`), `reasoning_effort` **low** (medium with "deep thinking"). One flowing prompt: identity, the learning stance with cross-subject examples, the optional bridge helper, an ambition bar (what a senior Phaser 4 / Three.js developer ships: title screen with controls, a look, juice, WebAudio, a curve that adds elements, a fail state, a satisfying end), the technical rules the harness depends on, delivery format, language rule. No level counts, no line counts, no engine table. Output: TITLE / BRIEF / SUMMARY lines + one ```html``` file, ≤3 deliveries.
+4. **Deterministic post-processing** — vibe `code_utils._validate_and_fix_code` + `libraries.normalize_cdn_urls` against the curated CDN list.
+5. **Validate** — Playwright headless: load, no `pageerror` for 4 s, click Start, 3.5 s more, poster sampling (9 s), canvas non-blank, ≥ 30 rAF ticks, harness present, and a **play score** (frames rendered and whether the canvas reacts to keys/pointer). No learning-contract assertion. Structured errors go back for up to 2 repair rounds.
+6. **Learning judge** — mini model scores `{learning_through_play, fun, polish, age_fit}` 0-5 with `notes` and one `top_fix`. A finished game is **never discarded**: below the bar (`learning_through_play < 3` or `fun + polish < 5`) the builder gets ONE revision turn in the same session with the judge's top fix (patches or a full game); a validated revision replaces the HTML and is judged again, otherwise the original stands. The verdict lands on the version entry and the job row.
+7. **Persist** — upload HTML + poster to Blob, bump version, write `usage_summary` + `timings` + `judge`, `notify()` + `realtime.publish(user:{learner_id}, {type:'game', ...})`.
 
 Edit jobs run steps 3–7 with the current HTML sent **line-numbered** and vibe's patch DSL (`REPLACE_LINES / INSERT_AFTER / DELETE_LINES`, all-or-nothing, brace-balance guard); >5000 lines forces full rewrite. Fix jobs add the captured error list, last `__yuvi` snapshot and the "you already tried X" memory of the last 5 attempts.
 
@@ -124,7 +125,7 @@ Edit jobs run steps 3–7 with the current HTML sent **line-numbered** and vibe'
 
 Saves tokens and makes behaviour uniform. Prepended to every served HTML:
 
-- `YuviLearn` bridge: `await YuviLearn.next()` → next question `{id, text, answers[]}`; `await YuviLearn.answer(id, answer)` → `{correct, feedback}` via `postMessage` to the parent, which calls `/api/games/{id}/check` (**grading is server-side; correct answers never ship to the client**); `YuviLearn.progress()`; `YuviLearn.done()`.
+- `YuviLearn` — a thin **optional** helper (2026-09-10): `await YuviLearn.mount(q, el)` renders a question the model wrote itself (`{text, answers?, correct, type?, figure?}`) and grades it locally; `YuviLearn.progress(patch?)` and `YuviLearn.done(summary?)` post `learn.progress` / `learn.done` to the host (the celebration). Legacy `next()` / `answer()` resolve to null / a harmless result so games built before the change never throw. The game talks, the host listens; nothing is graded on the server.
 - `YuviStorage` (postMessage-backed KV; `localStorage` shimmed in-memory, as in vibe).
 - Error reporter (`error`, `unhandledrejection`, `console.error`, heartbeat) → parent, deduped, with a per-render nonce.
 - Fit-to-frame scaler (vibe `gameFrame.ts`), viewport meta, `visualViewport` handling for tablets, pointer-lock passthrough.
@@ -170,13 +171,17 @@ Follows `.github/instructions/ai-usage-tracking.instructions.md`:
 | 2 | **Worker + infra** | Ported vibe modules under `workers/game_gen/`, learning contract prompt, harness, validator with contract assertions, repair loop, judge, DLQ consumer, Dockerfile, Bicep, deploy workflow, KEDA scaling verified with 10 parallel jobs. |
 | 3 | **Studio Game Lab station** | Prop + station wiring (`StationId`, zones, pads, anchors), panel with history + create wizard, live build card, prop reacts to realtime frames. |
 | 4 | **Lesson page Games tab + player** | Third tab, full-screen `GamePlayer`, YuviLearn bridge with server-side grading, edit chat panel, bug capture + auto-fix, bell chime, locales he/en/ar. |
-| 5 | **Learning telemetry + teacher visibility** | `learner_game_answers` into learner signals / helped-attribution; teacher profile shows student-made games; admin report feature filter. |
+| 5 | **Learning telemetry + teacher visibility** | (answers telemetry dropped with the question machinery, 2026-09-10) teacher profile shows student-made games; admin jobs report with timings + judge scores. |
 | 6 | **Hardening** | Load test, cost report vs. estimate, content-safety review, a11y/RTL pass on Chromebook + tablet, docs update. |
 
 Sequencing: 0 → 1 ∥ 3 → 2 → 4 → 5 → 6. Task 0 gates the model choice; if `claude-opus-5` is unavailable through Copilot for the org, fall back to the provider interface with Anthropic direct before building task 2.
 
 ---
 
+
+### Revised 2026-09-10 — let the model design
+
+Questions were the part the kids met first and the part that felt broken ("what chess board?"). Blueprints, figures, per-run instances and server grading were removed; the learning context became one paragraph; the prompt became one flowing brief with an ambition bar instead of a rule book; the judge revises instead of discarding; effort dropped to low/medium; the worker stays warm; and every job carries per-stage timings so the report (`scripts/games_report.py`) shows where the seconds and dollars go. The model default is chosen by the bake-off (Sonnet 5 / GPT-5.6 Sol / Opus 4.8 vs Opus 5), with the user's own play-through as the final vote. See [game-question-blueprints.md](game-question-blueprints.md) (superseded) for what was there before.
 
 ### Game page (revised 2026-09-08)
 

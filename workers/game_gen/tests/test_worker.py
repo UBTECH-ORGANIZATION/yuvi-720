@@ -7,13 +7,17 @@ from types import SimpleNamespace
 import pytest
 
 from game_gen import worker
-from game_gen.pipeline import JobResult
+from game_gen.pipeline import Attempt, JobResult
 from game_gen.usage import UsageTotals
 
-COMPONENT = {
-    "id": "c1", "unit_id": "u1", "title": "מסה", "information_to_bot": "notes",
-    "questions_by_item": {"i1": [{"questionId": "q1", "questionText": "מהי מסה?", "answers": ["כמות חומר", "נפח"], "correctAnswers": ["כמות חומר"]}]},
+CONTEXT = {
+    "component": {"id": "c1", "title": "מסה", "purpose": "both", "relative_difficulty": 3},
+    "unit": {"id": "u1", "title": "יחידה", "subject": "science"},
+    "objective": {"id": "o1", "title": "מסה", "description": "…", "curriculum_title": "8th Grade Science"},
+    "learning_description": "הילד לומד שמסה כוללת = אריזה + תכולה.",
 }
+JUDGE = {"scores": {"learning_through_play": 4, "fun": 4, "polish": 3, "age_fit": 5}, "notes": "n", "top_fix": "t",
+         "revised": False, "before": None, "model": "gpt-5.4-mini"}
 
 
 class FakeStore:
@@ -23,25 +27,31 @@ class FakeStore:
         self.games = {"g1": {"_id": "g1", "learner_id": "l1", "unit_id": "u1", "component_id": "c1", "title": "מסה",
                              "status": "queued", "current_version": 0, "versions": [], "sparks_spent": 0}}
         self.jobs = {"j1": {"_id": "j1", "game_id": "g1", "learner_id": "l1", "kind": "create", "status": "queued", "attempts": 0,
-                            "payload": {"genre": "shooter", "vibe": "חלל", "language": "he", "device": "keyboard",
-                                        "context": {"component": COMPONENT, "unit": {"id": "u1", "title": "יחידה", "objective_id": "o1", "subject": "science"}, "objective": {"title": "מסה"}}}}}
+                            "created_at": "2026-09-10T08:00:00+00:00",
+                            "payload": {"kind": "create", "genre": "shooter", "vibe": "חלל", "language": "he", "device": "keyboard",
+                                        "model": "claude-sonnet-5", "reasoning_effort": "medium", "judge": True, "plan": True,
+                                        "context": CONTEXT}}}
         self.status_log = []
+        self.version_kwargs = []
 
     async def get_game(self, gid): return self.games.get(gid)
     async def get_job(self, jid): return self.jobs.get(jid)
     async def update_job(self, jid, **f): self.jobs[jid].update(f); return self.jobs[jid]
+    async def update_game(self, gid, **f): self.games[gid].update(f); return self.games[gid]
     async def update_status(self, gid, status, errors_last=None):
         self.games[gid]["status"] = status; self.status_log.append(status)
         if errors_last is not None: self.games[gid]["errors_last"] = errors_last
         return self.games[gid]
     def version_entry(self, game, v=None):
         return next((e for e in game["versions"] if e["v"] == (v or game["current_version"])), None)
-    async def add_version(self, gid, *, blob_path, sha256, source, summary="", title=None, thumb_blob_path=None, sparks=0, design_brief=None):
+    async def add_version(self, gid, *, blob_path, sha256, source, summary="", title=None, thumb_blob_path=None, sparks=0,
+                          design_brief=None, **kwargs):
         g = self.games[gid]; v = len(g["versions"]) + 1
-        entry = {"v": v, "blob_path": blob_path, "sha256": sha256, "source": source, "summary": summary}
+        entry = {"v": v, "blob_path": blob_path, "sha256": sha256, "source": source, "summary": summary, **kwargs}
         g["versions"].append(entry); g["current_version"] = v; g["status"] = "ready"; g["sparks_spent"] += sparks
         if title: g["title"] = title
         if thumb_blob_path: g["thumb_blob_path"] = thumb_blob_path
+        self.version_kwargs.append(kwargs)
         return entry
     async def _find(self, coll, query, sort=None, limit=None):
         return [j for j in self.jobs.values() if j["status"] == query.get("status")][: (limit or 99)]
@@ -67,14 +77,20 @@ class FakeNotify:
 def fakes(monkeypatch):
     store, html, notify = FakeStore(), FakeHtmlStore(), FakeNotify()
     monkeypatch.setattr(worker, "_backend", lambda: (store, html, notify))
+    worker._FIRST_JOB["pending"] = True
     return SimpleNamespace(store=store, html=html, notify=notify)
 
 
 def _result(ok=True):
     usage = UsageTotals(); usage.cost_usd = 0.25; usage.output_tokens = 5000
+    attempts = [Attempt(1, "text", ok, [] if ok else [{"message": "x is not defined"}], "ok" if ok else "1 error(s): x is not defined",
+                        20.0, model_s=30.0, output_tokens=5000, html_lines=300, error_classes=[] if ok else ["scope"],
+                        play_score={"frames": 50, "input_reacts": True, "dom_text": True})]
     return JobResult(ok=ok, html="<!DOCTYPE html><html><head></head><body><script>1</script></body></html>" if ok else None,
-                     title="קרב המסה", summary="שאלות בין גלים", attempts=[], usage=usage, judge={"learning_integral": 4},
-                     screenshot_png=b"png" if ok else None, elapsed_s=90.0, error=None if ok else "judge_rejected: 2")
+                     title="קרב המסה", summary="המסה היא המכניקה", attempts=attempts, usage=usage, judge=JUDGE if ok else None,
+                     screenshot_png=b"png" if ok else None, elapsed_s=90.0, error=None if ok else "no_valid_submission",
+                     timings={"session_start_s": 1.5, "plan_s": 6.0, "model_s": [30.0], "validate_s": [20.0], "judge_s": 4.0,
+                              "revise_s": 0.0, "rejudge_s": 0.0, "total_s": 61.5})
 
 
 def test_success_path_stores_version_and_rings_bell(fakes, monkeypatch):
@@ -83,23 +99,45 @@ def test_success_path_stores_version_and_rings_bell(fakes, monkeypatch):
     async def fake_run_job(spec, progress):
         captured["spec"] = spec
         progress({"type": "build", "status": "start", "model": spec.model})
-        progress({"type": "validate", "attempt": 1, "tool": "submit_game"})
+        progress({"type": "validate", "attempt": 1, "tool": "text"})
         return _result(True)
 
     monkeypatch.setattr(worker, "run_job", fake_run_job)
     result = asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
     assert result.ok
     spec = captured["spec"]
-    assert spec.kind == "create" and spec.genre == "shooter" and spec.pack.questions[0].id == "i1#q1"
-    assert spec.answer_key.correct == {"i1#q1": ["כמות חומר"]}
+    assert spec.kind == "create" and spec.genre == "shooter"
+    assert spec.pack.learning_description == CONTEXT["learning_description"] and spec.pack.grade == "8"
+    assert spec.pack.component_title == "מסה" and spec.pack.subject == "science"
+    assert spec.model == "claude-sonnet-5" and spec.reasoning_effort == "medium" and spec.judge and spec.plan
     game = fakes.store.games["g1"]
     assert game["status"] == "ready" and game["current_version"] == 1 and game["title"] == "קרב המסה"
     assert game["sparks_spent"] == 25 and game["thumb_blob_path"].endswith("v1/thumb.png")
     assert "games/l1/g1/v1/index.html" in fakes.html.blobs
-    assert fakes.store.jobs["j1"]["status"] == "done" and fakes.store.jobs["j1"]["usage_summary"]["cost_usd"] == 0.25
+    job = fakes.store.jobs["j1"]
+    assert job["status"] == "done" and job["usage_summary"]["cost_usd"] == 0.25
+    assert job["model"] == "claude-sonnet-5" and job["reasoning_effort"] == "medium"
+    assert job["judge"] == JUDGE and fakes.store.version_kwargs == [{"judge": JUDGE}]
+    assert job["attempts_detail"][0]["n"] == 1 and job["attempts_detail"][0]["play_score"]["frames"] == 50
+    t = job["timings"]
+    assert t["model_s"] == [30.0] and t["plan_s"] == 6.0 and t["judge_s"] == 4.0
+    assert t["queued_s"] > 0 and t["wake_s"] >= 0 and t["persist_s"] >= 0 and t["total_s"] >= 0
     assert fakes.notify.bells == [("game_ready", "g1", 1)]
     assert "build" in fakes.notify.frames and "validate" in fakes.notify.frames
     assert fakes.store.status_log[0] == "building" and fakes.store.games["g1"]["status"] == "ready"
+
+
+def test_spec_defaults_when_the_payload_is_sparse(monkeypatch):
+    monkeypatch.delenv("COPILOT_MODEL", raising=False)
+    spec = worker.spec_from_job({"_id": "j", "game_id": "g", "learner_id": "l", "payload": {"context": {}}})
+    assert spec.model == "claude-opus-5" and spec.reasoning_effort == "low" and spec.judge and spec.plan
+    assert spec.pack.component_id == "" and spec.pack.language == "he"
+
+
+def test_created_at_parsing():
+    assert worker._parse_ts("2026-09-10T08:00:00+00:00") == worker._parse_ts("2026-09-10T08:00:00Z")
+    assert worker._parse_ts(12.5) == 12.5
+    assert worker._parse_ts(None) is None and worker._parse_ts("yesterday") is None
 
 
 def test_failure_path_marks_failed_and_notifies(fakes, monkeypatch):
@@ -109,7 +147,11 @@ def test_failure_path_marks_failed_and_notifies(fakes, monkeypatch):
     monkeypatch.setattr(worker, "run_job", fake_run_job)
     asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
     assert fakes.store.games["g1"]["status"] == "failed"
-    assert fakes.store.jobs["j1"]["status"] == "failed" and fakes.store.jobs["j1"]["error_class"] == "judge_rejected"
+    job = fakes.store.jobs["j1"]
+    assert job["status"] == "failed" and job["error_class"] == "no_valid_submission"
+    assert job["timings"]["total_s"] >= 0 and job["attempts_detail"][0]["error_classes"] == ["scope"]
+    assert job["judge"] is None and job["model"] == "claude-sonnet-5"
+    assert fakes.store.games["g1"]["errors_last"][0]["message"].startswith("1 error(s)")
     assert fakes.notify.bells == [("game_failed", "g1", 0)]
 
 
@@ -144,6 +186,62 @@ def test_edit_job_loads_current_html(fakes, monkeypatch):
     assert fakes.notify.bells == [("game_edit_ready", "g1", 2)]
 
 
+def test_plan_frame_is_published_and_the_description_written(fakes, monkeypatch):
+    pitch = "HOOK: ספינת מטען שחייבת לזרוק אריזה, לא מטען.\n" + ("WORLD & LOOK: חלל. " * 60)
+
+    async def fake_run_job(spec, progress):
+        progress({"type": "plan", "status": "start", "model": "gpt-5.4-mini"})
+        progress({"type": "plan", "status": "done", "text": pitch})
+        progress({"type": "build", "status": "start", "model": spec.model})
+        await asyncio.sleep(0)
+        return _result(True)
+
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    plan = [extra for event, extra in fakes.notify.extras if event == "plan"]
+    assert len(plan) == 1 and plan[0]["detail"] == pitch[:600] and len(plan[0]["detail"]) == 600
+    assert fakes.store.games["g1"]["description"] == pitch[:600]
+
+
+def test_plan_frame_tolerates_a_store_without_update_game(fakes, monkeypatch):
+    del FakeStore.update_game
+    try:
+        async def fake_run_job(spec, progress):
+            progress({"type": "plan", "status": "done", "text": "HOOK"})
+            return _result(True)
+
+        monkeypatch.setattr(worker, "run_job", fake_run_job)
+        asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+        assert "plan" in fakes.notify.frames and "description" not in fakes.store.games["g1"]
+    finally:
+        async def update_game(self, gid, **f): self.games[gid].update(f); return self.games[gid]
+        FakeStore.update_game = update_game
+
+
+def test_judge_revision_streams_like_an_edit(fakes, monkeypatch):
+    """A revision of a create starts from the accepted game: the kid sees the
+    file at once, then the changed lines light up as each operation lands."""
+    original = "<html>\nb\nc\n</html>"
+
+    async def fake_run_job(spec, progress):
+        progress({"type": "build", "status": "start", "model": spec.model})
+        progress({"type": "text_delta", "text": "TITLE: x\n```html\n<html>\nb\n"})
+        progress({"type": "revise", "status": "start", "html": original, "top_fix": "more mass"})
+        progress({"type": "text_delta", "text": "SUMMARY: הרקע כחול\nREPLACE_LINES 2-2\nB\nEND_REPLACE\n"})
+        progress({"type": "revise", "status": "done", "revised": True})
+        return _result(True)
+
+    monkeypatch.setattr(worker, "run_job", fake_run_job)
+    asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
+    code = [extra for event, extra in fakes.notify.extras if event == "code"]
+    reset = [c for c in code if c.get("reset") and c.get("instant")]
+    assert reset[0]["chunk"] == original
+    patched = [c for c in code if c.get("changed")]
+    assert patched and patched[-1]["chunk"] == "<html>\nB\nc\n</html>" and patched[-1]["changed"] == [(2, 2)]
+    summary = next(extra for event, extra in fakes.notify.extras if event == "summary")
+    assert summary["detail"] == "הרקע כחול"
+
+
 def test_mongo_loop_once_drains_queue(fakes, monkeypatch):
     async def fake_run_job(spec, progress):
         return _result(True)
@@ -163,7 +261,7 @@ def test_reasoning_streams_as_thinking_frames_and_a_tail(fakes, monkeypatch):
         progress({"type": "reasoning_delta", "text": "First, the world: a space station. "})
         progress({"type": "reasoning_delta", "text": "Then the loop."})
         # The snapshot is throttled; a phase event forces it, as the clock does in production.
-        progress({"type": "validate", "attempt": 1, "tool": "submit_game"})
+        progress({"type": "validate", "attempt": 1, "tool": "text"})
         await asyncio.sleep(0)
         return _result(True)
 
@@ -200,7 +298,6 @@ def test_hand_in_replaces_partial_stream_with_the_whole_code(fakes, monkeypatch)
     monkeypatch.setattr(worker, "run_job", fake_run_job)
     asyncio.run(worker.handle_job(dict(fakes.store.jobs["j1"])))
     code = [extra for event, extra in fakes.notify.extras if event == "code"]
-    assert code[0]["chunk"] == "<!DOCTYPE" and "reset" not in code[0] or code[0].get("reset") is None or True
     bursts = [c for c in code if c.get("reset") is not None]
     assert bursts[0]["reset"] is True and bursts[1]["reset"] is False
     assert "".join(c["chunk"] for c in bursts) == html
@@ -247,6 +344,8 @@ def test_patch_streamer_shows_the_patched_file_as_each_operation_lands():
     assert frame["html"] == "<html>\nB1\nB2\nc\nd\n</html>\nF"
     assert frame["changed"] == [(2, 3), (7, 7)] and frame["focus_line"] == 7
     assert s.feed("```html\n<!DOCTYPE html>") is None and s.rewrite
+    s.rebase("<html>\nz\n</html>")
+    assert not s.rewrite and s.feed("REPLACE_LINES 2-2\nZ\nEND_REPLACE\n")["html"] == "<html>\nZ\n</html>"
 
 
 def test_changed_ranges_follow_the_patched_numbering():

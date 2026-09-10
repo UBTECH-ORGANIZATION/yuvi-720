@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
+import { useAuth } from '../../../providers/AuthProvider'
 import {
   GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames,
   type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject, prepareGame } from '../../../services/games'
@@ -13,6 +14,9 @@ import {
   orderComponents, orderObjectives, statusTone, upsertGame, type GameLabPreselect, type GameLabTab,
 } from './gameLabModel'
 import type { GameLabActivity } from '../useGameLabActivity'
+
+/** Admin bake-off choices; empty means the deployment default. */
+const GAME_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'gpt-5.6-sol', 'claude-opus-4.8']
 
 const PAGE_SIZE = 12
 
@@ -322,6 +326,10 @@ function CreateWizard({
   onCreated: (game: LearnerGame) => void
 }) {
   const { t } = useI18n()
+  const { user } = useAuth()
+  // The model select is an admin's bake-off tool; the server ignores the
+  // field for anyone else, so it is not even shown to them.
+  const isAdmin = Boolean(user?.roles.includes('admin'))
   const [subjects, setSubjects] = useState<PickerSubject[] | null>(null)
   const [subject, setSubject] = useState<string | null>(null)
   const [pickerError, setPickerError] = useState(false)
@@ -331,6 +339,7 @@ function CreateWizard({
   const [vibe, setVibe] = useState('')
   const [name, setName] = useState('')
   const [deep, setDeep] = useState(false)
+  const [model, setModel] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const preselected = useRef(false)
@@ -353,7 +362,7 @@ function CreateWizard({
     if (!found) return
     setObjective(found)
     const part = findComponent(found, preselect.component)
-    if (part && part.question_count > 0) { setComponent(part); prepareGame(part.id).catch(() => {}) }
+    if (part) { setComponent(part); prepareGame(part.id).catch(() => {}) }
   }, [subjects, preselect])
 
   const step = !objective ? 1 : !component ? 2 : 3
@@ -379,6 +388,7 @@ function CreateWizard({
         title: name.trim().slice(0, TITLE_MAX),
         device: isTouch ? 'touch' : 'keyboard',
         deep_thinking: deep,
+        ...(isAdmin && model ? { model } : {}),
       })
       onCreated(game)
     } catch (error) {
@@ -449,24 +459,20 @@ function CreateWizard({
           />
           <h2 className="ys-section__title">{t('studio.gamelab.pick.component')}</h2>
           <ul className="ys-gamelab-picks">
-            {orderComponents(objective.components).map((row) => {
-              const empty = row.question_count === 0
-              return (
-                <li key={row.id}>
-                  <button type="button" className="ys-gamelab-pick" disabled={empty} onClick={() => { setComponent(row); prepareGame(row.id).catch(() => {}) }}>
-                    <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
-                    {row.unit_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.unit_title}</bdi></span>}
-                    {row.purpose && <span className="ys-gamelab-pick__purpose"><bdi dir="auto">{row.purpose}</bdi></span>}
+            {orderComponents(objective.components).map((row) => (
+              <li key={row.id}>
+                <button type="button" className="ys-gamelab-pick" onClick={() => { setComponent(row); prepareGame(row.id).catch(() => {}) }}>
+                  <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
+                  {row.unit_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.unit_title}</bdi></span>}
+                  {row.purpose && <span className="ys-gamelab-pick__purpose"><bdi dir="auto">{row.purpose}</bdi></span>}
+                  {row.visited && (
                     <span className="ys-gamelab-pick__foot">
-                      <span className="ys-gamelab-badge ys-gamelab-badge--soft">
-                        {empty ? t('studio.gamelab.noQuestions') : t('studio.gamelab.questions', { count: row.question_count })}
-                      </span>
-                      {row.visited && <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>}
+                      <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>
                     </span>
-                  </button>
-                </li>
-              )
-            })}
+                  )}
+                </button>
+              </li>
+            ))}
           </ul>
         </>
       )}
@@ -537,6 +543,16 @@ function CreateWizard({
               <small>{t('studio.gamelab.deep.hint')}</small>
             </span>
           </button>
+
+          {isAdmin && (
+            <label className="ys-gamelab-field">
+              <span className="ys-subhead">{t('studio.gamelab.model')}</span>
+              <select className="ys-gamelab-input" value={model} onChange={(change) => setModel(change.target.value)}>
+                <option value="">{t('studio.gamelab.model.auto')}</option>
+                {GAME_MODELS.map((id) => <option key={id} value={id}>{id}</option>)}
+              </select>
+            </label>
+          )}
 
           <p className="ys-gamelab-hint">
             <Icon name={isTouch ? 'hand' : 'chip'} size={14} />

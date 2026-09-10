@@ -1,11 +1,11 @@
 """Shared fixtures for the Learning Game Lab tests.
 
 A fake `kata_catalog` snapshot with one science objective, one unit and two
-components — one with gradeable questions (`COMP-A`) and one without
-(`COMP-EMPTY`), so the picker's filter and the create route's refusal both
-have something to bite on. Question ids repeat across items (`q1` on both
-screens) exactly as the live catalog does, so a test that grades `item-2#q1`
-proves the item-scoped rule and not just the happy path.
+components — one with authored questions (`COMP-A`) and one without
+(`COMP-EMPTY`). Both are playable now: the game is built around the lesson's
+learning description, and the questions are only evidence for that paragraph.
+The questioned component keeps its `correctAnswers` so the tests can prove
+they never reach a job, a response, or a prompt.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from fastapi import FastAPI
 
 from app.auth.dependencies import current_user, require_learner
 from app.services import kata_catalog, notifications, realtime
-from app.services.games import html_store, store
+from app.services.games import html_store, learning_descriptions, store
 
 LEARNER = "kid-a"
 OTHER = "kid-b"
@@ -31,6 +31,12 @@ OBJECTIVE = "MOE.SCI.G7.MASS.MEASURE"
 UNIT = "unit-mass"
 COMP = "COMP-A"
 COMP_EMPTY = "COMP-EMPTY"
+
+#: What the (patched) description service hands every job.
+DESCRIPTION = (
+    "בשיעור הזה לומדים למדוד מסה במאזניים: מסה נמדדת בקילוגרמים ובגרמים, "
+    "1 ק\"ג = 1000 גרם, ומאזניים משווים בין שני צדדים. טעויות נפוצות: בלבול בין מסה למשקל."
+)
 
 
 def _component(cid: str, *, questions: bool) -> dict[str, Any]:
@@ -74,7 +80,9 @@ def snapshot() -> dict[str, Any]:
             "titles": {}, "sub_topic": "MOE.SCI.G7.MASS", "grade": "7",
             "components": list(components.values())}
     objective = {"id": OBJECTIVE, "subject": "science", "title": "מדידת מסה", "titles": {},
-                 "topic_title": "חומר", "prerequisites": [], "unit_ids": [UNIT]}
+                 "topic_title": "חומר", "prerequisites": [], "unit_ids": [UNIT],
+                 "curriculum_title": "Science for 7th Grade",
+                 "description": "Students measure mass with a balance and tell mass from weight."}
     return {
         "loaded_at": 1.0,
         "objectives": {OBJECTIVE: objective},
@@ -85,37 +93,13 @@ def snapshot() -> dict[str, Any]:
     }
 
 
-BLUEPRINT = {
-    "skill": "read the mass off a balance", "topic": "mass", "level": "core", "interaction": "choice",
-    "params": {"m": {"int": [2, 9]}},
-    "stem": "מה המסה על המאזניים?", "answer": "{m} ק\"ג", "accept": ["{m}"],
-    "distractors": ["{m+1} ק\"ג", "{m-1} ק\"ג", "{m*10} ק\"ג"],
-    "figure": {"frame": {"axes": {"x": [0, 10], "y": [0, 10]}},
-               "items": [{"kind": "bar", "at": [5, 0], "value": "m", "label": "ק\"ג"}]},
-}
-BLUEPRINT_TEXT = {
-    "skill": "write a mass", "topic": "mass", "level": "easy", "interaction": "text",
-    "params": {"a": {"int": [1, 5]}, "b": {"int": [1, 5]}},
-    "stem": "כמה זה {a} ק\"ג ועוד {b} ק\"ג?", "answer": "{a+b}", "figure": None,
-}
-
-
-def blueprint_docs() -> list[dict[str, Any]]:
-    """Two usable blueprints for COMP, shaped like `blueprints._doc` output."""
-    return [
-        {"_id": f"bp:{COMP}|fp|v1.2|{i}", "component_id": COMP, "fingerprint": "fp", "index": i,
-         "skill": bp["skill"], "topic": bp["topic"], "level": bp["level"], "dsl_version": 1, "prompt_version": 2,
-         "blueprint": bp, "status": "ok", "errors": [], "judge": {"answerable": True, "agrees": True}}
-        for i, bp in enumerate((BLUEPRINT, BLUEPRINT_TEXT))
-    ]
-
-
 class GamesHarness(ExitStack):
     """Everything a games test needs, entered as one context.
 
     No database (the collection handle is None → JSON fallback in a temp dir),
     a primed catalog snapshot, local HTML storage in the same temp dir, the
-    mongo job mode, and a fresh notifications/realtime state.
+    mongo job mode, a fresh notifications/realtime state, and the learning
+    description service answered from a constant — no model call.
     """
 
     def __enter__(self) -> "GamesHarness":
@@ -128,19 +112,20 @@ class GamesHarness(ExitStack):
             "GAMES_STORAGE": "local", "GAME_JOBS_MODE": "mongo",
             "GAMES_DAILY_CREATE_CAP": "3", "GAMES_DAILY_EDIT_CAP": "10",
         }))
+        os.environ.pop("GAME_MODEL_DEFAULT", None)
         self.enter_context(patch.dict(kata_catalog._SNAPSHOT, snapshot(), clear=True))
         self.enter_context(patch.object(kata_catalog, "ensure_loaded", AsyncMock()))
         self.enter_context(patch("app.services.events.get_recent_events",
                                  AsyncMock(return_value=[{"objective_id": OBJECTIVE, "launch": COMP}])))
-        # Blueprint games: no model call — a fixed, valid blueprint set stands
-        # in for generation, the create prepares inline so the job exists
-        # when the response comes back, and instances live in memory.
+        # The create prepares inline so the job exists when the response
+        # comes back; the description is a constant rather than a model call.
         from app.routes import games as routes
-        from app.services.games import blueprints, store as games_store
         self.enter_context(patch.object(routes, "INLINE_BACKGROUND", True))
-        self.enter_context(patch.object(blueprints, "ensure_blueprints", AsyncMock(return_value=blueprint_docs())))
-        self.enter_context(patch.object(blueprints, "cached_for_component", AsyncMock(return_value=blueprint_docs())))
-        games_store._memory_instances.clear()
+        self.enter_context(patch.object(learning_descriptions, "ensure_description",
+                                        AsyncMock(return_value=DESCRIPTION)))
+        self.enter_context(patch.object(learning_descriptions, "cached",
+                                        AsyncMock(return_value=DESCRIPTION)))
+        learning_descriptions.reset_for_tests()
         notifications.reset_for_tests()
         realtime.reset_for_tests()
         return self

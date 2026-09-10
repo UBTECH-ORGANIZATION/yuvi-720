@@ -1,4 +1,5 @@
-"""The games store: CRUD, versions, the cursor, the caps, and the answer log.
+"""The games store: CRUD, versions, the cursor, the caps, model/effort, and
+the admin's job window.
 
 Runs against the JSON fallback in a temp dir — the same code path a dev box
 without credentials uses, and the one that would silently touch production if
@@ -133,19 +134,56 @@ class GameStoreTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(store.GameStoreError):
             await store.create_job(game_id=game["_id"], learner_id=LEARNER, kind="rebuild", payload={})
 
-    # ── answers ──────────────────────────────────────────────────────────────
+    # ── model / effort / instrumentation ─────────────────────────────────────
 
-    async def test_answers_are_sequenced_per_game_and_learner(self):
+    async def test_model_and_effort_live_on_the_game_and_the_job(self):
         game = await _make()
-        for correct in (True, False, True):
-            await store.record_answer(game_id=game["_id"], learner_id=LEARNER,
-                                      question_id="item-1#q1", item_id="item-1",
-                                      component_id=COMP, correct=correct)
-        rows = await store.list_answers(game["_id"], LEARNER)
-        self.assertEqual([row["seq"] for row in rows], [1, 2, 3])
-        self.assertEqual(rows[1]["_id"], f"{game['_id']}:{LEARNER}:2")
-        self.assertEqual([row["correct"] for row in rows], [True, False, True])
-        self.assertEqual(await store.list_answers(game["_id"], OTHER), [])
+        self.assertIsNone(game["model"])
+        self.assertEqual(game["reasoning_effort"], "low")
+        for gone in ("question_mode", "question_total", "question_kinds"):
+            self.assertNotIn(gone, game)
+        picked = await _make(model="claude-sonnet-5", reasoning_effort="medium")
+        self.assertEqual((picked["model"], picked["reasoning_effort"]), ("claude-sonnet-5", "medium"))
+        with self.assertRaises(store.GameStoreError):
+            await _make(reasoning_effort="max")
+
+        job = await store.create_job(game_id=picked["_id"], learner_id=LEARNER, kind="create",
+                                     payload={"model": "claude-sonnet-5", "reasoning_effort": "medium"})
+        self.assertEqual((job["model"], job["reasoning_effort"]), ("claude-sonnet-5", "medium"))
+        for key in ("timings", "attempts_detail", "judge"):
+            self.assertIsNone(job[key])
+        bare = await store.create_job(game_id=game["_id"], learner_id=LEARNER, kind="create", payload={})
+        self.assertIsNone(bare["model"])
+        self.assertEqual(bare["reasoning_effort"], "low")
+        # The worker's instrumentation lands through update_job as-is.
+        updated = await store.update_job(job["_id"], timings={"total_s": 80.0}, judge={"scores": {"fun": 3}})
+        self.assertEqual(updated["timings"], {"total_s": 80.0})
+        self.assertEqual((await store.get_job(job["_id"]))["judge"]["scores"]["fun"], 3)
+
+    async def test_add_version_keeps_the_judge_verdict(self):
+        game = await _make()
+        verdict = {"scores": {"learning_through_play": 4, "fun": 3}, "notes": "ok", "revised": False}
+        entry = await store.add_version(game["_id"], blob_path="a", sha256="1", source="create", judge=verdict)
+        self.assertEqual(entry["judge"], verdict)
+        stored = await store.get_game(game["_id"])
+        self.assertEqual(stored["versions"][0]["judge"]["scores"]["fun"], 3)
+        plain = await store.add_version(game["_id"], blob_path="b", sha256="2", source="edit")
+        self.assertIsNone(plain["judge"])
+
+    async def test_list_jobs_since_windows_newest_first_with_titles(self):
+        game = await _make(title="Space cats")
+        other = await _make(OTHER, title="Moon dogs")
+        first = await store.create_job(game_id=game["_id"], learner_id=LEARNER, kind="create", payload={})
+        second = await store.create_job(game_id=other["_id"], learner_id=OTHER, kind="edit", payload={}, version=1)
+        stale = await store.create_job(game_id=game["_id"], learner_id=LEARNER, kind="fix", payload={}, version=1)
+        await store.update_job(stale["_id"], created_at="2020-01-01T00:00:00+00:00")
+        rows = await store.list_jobs_since(hours=24)
+        self.assertEqual([row["_id"] for row in rows], [second["_id"], first["_id"]])
+        self.assertEqual([row["_id"] for row in await store.list_jobs_since(hours=24, limit=1)], [second["_id"]])
+        titles = await store.get_games([row["game_id"] for row in rows] + ["gm-missing"])
+        self.assertEqual({gid: row["title"] for gid, row in titles.items()},
+                         {game["_id"]: "Space cats", other["_id"]: "Moon dogs"})
+        self.assertEqual(await store.get_games([]), {})
 
 
 if __name__ == "__main__":

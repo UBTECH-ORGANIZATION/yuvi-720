@@ -11,7 +11,8 @@ Two transports, one handler:
   on success, abandon on transient failure, dead-letter after ``max_delivery``.
 
 The handler itself never trusts the message beyond the job id: the job row in
-Mongo is the source of truth (payload, context with correct answers, kind).
+Mongo is the source of truth (payload, learning context, kind). At the end it
+writes the job's timings, per-attempt detail and the judge's verdict.
 
 Runs with ``PYTHONPATH=workers:backend`` — it imports the backend's games
 services directly (store, html_store, notify, ai_usage) instead of talking to
@@ -20,6 +21,7 @@ the API, exactly like the Manim worker does.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import re
 import logging
@@ -27,6 +29,7 @@ import os
 import signal
 import socket
 import time
+from datetime import datetime
 from typing import Any, Optional
 
 from . import config  # noqa: F401  (loads backend/.env for local runs)
@@ -51,6 +54,8 @@ THINK_FRAME_MAX = 1500        # …unless this much piled up
 LIVE_THINK_TAIL = 12_000      # reasoning kept on the job row for a page opened mid-think
 LIVE_SNAPSHOT_INTERVAL_S = 3.0  # the job row keeps a snapshot so a page opened mid-build catches up
 LIVE_CODE_TAIL = 240_000     # the whole game, so a reload mid-build shows every line
+PROCESS_STARTED = time.time()  # wake_s: how long the first job waited for this process
+_FIRST_JOB = {"pending": True}
 
 
 def _backend():
@@ -70,30 +75,34 @@ def _game_status_for(event: dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _parse_ts(value: Any) -> Optional[float]:
+    """`created_at` is an ISO string from the store (`_now()`); a float is accepted too."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        return datetime.fromisoformat(text).timestamp()
+    except (TypeError, ValueError):
+        return None
+
+
 def spec_from_job(job: dict[str, Any]) -> JobSpec:
     payload = job.get("payload") or {}
-    ctx = payload.get("context") or {}
-    pack, key = build_context_pack(
-        ctx.get("component") or {},
-        ctx.get("unit") or {},
-        ctx.get("objective") or {},
+    pack = build_context_pack(
+        payload.get("context") or {},
         language=str(payload.get("language") or "he"),
         device=str(payload.get("device") or "keyboard"),
-        typed="text" in (payload.get("question_kinds") or ["choice", "text"]),
     )
-    bundle = payload.get("blueprints") or {}
-    if bundle.get("summaries"):
-        pack.blueprints = list(bundle["summaries"])
-        pack.fixtures = list(bundle.get("fixtures") or [])
-        pack.question_total = int(bundle.get("total") or len(pack.fixtures))
-        key.correct = {str(k): [str(v) for v in vs] for k, vs in (bundle.get("key") or {}).items()}
     return JobSpec(
         job_id=str(job["_id"]),
         game_id=str(job["game_id"]),
         learner_id=str(job["learner_id"]),
         kind=str(job.get("kind") or "create"),
         pack=pack,
-        answer_key=key,
         genre=str(payload.get("genre") or "surprise"),
         vibe=str(payload.get("vibe") or ""),
         clarifications=dict(payload.get("clarifications") or {}),
@@ -104,7 +113,9 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         runtime_errors=list(payload.get("runtime_errors") or []),
         history=list(payload.get("history") or []),
         model=str(payload.get("model") or os.environ.get("COPILOT_MODEL") or "claude-opus-5"),
-        reasoning_effort=str(payload.get("reasoning_effort") or "high"),
+        reasoning_effort=str(payload.get("reasoning_effort") or "low"),
+        judge=bool(payload.get("judge", True)),
+        plan=bool(payload.get("plan", True)),
         max_ai_credits=float(os.environ["GAME_MAX_AI_CREDITS"]) if os.environ.get("GAME_MAX_AI_CREDITS") else None,
         usage_context=usage_context(
             actor_id=str(job["learner_id"]), game_id=str(job["game_id"]), job_id=str(job["_id"]), operation="game.build",
@@ -192,6 +203,10 @@ class _PatchStreamer:
     takes over."""
 
     def __init__(self, original: str) -> None:
+        self.rebase(original)
+
+    def rebase(self, original: str) -> None:
+        """Start over against a new original (the judge's revision of a create)."""
         self.original = original
         self.buf = ""
         self.ops_seen = 0
@@ -291,7 +306,17 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
     kind = str(job.get("kind") or "create")
     log.info("job %s: %s for game %s (attempt %s)", job_id, kind, game_id, int(job.get("attempts") or 0) + 1)
 
-    await store.update_job(job_id, status="running", started_at=time.time(), worker_replica=REPLICA,
+    started_at = time.time()
+    created_at = _parse_ts(job.get("created_at"))
+    queued_s = max(0.0, started_at - created_at) if created_at is not None else 0.0
+    # The first job of a process is the one that woke it (a scale-from-zero
+    # start): the wait between the job's birth and the process is its wake.
+    wake_s = 0.0
+    if _FIRST_JOB["pending"]:
+        _FIRST_JOB["pending"] = False
+        if created_at is None or created_at <= PROCESS_STARTED:
+            wake_s = max(0.0, started_at - PROCESS_STARTED)
+    await store.update_job(job_id, status="running", started_at=started_at, worker_replica=REPLICA,
                            attempts=int(job.get("attempts") or 0) + 1)
     if kind in ("edit", "fix"):
         job.setdefault("payload", {})["current_html"] = await _load_current_html(job)
@@ -394,6 +419,28 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
                 code["buf"] += chunk
                 flush_code()
             return
+        if kind == "plan":
+            # The pitch: the kid reads the concept while the builder starts.
+            if event.get("status") == "done":
+                text = str(event.get("text") or "")[:600]
+                notify.publish_progress(learner_id, game_id, "plan", status=last_status["value"] or "building", detail=text)
+                update_game = getattr(store, "update_game", None)
+                if text and update_game is not None:
+                    pending.append(asyncio.get_event_loop().create_task(update_game(game_id, description=text)))
+            return
+        if kind == "revise":
+            # The judge asked for one fix: from here the reply streams like an
+            # edit — the kid sees the accepted game, then the changed lines.
+            if event.get("status") == "start":
+                original = str(event.get("html") or "")
+                patcher.rebase(original)
+                fence.reset()
+                edit["text"], edit["summary"], edit["at"] = "", "", 0.0
+                code["buf"], code["len"], code["tail"] = "", len(original), original[-LIVE_CODE_TAIL:]
+                notify.publish_progress(learner_id, game_id, "code", status=last_status["value"] or "building",
+                                        chunk=original, code_len=len(original), reset=True, instant=True)
+                snapshot(force=True)
+            return
         if kind == "build":
             fence.reset()
         if kind == "tool" and event.get("status") == "start":
@@ -462,28 +509,45 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
         await asyncio.gather(*pending, return_exceptions=True)
 
     usage_summary = result.usage.as_dict()
+    attempts_detail = [a.as_detail() for a in result.attempts]
+
+    def timings(persist_s: float = 0.0) -> dict[str, Any]:
+        out = dict(result.timings or {})
+        out.update({"queued_s": round(queued_s, 3), "wake_s": round(wake_s, 3),
+                    "persist_s": round(persist_s, 3), "total_s": round(time.time() - started_at, 3)})
+        return out
+
     if result.ok and result.html:
+        t_persist = time.perf_counter()
         game = await store.get_game(game_id) or {"_id": game_id, "learner_id": learner_id}
         v = max((int(e.get("v") or 0) for e in game.get("versions") or []), default=0) + 1
         stored = await html_store.put_html(learner_id, game_id, v, result.html)
         thumb_path = None
         if result.screenshot_png:
             thumb_path = await html_store.put_bytes(learner_id, game_id, v, "thumb.png", result.screenshot_png, "image/png")
-        entry = await store.add_version(
-            game_id, blob_path=stored["blob_path"], sha256=stored["sha256"], source=kind,
+        version_kwargs: dict[str, Any] = dict(
+            blob_path=stored["blob_path"], sha256=stored["sha256"], source=kind,
             summary=result.summary, title=result.title or None, thumb_blob_path=thumb_path,
             sparks=int(round(result.usage.cost_usd * SPARKS_PER_USD)),
             design_brief=result.design_brief or None,
         )
-        await store.update_job(job_id, status="done", finished_at=time.time(), usage_summary=usage_summary, error_class=None)
+        if _accepts_kwarg(store.add_version, "judge"):
+            version_kwargs["judge"] = result.judge
+        entry = await store.add_version(game_id, **version_kwargs)
+        persist_s = time.perf_counter() - t_persist
+        await store.update_job(job_id, status="done", finished_at=time.time(), usage_summary=usage_summary, error_class=None,
+                               timings=timings(persist_s), attempts_detail=attempts_detail, judge=result.judge,
+                               model=spec.model, reasoning_effort=spec.reasoning_effort)
         game = await store.get_game(game_id) or game
         kind_map = {"create": "game_ready", "edit": "game_edit_ready", "fix": "game_fix_ready"}
         await notify.notify_game(kind_map.get(kind, "game_ready"), game, int(entry["v"]))
         log.info("job %s done: v%s %s ($%.3f, %.0fs)", job_id, entry["v"], result.title, result.usage.cost_usd, result.elapsed_s)
     else:
         error_class = (result.error or "failed").split(":")[0][:60]
-        errors_last = [{"message": str(a.contract_reason or ""), "errors": a.errors[:5]} for a in result.attempts[-2:]]
-        await store.update_job(job_id, status="failed", finished_at=time.time(), usage_summary=usage_summary, error_class=error_class)
+        errors_last = [{"message": str(a.reason or ""), "errors": a.errors[:5]} for a in result.attempts[-2:]]
+        await store.update_job(job_id, status="failed", finished_at=time.time(), usage_summary=usage_summary, error_class=error_class,
+                               timings=timings(), attempts_detail=attempts_detail, judge=result.judge,
+                               model=spec.model, reasoning_effort=spec.reasoning_effort)
         game = await store.get_game(game_id) or {"_id": game_id, "learner_id": learner_id}
         # A failed edit or fix leaves the game exactly as it was: the current
         # version still plays, so the card stays "ready". Only a create with
@@ -494,6 +558,15 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
         await notify.notify_game("game_failed", game, int(game.get("current_version") or 0))
         log.warning("job %s failed: %s", job_id, result.error)
     return result
+
+
+def _accepts_kwarg(fn: Any, name: str) -> bool:
+    """True when `fn(..., name=…)` is a valid call (named or **kwargs)."""
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return True
+    return name in params or any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
 # ── Mongo polling transport ─────────────────────────────────────────────────

@@ -15,24 +15,35 @@ import { useEffect, useMemo, useState } from 'react'
 import { EmptyState, Panel } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import {
-  getGamesUsage, resetLearnerGameCaps, setGameCapDefaults, setLearnerGameCaps,
-  type GameCaps, type GameUsageReport, type GameUsageRow,
+  getGamesJobs, getGamesUsage, resetLearnerGameCaps, setGameCapDefaults, setLearnerGameCaps,
+  type GameCaps, type GameJobRow, type GameUsageReport, type GameUsageRow,
 } from '../../services/admin'
 import type { AdminData } from './AdminConsolePage'
 import { AdminSection, RefusalNotice, useAdminMutation } from './AdminShared'
 
 const usd = (value: number) => `$${value.toFixed(2)}`
+const secs = (value: number | undefined | null) => (typeof value === 'number' ? `${Math.round(value)}s` : '—')
+/** How far back the jobs table looks, in hours. */
+const JOB_WINDOWS = [24, 168, 720]
 
 export function AdminGamesTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
   const [report, setReport] = useState<GameUsageReport | null>(null)
   const [nonce, setNonce] = useState(0)
+  const [jobs, setJobs] = useState<GameJobRow[] | null>(null)
+  const [sinceHours, setSinceHours] = useState(168)
 
   useEffect(() => {
     let active = true
     getGamesUsage().then((result) => { if (active) setReport(result) }).catch(() => {})
     return () => { active = false }
   }, [nonce])
+
+  useEffect(() => {
+    let active = true
+    getGamesJobs(200, sinceHours).then((result) => { if (active) setJobs(result.items) }).catch(() => { if (active) setJobs([]) })
+    return () => { active = false }
+  }, [nonce, sinceHours])
 
   const refresh = () => setNonce((value) => value + 1)
   const mutation = useAdminMutation(refresh)
@@ -123,6 +134,40 @@ export function AdminGamesTab({ data }: { data: AdminData }) {
         )}
       </AdminSection>
 
+      <AdminSection title={t('adm.games.jobs')} hint={t('adm.games.jobs.hint')}>
+        <div className="adm-caps adm-caps--compact">
+          <select className="adm-picker" value={sinceHours} onChange={(event) => setSinceHours(Number(event.target.value))}>
+            {JOB_WINDOWS.map((hours) => <option key={hours} value={hours}>{t('adm.games.jobs.window', { hours })}</option>)}
+          </select>
+        </div>
+        {jobs === null ? (
+          <Panel className="adm-panel">{t('adm.loading')}</Panel>
+        ) : jobs.length ? (
+          <div className="adm-table__wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>{t('adm.games.jobs.col.title')}</th>
+                  <th>{t('adm.games.jobs.col.learner')}</th>
+                  <th>{t('adm.games.jobs.col.model')}</th>
+                  <th>{t('adm.games.jobs.col.status')}</th>
+                  <th>{t('adm.games.jobs.col.total')}</th>
+                  <th>{t('adm.games.jobs.col.modelTime')}</th>
+                  <th>{t('adm.games.jobs.col.cost')}</th>
+                  <th>{t('adm.games.jobs.col.judge')}</th>
+                  <th>{t('adm.games.jobs.col.error')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => <JobRow key={job.job_id} job={job} people={data.people} />)}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="gamepad" title={t('adm.games.jobs.empty')} />
+        )}
+      </AdminSection>
+
       {unlisted.length ? (
         <AdminSection title={t('adm.games.add')} hint={t('adm.games.add.hint')}>
           <Panel className="adm-panel">
@@ -138,6 +183,38 @@ export function AdminGamesTab({ data }: { data: AdminData }) {
         </AdminSection>
       ) : null}
     </div>
+  )
+}
+
+function JobRow({ job, people }: { job: GameJobRow; people: AdminData['people'] }) {
+  const person = people.find((row) => row.user_id === job.learner_id)
+  const scores = job.judge?.scores
+  const score = (value: number | undefined) => (typeof value === 'number' ? String(value) : '·')
+  return (
+    <tr className={job.status === 'failed' ? 'is-capped' : ''}>
+      <td dir="auto">
+        <strong>{job.title || job.game_id}</strong>
+        <code className="adm-id">{job.kind} · {job.job_id}</code>
+      </td>
+      <td dir="auto">{person?.display_name || person?.username || job.learner_id}</td>
+      <td>
+        {job.model || '—'}
+        {job.reasoning_effort ? <div className="adm-muted">{job.reasoning_effort}</div> : null}
+      </td>
+      <td>{job.status}</td>
+      <td>{secs(job.timings?.total_s)}</td>
+      <td>{job.timings?.model_s?.length ? job.timings.model_s.map((value) => secs(value)).join(' / ') : '—'}</td>
+      <td>{typeof job.usage_summary?.cost_usd === 'number' ? usd(job.usage_summary.cost_usd) : '—'}</td>
+      <td>
+        {scores ? (
+          <>
+            {score(scores.learning_through_play)}/{score(scores.fun)}/{score(scores.polish)}/{score(scores.age_fit)}
+            {job.judge?.revised ? <small className="adm-muted"> ↻</small> : null}
+          </>
+        ) : '—'}
+      </td>
+      <td>{job.error_class ? <code className="adm-id">{job.error_class}</code> : ''}</td>
+    </tr>
   )
 }
 

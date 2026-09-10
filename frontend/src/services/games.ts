@@ -5,7 +5,8 @@
  * status, event?}` on the learner's SSE stream, and completion rings the bell
  * (`game_ready` / `game_failed` / `game_edit_ready` / `game_fix_ready`).
  * The played HTML is fetched with the runtime harness already injected by the
- * server; correct answers never reach the browser — `checkAnswer` grades.
+ * server; the game grades itself inside the frame and only reports events
+ * (see features/games/hostBridge.ts) — nothing here checks an answer.
  */
 
 // Extension spelled out: `tests/game-host-bridge.test.ts` loads this module
@@ -46,6 +47,9 @@ export interface LearnerGame {
   title: string
   /** Yuvi's design brief for the game, in the kid's language (may be empty). */
   description?: string
+  /** Which model wrote it and how hard it thought — set at create, kept on edits. */
+  model?: string | null
+  reasoning_effort?: 'low' | 'medium' | 'high' | string
   genre: GameGenre | string
   prompt: string
   language: string
@@ -76,7 +80,6 @@ export interface PickerComponent {
   purpose: string | null
   difficulty: string | number | null
   is_assessment: boolean
-  question_count: number
   visited: boolean
 }
 
@@ -106,6 +109,8 @@ export interface CreateGameInput {
   clarifications?: Record<string, string>
   device?: 'keyboard' | 'touch'
   deep_thinking?: boolean
+  /** Admin only: which model writes the game; the server ignores it for anyone else. */
+  model?: string
 }
 
 export interface RuntimeErrorReport {
@@ -220,36 +225,10 @@ export function gamePlayPath(gameId: string, from: 'studio' | 'lesson' | 'bell',
   return `/games/play?${q.toString()}`
 }
 
-/** One question of a blueprint game, drawn fresh for (run, index); null past
- *  the end of the run. The figure is HTML the harness inserts as-is. */
-export interface GameQuestion {
-  id: string
-  text: string
-  type: 'choice' | 'text' | 'hotspot'
-  answers: string[]
-  figure: string | null
-  alt: string
-  targets: string[]
-  index: number
-  total: number
-}
-
-/** Warm a component's question blueprints while the kid is still writing
- *  the brief, so the create itself does not wait for them. Fire-and-forget. */
-export function prepareGame(componentId: string) {
-  return apiPost<{ ready: boolean; usable: number }>('/api/games/prepare', { component_id: componentId })
-}
-
-export function nextQuestion(gameId: string, runId: string, index: number) {
-  return apiPost<{ question: GameQuestion | null }>(
-    `/api/games/${encodeURIComponent(gameId)}/next`, { run_id: runId, index },
-  ).then((r) => r.question)
-}
-
-export function checkAnswer(gameId: string, questionId: string, answer: string | number) {
-  return apiPost<{ correct: boolean; correct_answer: string | null; feedback: string | null }>(
-    `/api/games/${encodeURIComponent(gameId)}/check`, { question_id: questionId, answer },
-  )
+/** Warm the component's learning description while the kid is still writing
+ *  the brief, so the create itself does not wait for it. Fire-and-forget. */
+export function prepareGame(componentId: string, language?: string) {
+  return apiPost<{ ready: boolean }>('/api/games/prepare', language ? { component_id: componentId, language } : { component_id: componentId })
 }
 
 export function revertGame(gameId: string, v: number) {

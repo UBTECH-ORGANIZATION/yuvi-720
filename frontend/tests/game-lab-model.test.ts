@@ -36,7 +36,7 @@ describe('the objective picker', () => {
   it('applies the same rule to components', () => {
     const rows = [
       { id: 'x', visited: false }, { id: 'y', visited: true },
-    ].map((row) => ({ ...row, unit_id: 'u', unit_title: '', title: row.id, purpose: null, difficulty: null, is_assessment: false, question_count: 3 }))
+    ].map((row) => ({ ...row, unit_id: 'u', unit_title: '', title: row.id, purpose: null, difficulty: null, is_assessment: false }))
     assert.deepEqual(orderComponents(rows).map((row) => row.id), ['y', 'x'])
   })
 })

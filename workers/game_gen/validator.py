@@ -5,16 +5,18 @@ pageerror / requestfailed hooks, a settle wait, multilingual Start-button
 click heuristics, a post-interaction wait, empty-page detection and error
 categorisation for the fix prompt.
 
-Extended for the yuvi worker with a *learning-contract* phase that reads
-``window.__yuvi`` (maintained by ``harness/error_reporter.js`` and the game):
-``{learn:{asked,answered,correct,done}, heartbeat, errors}``.  The validator
-waits up to ``contract_timeout_s`` for ``learn.asked >= 1``, checks the rAF
-heartbeat, samples canvases for a non-blank frame, and takes an 800x600 PNG.
+Extended for the yuvi worker with a harness phase that reads ``window.__yuvi``
+(maintained by ``harness/error_reporter.js`` and the bridge):
+``{learn:{asked,answered,correct,done}, heartbeat, errors}``. After Start the
+validator plays for ~2 s (the *play score*: frames rendered, whether input
+changes the picture, whether there is DOM text), checks the rAF heartbeat,
+samples canvases for a non-blank frame, and takes an 800x600 PNG. The game
+owns its questions; nothing is required of it beyond running well.
 
 Usage::
 
     result = await validate_html(html, preinject_html=harness_tags)
-    if not result.ok or not result.contract_ok: ...
+    if not result.ok: ...
 """
 from __future__ import annotations
 
@@ -38,11 +40,10 @@ except ImportError:  # pragma: no cover
 SETTLE_TIMEOUT_MS = 4000          # wait after load for first-tick errors
 INTERACTION_SETTLE_MS = 3500      # wait after clicking Start
 PAGE_LOAD_TIMEOUT_MS = 15000
-CONTRACT_TIMEOUT_S = 20.0         # wait for learn.asked >= 1
-FIGURE_CHECK_GRACE_MS = 3000      # the bridge's figure check fires 2.5 s after next()
 POSTER_STEP_MS = 1500             # thumbnail: sample play every 1.5 s while no question is open
-POSTER_WINDOW_MS = 9000           # …for this long after Start (the contract asks after ≥ 8 s of play)
-CONTRACT_POLL_MS = 250
+POSTER_WINDOW_MS = 6000           # …for this long after Start
+PLAY_INPUT_MS = 700               # play score: hold the pointer / keys this long
+PLAY_SAMPLE_MS = 600              # play score: idle frames counted over this long
 MIN_HEARTBEAT = 30                # rAF ticks the harness must have counted
 CHROMIUM_ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist"]
 
@@ -70,14 +71,13 @@ class ValidationResult:
     """Verdict of one headless run.
 
     ``ok`` is the runtime verdict (no JS errors, page rendered, main thread
-    alive, canvas not blank).  ``contract_ok`` is the learning contract
-    (``window.__yuvi.learn.asked >= 1`` within the timeout).
+    alive, canvas not blank). ``play_score`` is informational:
+    ``{frames, input_reacts, dom_text}`` measured over ~2 s after Start.
     """
 
     ok: bool
     errors: list[dict] = field(default_factory=list)
-    contract_ok: bool = False
-    contract_reason: str = ""
+    play_score: Optional[dict] = None
     heartbeat: int = 0
     canvas_blank: bool = False
     screenshot_png: Optional[bytes] = None
@@ -247,29 +247,124 @@ _CANVAS_SAMPLE_JS = """async () => {
 }"""
 
 
+# A cheap fingerprint of what is on screen: the first visible canvas drawn
+# into 32x32 and hashed, plus whether the DOM shows any text. WebGL canvases
+# without preserveDrawingBuffer read back black; the caller falls back to a
+# screenshot hash when the canvas hash is empty.
+_FRAME_HASH_JS = """() => {
+    const c = Array.from(document.querySelectorAll('canvas'))
+        .find(x => x.width > 0 && x.height > 0 && x.offsetWidth > 0 && x.offsetHeight > 0);
+    const textNodes = document.body ? document.body.innerText : '';
+    const domText = !!(textNodes && textNodes.replace(/\\s+/g, '').length >= 3);
+    if (!c) return { hash: null, dom_text: domText };
+    try {
+        const s = document.createElement('canvas');
+        s.width = 32; s.height = 32;
+        const ctx = s.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(c, 0, 0, 32, 32);
+        const d = ctx.getImageData(0, 0, 32, 32).data;
+        let h = 2166136261, sum = 0;
+        for (let i = 0; i < d.length; i += 4) {
+            const v = (d[i] >> 3) * 1024 + (d[i + 1] >> 3) * 32 + (d[i + 2] >> 3);
+            h = ((h ^ v) * 16777619) >>> 0;
+            sum += d[i] + d[i + 1] + d[i + 2];
+        }
+        return { hash: sum === 0 ? null : String(h), dom_text: domText };
+    } catch (e) {
+        return { hash: null, dom_text: domText, tainted: true };
+    }
+}"""
+
+
+async def _frame_hash(page) -> tuple[Optional[str], bool]:  # noqa: ANN001
+    """(fingerprint, dom_text) — canvas pixel hash, or a small screenshot's hash."""
+    dom_text = False
+    try:
+        sample = await page.evaluate(_FRAME_HASH_JS) or {}
+        dom_text = bool(sample.get("dom_text"))
+        if sample.get("hash"):
+            return str(sample["hash"]), dom_text
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import hashlib
+        png = await page.screenshot(type="png", clip={"x": 0, "y": 0, "width": 320, "height": 240})
+        return hashlib.sha1(png).hexdigest(), dom_text
+    except Exception:  # noqa: BLE001
+        return None, dom_text
+
+
+async def _play_score(page) -> dict[str, Any]:  # noqa: ANN001
+    """~2 s of play after Start: frames rendered while idle, and whether the
+    picture changes when the kid presses the usual keys and taps the canvas."""
+    score: dict[str, Any] = {"frames": 0, "input_reacts": False, "dom_text": False}
+    try:
+        before = await page.evaluate(_YUVI_STATE_JS) or {}
+        hash_before, dom_text = await _frame_hash(page)
+        await page.wait_for_timeout(PLAY_SAMPLE_MS)
+        mid = await page.evaluate(_YUVI_STATE_JS) or {}
+        score["frames"] = max(0, int(mid.get("heartbeat") or 0) - int(before.get("heartbeat") or 0))
+        hash_idle, _ = await _frame_hash(page)
+        # Input: arrow / D / Space held, plus a pointer down-up at the canvas centre.
+        vp = page.viewport_size or {"width": 800, "height": 600}
+        box = None
+        try:
+            box = await page.locator("canvas").first.bounding_box(timeout=500)
+        except Exception:  # noqa: BLE001
+            box = None
+        cx = (box["x"] + box["width"] / 2) if box else vp["width"] / 2
+        cy = (box["y"] + box["height"] / 2) if box else vp["height"] / 2
+        for key in ("ArrowRight", "KeyD", "Space"):
+            try:
+                await page.keyboard.down(key)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            await page.mouse.move(cx, cy)
+            await page.mouse.down()
+        except Exception:  # noqa: BLE001
+            pass
+        await page.wait_for_timeout(PLAY_INPUT_MS)
+        try:
+            await page.mouse.up()
+        except Exception:  # noqa: BLE001
+            pass
+        for key in ("ArrowRight", "KeyD", "Space"):
+            try:
+                await page.keyboard.up(key)
+            except Exception:  # noqa: BLE001
+                pass
+        hash_after, dom_text_after = await _frame_hash(page)
+        # A frame that changed on its own (animation) already proves life; a
+        # frame that only changes with input proves the controls are wired.
+        score["input_reacts"] = bool(hash_after and hash_after != hash_idle) or bool(hash_idle and hash_before and hash_idle != hash_before)
+        score["dom_text"] = bool(dom_text or dom_text_after)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("play score failed: %s", exc)
+    return score
+
+
 async def validate_html(
     html: str,
     *,
     preinject_html: Optional[str] = None,
     settle_ms: int = SETTLE_TIMEOUT_MS,
     interaction_settle_ms: int = INTERACTION_SETTLE_MS,
-    contract_timeout_s: float = CONTRACT_TIMEOUT_S,
     min_heartbeat: int = MIN_HEARTBEAT,
     viewport_width: int = 800,
     viewport_height: int = 600,
     screenshot: bool = True,
 ) -> ValidationResult:
-    """Run ``html`` in headless Chromium and report errors + learning contract.
+    """Run ``html`` in headless Chromium and report errors + a play score.
 
     ``preinject_html`` (harness ``<script>`` tags) is prepended into ``<head>``
     so it runs before any game code.  Never raises for game problems; an
     infrastructure failure is reported in ``validator_error`` with ``ok=True``
-    (fail-open, like vibe) and ``contract_ok=False``.
+    (fail-open, like vibe).
     """
     if not HAS_PLAYWRIGHT:
         log.warning("playwright not installed; skipping runtime validation")
-        return ValidationResult(ok=True, contract_reason="playwright not installed",
-                                validator_error="playwright not installed")
+        return ValidationResult(ok=True, validator_error="playwright not installed")
 
     doc = inject_into_head(html, preinject_html) if preinject_html else html
 
@@ -280,8 +375,7 @@ async def validate_html(
     yuvi_state: Optional[dict] = None
     heartbeat = 0
     canvas_blank = False
-    contract_ok = False
-    contract_reason = ""
+    play_score: Optional[dict] = None
     png: Optional[bytes] = None
 
     tmp_path: Optional[str] = None
@@ -328,8 +422,7 @@ async def validate_html(
                 except Exception as e:  # noqa: BLE001
                     errors.append({"source": "navigation", "message": f"Page failed to load: {e}"})
                     return ValidationResult(ok=False, errors=errors, warnings=warnings,
-                                            failed_requests=failed_requests,
-                                            contract_reason="page failed to load")
+                                            failed_requests=failed_requests)
                 await page.wait_for_timeout(settle_ms)
 
                 # ── Phase 2: interaction (Start button) ──
@@ -344,8 +437,8 @@ async def validate_html(
                 # The thumbnail is the game itself, never a question overlay.
                 # The bridge counts questions asked and answered, so "a
                 # question is open" is exact: capture play frames only while
-                # asked == answered, keep the latest (the most play on
-                # screen), and fall back to the title screen taken before
+                # asked == answered, keep the latest non-empty (the most play
+                # on screen), and fall back to the title screen taken before
                 # Start when the game asks at once.
                 early_png: Optional[bytes] = title_png
                 if screenshot:
@@ -359,7 +452,9 @@ async def validate_html(
                             learn = (await page.evaluate(_YUVI_STATE_JS) or {}).get("learn") or {}
                             if int(learn.get("asked") or 0) > int(learn.get("answered") or 0):
                                 continue  # a question is open — not a poster
-                            early_png = await page.screenshot(type="png", full_page=False)
+                            shot = await page.screenshot(type="png", full_page=False)
+                            if shot:
+                                early_png = shot
                         except Exception as e:  # noqa: BLE001
                             log.warning("poster capture failed: %s", e)
                 else:
@@ -380,51 +475,24 @@ async def validate_html(
                     except Exception:  # noqa: BLE001
                         pass
 
-                # ── Phase 4: learning contract via window.__yuvi ──
+                # ── Phase 4: harness state via window.__yuvi ──
                 try:
                     yuvi_state = await page.evaluate(_YUVI_STATE_JS)
                 except Exception:  # noqa: BLE001
                     yuvi_state = None
 
                 if yuvi_state is None:
-                    contract_reason = "window.__yuvi missing (harness not injected or page crashed)"
+                    errors.append({
+                        "source": "harness",
+                        "message": "window.__yuvi missing (harness not injected or page crashed)",
+                    })
                 else:
-                    deadline = asyncio.get_running_loop().time() + max(0.0, contract_timeout_s)
-                    while True:
-                        learn = (yuvi_state or {}).get("learn") or {}
-                        asked = int(learn.get("asked") or 0)
-                        if asked >= 1:
-                            contract_ok = True
-                            contract_reason = (
-                                f"learn.asked={asked} answered={learn.get('answered', 0)} "
-                                f"correct={learn.get('correct', 0)} done={learn.get('done', False)}"
-                            )
-                            break
-                        if asyncio.get_running_loop().time() >= deadline:
-                            contract_reason = f"learn.asked stayed 0 for {contract_timeout_s:g}s"
-                            break
-                        await page.wait_for_timeout(CONTRACT_POLL_MS)
-                        try:
-                            yuvi_state = await page.evaluate(_YUVI_STATE_JS) or yuvi_state
-                        except Exception:  # noqa: BLE001
-                            break
-
-                    # A question that came with a figure the kid never saw is
-                    # unanswerable: the bridge counts those 2.5 s after each
-                    # next(), so give that timer time to fire before reading.
-                    await page.wait_for_timeout(FIGURE_CHECK_GRACE_MS)
+                    # ── Phase 4b: play score (~2 s of play) ──
+                    play_score = await _play_score(page)
                     try:
                         yuvi_state = await page.evaluate(_YUVI_STATE_JS) or yuvi_state
                     except Exception:  # noqa: BLE001
                         pass
-                    missing = int(((yuvi_state or {}).get("learn") or {}).get("figure_missing") or 0)
-                    if missing:
-                        errors.append({
-                            "source": "contract",
-                            "message": f"{missing} question(s) had a `figure` that never appeared on screen "
-                                       "(≥120×80px) — insert `q.figure` with innerHTML at the top of the "
-                                       "question overlay, or use `YuviLearn.mount(q, el)`",
-                        })
                     heartbeat = int((yuvi_state or {}).get("heartbeat") or 0)
                     if heartbeat < min_heartbeat:
                         errors.append({
@@ -466,8 +534,7 @@ async def validate_html(
 
     except Exception as e:  # noqa: BLE001
         log.error("runtime validation failed unexpectedly: %s", e)
-        return ValidationResult(ok=True, contract_ok=False, contract_reason=f"validator crashed: {e}",
-                                validator_error=str(e))
+        return ValidationResult(ok=True, validator_error=f"validator crashed: {e}")
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try:
@@ -477,15 +544,13 @@ async def validate_html(
 
     ok = len(errors) == 0
     if ok:
-        log.info("runtime validation passed (0 errors, %d warnings); contract_ok=%s (%s)",
-                 len(warnings), contract_ok, contract_reason)
+        log.info("runtime validation passed (0 errors, %d warnings); play=%s", len(warnings), play_score)
     else:
         log.info("runtime validation found %d error(s): %s", len(errors),
                  "; ".join(e["message"][:80] for e in errors[:3]))
 
     return ValidationResult(
-        ok=ok, errors=errors, contract_ok=contract_ok, contract_reason=contract_reason,
-        heartbeat=heartbeat, canvas_blank=canvas_blank, screenshot_png=png,
+        ok=ok, errors=errors, play_score=play_score, heartbeat=heartbeat, canvas_blank=canvas_blank, screenshot_png=png,
         warnings=warnings, failed_requests=failed_requests, clicked_start=clicked,
         yuvi_state=yuvi_state,
     )
@@ -550,11 +615,6 @@ def format_errors_for_fix_prompt(result: ValidationResult | dict) -> str:
         if hint not in hints_seen:
             parts.append(f"  Hint: {hint}")
             hints_seen.add(hint)
-
-    if not data.get("contract_ok", True) and data.get("contract_reason"):
-        parts.append(f"- [contract] Learning contract not met: {data['contract_reason']}")
-        parts.append("  Hint: The game must ask its first question (window.__yuvi.learn.asked >= 1) "
-                     "within 20 seconds of loading, without requiring anything beyond pressing Start.")
 
     if not parts:
         return ""

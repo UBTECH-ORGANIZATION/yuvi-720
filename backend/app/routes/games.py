@@ -6,18 +6,25 @@ through ``assert_can_read_learner`` — the same org scoping every other
 teacher read composes. Mutations are owner-only; a teacher can look at a
 child's game but cannot spend the child's daily cap.
 
-Three things this module is careful about:
+Four things this module is careful about:
 
-**Answers never leave.** A game document has no context; the job payload
-(which has the correct answers) is never returned; the picker (`/objectives`)
-projects components down to id/title/question_count; and the served HTML gets
-the harness WITHOUT an answer key, so grading is ``POST /check`` only.
+**The context never leaves.** A game document has no learning context; the
+job payload (the trimmed catalog snapshot and the learning description) is
+never returned; the picker (`/objectives`) projects components down to
+id/title/purpose; and the served HTML gets the harness with titles and the
+language only — the game grades its own questions in the page.
 
 **Caps are enforced before anything is written.** Creates and edits per
 learner per UTC day come from ``budget.effective_caps`` (an admin override, the
 admin defaults, or the ``GAMES_DAILY_*_CAP`` env values), and at most two
 fix jobs per version — a broken game that two repair rounds could not fix is
 not going to be fixed by a third (§2.5).
+
+**The model is decided at create.** ``GAME_MODEL_DEFAULT`` (or an admin's
+pick — a learner's ``model`` is ignored, never refused) and the effort
+(``medium`` with deep thinking, ``low`` otherwise) are stored on the game;
+edits and fixes reuse them. Timings, judge verdicts and model names are
+exposed on jobs to admins only.
 
 **The harness is the worker's.** ``game_gen.harness`` is imported from
 ``<repo>/workers`` so the HTML served here is injected by exactly the code the
@@ -29,7 +36,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -38,11 +44,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import ROLE_LEARNER, assert_can_read_learner, current_user, require_learner
+from app.auth.dependencies import (
+    ROLE_ADMIN, ROLE_LEARNER, assert_can_read_learner, current_user, require_learner,
+)
 from app.services import content_filter, events, kata_catalog
 from app.services.llm import call_llm
 from app.services.ai_usage import UsageContext
-from app.services.games import blueprints, budget, distractors, grading, html_store, instances, jobs, narration, store
+from app.services.games import budget, html_store, jobs, learning_descriptions, narration, store
 from app.services.learner_activity import HIDDEN_SUBJECTS
 
 log = logging.getLogger(__name__)
@@ -66,16 +74,16 @@ _FIX_JOBS_PER_VERSION = 2
 
 
 def _harness_module():
-    """``game_gen.harness`` + ``game_gen.context_pack`` from the worker package,
-    or None when the package is not on this box."""
+    """``game_gen.harness`` from the worker package, or None when the package
+    is not on this box."""
     if str(_WORKERS_DIR) not in sys.path and _WORKERS_DIR.exists():
         sys.path.insert(0, str(_WORKERS_DIR))
     try:
-        from game_gen import context_pack, harness
+        from game_gen import harness
     except Exception as exc:  # pragma: no cover - environment dependent
         log.warning("game harness unavailable: %s", type(exc).__name__)
         return None
-    return harness, context_pack
+    return harness
 
 
 # ── request models ───────────────────────────────────────────────────────────
@@ -101,6 +109,9 @@ class CreateGameRequest(BaseModel):
     device: Device = "keyboard"
     language: Language = "he"
     deep_thinking: bool = False
+    # Which model builds it. Honoured for an admin session only; a learner's
+    # value is ignored (the game gets ``GAME_MODEL_DEFAULT``), never refused.
+    model: Optional[str] = Field(default=None, max_length=80)
 
 
 class EditRequest(BaseModel):
@@ -117,19 +128,6 @@ class BugReport(BaseModel):
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=600)
-
-
-class CheckRequest(BaseModel):
-    question_id: str = Field(min_length=1, max_length=200)
-    answer: int | str
-    latency_ms: Optional[int] = Field(default=None, ge=0, le=3_600_000)
-
-
-class NextRequest(BaseModel):
-    """One draw of a blueprint game: the run (a fresh id per play-through)
-    and the question index inside it."""
-    run_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_\-]+$")
-    index: int = Field(ge=0, le=200)
 
 
 class RevertRequest(BaseModel):
@@ -151,6 +149,16 @@ async def _reader(
     if ROLE_LEARNER not in (session.get("roles") or []):
         raise HTTPException(status_code=403, detail="learner_role_required")
     return own
+
+
+def _is_admin(session: dict[str, Any]) -> bool:
+    """The token's role — the gate for what a response shows (model names,
+    timings, judge verdicts), not for what it changes."""
+    return ROLE_ADMIN in (session.get("roles") or [])
+
+
+async def _admin_reader(session: dict[str, Any] = Depends(current_user)) -> bool:
+    return _is_admin(session)
 
 
 async def _owned_game(game_id: str, learner_id: str) -> dict[str, Any]:
@@ -181,11 +189,13 @@ def _public_version(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _public_job(job: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
-    """Status and error class only. The payload holds the answers."""
+def _public_job(job: Optional[dict[str, Any]], *, admin: bool = False) -> Optional[dict[str, Any]]:
+    """Status and error class for everyone; never the payload (it holds the
+    context). An admin also sees the instrumentation — model, effort,
+    timings, attempts, the judge's verdict."""
     if not job:
         return None
-    return {
+    out: dict[str, Any] = {
         "job_id": job.get("_id"),
         "kind": job.get("kind"),
         "status": job.get("status"),
@@ -193,10 +203,20 @@ def _public_job(job: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
         "started_at": job.get("started_at"),
         "finished_at": job.get("finished_at"),
     }
+    if admin:
+        out.update({
+            "model": job.get("model"),
+            "reasoning_effort": job.get("reasoning_effort"),
+            "timings": job.get("timings"),
+            "attempts_detail": job.get("attempts_detail"),
+            "judge": job.get("judge"),
+            "usage_summary": job.get("usage_summary"),
+        })
+    return out
 
 
 def _public_game(game: dict[str, Any], *, lang: str = "he",
-                 last_job: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+                 last_job: Optional[dict[str, Any]] = None, admin: bool = False) -> dict[str, Any]:
     return {
         "game_id": game.get("_id"),
         "learner_id": game.get("learner_id"),
@@ -216,12 +236,12 @@ def _public_game(game: dict[str, Any], *, lang: str = "he",
         "has_thumb": bool(game.get("thumb_blob_path")),
         "errors_last": list(game.get("errors_last") or [])[:5],
         "sparks_spent": int(game.get("sparks_spent") or 0),
-        "question_mode": str(game.get("question_mode") or "legacy"),
-        "question_total": int(game.get("question_total") or 0),
+        "model": game.get("model"),
+        "reasoning_effort": str(game.get("reasoning_effort") or "low"),
         "description": str(game.get("description") or ""),
         "created_at": game.get("created_at"),
         "updated_at": game.get("updated_at"),
-        "last_job": _public_job(last_job),
+        "last_job": _public_job(last_job, admin=admin),
     }
 
 
@@ -235,6 +255,7 @@ async def list_games(
     limit: int = Query(20, ge=1, le=store.MAX_PAGE),
     lang: str = Query("he", max_length=5),
     learner_id: str = Depends(_reader),
+    admin: bool = Depends(_admin_reader),
 ):
     await kata_catalog.ensure_loaded()
     rows, next_cursor = await store.list_games(
@@ -242,7 +263,7 @@ async def list_games(
         cursor=cursor, limit=limit,
     )
     return JSONResponse(
-        content={"games": [_public_game(row, lang=lang) for row in rows],
+        content={"games": [_public_game(row, lang=lang, admin=admin) for row in rows],
                  "next_cursor": next_cursor},
         headers=_NO_STORE,
     )
@@ -257,8 +278,8 @@ async def picker_objectives(
 
     Objectives and components the learner has already visited come first
     (their recent events name the objective and the launched component); the
-    rest of the subject catalog follows. Only components with gradeable
-    questions are offered — a game needs something to gate progress on.
+    rest of the subject catalog follows. Every component is offered — the
+    game is built around what the lesson teaches, not around its questions.
     """
     await kata_catalog.ensure_loaded()
     visited_objectives: set[str] = set()
@@ -284,9 +305,6 @@ async def picker_objectives(
             oid = str(objective.get("id") or "")
             components_out: list[dict[str, Any]] = []
             for component in kata_catalog.components_for(oid):
-                count = jobs.gradeable_question_count(component)
-                if count == 0:
-                    continue
                 cid = str(component.get("id") or "")
                 components_out.append({
                     "id": cid,
@@ -297,7 +315,6 @@ async def picker_objectives(
                     "purpose": component.get("purpose"),
                     "difficulty": component.get("relative_difficulty"),
                     "is_assessment": bool(component.get("is_assessment")),
-                    "question_count": count,
                     "visited": cid in visited_components,
                 })
             if not components_out:
@@ -322,7 +339,10 @@ async def picker_objectives(
 
 
 @router.post("", status_code=201)
-async def create_game(data: CreateGameRequest, learner_id: str = Depends(require_learner)):
+async def create_game(
+    data: CreateGameRequest, learner_id: str = Depends(require_learner),
+    session: dict[str, Any] = Depends(current_user),
+):
     if data.genre not in jobs.GENRES:
         raise HTTPException(status_code=422, detail="bad_genre")
     inspirations = [chip for chip in data.inspirations if chip in jobs.INSPIRATIONS][:6]
@@ -330,7 +350,7 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
 
     await kata_catalog.ensure_loaded()
     component = kata_catalog.get_component(data.component_id)
-    if not component or jobs.gradeable_question_count(component) == 0:
+    if not component:
         raise HTTPException(status_code=404, detail="component_not_found")
     if component.get("unit_id") and component["unit_id"] != data.unit_id:
         raise HTTPException(status_code=422, detail="unit_mismatch")
@@ -342,17 +362,19 @@ async def create_game(data: CreateGameRequest, learner_id: str = Depends(require
     learner_title = " ".join(data.title.split())[:40]
     title = learner_title or (kata_catalog.component_title(data.component_id, data.language)
                               or component.get("title") or data.component_id)
+    requested_model = " ".join((data.model or "").split())[:80]
+    model = requested_model if (requested_model and _is_admin(session)) else jobs.default_model()
     game = await store.create_game(
         learner_id=learner_id, objective_id=data.objective_id, unit_id=data.unit_id,
         component_id=data.component_id, title=title, title_by_learner=bool(learner_title), genre=data.genre, prompt=data.vibe,
-        language=data.language, device=data.device, question_mode="blueprints",
+        language=data.language, device=data.device,
+        model=model, reasoning_effort="medium" if data.deep_thinking else "low",
     )
-    # Questions come from blueprints (generated once per component, cached):
-    # every run draws fresh instances with the context the kid needs. The
-    # first pick of a component means a model call, so the card answers now
-    # and the build starts as soon as the blueprints are in.
+    # The job needs the lesson's learning description (one cached mini call
+    # on a component's first pick), so the card answers now and the build
+    # starts as soon as the paragraph is in.
     work = _prepare_and_enqueue(
-        game, component, data, inspirations=inspirations, learner_title=learner_title, learner_id=learner_id,
+        game, data, inspirations=inspirations, learner_title=learner_title,
     )
     job = None
     if INLINE_BACKGROUND:
@@ -379,28 +401,17 @@ def _spawn(coro: Any) -> None:
 
 
 async def _prepare_and_enqueue(
-    game: dict[str, Any], component: dict[str, Any], data: CreateGameRequest, *,
-    inspirations: list[str], learner_title: str, learner_id: str,
+    game: dict[str, Any], data: CreateGameRequest, *,
+    inspirations: list[str], learner_title: str,
 ) -> Optional[dict[str, Any]]:
-    """Blueprints first, then the job. Returns the job, or None when the game
-    was marked failed instead."""
+    """Build the context (the learning description, cached or generated)
+    and enqueue. Returns the job, or None when the game was marked failed."""
     game_id = str(game["_id"])
     try:
-        docs = await blueprints.ensure_blueprints(
-            component, kata_catalog.get_unit(data.unit_id), kata_catalog.get_objective(data.objective_id),
-            actor_id=learner_id, language=data.language,
-        )
-        usable_count = len(blueprints.usable(docs))
-        if usable_count == 0:
-            log.warning("game %s: no answerable questions for %s", game_id, data.component_id)
-            await store.update_status(game_id, "failed", errors_last=[{"message": "no_answerable_questions"}])
-            return None
-        game = await store.update_game(game_id, question_total=blueprints.run_total(usable_count)) or game
         return await jobs.enqueue(
             game, "create", genre=data.genre, vibe=data.vibe, inspirations=inspirations,
             clarifications=data.clarifications, language=data.language,
-            device=data.device, deep_thinking=data.deep_thinking,
-            learner_title=learner_title,
+            device=data.device, learner_title=learner_title,
         )
     except Exception as exc:
         log.warning("game %s: prepare/enqueue failed: %s", game_id, type(exc).__name__)
@@ -413,47 +424,58 @@ async def _prepare_and_enqueue(
 
 class PrepareRequest(BaseModel):
     component_id: str = Field(min_length=1, max_length=160)
+    language: Language = "he"
 
 
 @router.post("/prepare", status_code=202)
 async def prepare_component(data: PrepareRequest, learner_id: str = Depends(require_learner)):
-    """Warm a component's blueprints while the kid writes the brief. Answers
-    at once with what is cached; generation, if needed, runs behind."""
+    """Warm a component's learning description while the kid writes the
+    brief. Answers at once with whether it is cached; generation, if needed,
+    runs behind (and the create that follows joins the same task)."""
     await kata_catalog.ensure_loaded()
     component = kata_catalog.get_component(data.component_id)
     if not component:
         raise HTTPException(status_code=404, detail="component_not_found")
-    docs = await blueprints.cached_for_component(data.component_id, blueprints.profile_fingerprint(component))
-    if not docs:
-        unit = kata_catalog.get_unit(str(component.get("unit_id") or ""))
-        objective = kata_catalog.get_objective(str((unit or {}).get("objective_id") or component.get("objective_id") or ""))
-        _spawn(blueprints.ensure_blueprints(component, unit, objective, actor_id=learner_id))
-    return JSONResponse(status_code=202, content={"ready": bool(docs), "usable": len(blueprints.usable(docs))}, headers=_NO_STORE)
+    unit = kata_catalog.get_unit(str(component.get("unit_id") or ""))
+    objective = kata_catalog.get_objective(
+        str(component.get("objective_id") or (unit or {}).get("objective_id") or "")
+    )
+    text = await learning_descriptions.cached(
+        data.component_id, data.language,
+        fingerprint=learning_descriptions.fingerprint(component, unit, objective),
+    )
+    if text is None:
+        _spawn(learning_descriptions.ensure_description(
+            component, unit, objective, actor_id=learner_id, language=data.language,
+        ))
+    return JSONResponse(status_code=202, content={"ready": text is not None}, headers=_NO_STORE)
 
 
 @router.get("/{game_id}")
 async def read_game(
     game_id: str, lang: str = Query("he", max_length=5), learner_id: str = Depends(_reader),
+    admin: bool = Depends(_admin_reader),
 ):
     game = await _owned_game(game_id, learner_id)
     await kata_catalog.ensure_loaded()
     last = await store.latest_job(game_id)
-    return JSONResponse(content=_public_game(game, lang=lang, last_job=last), headers=_NO_STORE)
+    return JSONResponse(content=_public_game(game, lang=lang, last_job=last, admin=admin), headers=_NO_STORE)
 
 
 @router.get("/{game_id}/html")
 async def read_game_html(
     game_id: str, v: Optional[int] = Query(None, ge=1), learner_id: str = Depends(_reader),
 ):
-    """The game, with the serve-time harness and WITHOUT an answer key."""
+    """The game, with the serve-time harness. The bridge gets titles and the
+    language only — the game carries its own questions and grades them in
+    the page; nothing here knows an answer."""
     game = await _owned_game(game_id, learner_id)
     entry = store.version_entry(game, v)
     if entry is None:
         raise HTTPException(status_code=404, detail="version_not_found")
-    modules = _harness_module()
-    if modules is None:
+    harness = _harness_module()
+    if harness is None:
         raise HTTPException(status_code=503, detail="harness_unavailable")
-    harness, context_pack = modules
 
     try:
         html = await html_store.get_html(str(entry.get("blob_path") or entry.get("html_path") or ""))
@@ -463,28 +485,24 @@ async def read_game_html(
         raise HTTPException(status_code=404, detail="html_not_found")
 
     await kata_catalog.ensure_loaded()
-    component = kata_catalog.get_component(str(game.get("component_id") or "")) or {
-        "id": game.get("component_id"), "title": game.get("title"),
+    language = str(game.get("language") or "he")
+    component_id = str(game.get("component_id") or "")
+    objective_id = str(game.get("objective_id") or "")
+    component = kata_catalog.get_component(component_id) or {}
+    objective = kata_catalog.get_objective(objective_id) or {}
+    learn_data = {
+        "component": {
+            "id": component_id,
+            "title": kata_catalog.component_title(component_id, language)
+                     or str(component.get("title") or game.get("title") or ""),
+        },
+        "objective": {
+            "id": objective_id,
+            "title": kata_catalog.objective_title(objective_id, language)
+                     or str(objective.get("title") or ""),
+        },
+        "language": language,
     }
-    unit = kata_catalog.get_unit(str(game.get("unit_id") or ""))
-    objective = kata_catalog.get_objective(str(game.get("objective_id") or ""))
-    # The same options the build saw (cached distractors), and typed questions
-    # only for games whose code renders an input box.
-    component = await distractors.enrich_component(component, actor_id=learner_id)
-    pack, _key = context_pack.build_context_pack(
-        component, unit, objective,
-        language=str(game.get("language") or "he"), device=str(game.get("device") or "keyboard"),
-        typed="text" in (game.get("question_kinds") or []),
-    )
-    # `answer_key` deliberately absent: the bridge grades through /check.
-    learn_data = pack.to_learn_data()
-    if game.get("question_mode") == "blueprints":
-        # No questions in the page: the bridge asks `/next` for each draw.
-        learn_data = {
-            "mode": "blueprints", "total": int(game.get("question_total") or 0),
-            "language": learn_data.get("language"), "component": learn_data.get("component"),
-            "objective": learn_data.get("objective"), "questions": [],
-        }
     fragment = harness.build_harness(learn_data)
     return HTMLResponse(
         content=harness.inject_harness(html, fragment),
@@ -630,33 +648,6 @@ async def report_bug(game_id: str, data: BugReport, learner_id: str = Depends(re
     except jobs.EnqueueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
     return JSONResponse(content={"job_id": job["_id"], "status": "queued"}, headers=_NO_STORE)
-
-
-@router.post("/{game_id}/check")
-async def check_answer(game_id: str, data: CheckRequest, learner_id: str = Depends(require_learner)):
-    game = await _owned_game(game_id, learner_id)
-    try:
-        if instances.is_instance_id(data.question_id):
-            result = await instances.grade(game, data.question_id, data.answer, latency_ms=data.latency_ms)
-        else:
-            result = await grading.grade(game, data.question_id, data.answer, latency_ms=data.latency_ms)
-    except (grading.GradingError, instances.InstanceError) as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from None
-    return JSONResponse(content={**result, "feedback": None}, headers=_NO_STORE)
-
-
-@router.post("/{game_id}/next")
-async def next_question(game_id: str, data: NextRequest, learner_id: str = Depends(require_learner)):
-    """The next question of a blueprint game: a fresh instance (text, options,
-    figure) whose answer stays here. `null` past the end of the run."""
-    game = await _owned_game(game_id, learner_id)
-    if game.get("question_mode") != "blueprints":
-        raise HTTPException(status_code=409, detail="not_a_blueprint_game")
-    try:
-        question = await instances.next_instance(game, run_id=data.run_id, index=data.index)
-    except instances.InstanceError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from None
-    return JSONResponse(content={"question": question}, headers=_NO_STORE)
 
 
 @router.post("/{game_id}/revert")

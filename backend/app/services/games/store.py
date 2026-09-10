@@ -1,17 +1,18 @@
-"""Persistence for learner-made games — three collections, one rule each.
+"""Persistence for learner-made games — two collections, one rule each.
 
-    learner_games         _id = game_id                       what the learner asked for, and every version built
-    learner_game_jobs     _id = job_id                        one unit of worker work (create | edit | fix)
-    learner_game_answers  _id = "{game_id}:{learner_id}:{seq}" one graded answer inside a game
+    learner_games         _id = game_id    what the learner asked for, and every version built
+    learner_game_jobs     _id = job_id     one unit of worker work (create | edit | fix)
+
+(plus ``learner_game_limits`` for the admin-set daily caps, see ``budget.py``).
 
 ## The game document is the learner's view; the job carries the context
 
-A game row is what the learner sees on a card: title, genre, status, versions.
-It deliberately holds NO learning context — the component's questions and
-their correct answers travel in the **job payload** (``jobs.py``), which only
-the worker and the grader read. Keeping the two apart is what lets every route
-return a game document verbatim without a redaction step that someone will one
-day forget.
+A game row is what the learner sees on a card: title, genre, status, versions,
+and the model/effort that built it. It deliberately holds NO learning context
+— the trimmed catalog snapshot and the learning description travel in the
+**job payload** (``jobs.py``), which only the worker reads. Keeping the two
+apart is what lets every route return a game document verbatim without a
+redaction step that someone will one day forget.
 
 ## HTML is never here
 
@@ -36,7 +37,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -46,18 +47,17 @@ log = logging.getLogger(__name__)
 
 GAMES = "learner_games"
 JOBS = "learner_game_jobs"
-ANSWERS = "learner_game_answers"
 #: Per-learner daily caps set by an admin; the row ``__defaults__`` holds the
 #: system-wide defaults that override the env values (see ``budget.py``).
 LIMITS = "learner_game_limits"
-BLUEPRINTS = "game_question_blueprints"
-INSTANCES = "game_question_instances"
-#: Instances when no database is configured (tests, JSON fallback): id → row.
-_memory_instances: dict[str, dict[str, Any]] = {}
 LIMITS_DEFAULTS_ID = "__defaults__"
 
 _FALLBACK_FILE = Path(__file__).resolve().parents[3] / ".runtime" / "games.json"
-_FALLBACK_KEYS = {GAMES: "games", JOBS: "jobs", ANSWERS: "answers", LIMITS: "limits"}
+_FALLBACK_KEYS = {GAMES: "games", JOBS: "jobs", LIMITS: "limits"}
+
+#: The builder's reasoning tiers. "low" is the default; "medium" is the kid's
+#: deep-thinking choice; "high" is reserved for an admin's explicit request.
+REASONING_EFFORTS = ("low", "medium", "high")
 
 #: queued → planning → building → validating → (fixing) → ready | failed.
 #: The worker owns every transition after `queued`; the app only ever writes
@@ -101,11 +101,6 @@ def new_game_id() -> str:
 
 def new_job_id() -> str:
     return f"gj-{uuid.uuid4().hex[:12]}"
-
-
-def answer_id(game_id: str, learner_id: str, seq: int) -> str:
-    """``gm-abc:kid:3`` — the third graded answer of that learner in that game."""
-    return f"{game_id}:{learner_id}:{int(seq)}"
 
 
 # ── JSON fallback ────────────────────────────────────────────────────────────
@@ -269,14 +264,21 @@ async def create_game(
     *, learner_id: str, objective_id: str, unit_id: str, component_id: str,
     title: str, genre: str, prompt: str = "", language: str = "he",
     device: str = "keyboard", path_node_id: Optional[str] = None,
-    title_by_learner: bool = False, question_mode: str = "legacy", question_total: int = 0,
+    title_by_learner: bool = False, model: Optional[str] = None,
+    reasoning_effort: str = "low",
 ) -> dict[str, Any]:
     """Record what the learner asked for. The build is a separate job.
 
     `title` is provisional unless `title_by_learner`: the worker replaces it
-    with the one the model chose (``SubmitParams.title``) when the first
-    version lands. A name the kid typed is theirs and is never overwritten.
+    with the one the model chose when the first version lands. A name the kid
+    typed is theirs and is never overwritten.
+
+    `model` / `reasoning_effort` are decided at create and reused by every
+    edit and fix, so a game stays on the model that wrote it. `model` None
+    means the worker's default.
     """
+    if reasoning_effort not in REASONING_EFFORTS:
+        raise GameStoreError("bad_reasoning_effort")
     document = {
         "_id": new_game_id(),
         "learner_id": learner_id,
@@ -286,15 +288,8 @@ async def create_game(
         "path_node_id": path_node_id,
         "title": (title or "")[:80],
         "title_by_learner": bool(title_by_learner),
-        # Which question kinds this game's code renders. Games built before
-        # typed questions existed only know buttons, and the served pack (and
-        # any patch of them) must keep to that.
-        "question_kinds": ["choice", "text"],
-        # "blueprints": questions are drawn per run from the component's
-        # blueprints (`/next`); "legacy": the catalog rows are baked into the
-        # served page. `question_total` sizes a blueprint run.
-        "question_mode": question_mode,
-        "question_total": int(question_total or 0),
+        "model": str(model)[:80] if model else None,
+        "reasoning_effort": reasoning_effort,
         "genre": genre,
         "prompt": (prompt or "")[:600],
         "language": language,
@@ -376,9 +371,13 @@ async def add_version(
     game_id: str, *, blob_path: str, sha256: str, source: str, summary: str = "",
     title: Optional[str] = None, thumb_blob_path: Optional[str] = None,
     sparks: int = 0, design_brief: Optional[str] = None,
+    judge: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Append a built version and make it current. The game becomes `ready`
     and its error list is cleared — whatever was broken, this build replaced it.
+
+    `judge` is the worker's verdict on this version (scores, notes, whether a
+    revision ran) — kept on the entry for the admin report, never a gate.
 
     Returns the version entry, not the game, because the caller's next step
     (notify) is keyed by `v`.
@@ -397,6 +396,7 @@ async def add_version(
         "created_at": _now(),
         "source": source,
         "summary": (summary or "")[:300],
+        "judge": dict(judge) if isinstance(judge, dict) else None,
     }
     fields: dict[str, Any] = {
         "versions": versions + [entry],
@@ -457,7 +457,12 @@ async def create_job(
     version: Optional[int] = None,
 ) -> dict[str, Any]:
     """One unit of worker work. `version` is the game version an edit or fix
-    starts from — it is what the per-version fix cap counts by."""
+    starts from — it is what the per-version fix cap counts by.
+
+    `model` / `reasoning_effort` mirror the payload so the admin report can
+    group by them without opening payloads; `timings`, `attempts_detail` and
+    `judge` are the worker's instrumentation, written at done/failed.
+    """
     if kind not in JOB_KINDS:
         raise GameStoreError("bad_kind")
     document = {
@@ -467,6 +472,8 @@ async def create_job(
         "kind": kind,
         "version": int(version) if version is not None else None,
         "payload": payload,
+        "model": payload.get("model"),
+        "reasoning_effort": payload.get("reasoning_effort") or "low",
         "status": "queued",
         "attempts": 0,
         "worker_replica": None,
@@ -474,6 +481,9 @@ async def create_job(
         "finished_at": None,
         "error_class": None,
         "usage_summary": None,
+        "timings": None,
+        "attempts_detail": None,
+        "judge": None,
         "created_at": _now(),
         "updated_at": _now(),
     }
@@ -514,47 +524,22 @@ async def count_fix_jobs_for_version(game_id: str, v: int) -> int:
     return await _count(JOBS, {"game_id": game_id, "kind": "fix", "version": int(v)})
 
 
-# ── learner_game_answers ─────────────────────────────────────────────────────
-
-async def record_answer(
-    *, game_id: str, learner_id: str, question_id: str, item_id: str,
-    component_id: str, correct: bool, latency_ms: Optional[int] = None,
-    blueprint_id: str = "", instance_id: str = "",
-) -> dict[str, Any]:
-    """One graded answer. The sequence is per (game, learner), so a learner's
-    play-through reads back in order without a timestamp sort.
-
-    `$setOnInsert` with a retry rather than a count-then-write: two answers
-    posted in the same tick would otherwise both claim the same sequence and
-    one of them would silently overwrite the other.
-    """
-    document: dict[str, Any] = {
-        "game_id": game_id,
-        "learner_id": learner_id,
-        "question_id": question_id,
-        "item_id": item_id,
-        "component_id": component_id,
-        "correct": bool(correct),
-        "latency_ms": int(latency_ms) if latency_ms is not None else None,
-        "at": _now(),
-    }
-    if blueprint_id:
-        # Blueprint games: which generator asked, and which draw of it.
-        document["blueprint_id"] = blueprint_id
-        document["instance_id"] = instance_id
-    base = await _count(ANSWERS, {"game_id": game_id, "learner_id": learner_id})
-    for offset in range(1, 6):
-        seq = base + offset
-        candidate = {**document, "_id": answer_id(game_id, learner_id, seq), "seq": seq}
-        if await _insert_if_absent(ANSWERS, candidate):
-            return candidate
-    raise GameStoreError("answer_sequence_contended")
+async def list_jobs_since(hours: int = 168, limit: int = 200) -> list[dict[str, Any]]:
+    """Every learner's jobs created in the last `hours`, newest first — the
+    admin report's window. ISO timestamps compare as strings, so the same
+    `$gte` works against Mongo and the JSON fallback."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=max(1, int(hours)))).isoformat()
+    limit = max(1, min(int(limit), 1000))
+    return await _find(JOBS, {"created_at": {"$gte": since}}, sort=("created_at", -1), limit=limit)
 
 
-async def list_answers(game_id: str, learner_id: str) -> list[dict[str, Any]]:
-    rows = await _find(ANSWERS, {"game_id": game_id, "learner_id": learner_id})
-    rows.sort(key=lambda row: int(row.get("seq") or 0))
-    return rows
+async def get_games(game_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Rows by id, deleted included — one read for a report's title column."""
+    ids = list(dict.fromkeys(str(game_id) for game_id in game_ids if game_id))
+    if not ids:
+        return {}
+    rows = await _find(GAMES, {"_id": {"$in": ids}}, limit=len(ids))
+    return {str(row["_id"]): row for row in rows}
 
 
 # ── learner_game_limits ──────────────────────────────────────────────────────
@@ -603,18 +588,16 @@ async def list_all_jobs(limit: int = 10000) -> list[dict[str, Any]]:
 async def ensure_indexes() -> None:
     """The card list reads (learner, created_at); the caps count (learner,
     created_at) and (learner, kind, created_at); the worker polls (status,
-    created_at) and the fix cap counts (game, kind, version)."""
+    created_at); the fix cap counts (game, kind, version); the admin report
+    windows on created_at."""
     plan = {
         GAMES: ([("learner_id", 1), ("created_at", -1)],
                 [("learner_id", 1), ("component_id", 1), ("created_at", -1)]),
         JOBS: ([("status", 1), ("created_at", 1)],
                [("game_id", 1), ("created_at", -1)],
                [("learner_id", 1), ("kind", 1), ("created_at", -1)],
-               [("game_id", 1), ("kind", 1), ("version", 1)]),
-        ANSWERS: ([("game_id", 1), ("learner_id", 1), ("seq", 1)],
-                  [("learner_id", 1), ("at", -1)]),
-        BLUEPRINTS: ([("component_id", 1)],),
-        INSTANCES: ([("game_id", 1), ("run_id", 1), ("index", 1)],),
+               [("game_id", 1), ("kind", 1), ("version", 1)],
+               [("created_at", -1)]),
     }
     for collection, indexes in plan.items():
         handle = _get_collection_named(collection)

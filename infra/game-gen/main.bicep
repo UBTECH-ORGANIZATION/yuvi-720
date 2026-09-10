@@ -21,6 +21,8 @@ param acrName string = 'yuvi720acr'
 @description('Principal id of the App Service (or slot) that enqueues jobs — gets Service Bus Data Sender + Blob Data Contributor.')
 param appServicePrincipalId string = ''
 param maxReplicas int = env == 'prod' ? 10 : 2
+@description('Replicas kept warm. 1 removes the 30-60 s cold start (image pull + Chromium + Copilot runtime) at ~1 vCPU/2 GiB of idle spend; KEDA still scales above it per queued job.')
+param minReplicas int = env == 'prod' ? 1 : 0
 param mongoDatabase string = 'yuvi720'
 param sparkEnvironment string = env == 'prod' ? 'production' : 'dev'
 param maxAiCredits string = '300'
@@ -165,7 +167,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: minReplicas
         maxReplicas: maxReplicas
         rules: [
           {
@@ -176,8 +178,8 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
               metadata: {
                 queueName: queueName
                 namespace: sb.name
-                messageCount: '1'           // one Opus build per replica
-                activationMessageCount: '0'
+                messageCount: '1'           // one build per replica
+                activationMessageCount: '0' // only matters when minReplicas is 0
               }
             }
           }

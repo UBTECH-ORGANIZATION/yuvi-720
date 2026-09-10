@@ -80,8 +80,8 @@ jobs:
                copilotGithubToken="${{ secrets.COPILOT_GITHUB_TOKEN }}" \
                mongoConnectionString="$mongo" redisConnectionString="$redis" \
             --query "properties.outputs" -o json
-      - name: Smoke — replica can start (scale rule keeps it at 0 when idle)
-        run: az containerapp show -g "$RESOURCE_GROUP" -n ca-game-gen-dev --query "properties.{state:provisioningState, image:template.containers[0].image}" -o json
+      - name: Smoke — deployed image and scale (minReplicas keeps a warm replica; KEDA adds more per queued job)
+        run: az containerapp show -g "$RESOURCE_GROUP" -n ca-game-gen-dev --query "properties.{state:provisioningState, image:template.containers[0].image, scale:template.scale}" -o json
 
   deploy-prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'prod'

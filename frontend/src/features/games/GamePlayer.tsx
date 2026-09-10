@@ -31,8 +31,8 @@ import { CodeView } from './CodeView'
 import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
-  askGame, checkAnswer, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
-  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, nextQuestion, getGameNarration } from '../../services/games'
+  askGame, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
+  type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, getGameNarration } from '../../services/games'
 import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
 import './games.css'
 
@@ -116,7 +116,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const [toast, setToast] = useState<string | null>(null)
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [finished, setFinished] = useState<GameProgress | null>(null)
-  const [total, setTotal] = useState(0)
   const [errorCount, setErrorCount] = useState(0)
   const [liveCode, setLiveCode] = useState('')
   const [changed, setChanged] = useState<[number, number][]>([])
@@ -313,9 +312,6 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     if (!nonce) return
     const bridge = createHostBridge({
       nonce,
-      check: (questionId, answer) => checkAnswer(game.game_id, questionId, answer),
-      next: (runId, index) => nextQuestion(game.game_id, runId, index),
-      onReady: (count) => setTotal(count),
       onAsked: () => { questionOpenRef.current = true },
       onAnswered: () => { questionOpenRef.current = false },
       onDone: (progress) => {
@@ -386,10 +382,14 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
         if (live.chunk) setThinkingText((current) => (current + live.chunk).slice(-THINK_TEXT_MAX))
         return
       }
-      if (live.event === 'summary' && typeof live.detail === 'string' && live.detail) {
-        // Yuvi's own one-line summary of the edit, in the kid's language:
-        // on screen the moment it is written, before any code moves.
-        setNarration((current) => (current[current.length - 1] === live.detail ? current : [...current, live.detail as string]))
+      if ((live.event === 'summary' || live.event === 'plan') && typeof live.detail === 'string' && live.detail) {
+        // Yuvi's own line, in the kid's language: an edit's one-line summary,
+        // or the pitch the plan pass wrote before any code moves. On screen
+        // the moment it is written.
+        const detail = live.detail
+        setNarration((current) => (current[current.length - 1] === detail ? current : [...current, detail]))
+        // The pitch is the game's description until the brief replaces it.
+        if (live.event === 'plan') setGame((current) => (current.description === detail ? current : { ...current, description: detail }))
       }
       if (live.event === 'patching') setPhase('writing')
       if (live.event === 'validate' || live.event === 'validated') setPhase('validating')
