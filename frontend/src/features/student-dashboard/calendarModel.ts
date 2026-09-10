@@ -63,3 +63,21 @@ export function formatCalendarTime(value: string, language: string): string {
     timeZone: ISRAEL_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(date)
 }
+
+/** Whole minutes remaining only while a timed lesson is in progress. */
+export function activeLessonMinutesRemaining(item: CalendarItem, now = Date.now()): number | null {
+  if (item.kind !== 'lesson' || item.all_day || !item.end_at) return null
+  const start = Date.parse(item.start_at)
+  const end = Date.parse(item.end_at)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || now < start || now >= end) return null
+  return Math.ceil((end - now) / 60_000)
+}
+
+/** Elapsed percentage only while a timed lesson is in progress. */
+export function activeLessonProgressPercent(item: CalendarItem, now = Date.now()): number | null {
+  if (item.kind !== 'lesson' || item.all_day || !item.end_at) return null
+  const start = Date.parse(item.start_at)
+  const end = Date.parse(item.end_at)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || now < start || now >= end) return null
+  return Math.round(((now - start) / (end - start)) * 100)
+}

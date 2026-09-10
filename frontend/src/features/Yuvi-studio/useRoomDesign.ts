@@ -3,10 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
-  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom,
-  type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallStyleId,
+  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, moveOrRestoreRoomItem, newItemUid, normalizeRoom, resetRoom, sameRoom, switchRoomWorld, syncActiveWorld,
+  type GamingRoomTitleId, type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallAnchor, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
+import { reconcileItemsForLayout, reconcileStationsForLayout, roomLayout, wallAnchorAt, type RoomLayoutId } from './RoomLayouts.ts'
+
+const ROOM_PROP_SCALE = 1.75
+const migrationOptions = (state) => ({
+  sportsArenaOwned: (state.room_unlocks ?? []).includes('layout:sportsArena'),
+  boundsFor: (item: RoomItem) => {
+    const spec = roomItemSpec(item.kind)
+    return { radius: (spec?.radius ?? 2.1) * ROOM_PROP_SCALE, height: (spec?.height ?? 2) * ROOM_PROP_SCALE, wall: spec?.placement === 'wall' }
+  },
+})
 
 /**
  * The learner's own room: what they placed, where, and how the space is lit.
@@ -31,7 +41,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     setLoaded(false)
     try {
       const state = await getLearnerState()
-      const stored = normalizeRoom(state.room)
+      const stored = normalizeRoom(state.room, migrationOptions(state))
       setRoom(stored)
       setBaseline(cloneRoom(stored))
     } catch { /* an empty room is a perfectly good starting point */ }
@@ -43,13 +53,13 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const full = room.items.length >= MAX_ROOM_ITEMS
 
   /** Drop a new prop on the floor and select it, so it can be adjusted at once. */
-  const place = (kind: string, x: number, z: number, rot = 0) => {
+  const place = (kind: string, x: number, z: number, rot = 0, wallAnchor?: WallAnchor) => {
     const spec = roomItemSpec(kind)
     if (!spec || full) return null
     const uid = newItemUid()
     setRoom((prev) => ({
       ...prev,
-      items: [...prev.items, { uid, kind, x, z, rot, tint: spec.tintable ? spec.tint : undefined }],
+      items: [...prev.items, { uid, kind, x, z, rot, ...(spec.placement === 'wall' ? { wallAnchor: wallAnchor ?? wallAnchorAt(roomLayout(prev.activeLayoutId), { x, z }) } : {}), tint: spec.tintable ? spec.tint : undefined }],
     }))
     setSelectedUid(uid)
     return uid
@@ -62,7 +72,16 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     }))
   }
 
-  const move = (uid: string, x: number, z: number) => patchItem(uid, { x, z })
+  const move = (uid: string, x: number, z: number, wallAnchor?: WallAnchor) => {
+    const item = [...roomRef.current.items, ...roomRef.current.storedItems].find((entry) => entry.uid === uid)
+    setRoom((prev) => moveOrRestoreRoomItem(prev, uid, {
+      x,
+      z,
+      ...(item && roomItemSpec(item.kind)?.placement === 'wall'
+        ? { wallAnchor: wallAnchor ? { ...wallAnchor, height: item.wallAnchor?.height ?? wallAnchor.height } : wallAnchorAt(roomLayout(roomRef.current.activeLayoutId), { x, z }, item.wallAnchor?.height ?? 0) }
+        : {}),
+    }))
+  }
   const rotate = (uid: string, delta: number) => {
     setRoom((prev) => ({
       ...prev,
@@ -75,7 +94,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     setSelectedUid((prev) => (prev === uid ? null : prev))
   }
   const clear = () => {
-    setRoom((prev) => ({ ...prev, items: [] }))
+    setRoom((prev) => ({ ...prev, items: [], storedItems: [] }))
     setSelectedUid(null)
   }
 
@@ -93,6 +112,56 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
+  const setGamingRoomTitle = async (gamingRoomTitle: GamingRoomTitleId) => {
+    const current = cloneRoom(roomRef.current)
+    const next = cloneRoom(current)
+    next.worlds.creatorLoft = { ...next.worlds.creatorLoft, gamingRoomTitle }
+    roomRef.current = next
+    setRoom(next)
+    const ok = await save(next)
+    if (!ok) {
+      roomRef.current = current
+      setRoom(current)
+    }
+    return ok
+  }
+
+  /** Each world restores its own design; stations and surprise rewards travel. */
+  const setActiveLayout = async (activeLayoutId: RoomLayoutId) => {
+    const current = cloneRoom(roomRef.current)
+    if (current.activeLayoutId === activeLayoutId) return { ok: true, relocatedUids: [] as string[], hiddenItems: [] as RoomItem[] }
+    const ownedRoom = activeLayoutId === 'sportsArena'
+      ? normalizeRoom(syncActiveWorld(current), migrationOptions({ room_unlocks: ['layout:sportsArena'] }))
+      : current
+    const switched = switchRoomWorld(ownedRoom, activeLayoutId)
+    const reconciliation = activeLayoutId === 'sportsArena'
+      ? { items: switched.items, storedItems: switched.storedItems, relocatedUids: [], hiddenItems: [] }
+      : reconcileItemsForLayout(roomLayout(activeLayoutId), switched.items, switched.storedItems, {
+      radiusFor: (item) => (roomItemSpec(item.kind)?.radius ?? 0.5) * ROOM_PROP_SCALE,
+      isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
+      sourceLayout: roomLayout(activeLayoutId),
+    })
+    const stationReconciliation = reconcileStationsForLayout(roomLayout(activeLayoutId), current.stations, reconciliation.items, {
+      radiusFor: () => 1.6,
+      itemRadiusFor: (item) => (roomItemSpec(item.kind)?.radius ?? 0.5) * ROOM_PROP_SCALE,
+      isWallItem: (item) => roomItemSpec(item.kind)?.placement === 'wall',
+    })
+    const next = {
+      ...switched,
+      items: reconciliation.items,
+      storedItems: reconciliation.storedItems,
+      stations: stationReconciliation.stations,
+    }
+    roomRef.current = next
+    setRoom(next)
+    const ok = await save(next)
+    if (!ok) {
+      roomRef.current = current
+      setRoom(current)
+    }
+    return { ok, relocatedUids: reconciliation.relocatedUids, hiddenItems: reconciliation.hiddenItems }
+  }
+
   /** Stations are furniture too: the learner decides where their room's doors are. */
   const moveStation = (id: StationId, x: number, z: number, rot?: number) => {
     setRoom((prev) => ({
@@ -120,12 +189,12 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
 
   const save = async (next?: RoomDesign) => {
     if (saving) return false
-    const payload = next ?? room
+    const payload = syncActiveWorld(next ?? room)
     setSaving(true)
     let ok = false
     try {
       const state = await updateLearnerState({ room: payload })
-      const stored = normalizeRoom(state.room ?? payload)
+      const stored = normalizeRoom(state.room ?? payload, migrationOptions(state))
       setRoom(stored)
       setBaseline(cloneRoom(stored))
       setJustSaved(true)
@@ -148,8 +217,8 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   }
 
   /** The welcome sequence is remembered separately from the room tutorial. */
-  const completeIntro = async () => {
-    const next = { ...cloneRoom(roomRef.current), introDone: true }
+  const completeIntro = async (nextRoom?: RoomDesign) => {
+    const next = { ...cloneRoom(nextRoom ?? roomRef.current), introDone: true }
     setRoom(next)
     return save(next)
   }
@@ -162,7 +231,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear, materializeWeeklyReward,
-    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
+    setFloor, setWall, setMood, setGamingRoomTitle, setActiveLayout, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

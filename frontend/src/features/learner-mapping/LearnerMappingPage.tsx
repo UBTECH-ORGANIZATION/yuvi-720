@@ -779,9 +779,6 @@ export function LearnerMappingPage() {
     setIsTyping(true)
     setReflectionText('')
 
-    const entered = await enterReflectionStage()
-    if (!entered) return
-
     const questionsAndAnswers = part.questions.map((question) => {
       const answerIndex = nextAnswers[question.id]
       return {
@@ -789,15 +786,19 @@ export function LearnerMappingPage() {
         answer: answerIndex === undefined ? '' : question.options[answerIndex] || ''
       }
     })
-
+    // The reflection header is rendered during the Yuvi handoff, so prepare
+    // the next section's snapshot before that stage mounts.
     setSummaryPartIndex(partIndex)
     setSummaryTitle(part.title)
     setSummaryQa(questionsAndAnswers)
-    // Completing this section earns a Yuvi store item (if that part maps to one).
-    grantPhaseReward(partIndex)
     setLastSectionContext(
       `${part.title} - ${questionsAndAnswers.map((pair) => `${pair.question}: ${pair.answer}`).join(' | ')}`
     )
+
+    const entered = await enterReflectionStage()
+    if (!entered) return
+    // Completing this section earns a Yuvi store item (if that part maps to one).
+    grantPhaseReward(partIndex)
 
     // New reflection: a short opener + up to 3 tap-to-answer questions about the
     // most extreme answers (no free text). Deterministic engine — text comes from

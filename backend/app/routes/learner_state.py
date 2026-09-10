@@ -109,9 +109,16 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     room = data.get("room")
     if not isinstance(room, dict):
         return
-    items = room.get("items")
-    if not isinstance(items, list):
+    item_lists = [value for key in ("items", "storedItems") if isinstance((value := room.get(key)), list)]
+    worlds = room.get("worlds")
+    if isinstance(worlds, dict):
+        for world in worlds.values():
+            if not isinstance(world, dict):
+                continue
+            item_lists.extend(value for key in ("items", "storedItems") if isinstance((value := world.get(key)), list))
+    if not item_lists:
         return
+    items = [item for item_list in item_lists for item in item_list]
     from app.services import studio_surprises
 
     surprise_kinds = set(studio_surprises.REWARD_KINDS)
@@ -133,15 +140,36 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     permitted_private = {kind for kind in private_kinds if await studio_surprises.can_hold_reward(learner_id, kind)}
     if gated <= held and private_kinds <= permitted_private:
         return
-    room["items"] = [
-        item for item in items
-        if not (isinstance(item, dict)
-                and unlocks.is_gated_prop(str(item.get("kind")))
-                and str(item.get("kind")) not in held)
-            and not (isinstance(item, dict)
-                 and str(item.get("kind")) in surprise_kinds
-                 and str(item.get("kind")) not in permitted_private)
-    ]
+    for item_list in item_lists:
+        item_list[:] = [
+            item for item in item_list
+            if not (isinstance(item, dict)
+                    and unlocks.is_gated_prop(str(item.get("kind")))
+                    and str(item.get("kind")) not in held)
+                and not (isinstance(item, dict)
+                     and str(item.get("kind")) in surprise_kinds
+                     and str(item.get("kind")) not in permitted_private)
+        ]
+
+
+async def _screen_room_layout(learner_id: str, data: dict) -> None:
+    """Keep locked room shells server-owned, like locked furniture."""
+    room = data.get("room")
+    if not isinstance(room, dict):
+        return
+    legacy_layouts = {"dome": "adventurePark", "triangularObservatory": "creatorLoft"}
+    active_layout = legacy_layouts.get(room.get("activeLayoutId"), room.get("activeLayoutId"))
+    if active_layout not in {"lab", "adventurePark", "sportsArena", "creatorLoft"}:
+        active_layout = "lab"
+    room["activeLayoutId"] = active_layout
+    if active_layout not in {"sportsArena", "creatorLoft"}:
+        return
+    state = await get_learner_state(learner_id)
+    unlocks = set(state.get("room_unlocks") or [])
+    if "layout:triangularObservatory" in unlocks:
+        unlocks.add("layout:creatorLoft")
+    if f"layout:{active_layout}" not in unlocks:
+        room["activeLayoutId"] = "lab"
 
 
 async def _screen_equipped(learner_id: str, data: dict) -> None:
@@ -185,7 +213,11 @@ async def _screen_equipped(learner_id: str, data: dict) -> None:
 async def patch_learner_state(data: dict, session=Depends(require_learner_session)):
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
+    # Studio time is derived from the server clock; accepting it here would let
+    # a browser reset its own hourly allowance.
+    data.pop("studio_time", None)
     await _screen_room_items(learner_id, data)
+    await _screen_room_layout(learner_id, data)
     await _screen_equipped(learner_id, data)
     # A badge chosen as the profile picture must actually be earned — the picker
     # only offers earned coins, so this rejects tampering, not normal use.

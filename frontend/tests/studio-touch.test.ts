@@ -54,8 +54,8 @@ test('hovering furniture opens its menu and leaving it begins dismissal', () => 
   assert.match(avatar, /const onPropHover = \(event: PointerEvent\) => \{[\s\S]{0,160}openMenuAt\(event\.clientX, event\.clientY\)/)
   assert.match(avatar, /addEventListener\('pointermove', onPropHover/)
   assert.match(avatar, /addEventListener\('pointerleave', onPropHoverLeave\)/)
-  assert.match(studio, /onItemMenu=\{!placing \? showPropMenu : undefined\}/)
-  assert.match(studio, /onItemMenuLeave=\{!placing \? \(\) => \{ deferPropMenuClose\(\); setSurpriseNotice\(false\) \} : undefined\}/)
+  assert.match(studio, /onItemMenu=\{!visitorRoom && !placing \? showPropMenu : undefined\}/)
+  assert.match(studio, /onItemMenuLeave=\{!visitorRoom && !placing \? \(\) => \{ deferPropMenuClose\(\); setSurpriseNotice\(false\) \} : undefined\}/)
   assert.match(studio, /onHoverStart=\{clearPropMenuClose\}/)
   assert.match(studio, /setTimeout\(\(\) => setPropMenu\(null\), 350\)/)
   assert.match(propMenu, /onMouseEnter=\{onHoverStart\}/)
@@ -69,9 +69,9 @@ test('tintable furniture offers colours only through its hover menu', () => {
   assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
 })
 
-test('hovering Yuvi station offers only the Design Yuvi action', () => {
+test('hovering Yuvi station offers Design Yuvi and Move actions', () => {
   assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
-  assert.match(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
+  assert.match(studio, /onMove=\{\(\) => startMove\(propMenu\.uid\)\}/)
   assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
   assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
 })
@@ -81,17 +81,38 @@ test('only the visible Yuvi podium, not its light pool, opens the station menu',
   assert.doesNotMatch(labRoom, /raycaster\.intersectObject\(platform, true\)/)
 })
 
-test('globe and mission furniture open hover menus with move and rotate only', () => {
+test('globe and World Capsule furniture open hover menus with move and rotate only', () => {
   assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
   assert.match(studio, /onRemove=\{menuStation \? undefined/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
-  assert.equal(he['YuviStudio.zone.mission'], 'עמדת המשימות')
+  assert.equal(he['YuviStudio.zone.mission'], 'ביקור אצל חברים')
+})
+
+test('Visit Friends opens only friend choices while Room Design owns world switching', () => {
+  assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setPlacing\(null\)[\s\S]{0,160}setMode\('roam'\)/)
+  assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
+  assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
+  assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[[\s\S]{0,180}roomLayout\(layoutId\)\.walkBlockers/)
+  assert.match(labRoom, /noBuildZones[\s\S]{0,700}roomLayout\(layoutId\)\.decorBlockers/)
+  assert.match(labRoom, /noBuildZones[\s\S]*'mission'/)
+  assert.match(studio, /type StudioMode = 'roam' \| 'avatar' \| 'room' \| 'friends'/)
+  assert.match(studio, /if \(zone === 'mission'\) \{\s+setPlacing\(null\)\s+setFirstPerson\(false\)\s+setMode\('friends'\)/)
+  assert.match(studio, /\{mode === 'friends' && !visitorRoom && \(\s+<StationPanel\s+title=\{t\('YuviStudio\.capsule\.title'\)\}/)
+  assert.doesNotMatch(studio, /value=\{worldPickerOpen \? 'worlds' : 'friends'\}/)
+  assert.doesNotMatch(studio, /YuviStudio\.capsule\.switchWorld/)
+  assert.match(studio, /worldSelector=\{\(/)
+  assert.doesNotMatch(studio, /onClick=\{requestWorldPicker\}/)
+  assert.doesNotMatch(studio, /navigate\('\/yuvi-studio\/community'\)/)
+  assert.equal(he['YuviStudio.capsule.title'], 'ביקור אצל חברים')
+  assert.equal(he['YuviStudio.capsule.visitFriend'], 'לבקר חבר')
+  assert.equal(he['YuviStudio.room.switchWorld'], 'החלפת חדר')
 })
 
 test('room styles share the General Room tab', () => {
   assert.match(studio, /type RoomTab = RoomItemCategory \| 'general' \| 'surprises'/)
+  assert.match(studio, /const \[category, setCategory\] = useState<RoomTab>\('general'\)/)
   assert.match(studio, /YuviStudio\.room\.general/)
   assert.match(studio, /category === 'general'/)
   assert.match(studio, /key: 'floor', options: ROOM_STYLES/)
@@ -100,19 +121,32 @@ test('room styles share the General Room tab', () => {
   assert.equal(he['YuviStudio.room.general'], 'חדר כללי')
 })
 
+test('room time reminders fire at the requested countdown thresholds', () => {
+  assert.match(studio, /const TIME_REMINDER_SECONDS = new Set\(\[15 \* 60, 10 \* 60, 5 \* 60, 60\]\)/)
+  assert.match(studio, /TIME_REMINDER_SECONDS\.has\(remainingSeconds\)/)
+  assert.match(studio, /setTimeout\(\(\) => \{\s+setTimeReminder\(false\)/)
+  assert.doesNotMatch(studio, /5 \* 60 \* 1000/)
+})
+
 test('an approved gift opens only from a deliberate item tap', () => {
   assert.match(avatar, /const tappedItem = pickRoomItemAt\(event\.clientX, event\.clientY\)/)
   assert.match(avatar, /onRoomItemTapRef\.current\?\.\(tappedItem\)/)
   assert.match(studio, /weeklySurprise\.state === 'ready' \? WEEKLY_SURPRISE_READY : WEEKLY_SURPRISE_COVERED/s)
-  assert.match(studio, /onRoomItemTap=\{\(uid\) => \{/)
+  assert.match(studio, /onRoomItemTap=\{!visitorRoom \? \(uid\) => \{/)
   assert.match(studio, /claimWeeklySurprise\(\)/)
 })
 
-test('a first visit gets a four-step in-world welcome without reopening the old practical tutorial', () => {
+test('a direct room-station tap ignores Yuvi station on the walk there', () => {
+  assert.match(avatar, /const tappedStation = pickStationAt\(event\.clientX, event\.clientY\)/)
+  assert.match(avatar, /if \(tappedStation && !lockRoamRef\.current\) \{[\s\S]{0,160}walkTo\(target\.x, target\.z, tappedStation\)/)
+  assert.match(avatar, /const passingUnrequestedZone = Boolean\(requestedZone && nextZone && nextZone !== requestedZone\)/)
+})
+
+test('a first visit gets a five-step welcome that teaches catalog furniture placement', () => {
   assert.match(roomDesign, /introDone: false/)
   assert.match(roomDesign, /const introDone = record\.introDone === true/)
   assert.match(roomDesign, /base\.introDone = introDone/)
-  assert.match(roomState, /const completeIntro = async \(\) => \{[\s\S]{0,180}introDone: true/)
+  assert.match(roomState, /const completeIntro = async \(nextRoom\?: RoomDesign\) => \{[\s\S]{0,180}introDone: true/)
   assert.match(roomState, /export function useRoomDesign\(autoLoad = true, reloadKey\?: string\)/)
   assert.match(roomState, /setLoaded\(false\)[\s\S]{0,360}\}, \[reloadKey\]\)/)
   assert.match(studio, /const \{ user \} = useAuth\(\)/)
@@ -120,7 +154,7 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.match(studio, /tutorialArmed\.current = false[\s\S]{0,260}\[user\?\.user_id\]/)
   assert.match(studio, /if \(!roomState\.room\.introDone\) \{ setIntroScene\(0\); return \}/)
   assert.doesNotMatch(studio, /setTutorial\(/)
-  assert.match(studio, /lockRoam=\{mode !== 'roam' \|\| introScene !== null\}/)
+  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\) \|\| gamingRoomTitleGuiding \|\| gamingRoomTitlePrompt \|\| introScene !== null \|\| travelPhase !== 'idle'\}/)
   assert.match(studio, /<StudioWelcome/)
   assert.match(studio, /await roomState\.completeIntro\(\)/)
   assert.match(studio, /const \[introAvatarChanged, setIntroAvatarChanged\] = useState\(false\)/)
@@ -132,20 +166,28 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed\)/)
   assert.match(studio, /placing\.station === 'room'/)
   assert.match(studio, /station: 'avatar'/)
+  assert.match(studio, /const \[introRoomItemAdded, setIntroRoomItemAdded\] = useState\(false\)/)
+  assert.match(studio, /if \(introScene === 2\) setIntroRoomItemAdded\(true\)/)
+  assert.match(studio, /if \(!introRoomItemAdded\) \{ setIntroCheckFailed\(true\); return \}/)
+  assert.match(studio, /YuviStudio\.intro\.roomCatalog\.pick/)
+  assert.match(studio, /YuviStudio\.intro\.roomCatalog\.missing/)
+  assert.match(studio, /YuviStudio\.intro\.roomCatalog\.done/)
   assert.match(studio, /goToStation\('avatar'\)/)
-  assert.match(studio, /const saved = await saveAll\(\)[\s\S]{0,100}await roomState\.completeIntro\(\)/)
+  assert.match(studio, /const completed = await roomState\.completeIntro\(\)[\s\S]{0,100}const avatarSaved = dirty \? await save\(\) : true/)
   assert.doesNotMatch(studio, /introBeanbag|INTRO_ROOM_ITEM/)
   assert.match(studio, /YuviStudio\.intro\.station\.room/)
   assert.match(studio, /YuviStudio\.intro\.station\.avatar/)
   assert.match(studio, /YuviStudio\.intro\.station\.done/)
-  assert.match(studio, /if \(introScene === 2\) \{[\s\S]{0,100}setIntroAvatarChanged\(true\)/)
+  assert.match(studio, /if \(introScene === 3\) \{[\s\S]{0,100}setIntroAvatarChanged\(true\)/)
   assert.match(studio, /YuviStudio\.tut\.help/)
   assert.match(itemCard, /highlighted \? 'is-highlighted' : ''/)
   assert.match(welcome, /role="dialog"/)
   assert.equal(he['YuviStudio.intro.continue'], 'יאללה, בונים')
   assert.match(he['YuviStudio.intro.station.room'], /שולחן עיצוב החדר/)
   assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שני הרהיטים בחדר, אפשר להמשיך.')
+  assert.match(he['YuviStudio.intro.roomCatalog.pick'], /קטגוריה מהלשוניות.*רהיט.*מקום פנוי/)
   assert.match(he['YuviStudio.intro.avatar.done'], /עיצוב יובי/)
+  assert.equal(he['YuviStudio.intro.scene4'], 'החדר והיובי שלכם מוכנים. מוכנים לצאת להרפתקה?')
   assert.equal(he['YuviStudio.intro.finish'], 'יוצאים לשחק')
 })
 
@@ -214,6 +256,12 @@ test('two fingers zoom and pan', () => {
 test('a cancelled gesture does not strand the drag', () => {
   assert.match(avatar, /addEventListener\('pointercancel', onPointerCancel\)/)
   assert.match(avatar, /removeEventListener\('pointercancel', onPointerCancel\)/)
+})
+
+test('left-drag camera orbit supports a complete turn', () => {
+  assert.doesNotMatch(avatar, /YAW_LIMIT/)
+  assert.match(avatar, /userYaw -= dx \* 0\.007/)
+  assert.match(avatar, /userYaw \+= velYaw/)
 })
 
 test('the tap test allows for a finger, not a mouse', () => {

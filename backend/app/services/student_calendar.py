@@ -185,9 +185,16 @@ def _source_item(row: dict, now: datetime) -> CalendarItem | None:
         return None
     moment, all_day = parsed
     raw_status = str(row.get("status") or "upcoming")
+    end = _parse_local(row.get("end_at"))
+    is_active_lesson = (
+        kind == "lesson"
+        and not all_day
+        and end is not None
+        and moment <= now < end[0]
+    )
     status: ItemStatus = (
         "cancelled" if raw_status == "cancelled"
-        else "completed" if _is_past(moment, all_day, now)
+        else "completed" if _is_past(moment, all_day, now) and not is_active_lesson
         else "upcoming"
     )
     return CalendarItem(

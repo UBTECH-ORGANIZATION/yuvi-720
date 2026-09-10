@@ -41,13 +41,20 @@ test('a reset is not a way to finish the walkthrough either', () => {
   assert.equal(resetRoom(decorated({ tutorialDone: false })).tutorialDone, false)
 })
 
-test('everything the learner decorated goes back', () => {
+test('reset clears the placed-room arrangement without changing ownership', () => {
   const fresh = resetRoom(decorated())
   assert.deepEqual(fresh.items, [])
+  assert.deepEqual(fresh.storedItems, [])
   assert.equal(fresh.floor, DEFAULT_ROOM.floor)
   assert.equal(fresh.wall, DEFAULT_ROOM.wall)
   assert.equal(fresh.mood, DEFAULT_ROOM.mood)
   assert.deepEqual(fresh.stations, DEFAULT_STATIONS)
+})
+
+test('a reset keeps completed design stations visible', () => {
+  const fresh = resetRoom(decorated({ introDone: true }))
+  assert.equal(fresh.stations.avatar.placed, true)
+  assert.equal(fresh.stations.room.placed, true)
 })
 
 test('resetting an untouched room is not a change to save', () => {
@@ -63,4 +70,12 @@ test('the reset room is a copy, not a view of the shared default', () => {
   fresh.items.push({ uid: 'x', kind: 'rug', x: 0, z: 0, rot: 0 })
   assert.equal(DEFAULT_ROOM.stations.avatar.x, DEFAULT_STATIONS.avatar.x)
   assert.equal(DEFAULT_ROOM.items.length, 0)
+})
+
+test('wall anchors are cleared with the reset arrangement', () => {
+  const room = decorated({
+    items: [{ uid: 'poster', kind: 'poster', x: 2, z: -11, rot: 0, wallAnchor: { wallId: 'north', offset: 0.6, height: 0.3 } }],
+  })
+  const fresh = resetRoom(room)
+  assert.deepEqual(fresh.storedItems, [])
 })
