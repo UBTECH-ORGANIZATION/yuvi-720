@@ -183,6 +183,23 @@ Sequencing: 0 → 1 ∥ 3 → 2 → 4 → 5 → 6. Task 0 gates the model choice
 
 Questions were the part the kids met first and the part that felt broken ("what chess board?"). Blueprints, figures, per-run instances and server grading were removed; the learning context became one paragraph; the prompt became one flowing brief with an ambition bar instead of a rule book; the judge revises instead of discarding; effort dropped to low/medium; the worker stays warm; and every job carries per-stage timings so the report (`scripts/games_report.py`) shows where the seconds and dollars go. The model default is chosen by the bake-off (Sonnet 5 / GPT-5.6 Sol / Opus 4.8 vs Opus 5), with the user's own play-through as the final vote. See [game-question-blueprints.md](game-question-blueprints.md) (superseded) for what was there before.
 
+### Bake-off 2026-09-10 — the default model
+
+48 games (3 components: mass gross/tare/net, chemical formulas, math coordinates × 2 briefs × 4 models × low/medium) built by the dev worker into gal's studio; judged by gpt-5.4-mini; every build passed the validator. `scripts/games_report.py --since-hours 6 --md`:
+
+| model | effort | n | total_s p50 / p95 | cost mean / p95 | learning · fun · polish · age |
+|---|---|---|---|---|---|
+| **claude-sonnet-5** | **low** | 6 | **230 / 284** | **$0.19 / $0.23** | 4.8 · 4.2 · 4.7 · 5.0 |
+| claude-sonnet-5 | medium | 6 | 396 / 437 | $0.29 / $0.33 | 4.8 · 4.2 · 4.5 · 4.8 |
+| gpt-5.6-sol | low | 6 | 253 / 371 | $0.34 / $0.54 | 4.8 · 4.0 · 4.8 · 5.0 |
+| gpt-5.6-sol | medium | 6 | 345 / 399 | $0.37 / $0.43 | 4.7 · 4.0 · 4.8 · 4.7 |
+| claude-opus-4.8 | low | 6 | 309 / 386 | $0.53 / $0.84 | 4.5 · 4.2 · 4.5 · 5.0 |
+| claude-opus-4.8 | medium | 6 | 314 / 432 | $0.54 / $0.76 | 4.3 · 4.0 · 4.5 · 5.0 |
+| claude-opus-5 | low | 7 | 325 / 444 | $0.53 / $0.82 | 4.4 · 4.3 · 4.7 · 5.0 |
+| claude-opus-5 | medium | 6 | 546 / 791 | $1.02 / $1.50 | 5.0 · 4.5 · 4.5 · 4.8 |
+
+Decision: **`claude-sonnet-5`, effort `low`** is the default (`GAME_MODEL_DEFAULT`, worker `COPILOT_MODEL`); "deep thinking" runs Sonnet at `medium`. Medium effort bought no judge points on any model and cost 55-90 % more time. Opus 4.6 is not on the Copilot catalog (Opus 4.8 stood in). Where the seconds go at Sonnet low: model turn ≈ 160 s p50, validate ≈ 35 s, plan ≈ 17 s, judge ≈ 15 s, queue+wake < 5 s. Next weak spot: the second delivery after a validator error (Opus/Sol spent 60-90 s there); the play-score and poster windows are the next 20 s.
+
 ### Game page (revised 2026-09-08)
 
 `/games/play?game=<id>&from=studio|lesson|bell` is the one door to a game: a normal learner page (app bar, platform theme) with the game on the stage, a floating HUD (back "to Yuvi", title, status, fullscreen), and Yuvi's chat on the right in the companion's visual language. While a build runs the stage is a **build console** that streams the code as it is written (the worker forwards `assistant.tool_call_delta` of `submit_game` as coalesced `event:'code'` realtime frames, ~1/s) and the chat is disabled. The chat has two modes: **change** (an edit job; carries the runtime errors the frame reported) and **question** (`POST /api/games/{id}/ask`, mini tier, answered from the source without a rebuild). Cards show the validator's screenshot (`GET /api/games/{id}/thumb`).

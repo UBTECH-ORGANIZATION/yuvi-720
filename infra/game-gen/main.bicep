@@ -26,7 +26,7 @@ param minReplicas int = env == 'prod' ? 1 : 0
 param mongoDatabase string = 'yuvi720'
 param sparkEnvironment string = env == 'prod' ? 'production' : 'dev'
 param maxAiCredits string = '300'
-param copilotModel string = 'claude-opus-5'
+param copilotModel string = 'claude-sonnet-5' // bake-off 2026-09-10
 
 @secure()
 param copilotGithubToken string

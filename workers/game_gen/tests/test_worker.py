@@ -130,7 +130,7 @@ def test_success_path_stores_version_and_rings_bell(fakes, monkeypatch):
 def test_spec_defaults_when_the_payload_is_sparse(monkeypatch):
     monkeypatch.delenv("COPILOT_MODEL", raising=False)
     spec = worker.spec_from_job({"_id": "j", "game_id": "g", "learner_id": "l", "payload": {"context": {}}})
-    assert spec.model == "claude-opus-5" and spec.reasoning_effort == "low" and spec.judge and spec.plan
+    assert spec.model == "claude-sonnet-5" and spec.reasoning_effort == "low" and spec.judge and spec.plan
     assert spec.pack.component_id == "" and spec.pack.language == "he"
 
 

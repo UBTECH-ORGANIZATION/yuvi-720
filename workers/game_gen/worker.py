@@ -112,7 +112,7 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         current_html=str(payload.get("current_html") or ""),
         runtime_errors=list(payload.get("runtime_errors") or []),
         history=list(payload.get("history") or []),
-        model=str(payload.get("model") or os.environ.get("COPILOT_MODEL") or "claude-opus-5"),
+        model=str(payload.get("model") or os.environ.get("COPILOT_MODEL") or "claude-sonnet-5"),
         reasoning_effort=str(payload.get("reasoning_effort") or "low"),
         judge=bool(payload.get("judge", True)),
         plan=bool(payload.get("plan", True)),

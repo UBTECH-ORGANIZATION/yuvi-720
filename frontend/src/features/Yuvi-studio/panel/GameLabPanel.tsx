@@ -16,7 +16,7 @@ import {
 import type { GameLabActivity } from '../useGameLabActivity'
 
 /** Admin bake-off choices; empty means the deployment default. */
-const GAME_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'gpt-5.6-sol', 'claude-opus-4.8']
+const GAME_MODELS = ['claude-sonnet-5', 'claude-opus-5', 'gpt-5.6-sol', 'claude-opus-4.8']
 
 const PAGE_SIZE = 12
 
