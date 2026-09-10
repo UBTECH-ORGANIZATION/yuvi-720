@@ -121,6 +121,7 @@ class Attempt:
     html_lines: int = 0
     error_classes: list[str] = field(default_factory=list)
     play_score: Optional[dict[str, Any]] = None
+    phases: Optional[dict[str, float]] = None   # validator seconds per phase
 
     def as_detail(self) -> dict[str, Any]:
         """The `attempts_detail` row the worker writes on the job."""
@@ -128,7 +129,7 @@ class Attempt:
             "n": self.index, "ok": self.ok, "reason": self.reason,
             "validate_s": round(self.elapsed_s, 3), "model_s": round(self.model_s, 3),
             "output_tokens": self.output_tokens, "html_lines": self.html_lines,
-            "error_classes": list(self.error_classes), "play_score": self.play_score,
+            "error_classes": list(self.error_classes), "play_score": self.play_score, "phases": self.phases,
         }
 
 
@@ -286,7 +287,8 @@ async def _submit(state: _State, progress: ProgressFn, html: str, title: str, su
         reason = "validation_failed"
     state.attempts.append(Attempt(idx, tool_name, ok, list(result.errors), reason, elapsed,
                                   model_s=state.last_model_s, output_tokens=state.last_output_tokens,
-                                  html_lines=html_lines, error_classes=classes, play_score=result.play_score))
+                                  html_lines=html_lines, error_classes=classes, play_score=result.play_score,
+                                  phases=result.phases))
     progress({"type": "validated", "attempt": idx, "ok": ok, "errors": len(result.errors), "play_score": result.play_score})
     if ok:
         state.accepted_html = validate_and_fix_code(html)

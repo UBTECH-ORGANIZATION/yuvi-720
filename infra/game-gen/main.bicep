@@ -135,7 +135,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
           name: 'worker'
           image: image
           command: ['python', '-m', 'game_gen.worker']
-          resources: { cpu: json('1.0'), memory: '2Gi' }
+          resources: { cpu: json('2.0'), memory: '4Gi' } // 2 vCPU: a Three.js game validated in 12 s on a laptop took 127 s on 1 vCPU (software WebGL)
           env: concat([
             { name: 'GAME_JOBS_MODE', value: 'servicebus' }
             { name: 'GAME_JOBS_QUEUE', value: queueName }

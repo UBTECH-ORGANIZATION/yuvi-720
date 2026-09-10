@@ -25,6 +25,7 @@ import logging
 import os
 import re
 import tempfile
+import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -54,6 +55,7 @@ IGNORED_ERROR_PATTERNS = [
     "Extension context",
     "favicon.ico",
     "net::ERR_FILE_NOT_FOUND",  # local file:// refs that don't matter
+    "pointer lock",             # requestPointerLock is refused under file:// and in the sandbox; the game still runs
 ]
 IGNORED_WARNING_PATTERNS = ["DevTools", "Autofill", "third-party cookie", "download the React DevTools"]
 
@@ -80,6 +82,9 @@ class ValidationResult:
     play_score: Optional[dict] = None
     heartbeat: int = 0
     canvas_blank: bool = False
+    #: Seconds per phase (load, settle, start, poster, checks, play, canvas, shot): the
+    #: "checking" wait the kid sees, broken down so the slow part is a fact.
+    phases: dict[str, float] = field(default_factory=dict)
     screenshot_png: Optional[bytes] = None
     warnings: list[str] = field(default_factory=list)
     failed_requests: list[dict] = field(default_factory=list)
@@ -393,8 +398,8 @@ async def validate_html(
     settle_ms: int = SETTLE_TIMEOUT_MS,
     interaction_settle_ms: int = INTERACTION_SETTLE_MS,
     min_heartbeat: int = MIN_HEARTBEAT,
-    viewport_width: int = 800,
-    viewport_height: int = 600,
+    viewport_width: int = 640,   # small on purpose: the worker renders WebGL in software, and every
+    viewport_height: int = 360,  # frame and screenshot costs pixels (800×600 → 640×360 is 2.1× fewer)
     screenshot: bool = True,
 ) -> ValidationResult:
     """Run ``html`` in headless Chromium and report errors + a play score.
@@ -419,6 +424,13 @@ async def validate_html(
     canvas_blank = False
     play_score: Optional[dict] = None
     png: Optional[bytes] = None
+    phases: dict[str, float] = {}
+    _mark = [time.perf_counter()]
+
+    def lap(name: str) -> None:
+        now = time.perf_counter()
+        phases[name] = round(phases.get(name, 0.0) + now - _mark[0], 2)
+        _mark[0] = now
 
     tmp_path: Optional[str] = None
     try:
@@ -467,7 +479,9 @@ async def validate_html(
                     errors.append({"source": "navigation", "message": f"Page failed to load: {e}"})
                     return ValidationResult(ok=False, errors=errors, warnings=warnings,
                                             failed_requests=failed_requests)
+                lap("load")
                 await page.wait_for_timeout(settle_ms)
+                lap("settle")
 
                 # ── Phase 2: interaction (Start button) ──
                 before = len(errors)
@@ -477,7 +491,9 @@ async def validate_html(
                         title_png = await page.screenshot(type="png", full_page=False)
                     except Exception as e:  # noqa: BLE001
                         log.warning("title screenshot failed: %s", e)
+                lap("title_shot")
                 clicked = await _click_start_buttons(page)
+                lap("start")
                 # The thumbnail is the game itself, never a question overlay.
                 # The bridge counts questions asked and answered, so "a
                 # question is open" is exact: capture play frames only while
@@ -503,6 +519,7 @@ async def validate_html(
                             log.warning("poster capture failed: %s", e)
                 else:
                     await page.wait_for_timeout(interaction_settle_ms)
+                lap("poster")
                 for err in errors[before:]:
                     err["source"] = "post-interaction"
 
@@ -532,7 +549,9 @@ async def validate_html(
                     })
                 else:
                     # ── Phase 4b: play score (~2 s of play) ──
+                    lap("checks")
                     play_score = await _play_score(page)
+                    lap("play")
                     try:
                         yuvi_state = await page.evaluate(_YUVI_STATE_JS) or yuvi_state
                     except Exception:  # noqa: BLE001
@@ -551,6 +570,7 @@ async def validate_html(
                             errors.append({"source": f"harness/{harness_err.get('kind', 'error')}",
                                            "message": msg})
 
+                lap("checks")
                 # ── Phase 5: canvas non-blank ──
                 try:
                     sample = await page.evaluate(_CANVAS_SAMPLE_JS)
@@ -564,6 +584,7 @@ async def validate_html(
                 except Exception:  # noqa: BLE001
                     canvas_blank = False
 
+                lap("canvas")
                 # ── Phase 6: screenshot (thumbnail) ──
                 if screenshot:
                     try:
@@ -589,7 +610,9 @@ async def validate_html(
             except OSError:
                 pass
 
+    lap("shot")
     ok = len(errors) == 0
+    log.info("validation phases: %s", phases)
     if ok:
         log.info("runtime validation passed (0 errors, %d warnings); play=%s", len(warnings), play_score)
     else:
@@ -598,6 +621,7 @@ async def validate_html(
 
     return ValidationResult(
         ok=ok, errors=errors, play_score=play_score, heartbeat=heartbeat, canvas_blank=canvas_blank, screenshot_png=png,
+        phases=phases,
         warnings=warnings, failed_requests=failed_requests, clicked_start=clicked,
         yuvi_state=yuvi_state,
     )
