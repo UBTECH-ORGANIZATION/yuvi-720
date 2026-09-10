@@ -24,6 +24,8 @@ export function SupportWidget() {
   const [available, setAvailable] = useState(false)
   const [draft, setDraft] = useState('')
   const logRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLElement | null>(null)
+  const launcherRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     void isSupportEnabled().then(setAvailable)
@@ -50,6 +52,13 @@ export function SupportWidget() {
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' })
   }, [support.messages.length])
+
+  // Keyboard users get the panel handed to them when it opens, and the launcher
+  // handed back when it closes, so they never have to hunt for where they are.
+  useEffect(() => {
+    if (open) panelRef.current?.focus()
+    else launcherRef.current?.focus({ preventScroll: true })
+  }, [open])
 
   if (!available) return null
 
@@ -84,6 +93,7 @@ export function SupportWidget() {
 
       <button
         type="button"
+        ref={launcherRef}
         className="support-widget-launcher"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
@@ -97,7 +107,15 @@ export function SupportWidget() {
       </button>
 
       {open && (
-        <section className="support-widget-panel" aria-label={t('supportWidget.title')}>
+        <section
+          className="support-widget-panel"
+          ref={panelRef}
+          tabIndex={-1}
+          aria-label={t('supportWidget.title')}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setOpen(false)
+          }}
+        >
           <header>
             <div>
               <h2>{t('supportWidget.title')}</h2>
@@ -115,8 +133,12 @@ export function SupportWidget() {
           )}
 
           {support.share.pending && (
-            <div className="support-widget-consent" role="alertdialog">
-              <p>
+            <div
+              className="support-widget-consent"
+              role="alertdialog"
+              aria-labelledby="support-consent-share"
+            >
+              <p id="support-consent-share">
                 {support.share.pending === 'display'
                   ? t('supportWidget.consent.display')
                   : t('supportWidget.consent.dom')}
@@ -137,8 +159,8 @@ export function SupportWidget() {
           )}
 
           {support.voice.pending && (
-            <div className="support-widget-consent" role="alertdialog">
-              <p>{t('supportWidget.consent.voice')}</p>
+            <div className="support-widget-consent" role="alertdialog" aria-labelledby="support-consent-voice">
+              <p id="support-consent-voice">{t('supportWidget.consent.voice')}</p>
               <div>
                 <button type="button" className="primary" onClick={() => void support.acceptVoice()}>
                   {t('supportWidget.consent.allow')}
