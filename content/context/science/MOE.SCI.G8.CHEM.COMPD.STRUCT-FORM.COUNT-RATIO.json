@@ -8,7 +8,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00001",
       "title": "השפה הכימית של התרכובות - סיכמנו לכם בקצרה ",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T10:41:42.655892Z",
       "component_fingerprint": "2b0acd2205271d17",
       "extraction": {
@@ -2741,7 +2741,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00002",
       "title": "השפה הכימית של התרכובות​",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T10:48:32.121655Z",
       "component_fingerprint": "d58325c53aa8ae5a",
       "extraction": {
@@ -8238,7 +8238,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00003",
       "title": "השפה הכימית של התרכובות - תרגול רמה בסיסית 1",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T10:53:03.288785Z",
       "component_fingerprint": "0c4ba9a0d5353259",
       "extraction": {
@@ -12642,12 +12642,12 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
       "title": "השפה הכימית של התרכובות - תרגול רמה בסיסית 2",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T10:59:57.654215Z",
       "component_fingerprint": "c60173ee0e3e19c3",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-08T01:43:03Z",
+        "probed_at": "2026-09-12T01:36:40Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -12803,7 +12803,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00005",
       "title": "השפה הכימית של התרכובות - תרגול רמה ממוצעת 1",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T11:07:42.195223Z",
       "component_fingerprint": "db75a0a0ce39d02c",
       "extraction": {
@@ -13625,12 +13625,12 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006",
       "title": "השפה הכימית של התרכובות - תרגול רמה ממוצעת 2",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T11:20:10.183505Z",
       "component_fingerprint": "336ab91432ea340a",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-08T01:43:12Z",
+        "probed_at": "2026-09-12T01:36:50Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -13883,7 +13883,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00007",
       "title": "השפה הכימית של התרכובות - תרגול רמה מתקדמת 1",
       "cognitive_level": "['identifying']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T11:30:22.548471Z",
       "component_fingerprint": "824e2a7ba490aed5",
       "extraction": {
@@ -16572,7 +16572,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00008",
       "title": "השפה הכימית של התרכובות - הערכה 1",
       "cognitive_level": "['analyzing']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T11:37:12.541587Z",
       "component_fingerprint": "52801c57587ac964",
       "extraction": {
@@ -18244,7 +18244,7 @@
       "component_id": "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00009",
       "title": "השפה הכימית של התרכובות - הערכה 2",
       "cognitive_level": "['analyzing']",
-      "provider": "מטח - תוכן",
+      "provider": "",
       "kata_updated_at": "2026-08-21T11:50:20.641466Z",
       "component_fingerprint": "55d4e5df105ed5df",
       "extraction": {

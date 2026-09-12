@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-08T01:45:36Z",
+  "generated_at": "2026-09-12T01:47:54Z",
   "shards": [
     {
       "subject": "math",
       "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL",
       "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL.json",
-      "lomdot": 10
+      "lomdot": 9
     },
     {
       "subject": "math",
@@ -25,13 +25,19 @@
       "subject": "math",
       "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR",
       "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR.json",
-      "lomdot": 1
+      "lomdot": 5
     },
     {
       "subject": "math",
       "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG",
       "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG.json",
-      "lomdot": 1
+      "lomdot": 6
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE.UNIT-CONV",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE.UNIT-CONV.json",
+      "lomdot": 5
     },
     {
       "subject": "other",
@@ -47,6 +53,12 @@
     },
     {
       "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE.json",
+      "lomdot": 4
+    },
+    {
+      "subject": "science",
       "objective_id": "MOE.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO",
       "path": "science/MOE.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO.json",
       "lomdot": 9
@@ -54,29 +66,41 @@
   ],
   "backlog": {
     "browse": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00001",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00005",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00002",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006",
       "methodica-math-ratio-01-01",
+      "methodica-math-ratio-01-02",
+      "methodica-math-ratio-01-03",
+      "methodica-math-ratio-01-04",
+      "methodica-math-ratio-01-05",
+      "methodica-math-ratio-01-06",
       "methodica-math-ratio-02-01",
-      "methodica-science-mass-measure-02-01",
-      "methodica-science-mass-measure-02-02",
-      "methodica-science-mass-measure-02-04",
-      "methodica-science-mass-measure-02-05",
-      "methodica-science-mass-measure-02-06"
-    ]
-  },
-  "stats": {
-    "lomdot": 47,
-    "slides": 195,
-    "questions": 278,
-    "texts_generated": 62,
-    "texts_pending": 44,
-    "removed": [
+      "methodica-math-ratio-02-02",
+      "methodica-math-ratio-02-03",
+      "methodica-math-ratio-02-04",
+      "methodica-math-ratio-02-05",
+      "methodica-math-scale-01-01",
+      "methodica-math-scale-01-02",
+      "methodica-math-scale-01-03",
+      "methodica-math-scale-01-04",
+      "methodica-math-scale-01-05",
       "methodica-science-mass-measure-01-01",
       "methodica-science-mass-measure-01-02",
       "methodica-science-mass-measure-01-04",
       "methodica-science-mass-measure-01-05"
+    ]
+  },
+  "stats": {
+    "lomdot": 64,
+    "slides": 258,
+    "questions": 366,
+    "texts_generated": 459,
+    "texts_pending": 36,
+    "removed": [
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00001"
     ]
   }
 }

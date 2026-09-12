@@ -8,44 +8,36 @@
       "component_id": "methodica-math-ratio-01-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['process-thinking']",
-      "provider": "מתודיקה",
+      "provider": "",
       "kata_updated_at": "2026-09-03T11:50:02.737152Z",
-      "component_fingerprint": "48f51ba5bcc528b8",
+      "component_fingerprint": "b05ce0123b2f79af",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-09-08T01:43:22Z",
+        "probed_at": "2026-09-12T01:36:59Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 0,
         "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה לומדים מהו **יחס** ואיך הוא עוזר להבין קשר בין כמויות. נעבוד עם מצבים מחיי היומיום כדי לראות למה זה מעניין.",
+          "he": "בשיעור הזה נכיר את **היחס** ונלמד איך הוא עוזר להשוות בין כמויות, לכתוב קשרים בצורה ברורה ולבדוק מתי יחס נשמר גם כשמספרים משתנים.",
           "prompt_version": "cp-v2",
-          "source_fingerprint": "48f51ba5bcc528b8",
-          "generated_at": "2026-09-08T01:44:55Z",
+          "source_fingerprint": "b05ce0123b2f79af",
+          "generated_at": "2026-09-12T01:43:04Z",
           "model": "mini"
         }
       },
       "slides": [
         {
           "item_id": "methodica-math-ratio-01-01-001",
-          "title": "הוק + הקנייה: יחס בתמיסת בועות סבון",
+          "title": "יחס בתמיסת בועות סבון",
           "content_type": "instruction",
-          "media_format": "text",
-          "role": "teaching",
+          "media_format": "interactive-content",
+          "role": "question",
           "position": 1,
-          "fingerprint": "9eab789c917af64e",
+          "fingerprint": "3491bc325ea659dc",
           "information_to_bot": "מטרת הפריט: פתיחה מוטיבציונית (בחירת דמות מלווה) ולאחריה הקנייה של המושג 'יחס' דרך תרחיש הכנת תמיסת בועות סבון למסיבה. כיווני חשיבה: הבנה שהכפלת חלק בלבד מהמרכיבים במתכון שוברת את היחס המקורי בין הכמויות, ושיחס הוא מנה בין שני גדלים השומרת על קשר קבוע. טעויות נפוצות: הנחה שאפשר להכפיל רק מרכיב אחד ולקבל תוצאה זהה. מידע נוסף: כולל גם 3 דוגמאות נוספות ליחס בחיי היומיום (מהירות, קצב מילוי בריכה, צפיפות אוכלוסין) כהעשרה לא מוערכת.",
-          "texts": {
-            "lesson_step_intro": {
-              "he": "בואו ניכנס לתרחיש הראשון ונבדוק יחד מה אפשר ללמוד ממנו על יחס.",
-              "prompt_version": "cp-v2",
-              "source_fingerprint": "9eab789c917af64e",
-              "generated_at": "2026-09-08T01:44:55Z",
-              "model": "mini"
-            }
-          },
+          "texts": {},
           "questions": [
             {
               "question_id": "q1",
@@ -56,20 +48,27 @@
                 "ערבבנו את החומרים בכלי גדול מדי",
                 "הכנו את התמיסה יותר מחצי שעה לפני המסיבה"
               ],
-              "fingerprint": "42cbaced1861e512",
+              "fingerprint": "d1f8dadec909a3c8",
               "texts": {
                 "question_intro": {
-                  "he": "כאן חושבים על סיבה אפשרית לתוצאה ומקשרים אותה ליחס בין מרכיבים. נסו לבחור את ההסבר המתאים.",
+                  "he": "זו שאלה על הבנת **קשר בין כמויות**. קראו את האפשרויות, חשבו מה אפשר להסיק, ונסו לבחור את התשובה המתאימה.",
                   "prompt_version": "cp-v2",
-                  "source_fingerprint": "42cbaced1861e512",
-                  "generated_at": "2026-09-08T01:44:55Z",
+                  "source_fingerprint": "d1f8dadec909a3c8",
+                  "generated_at": "2026-09-12T01:43:04Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב אם כל המרכיבים בתמיסה עברו אותו שינוי, או רק חלק מהם.",
+                  "he": "שימו לב למה קרה כששינו רק חלק מהמרכיבים, ואיך זה עשוי להשפיע על **הקשר** ביניהם.",
                   "prompt_version": "cp-v2",
-                  "source_fingerprint": "42cbaced1861e512",
-                  "generated_at": "2026-09-08T01:44:55Z",
+                  "source_fingerprint": "d1f8dadec909a3c8",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הבנה של **יחס**: כשמשנים רק חלק מהמרכיבים, אפשר לשנות את הקשר ביניהם ולשבור את היחס המקורי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d1f8dadec909a3c8",
+                  "generated_at": "2026-09-12T01:43:04Z",
                   "model": "mini"
                 }
               }
@@ -78,12 +77,12 @@
         },
         {
           "item_id": "methodica-math-ratio-01-01-002",
-          "title": "הקנייה: כתיבת יחס, צמצום והרחבה (מדבקות)",
+          "title": "כתיבת יחס, צמצום והרחבה (מדבקות)",
           "content_type": "instruction",
-          "media_format": "text",
-          "role": "teaching",
+          "media_format": "interactive-content",
+          "role": "question",
           "position": 2,
-          "fingerprint": "3772f7f6d33a888a",
+          "fingerprint": "44c60ac191e386b0",
           "information_to_bot": "מטרת הפריט: הקניית האופן לכתוב יחס בכתיב מילולי ובכתיב מתמטי (שבר/יחס), וזיהוי שניתן לצמצם ולהרחיב יחס כמו שבר, דרך תרחיש מדבקות שחורות/אדומות וכחולות/ירוקות. כיווני חשיבה: שמירה על סדר הכתיבה (המספר הראשון בכתיב המילולי נכתב משמאל/במונה), זיהוי היגדים המבטאים יחס לעומת מידע שאינו יחס, והבנה שיחס בין שתי כמויות שוות הוא תמיד 1:1. טעויות נפוצות: היפוך סדר המספרים ביחס; בלבול בין 'יחס בין שני גדלים' לבין נתון בודד (מחיר, טמפרטורה). מידע נוסף: כולל גם תרגול אינטראקטיבי לא-מוערך של צמצום יחסים (לחיצה על כל יחס להצגת הפתרון).",
           "texts": {},
           "questions": [
@@ -97,8 +96,30 @@
                 "כמות המדבקות האדומות גדולה פי 2 מכמות המדבקות השחורות",
                 "כמות המדבקות השחורות היא מחצית מכמות המדבקות האדומות"
               ],
-              "fingerprint": "7f1c0944d7d86c05",
-              "texts": {}
+              "fingerprint": "076300c3fd649c58",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים **כתיבת יחס** והשוואה בין כמויות. נסו לזהות אילו משפטים מתארים קשר בין שני גדלים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "076300c3fd649c58",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהכמויות עצמן ולבדוק איך אפשר לנסח את הקשר ביניהן בצורה של **השוואה**.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "076300c3fd649c58",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת האם יודעים לזהות משפטים שמתארים **יחס** בין שתי כמויות, ולא רק מידע על כמות אחת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "076300c3fd649c58",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q2",
@@ -110,8 +131,30 @@
                 "המדבקות האדומות מהוות את רוב המדבקות",
                 "מספר המדבקות הכולל גדול פי 1.5 ממספר המדבקות האדומות"
               ],
-              "fingerprint": "36254dc0f949993c",
-              "texts": {}
+              "fingerprint": "551a22fc466bba6c",
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קשר בין **חלק** ל**שלם**. קראו את הנתונים ונסו להסיק מה אפשר לומר על המדבקות האדומות ביחס לכלל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "551a22fc466bba6c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו להשוות בין מספר המדבקות האדומות לבין **הכמות הכוללת**, ולחשוב מה זה אומר על החלק שלהן מתוך השלם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "551a22fc466bba6c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים הבנה של **חלק מתוך שלם**: איך מתארים כמות מסוימת ביחס לכלל המדבקות ומה אפשר להסיק ממנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "551a22fc466bba6c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q3",
@@ -123,24 +166,90 @@
                 "באקווריום יש 8 דגי זהב ו-4 דגים כחולים",
                 "הטמפטורה כעת היא 32°C"
               ],
-              "fingerprint": "ba6dcd6944b450f8",
-              "texts": {}
+              "fingerprint": "f543f27c045e103c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתמקדים בזיהוי **יחס** בין כמויות, ובחשיבה שמבדילה בין יחס לבין מידע אחר. נסו לבדוק כל משפט בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f543f27c045e103c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לשים לב אם מופיעות שתי כמויות שאפשר להשוות ביניהן, או רק נתון יחיד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f543f27c045e103c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של משפטים שמתארים קשר בין שתי כמויות, לעומת משפטים שנותנים מידע מסוג אחר כמו מחיר או טמפרטורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f543f27c045e103c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q4",
               "question_type": "fill-in",
               "question_text": "לפניכם 5 מדבקות. 4 מדבקות הן כחולות ואחת ירוקה. א. הקלידו את היחס בין מספר המדבקות הירוקות לבין מספר המדבקות הכחולות.",
               "answers": [],
-              "fingerprint": "5d418d17b2c159f2",
-              "texts": {}
+              "fingerprint": "2340043e44f0d23c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים כתיבה של יחס בסדר הנכון, עם חשיבה על התאמה בין הכמויות. נסו לכתוב בדיוק לפי הקשר הנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2340043e44f0d23c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לאיזו כמות מופיעה ראשונה בהקשר, ואיך זה מתבטא בכתיבה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2340043e44f0d23c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו צריך לתרגם את הקשר בין שתי הכמויות לכתיב של יחס, תוך שמירה על הסדר שבו הן הופיעו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2340043e44f0d23c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q5",
               "question_type": "numeric",
               "question_text": "ב. לפי אותו יחס (4:1): אם יש לנו 3 מדבקות ירוקות, כמה מדבקות כחולות יהיו לנו?",
               "answers": [],
-              "fingerprint": "c81baefd7546840d",
-              "texts": {}
+              "fingerprint": "a66711f1c5bba2c6",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מפעילים חשיבה על **הרחבה** של יחס ועל התאמה בין כמויות. נסו לבדוק מה קורה כשמשנים את הכמות הנתונה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a66711f1c5bba2c6",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר בקשר הקבוע שבין שתי הכמויות ולבדוק איך הוא נשמר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a66711f1c5bba2c6",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת שימוש ביחס כדי למצוא כמות מתאימה, תוך שמירה על אותו קשר בין שתי הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a66711f1c5bba2c6",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q6",
@@ -149,54 +258,61 @@
               "answers": [
                 "{'source': ['2 מדבקות ירוקות ו-4 מדבקות כחולות', '6 מדבקות ירוקות ו-24 מדבקות כחולות', '20 מדבקות ירוקות ו-80 מדבקות כחולות', '3 מדבקות ירוקות ו-7 מדבקות כחולות'], 'target': ['כן', 'לא']}"
               ],
-              "fingerprint": "4f03dc3e93dfcd01",
-              "texts": {}
+              "fingerprint": "38ff7524cfe0cd92",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים אם מצבים שונים מתאימים ליחס נתון, אז כדאי להשוות כל מצב לקשר שבבסיס השאלה. נסו אחד-אחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "38ff7524cfe0cd92",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו בכל מצב אם הקשר בין הכמויות שומר על אותו יחס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "38ff7524cfe0cd92",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו צריך להחליט לגבי כל מצב אם הוא מתאים ליחס הנתון, לפי הקשר בין שתי הכמויות בכל דוגמה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "38ff7524cfe0cd92",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
         {
           "item_id": "methodica-math-ratio-01-01-003",
-          "title": "תרגול מונחה: יחס אריחים בחנות",
+          "title": "נפתור יחד: יחס אריחים בחנות",
           "content_type": "solved-exercise",
           "media_format": "text",
           "role": "teaching",
           "position": 3,
-          "fingerprint": "7d3c724491a4817c",
+          "fingerprint": "acbb9f1c50f3c649",
           "information_to_bot": "מטרת הפריט: פתרון שלב-שלב יחד עם הדמות של תרגיל יחס ראשון — יחס בין אריחים מקושטים לחלקים ברצועת אריחים בחנות, כולל צמצום. כיווני חשיבה: זיהוי סדר הכתיבה של היחס לפי סדר ההופעה בכתיב המילולי, ובדיקה האם ניתן לצמצם את היחס שהתקבל. טעויות נפוצות: היפוך סדר המספרים ביחס. מידע נוסף: מהלך מודרך לחלוטין (אין החלטה עצמאית של הלומד על הפתרון הסופי, רק אישור צעדי ביניים).",
-          "texts": {},
-          "questions": [
-            {
-              "question_id": "q1",
-              "question_type": "choice",
-              "question_text": "מספר האריחים המקושטים כתוב ראשון בכתיב המילולי. איפה יהיה ממוקם אותו מספר בכתיב המתמטי של היחס?",
-              "answers": [
-                "מימין",
-                "משמאל"
-              ],
-              "fingerprint": "4c329c19563a55cf",
-              "texts": {}
-            },
-            {
-              "question_id": "q2",
-              "question_type": "true-false",
-              "question_text": "היחס בין מספר האריחים המקושטים (3) למספר האריחים החלקים (9) הוא 9:3. האם ניתן לצמצם את היחס?",
-              "answers": [
-                "כן",
-                "לא"
-              ],
-              "fingerprint": "40dc6360e8efa704",
-              "texts": {}
+          "texts": {
+            "lesson_step_intro": {
+              "he": "בואו נתחיל במסך שיעזור לסדר את החשיבה צעד אחר צעד.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "acbb9f1c50f3c649",
+              "generated_at": "2026-09-12T01:43:04Z",
+              "model": "mini"
             }
-          ]
+          },
+          "questions": []
         },
         {
           "item_id": "methodica-math-ratio-01-01-004",
-          "title": "חימום 1: יהלומים במשחק מחשב",
+          "title": "שאלת חימום: יהלומים במשחק מחשב",
           "content_type": "practice",
           "media_format": "interactive-content",
           "role": "question",
           "position": 4,
-          "fingerprint": "5f3a440c069c883e",
+          "fingerprint": "838f231bde000a67",
           "information_to_bot": "מטרת הפריט: תרגיל חימום ראשון להטמעת המושג יחס וסדר כתיבתו, דרך תרחיש איסוף יהלומים שחורים ולבנים במשחק מחשב. כיווני חשיבה: קביעת סדר המספרים ביחס לפי סדר ההופעה בכתיב המילולי, וחישוב פי-כמה גדולה כמות אחת מהשנייה מתוך היחס המצומצם. טעויות נפוצות: כתיבת היחס בסדר ההפוך (25:100 במקום 4:1 המצומצם). מידע נוסף: אין.",
           "texts": {},
           "questions": [
@@ -210,8 +326,1179 @@
                 "היחס בין מספר היהלומים השחורים למספר היהלומים הלבנים הוא 4 : 1",
                 "מספר היהלומים השחורים גדול פי 4 ממספר היהלומים הלבנים"
               ],
-              "fingerprint": "9c8cb20227a3fd66",
-              "texts": {}
+              "fingerprint": "f7eb9cb41a5b541c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתמקדים ב**יחס** ובהשוואה בין כמויות. נסו לבחון את ההיגדים בעין חשבונית.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f7eb9cb41a5b541c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהסדר שבו הכמויות מופיעות בשאלה, ואז לבדוק איך אפשר לכתוב את הקשר ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f7eb9cb41a5b541c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלות כאלה בודקים איך לכתוב את היחס בין שתי כמויות, ואפשר גם לבדוק אם הוא מצטמצם. חשוב לשים לב לסדר שבו הכמויות מופיעות, ולחשוב מה הוא אומר על ההשוואה ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f7eb9cb41a5b541c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "methodica-math-ratio-01-02",
+      "title": "זמן תרגול",
+      "cognitive_level": "['process-thinking']",
+      "provider": "",
+      "kata_updated_at": "2026-09-03T11:50:06.283512Z",
+      "component_fingerprint": "de06a116375d2f6b",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים **יחס** דרך מצבים מוכרים ומגוונים. כך אפשר לראות איך אותו רעיון מופיע בצורות שונות.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "de06a116375d2f6b",
+          "generated_at": "2026-09-12T01:43:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-01-02-001",
+          "title": "מגשי פיצה",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "8308cfbb1f681e62",
+          "information_to_bot": "מטרת הפריט: תרגול זיהוי וכתיבת יחס בין מנות זיתים למנות פטריות בשלושה מגשי פיצה. כיווני חשיבה: ספירת מנות מכל סוג בנפרד עבור כל פיצה, וכתיבת היחס לפי סדר ההופעה בכתיב המילולי. טעויות נפוצות: היפוך סדר המספרים ביחס; ערבוב בין המגשים. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "matching",
+              "question_text": "לפניכם 3 מגשי פיצות עם תוספות של זיתים ופטריות, מחולקות למנות בגודל שווה. התאימו לכל פיצה את היחס בין מספר מנות הפטריות למספר מנות הזיתים בה.",
+              "answers": [
+                "{'source': ['פיצה א', 'פיצה ב', 'פיצה ג'], 'target': ['3 : 1', '5 : 3', '1 : 3', 'מספר מנות הפיצה עם הפטריות גדול פי 3 ממספר מנות הפיצה עם הזיתים']}"
+              ],
+              "fingerprint": "1f9a9cf653e0af8c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים זיהוי של **יחס** בין כמויות בכמה מצבים. נסו להשוות, לספור ולבדוק מה מתאים לכל פיצה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1f9a9cf653e0af8c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתמקד בכל פיצה בנפרד ולבדוק את מנות כל תוספת לפני שמשווים ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1f9a9cf653e0af8c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה כזאת צריך לעקוב אחרי כל פיצה בנפרד, לספור את המנות מכל סוג, ואז לכתוב את היחס לפי סדר ההופעה. כך נמנעים מבלבול בין המגשים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1f9a9cf653e0af8c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-02-002",
+          "title": "מארזי כדורי שוקולד",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "b7d65af06ca354b2",
+          "information_to_bot": "מטרת הפריט: תרגול שמירה על יחס קבוע (4:3 בין כדורי שוקולד חלב למריר) בעת שינוי גודל מארז ומחירו. כיווני חשיבה: זיהוי מארזים ששומרים על היחס המקורי, וחישוב מחיר מארז לפי גורם ההגדלה מהיחס הבסיסי. טעויות נפוצות: בחירת מארז שבו שני הסוגים גדלו במספר שונה של יחידות (לא באותו גורם הכפלה). מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "מחיר 3 כדורי שוקולד חלב שלמים ו-4 כדורי שוקולד מריר שלמים הוא 20 ש\"ח. א. אלו מארזים נוספים ניתן לחשב בהתאם למחיר למעלה? (סמנו את כל התשובות הנכונות)",
+              "answers": [
+                "6 כדורי שוקולד חלב ו-8 כדורי שוקולד מריר",
+                "4.5 כדורי שוקולד חלב ו-6 כדורי שוקולד מריר",
+                "4 כדורי שוקולד חלב ו-5 כדורי שוקולד מריר",
+                "8 כדורי שוקולד חלב ו-6 כדורי שוקולד מריר"
+              ],
+              "fingerprint": "0666cd080eb9fa78",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים איך **יחס** נשמר כשמארזים משתנים. נסו לחשוב על התאמה בין כמויות ועל ההשוואה ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0666cd080eb9fa78",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק אילו כמויות גדלות יחד, בלי לשנות את הקשר ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0666cd080eb9fa78",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מחפשים מארזים ששומרים על אותו יחס בין שני סוגי כדורים, ואז בודקים איך המחיר מתאים לשינוי בגודל המארז. חשוב לשים לב שהשינוי יהיה עקבי בשתי הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0666cd080eb9fa78",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "fill-in",
+              "question_text": "ב. בכל אחד מהמארזים הבאים היחס בין מספר כדורי שוקולד חלב למספר כדורי שוקולד מריר הוא 4:3. השלימו את מחירי המארזים.",
+              "answers": [],
+              "fingerprint": "3b98a9900835b810",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן ממשיכים עם אותו נושא, ובוחנים התאמה של מארזים לפי **יחס** קבוע. נסו לחשב ולבדוק את ההשלמה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3b98a9900835b810",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אם אפשר לעבור מהמארז הבסיסי למארז חדש על ידי הכפלה באותו גורם של שני סוגי הכדורים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3b98a9900835b810",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לשמור על אותו יחס בין שני סוגי הכדורים, ואז לחשב את המחיר לפי אותו גורם הגדלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3b98a9900835b810",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-02-003",
+          "title": "סטנדרטי 3: זרי פרחים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "65a9d164f8e08b37",
+          "information_to_bot": "מטרת הפריט: תרגול שמירה על יחס קבוע (9:5 בין פרחים לבנים לוורודים) בעת הגדלת זר לפי מחיר נתון, כולל זיהוי מקרה שבו לא ניתן לשמור על היחס עם מספר שלם של פרחים. כיווני חשיבה: חישוב גורם ההגדלה ממחיר הזר החדש למחיר המקורי, והכפלת מספרי הפרחים באותו גורם. טעויות נפוצות: הזנת מספר פרחים שאינו שלם כשגורם ההגדלה אינו מספר שלם. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "fill-in",
+              "question_text": "זר בסיסי כולל 5 פרחים ורודים ו-9 פרחים לבנים ומחירו 28 ש\"ח. א. עצבו זר שמחירו 56 ש\"ח, בשמירה על היחס — מספר הפרחים הורודים ומספר הפרחים הלבנים.",
+              "answers": [],
+              "fingerprint": "21a27fbe5933aa85",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להסתכל על הקשר בין המחיר לבין מספרי הפרחים, ולבדוק איך הוא משפיע על כמות הפרחים בכל זר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21a27fbe5933aa85",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו למצוא את גורם ההגדלה מהמחיר המקורי למחיר החדש, ואז להפעיל אותו על שני סוגי הפרחים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21a27fbe5933aa85",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת שמירה על אותו יחס בזמן שינוי המחיר, ובמיוחד אם אפשר להגיע למספרים שלמים של פרחים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21a27fbe5933aa85",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "fill-in",
+              "question_text": "ב. עצבו זר שמחירו 84 ש\"ח.\n מספר הפרחים הלבנים ומספר הפרחים הורודים",
+              "answers": [],
+              "fingerprint": "bba2820b5344640f",
+              "texts": {
+                "question_intro": {
+                  "he": "שימו לב לקשר בין המחיר החדש לבין הזר הבסיסי, ונסו לחשב את השינוי במספרי הפרחים בהתאם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bba2820b5344640f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות את המחיר החדש למחיר הבסיסי, ואז לבדוק איך אותו שינוי משפיע על כל צבע בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bba2820b5344640f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המטרה היא לשמור על היחס הקבוע בין הפרחים, ולראות אם השינוי במחיר מאפשר מספרים שלמים של פרחים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bba2820b5344640f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q5",
+              "question_type": "choice",
+              "question_text": "ג. המעצבת קיבלה הזמנה לעיצוב זר לפי אותו יחס (9:5), כך שמחירו יהיה 70 ש\"ח. האם ניתן לעצב זר כזה?",
+              "answers": [
+                "כן",
+                "לא",
+                "אי אפשר לדעת"
+              ],
+              "fingerprint": "02f391df00348bf0",
+              "texts": {
+                "hint_l1": {
+                  "he": "כדאי לבדוק אם אפשר להגדיל את הזר הבסיסי כך שהיחס יישמר בלי לקבל חלקי פרחים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "02f391df00348bf0",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם אפשר לשמור על אותו יחס בין הפרחים גם כשמחיר הזר משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "02f391df00348bf0",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "methodica-math-ratio-01-03",
+      "title": "זמן תרגול #2",
+      "cognitive_level": "['algorithmic-thinking']",
+      "provider": "",
+      "kata_updated_at": "2026-09-03T11:50:08.036960Z",
+      "component_fingerprint": "cc6c1ce663ec3140",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים עבודה עם יחס: מצמצמים, מרחיבים ובודקים איך יחס נשמר במצבים שונים. תראו איך אותו רעיון מופיע גם בזוגות גרביים, מארזי ממתקים, מתכון לפנקייקים והזמנות קינוחים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "cc6c1ce663ec3140",
+          "generated_at": "2026-09-12T01:43:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-01-03-001",
+          "title": "צמצום יחסים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "57a60c9d91a5e89b",
+          "information_to_bot": "מטרת הפריט: תרגול בסיסי של צמצום 5 יחסים נתונים לצורתם המצומצמת ביותר. כיווני חשיבה: מציאת המספר הגדול ביותר שמחלק את שני איברי היחס. טעויות נפוצות: צמצום חלקי (לא במספר הגדול ביותר האפשרי). מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "other",
+              "question_text": "כתבו את היחס המצומצם.",
+              "answers": [
+                "תיבה א, 1:2, תיבה ב 3:4, תיבה ג 5:3 תיבה ד 2:5 תיבה ה 5:16"
+              ],
+              "fingerprint": "5f29b189f2d63749",
+              "texts": {
+                "question_intro": {
+                  "he": "נתמקד בצמצום יחסים ונחפש איך משווים בין שני האיברים. נסו לזהות את דרך החשיבה המתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5f29b189f2d63749",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לשני איברי היחס יחד, וחפשו מספר שמחלק את שניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5f29b189f2d63749",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בצמצום יחסים מחפשים את אותו מספר שמחלק את שני האיברים, כדי לכתוב את היחס בצורה המצומצמת ביותר. חשוב להיזהר מצמצום חלקי בלבד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5f29b189f2d63749",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-03-002",
+          "title": "הרחבת יחסים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "702d92c789e0a349",
+          "information_to_bot": "מטרת הפריט: תרגול בסיסי של הרחבת 4 יחסים נתונים (2:3, 1:7, 3:5, 1:4) כך שישלימו מספר נתון בצד השני. כיווני חשיבה: מציאת גורם ההכפלה המשותף משני איברי היחס לפי המספר הנתון, והכפלת האיבר החסר באותו גורם. טעויות נפוצות: הכפלת איבר אחד בלבד ולא שניהם באותו גורם. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "numeric",
+              "question_text": "הרחיבו את היחס 2:3 כך שישלים את היחס __ : 18.",
+              "answers": [],
+              "fingerprint": "5e8235b5f2900676",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים על הרחבת יחסים, ולכן צריך לחשוב על אותו גורם לשני האיברים. נסו למצוא את דרך ההתאמה המתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e8235b5f2900676",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק באיזה גורם מכפילים את אחד האיברים, ואז להחיל אותו על האיבר השני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e8235b5f2900676",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בהרחבת יחסים מחפשים גורם הכפלה משותף לשני האיברים, כדי להשלים את המספר הנתון בצד השני. חשוב להכפיל את שני האיברים באותו גורם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e8235b5f2900676",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "numeric",
+              "question_text": "הרחיבו את היחס 1:7 כך שישלים את היחס __ : 21.",
+              "answers": [],
+              "fingerprint": "fbfd825c25137d64",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן ממשיכים עם הרחבת יחסים, בעזרת התאמה בין שני האיברים. נסו לחשב את הגורם המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fbfd825c25137d64",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין המספר הנתון לבין אחד מאיברי היחס, ואז לבדוק מהו גורם ההכפלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fbfd825c25137d64",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בהרחבת יחסים מחפשים את אותו גורם שמכפיל את שני האיברים, כך שהיחס יתאים למספר הנתון. צריך להקפיד שלא לשנות רק איבר אחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fbfd825c25137d64",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q3",
+              "question_type": "numeric",
+              "question_text": "הרחיבו את היחס 3:5 כך שישלים את היחס 12 : __.",
+              "answers": [],
+              "fingerprint": "470609386c44b287",
+              "texts": {
+                "question_intro": {
+                  "he": "עוד תרגול בהרחבת יחסים, עם דגש על התאמה בין שני הצדדים. נסו לאתר את הקשר בין האיברים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "470609386c44b287",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את אותו גורם שמקשר בין הערך הנתון לבין אחד מאיברי היחס, ואז הפעילו אותו גם על האיבר השני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "470609386c44b287",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בהרחבת יחסים משתמשים בגורם הכפלה משותף לשני האיברים, כדי להשלים את החסר. חשוב לשמור על אותו גורם בשני הצדדים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "470609386c44b287",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q4",
+              "question_type": "numeric",
+              "question_text": "הרחיבו את היחס 1:4 כך שישלים את היחס 20 : __.",
+              "answers": [],
+              "fingerprint": "a84f7427b0446137",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתמקד בשמירה על **יחס** בין שני המספרים ולבדוק איך משלימים את החסר. נסו לגשת לזה דרך גורם ההכפלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a84f7427b0446137",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את אותו גורם שמקשר בין שני האיברים ביחס, ואז השתמשו בו גם כדי למצוא את האיבר החסר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a84f7427b0446137",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו בודקים איך **מרחיבים יחס** כך שאחד המספרים יהיה נתון. צריך לחשוב על אותו גורם הכפלה לשני האיברים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a84f7427b0446137",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-03-003",
+          "title": "זוגות גרביים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "e1d38c7f587e3fae",
+          "information_to_bot": "מטרת הפריט: תרגול בסיסי של קביעת סדר כתיבת יחס בין שתי כמויות (4 זוגות גרביים שחורים, 3 זוגות לבנים). כיווני חשיבה: המספר המוזכר ראשון בכתיב המילולי נכתב משמאל בכתיב המתמטי. טעויות נפוצות: היפוך סדר המספרים. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "עמית קנה חבילת גרביים שבה 4 זוגות שחורים ו-3 זוגות לבנים. מה מהבאים נכון לגבי היחס בין מספר זוגות הגרביים השחורים למספר זוגות הגרביים הלבנים?",
+              "answers": [
+                "היחס בין מספר זוגות הגרביים השחורים למספר זוגות הגרביים הלבנים הוא 3 : 4",
+                "היחס בין מספר זוגות הגרביים השחורים למספר זוגות הגרביים הלבנים הוא 4 : 3",
+                "היחס בין מספר זוגות הגרביים השחורים למספר זוגות הגרביים הלבנים הוא 1 : 1"
+              ],
+              "fingerprint": "432eec8aab7bf95f",
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על **יחס** ועל סדר הכתיבה שלו. נסו להשוות בין שני המספרים כפי שהם מופיעים במידע הנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "432eec8aab7bf95f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לאיזה מספר מופיע ראשון בתיאור, ואיך זה מתורגם לכתיבה של יחס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "432eec8aab7bf95f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לזהות את שני הגדלים ולכתוב את היחס ביניהם לפי הסדר המתאים. זו בדיקה של הבנה איך קוראים ומתרגמים יחס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "432eec8aab7bf95f",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-03-004",
+          "title": "מארזי ממתקים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 4,
+          "fingerprint": "f577b589b0d6f59d",
+          "information_to_bot": "מטרת הפריט: תרגול בסיסי של שמירה על יחס בין חטיפים לסוכריות (במארז מקורי בן 2 חטיפים ו-4 סוכריות במחיר 12 ש\"ח) בעת שינוי מחיר המארז, הן בהקטנה והן בהגדלה. כיווני חשיבה: חישוב גורם השינוי במחיר ביחס למארז המקורי, והחלת אותו גורם על כמות החטיפים והסוכריות. טעויות נפוצות: שינוי כמות אחד המרכיבים בלבד. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "numeric",
+              "question_text": "במארז ממתקים שמחירו 12 ש\"ח יש 2 חטיפי שוקולד ו-4 סוכריות. א. בנו מארז שמחירו 6 ש\"ח, שבו נשמר היחס — מספר החטיפים.",
+              "answers": [],
+              "fingerprint": "a7d332254467e7ee",
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על **שמירה על יחס** כשמשנים מחיר. נסו לחשוב איך שינוי אחד משפיע על כל הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a7d332254467e7ee",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות את המחיר החדש למחיר המקורי, ואז לבדוק מה קורה לשאר הכמויות באותו כיוון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a7d332254467e7ee",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הבנה של יחס בין חלקים במארז, ואיך שומרים עליו כשמחיר המארז משתנה. חשוב להתייחס לכל המרכיבים יחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a7d332254467e7ee",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "numeric",
+              "question_text": "א. בנו מארז שמחירו 6 ש\"ח, שבו נשמר היחס — מספר הסוכריות.",
+              "answers": [],
+              "fingerprint": "10558599d8bda6d4",
+              "texts": {
+                "question_intro": {
+                  "he": "זו אותה חשיבה של **שמירה על יחס** במארז, רק מכיוון אחר. נסו לבדוק איך שינוי המחיר מתקשר לשאר הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "10558599d8bda6d4",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על ההבדל בין המחיר הנתון למחיר המקורי, ואז בדקו איך להתאים את שאר המארז.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "10558599d8bda6d4",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך שומרים על אותו יחס במארז גם כשמחירו משתנה. הרעיון הוא להתאים את הכמויות לפי השינוי במחיר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "10558599d8bda6d4",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q3",
+              "question_type": "numeric",
+              "question_text": "ב. בנו מארז שמחירו 24 ש\"ח, שבו נשמר היחס — מספר החטיפים.",
+              "answers": [],
+              "fingerprint": "134c9c391a15f28d",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים יחס ושמירה על פרופורציה כשמשנים גודל של מארז. נסו לחשוב איך שינוי המחיר משפיע על הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "134c9c391a15f28d",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהשוואה למארז המקורי ולבדוק איך משתנה המחיר ביחס אליו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "134c9c391a15f28d",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת שמירה על **יחס** כשמחיר המארז משתנה. צריך להתייחס לשינוי ביחס למארז המקורי ולהחיל אותו גם על הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "134c9c391a15f28d",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q4",
+              "question_type": "numeric",
+              "question_text": "ב. בנו מארז שמחירו 24 ש\"ח, שבו נשמר היחס — מספר הסוכריות.",
+              "answers": [],
+              "fingerprint": "61f29b72d93d1792",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים יחס ושמירה על פרופורציה כשמשנים גודל של מארז. נסו לחשוב איך שינוי המחיר משפיע על הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61f29b72d93d1792",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהשוואה למארז המקורי ולבדוק איך משתנה המחיר ביחס אליו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61f29b72d93d1792",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת שמירה על **יחס** כשמחיר המארז משתנה. צריך להתייחס לשינוי ביחס למארז המקורי ולהחיל אותו גם על הכמויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61f29b72d93d1792",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-03-005",
+          "title": "מתכון פנקייקים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 5,
+          "fingerprint": "1534c8ad0c131cff",
+          "information_to_bot": "מטרת הפריט: תרגול ברמת קושי מעט גבוהה יותר של יחס והגדלת מתכון פנקייקים לפי גורם קנה מידה. כיווני חשיבה: המרת יחידות מידה זהות לפני בניית יחס (כוס לכפות), וזיהוי גורם ההגדלה של המתכון (פי 3) מתוך יחס בין כמות חדשה לישנה של מרכיב אחד, ואז החלת אותו גורם על כל שאר המרכיבים. טעויות נפוצות: בניית יחס בין יחידות מידה שונות בלי המרה; הגדלת חלק מהמרכיבים בלבד. מידע נוסף: המתכון המקורי (ל-10 פנקייקים) כולל 2 ביצים, כוס חלב 1, 4 כפות שמן, 1/3 כוס סוכר, כוס קמח 1, 2 כפיות אבקת אפייה, 1/4 כפית מלח — מוצג כטבלה גרפית עם סמלי מרכיבים.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "שחר מצאה מתכון ל-10 פנקייקים. כוס אחת של חלב מכילה 16 כפות חלב, ובמתכון יש 4 כפות שמן. א. מהו היחס המצומצם בין כמות השמן לכמות החלב?",
+              "answers": [
+                "2 : 1",
+                "4 : 1",
+                "8 : 1",
+                "16 : 1"
+              ],
+              "fingerprint": "633cfb1fe02275a2",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם יחסים בין יחידות מידה שונות ועם הגדלת מתכון לפי גורם קנה מידה. נסו לבחור דרך חשיבה מסודרת לפני שמתחילים לחשב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "633cfb1fe02275a2",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין כמויות באותן יחידות מידה, ורק אחר כך לבדוק את היחס בין המרכיבים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "633cfb1fe02275a2",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת עבודה עם **יחס** בין מרכיבים במתכון, כולל המרה בין יחידות מידה כשצריך. אחר כך אפשר להשתמש בגורם ההגדלה כדי לשמור על אותו יחס בין כל המרכיבים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "633cfb1fe02275a2",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "other",
+              "question_text": "למחרת שחר אירחה חברות ורצתה להגדיל את כמות הפנקייקים ל-30, והשתמשה ב-3 כוסות קמח (פי 3 מהמתכון המקורי). עזרו לה להשלים את שאר הכמויות במתכון המוגדל, בשמירה על אותו יחס בין המרכיבים:",
+              "answers": [
+                "ביצים 6, כוס חלב, 3, כפות שמן, 12 כוס סוכר, 1, כוס קמח, 3, כפיות אבקת אפיה, 6, כפיות מלח 3."
+              ],
+              "fingerprint": "834cdc203418ebdf",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם יחסים בין יחידות מידה שונות ועם הגדלת מתכון לפי גורם קנה מידה. נסו לבחור דרך חשיבה מסודרת לפני שמתחילים לחשב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "834cdc203418ebdf",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין כמויות באותן יחידות מידה, ורק אחר כך לבדוק את היחס בין המרכיבים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "834cdc203418ebdf",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת עבודה עם **יחס** בין מרכיבים במתכון, כולל המרה בין יחידות מידה כשצריך. אחר כך אפשר להשתמש בגורם ההגדלה כדי לשמור על אותו יחס בין כל המרכיבים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "834cdc203418ebdf",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-03-006",
+          "title": "הזמנות קינוחים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 6,
+          "fingerprint": "7c3fc2d498a59485",
+          "information_to_bot": "מטרת הפריט: תרגול ברמת קושי מעט גבוהה יותר של בניית וצמצום יחסים מתוך טבלת נתונים (הזמנות קינוחים למסיבת סיום כיתה: מוס שוקולד 10, עוגת גבינה 5, אבטיח 13, גלידת וניל 17). כיווני חשיבה: קריאת ההיגד וזיהוי איזה קינוח מוזכר ראשון כדי לקבוע סדר כתיבת היחס, והשוואת יחסים דרך חישוב 'פי כמה גדול'. טעויות נפוצות: היפוך סדר הכתיבה של היחס ביחס לסדר ההיגד. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "הטבלה מציגה את מספר ההזמנות: מוס שוקולד 10, עוגת גבינה 5, אבטיח 13, גלידת וניל 17. סמנו את כל ההיגדים הנכונים.",
+              "answers": [
+                "היחס בין מספר עוגות הגבינה למספר עוגות מוס השוקולד הוא 2 : 1",
+                "היחס בין מספר גלידות הוניל למספר מנות האבטיח הוא 17 : 13",
+                "היחס בין מספר גלידות הוניל למספר עוגות מוס השוקולד הוא 17 : 10",
+                "היחס בין מספר עוגות הגבינה למספר גלידות הוניל הוא 17 : 5",
+                "מספר גלידות הוניל גדול פי 1.7 ממספר עוגות מוס השוקולד"
+              ],
+              "fingerprint": "5787bf16ab6a5645",
+              "texts": {
+                "question_intro": {
+                  "he": "נסו לבחון את היחסים בין הכמויות בטבלה ולבדוק אילו היגדים מתאימים. שימו לב לסדר שבו משווים בין שני הערכים בכל היגד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5787bf16ab6a5645",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות כל זוג לפי הסדר שבו הוא מופיע, ולבדוק אם אפשר לצמצם את היחס או לחשב פי כמה אחד גדול מהשני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5787bf16ab6a5645",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "במשימות כאלה חשוב לקרוא את הטבלה, להשוות בין שני נתונים בכל פעם, ולשים לב לסדר הכתיבה של **היחס**. לפעמים צריך גם לבדוק אם אפשר לצמצם או לחשב פי כמה אחד גדול מהשני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5787bf16ab6a5645",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "methodica-math-ratio-01-04",
+      "title": "משימה בכיתה",
+      "cognitive_level": "['process-thinking']",
+      "provider": "",
+      "kata_updated_at": "2026-09-03T11:50:09.785529Z",
+      "component_fingerprint": "26403f12e32204fb",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה בודקים איך **יחס** מופיע סביבנו, דרך השוואה בין כמויות במרחב האמיתי ובניית יחסים מצומצמים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "26403f12e32204fb",
+          "generated_at": "2026-09-12T01:43:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-01-04-001",
+          "title": "משימת כיתה - מציאת יחסים בסביבה",
+          "content_type": "project-or-inquiry-task",
+          "media_format": "text",
+          "role": "teaching",
+          "position": 1,
+          "fingerprint": "a13f3a9562de8761",
+          "information_to_bot": "מטרת הפריט: העברת מושג היחס למרחב מציאותי — הלומדים מתבקשים לבחור בעצמם (בזוגות או לבד) שלושה זוגות עצמים בסביבתם הפיזית (בכיתה או בבית הספר) ולכתוב את היחס המצומצם בין הכמויות בכל זוג. כיווני חשיבה: זיהוי עצמים הניתנים להשוואה כמותית, בניית יחס ביניהם, וצמצומו במידת האפשר. טעויות נפוצות: בחירת שני עצמים שאינם ניתנים להשוואה משמעותית כיחס. מידע נוסף: המשימה מתבצעת ללא מחשב, במרחב הכיתה או בית הספר, בעזרת סרגל/מחשבון/כלי כתיבה; הלומד מקליד בסיום את שלושת היחסים שמצא, אך זו הזנה פיזית שאינה נאספת כתשובה מוערכת.",
+          "texts": {
+            "lesson_step_intro": {
+              "he": "צאו להתבונן סביב ונסו לגלות איך אפשר לתאר כמויות בעזרת יחס.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "a13f3a9562de8761",
+              "generated_at": "2026-09-12T01:43:04Z",
+              "model": "mini"
+            }
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "component_id": "methodica-math-ratio-01-05",
+      "title": "בואו נאתגר את עצמנו",
+      "cognitive_level": "['interpretation-and-reasoning']",
+      "provider": "",
+      "kata_updated_at": "2026-09-03T11:50:10.377935Z",
+      "component_fingerprint": "9c651bdb2b0ac53e",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים **יחס** בדרכים מאתגרות יותר, תוך שימוש בהשוואה, חישוב ובדיקת קשרים בין כמויות.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "9c651bdb2b0ac53e",
+          "generated_at": "2026-09-12T01:43:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-01-05-001",
+          "title": "מתקדם 1: יחס בין ריבועים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "23c7c9799fb7de9e",
+          "information_to_bot": "מטרת הפריט: ניתוח כיצד יחס אורכי צלעות בין שני ריבועים (4 ס\"מ ו-8 ס\"מ) משפיע על יחס ההיקפים והשטחים ביניהם. כיווני חשיבה: חישוב שטח (הכפלת אורך הצלע בעצמה) והיקף (הכפלת אורך הצלע ב-4), ובניית יחס בין הערכים המחושבים לכל ריבוע. טעויות נפוצות: הנחה שיחס השטחים שווה ליחס אורכי הצלעות (בלי להעלות בריבוע). מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "אורך הצלע של ריבוע א' הוא 4 ס\"מ, ואורך הצלע של ריבוע ב' הוא 8 ס\"מ. סמנו את כל ההיגדים הנכונים.",
+              "answers": [
+                "היחס בין אורך צלע ריבוע א' לאורך צלע ריבוע ב' הוא 1 : 2",
+                "היחס בין שטח ריבוע א' לשטח ריבוע ב' הוא 4 : 1",
+                "היחס בין היקף ריבוע א' להיקף ריבוע ב' הוא 2 : 1",
+                "אם נגדיל את אורך הצלע של כל ריבוע פי 2, היחס בין היקף ריבוע א' להיקף ריבוע ב' יהיה 4 : 1"
+              ],
+              "fingerprint": "5577b4123d93f510",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך להשוות בין צלעות, היקפים ושטחים של שני ריבועים, ולבחון איך שינוי באורך הצלע משפיע על הקשרים ביניהם. נסו לחשוב על כל גודל בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5577b4123d93f510",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לחשב קודם כל גודל בנפרד לכל ריבוע, ואז להשוות בין התוצאות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5577b4123d93f510",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לפתור שאלה על ריבועים, בודקים כל גודל לפי הכלל המתאים לו: צלע, היקף או שטח. אחר כך משווים בין הריבועים ובוחנים אם היחס משתנה כשאורך הצלע משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5577b4123d93f510",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-05-002",
+          "title": "משולש שווה-שוקיים",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 2,
+          "fingerprint": "73ac01a01dc65d75",
+          "information_to_bot": "מטרת הפריט: חישוב יחס בין סכום אורכי השוקיים לאורך הבסיס במשולש שווה-שוקיים (שוק 6 ס\"מ, בסיס 4 ס\"מ). כיווני חשיבה: חישוב סכום שתי השוקיים לפני בניית היחס, וצמצום היחס המתקבל. טעויות נפוצות: שימוש באורך שוק בודד במקום בסכום שתי השוקיים. מידע נוסף: אין.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "נתון משולש שווה-שוקיים. אורך השוק 6 ס\"מ, אורך הבסיס 4 ס\"מ. מה היחס המצומצם בין סכום האורכים של שתי השוקיים לבין אורך הבסיס במשולש?",
+              "answers": [
+                "2 : 3",
+                "3 : 1",
+                "1 : 4",
+                "1 : 3"
+              ],
+              "fingerprint": "e6b04c83c66bbe5c",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עוסקים ביחסים בתוך משולש שווה-שוקיים, וצריך לחשב לפני שמשווים. נסו לבדוק מה נכון כשמחברים גדלים זהים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e6b04c83c66bbe5c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל בחיבור של שתי השוקיים, ורק אחר כך לבנות את היחס מול הבסיס.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e6b04c83c66bbe5c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלות על משולש שווה-שוקיים חשוב לא להסתכל רק על שוק אחת, אלא על הסכום של שתיהן. אחרי החיבור בודקים את היחס ומצמצמים אותו אם אפשר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e6b04c83c66bbe5c",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "item_id": "methodica-math-ratio-01-05-003",
+          "title": "כמות שתייה מומלצת",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 3,
+          "fingerprint": "41b01fedd234ee52",
+          "information_to_bot": "מטרת הפריט: ניתוח והשוואת יחסים מתוך טבלת נתונים (כמות שתייה יומית מומלצת לבנים ולבנות לפי קבוצות גיל). כיווני חשיבה: בחינת כל היגד מול הנתונים המתאימים בטבלה, וזיהוי מתי היחס בין כמויות שוות הוא 1:1. טעויות נפוצות: השוואת קבוצות גיל לא מתאימות. מידע נוסף: נתוני הטבלה — בנים: 0.9/1.2/1.8/2.6/2.8 ליטר; בנות: 0.9/1.2/1.6/1.8/2.0 ליטר, לפי קבוצות הגיל 1-3/4-8/9-13/14-18/מעל 18.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "choice",
+              "question_text": "בטבלה מוצגת כמות השתייה המומלצת ביממה לבנים ולבנות, לפי קבוצת גיל. סמנו את כל ההיגדים הנכונים.",
+              "answers": [
+                "כמות השתייה המומלצת לבנים מעל גיל 18 גדולה פי 1.4 מכמות השתייה המומלצת לבנות מעל גיל 18",
+                "היחס בין כמות השתייה המומלצת לבנים לבין כמות השתייה המומלצת לבנות בגילאי 1-3 הוא 1 : 1",
+                "היחס בין כמות השתייה המומלצת לבנים מעל גיל 18 לבין כמות השתייה המומלצת לבנים בגיל 4-8 הוא 1 : 4"
+              ],
+              "fingerprint": "34a491c1c635c5e3",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים השוואה בין נתונים בטבלה. נסו להתבונן בכל היגד ולבדוק אותו מול הערכים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "34a491c1c635c5e3",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות כל היגד רק לנתונים של אותה קבוצת גיל ואותו מין.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "34a491c1c635c5e3",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו משווים בין נתונים מתוך טבלה ובודקים יחסים בין כמויות. חשוב להתאים כל היגד לשורה ולערך הנכונים, ולשים לב מתי מתקבל יחס של **1:1**.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "34a491c1c635c5e3",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "component_id": "methodica-math-ratio-01-06",
+      "title": "שאלת שיא",
+      "cognitive_level": "['interpretation-and-reasoning']",
+      "provider": "",
+      "kata_updated_at": "2026-09-03T11:50:11.385229Z",
+      "component_fingerprint": "717d788649192fda",
+      "extraction": {
+        "verdict": "not_attempted",
+        "probed_at": "",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
+      },
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נחקור **יחס** דרך תרחיש של ירידת טמפרטורה בחורף. נלמד לקרוא מידע מגרף, להשוות בין כמויות ולהסיק ממנו מסקנות.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "717d788649192fda",
+          "generated_at": "2026-09-12T01:43:04Z",
+          "model": "mini"
+        }
+      },
+      "slides": [
+        {
+          "item_id": "methodica-math-ratio-01-06-001",
+          "title": "ירידת טמפרטורה בחורף בירושלים (4 סעיפים)",
+          "content_type": "practice",
+          "media_format": "interactive-content",
+          "role": "question",
+          "position": 1,
+          "fingerprint": "293152ccda210617",
+          "information_to_bot": "מטרת הפריט: שאלת השיא של היחידה - תרחיש שלם שבו לומדים מסייעים לצוות עירוני להיערך לקרח על הכבישים בחורף, תוך שימוש ביחס שנגזר מגרף מדידת טמפרטורה. תתי-סעיפים: א) מציאת היחס המצומצם בין שעות המדידה להפרש הטמפרטורות מתוך הגרף. ב) פירוש משמעות היחס שנמצא. ג) זיהוי גרפים נוספים המתאימים לאותו יחס ירידה. ד) קביעת השעה שממנה עלולה להיווצר שכבת קרח, תוך הסקה מעבר לטווח הגרף המוצג. טעויות נפוצות: בניית היחס בסדר הפוך (טמפרטורה:זמן במקום זמן:טמפרטורה); פירוש שגוי של היחס כמכפלה ולא כהפרש קבוע לכל שעה. מידע נוסף: הגרף המקורי מתאר ירידה של 24°C במשך 8 שעות; שלושת הגרפים הנוספים בסעיף ג מוצגים ויזואלית, אך ההסבר בשקף קובע במפורש שגרפים א' ו-ב' מציגים ירידה של 3°C בכל שעה.",
+          "texts": {},
+          "questions": [
+            {
+              "question_id": "q1",
+              "question_type": "numeric",
+              "question_text": "א. מרכז הבקרה משתמש בגרף מדידת טמפרטורה מהחורף שעבר. מהו היחס המצומצם בין מספר שעות המדידה לבין הפרש הטמפרטורות? השלימו: __ : 1",
+              "answers": [],
+              "fingerprint": "18e8ad0c72725327",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בוחנים קשר בין זמן לבין שינוי בטמפרטורה. נסו לחשב, להשוות ולפרש את הנתונים שמופיעים על המסך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "18e8ad0c72725327",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לקשר בין משך הזמן לבין השינוי בטמפרטורה בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "18e8ad0c72725327",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים מציאת יחס מתוך גרף ופרשנות שלו. אחר כך משתמשים באותו רעיון כדי להשוות בין גרפים ולחשוב מה יקרה גם מעבר לטווח שמוצג.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "18e8ad0c72725327",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q2",
+              "question_type": "choice",
+              "question_text": "ב. מה המשמעות של היחס שמצאתם (3 : 1)?",
+              "answers": [
+                "בכל שעת מדידה, הטמפרטורה יורדת פי 3",
+                "בכל שעת מדידה, הטמפרטורה ירדה ב-3°C",
+                "בכל 3 שעות מדידה, הטמפרטורה ירדה ב-1°C"
+              ],
+              "fingerprint": "9190c5c31b43d484",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך לפרש יחס ולהבין מה הוא אומר על השינוי בכל שלב. נסו להתאים את המשמעות לתיאור הנכון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9190c5c31b43d484",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו מה היחס אומר על השינוי בכל שעה, ולא על מספר השעות כולו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9190c5c31b43d484",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מפרשים יחס כמבטא שינוי קבוע בכל יחידת זמן. חשוב להבדיל בין תיאור של ירידה בכל שעה לבין פירוש שמדבר על כפל או על קבוצת שעות אחרת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9190c5c31b43d484",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q3",
+              "question_type": "choice",
+              "question_text": "לפניכם גרפים המייצגים ירידת טמפרטורה בימי חורף נוספים. ג. אלו גרפים יכולים להצביע על ירידה של 3°C בכל שעה? (סמנו את כל הגרפים המתאימים)",
+              "answers": [
+                "א",
+                "ב",
+                "ג"
+              ],
+              "fingerprint": "fb77c215b5d6e988",
+              "texts": {
+                "question_intro": {
+                  "he": "כאן משווים בין גרפים ובודקים אילו מהם מתאימים לאותו דפוס ירידה. נסו להסתכל על קצב השינוי בכל גרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fb77c215b5d6e988",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו בכל גרף אם השינוי נראה אחיד לאורך הזמן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fb77c215b5d6e988",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים זיהוי של גרפים שמתאימים לאותו קצב ירידה. צריך להשוות בין ייצוגים שונים ולשים לב ל**שינוי קבוע** בכל שעה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fb77c215b5d6e988",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
+            },
+            {
+              "question_id": "q4",
+              "question_type": "choice",
+              "question_text": "כשהטמפרטורה צונחת אל מתחת ל-0°C עלולה להיווצר שכבת קרח על הכבישים. ד. בהתבסס על גרף המדידות, החל מאיזו שעה מתחילת המדידה עלולה להיווצר שכבת קרח?",
+              "answers": [
+                "אחרי 3 שעות מתחילת המדידה",
+                "אחרי 8 שעות מתחילת המדידה",
+                "לא יווצר קרח כי על פי הגרף הטמפרטורה לא יורדת מתחת ל-0°C",
+                "אי אפשר לדעת"
+              ],
+              "fingerprint": "a28a3ee162b81fa1",
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להיעזר בגרף ובמידע המצורף כדי להסיק מה קורה כשהטמפרטורה ממשיכה לרדת. זהו את הנתון המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a28a3ee162b81fa1",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב למה שמוצג בגרף לאורך הזמן, וחשבו מה אפשר להסיק ממנו לגבי ההמשך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a28a3ee162b81fa1",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה מבקשת להסיק מעבר לטווח הגרף: מה ניתן להבין מהמשך הירידה של הטמפרטורה, ואיך זה קשור לסכנת היווצרות קרח על הכבישים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a28a3ee162b81fa1",
+                  "generated_at": "2026-09-12T01:43:04Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
