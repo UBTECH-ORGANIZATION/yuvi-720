@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { navigate } from '../app/router'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
+import { formatStudioClock } from '../features/Yuvi-studio/studioTime'
 import { YuviHeadIcon } from './YuviHeadIcon'
 import './studio-launch-button.css'
 
@@ -27,7 +28,7 @@ export function StudioLaunchButton() {
   const activeStudioSeconds = transition?.activeStudioRemainingSeconds
   const showingActiveStudioTime = activeStudioSeconds !== null && activeStudioSeconds !== undefined
   const displayedSeconds = showingActiveStudioTime ? activeStudioSeconds : secondsUntilAvailable
-  const timeLabel = `${String(Math.floor(displayedSeconds / 60)).padStart(2, '0')}:${String(displayedSeconds % 60).padStart(2, '0')}`
+  const timeLabel = formatStudioClock(displayedSeconds)
 
   useEffect(() => {
     if (transition?.studioTime?.allowed === false && secondsUntilAvailable === 0) {

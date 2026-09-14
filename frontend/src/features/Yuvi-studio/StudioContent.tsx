@@ -32,6 +32,7 @@ import { getCommunityRoom, removeRoomLike, setRoomLike, type CommunityRoom } fro
 import { FriendTravelController } from './travel/FriendTravelController'
 import type { TravelPhase } from './travel/TravelStateMachine'
 import { useStudioTransition } from './StudioTransitionProvider'
+import { formatStudioClock } from './studioTime'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
@@ -194,7 +195,7 @@ export function StudioContent({
     if (remainingSeconds === 0 && studioTime?.allowed) setTimeExpired(true)
   }, [remainingSeconds, studioTime?.allowed])
 
-  const clock = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`
+  const clock = formatStudioClock(remainingSeconds)
 
   useEffect(() => {
     if (!setActiveStudioRemainingSeconds) return
