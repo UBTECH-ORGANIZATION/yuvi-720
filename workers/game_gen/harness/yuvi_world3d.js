@@ -405,6 +405,8 @@
       if (Kd.light && o.light !== false && lights.length < LIGHT_CAP) { const pl = new THREE.PointLight(Kd.light.c, Kd.light.i * (dark ? 1.3 : .6), Kd.light.d * s, 1.6); pl.position.set(0, Kd.light.y, 0); g.add(pl); lights.push(pl); }
       if (o.pos) { toV3(o.pos, g.position); if (o.snap !== false) g.position.y += Kd.float && water ? water.level - .1 : groundY(g.position.x, g.position.z); }
       if (o.add !== false) scene.add(g);
+      // `text`: a label floating over the prop (a sign that actually says something) — g.label.set(t) updates it
+      if (o.text != null && o.text !== '') { let top = 0; g.traverse(n => { if (n.geometry) { n.geometry.computeBoundingBox(); if (n.geometry.boundingBox) top = Math.max(top, n.geometry.boundingBox.max.y); } }); g.label = label(o.text, null, Object.assign({ size: .5, parent: g, snap: false }, o.label || {})); g.label.mesh.position.y = (top || 2) + .5; g.label.mesh.scale.multiplyScalar(1 / s); }
       return g;
     }
 
@@ -857,6 +859,40 @@
     }
     const minimaps = [];
 
+    // ── label: text in the world (a canvas-drawn plane that faces the camera) — signs, terminals, name tags. RTL-aware ──
+    const labels = [];
+    function label(text, pos, o) {
+      o = o || {};
+      const size = +o.size || .6, color = o.color || '#ffffff', bg = o.bg === false ? null : (o.bg || 'rgba(6,10,28,.82)'), glow = o.glow || null, maxW = +o.maxWidth || 26;
+      const cv = document.createElement('canvas'), cx = cv.getContext('2d'), scale = 48;
+      const k = kit(), rtl = (o.dir || (k ? k.dir : 'rtl')) === 'rtl';
+      const mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); mesh.userData.noRay = true; mesh.raycast = noop; mesh.renderOrder = 5;
+      const h = { mesh: mesh, text: '', billboard: o.billboard !== false, set: null, remove: null };
+      const font = '700 ' + scale + 'px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      h.set = t => {
+        h.text = t == null ? '' : String(t); const lines = h.text.split('\n');
+        cx.font = font; let w = 0; lines.forEach(l => { w = Math.max(w, cx.measureText(l).width); }); w = Math.min(w, maxW * scale) + scale * .9;
+        cv.width = Math.ceil(w); cv.height = Math.ceil(lines.length * scale * 1.25 + scale * .6);
+        cx.font = font; cx.textBaseline = 'middle'; cx.textAlign = 'center'; cx.direction = rtl ? 'rtl' : 'ltr';
+        if (bg) { cx.fillStyle = bg; const r = scale * .35; cx.beginPath(); if (cx.roundRect) cx.roundRect(0, 0, cv.width, cv.height, r); else cx.rect(0, 0, cv.width, cv.height); cx.fill(); }
+        if (glow) { cx.shadowColor = glow; cx.shadowBlur = scale * .5; }
+        cx.fillStyle = color;
+        lines.forEach((l, i) => cx.fillText(l, cv.width / 2, scale * .55 + i * scale * 1.25 + scale * .1, maxW * scale));
+        if (mat.map) mat.map.dispose();
+        const tex = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; mat.map = tex; mat.needsUpdate = true;
+        mesh.scale.set(size * cv.width / cv.height, size, 1);
+        return h;
+      };
+      h.remove = () => { if (mesh.parent) mesh.parent.remove(mesh); if (mat.map) mat.map.dispose(); mat.dispose(); mesh.geometry.dispose(); const i = labels.indexOf(h); if (i >= 0) labels.splice(i, 1); };
+      h.set(text);
+      if (pos) { toV3(pos, mesh.position); if (o.snap !== false && mesh.position.y < .01) mesh.position.y = groundY(mesh.position.x, mesh.position.z) + size * 1.2; }
+      if (!h.billboard) mesh.rotation.y = +o.rot || 0;
+      if (o.parent && o.parent.add) o.parent.add(mesh); else scene.add(mesh);
+      labels.push(h); return h;
+    }
+    animated.push({ update: () => { for (let i = 0; i < labels.length; i++) if (labels[i].billboard) labels[i].mesh.quaternion.copy(camera.quaternion); } });
+
     // ── objective strip (kid language: the game passes the text; direction from the kit) ──
     let objEl = null;
     function objective(text) {
@@ -916,7 +952,7 @@
       scene: scene, camera: camera, renderer: renderer, ground: ground, water: water, sky: sky, sun: sun, hemi: hemi, fill: fill, lights: lights, palette: palette, size: size, preset: P, biome: P, terrain: T,
       add: o => { if (o && o.isObject3D) scene.add(o); else warn('add(obj): not an Object3D'); return o; },
       remove: o => { if (o && o.isObject3D) scene.remove(o); return o; },
-      update: update, render: render, run: run, resize: resize, dispose: dispose, raycast: raycast, rand: rand, groundY: groundY, decorate: decorate,
+      update: update, render: render, run: run, resize: resize, dispose: dispose, raycast: raycast, rand: rand, groundY: groundY, decorate: decorate, label: label,
       props: { scatter: scatter, place: place, make: make, character: character, actor: o => character(Object.assign({ kind: 'human', role: 'villager' }, o || {})), get kinds() { return Object.keys(KINDS); }, get variants() { const v = {}; for (const k in KINDS) if (KINDS[k].variants) v[k] = Object.keys(KINDS[k].variants); return v; }, roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), sets: propSets,
         define: (name, def) => { if (!name || !def || !Array.isArray(def.parts)) { warn('props.define(name, {r, jit, parts[, variants, light, soft, float]}) — parts required'); return; } KINDS[name] = Object.assign({ r: .6, jit: [1, 1] }, def); } },
       player: player, enemy: enemy, enemies: enemies, projectiles: projectiles,

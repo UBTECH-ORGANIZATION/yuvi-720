@@ -42,6 +42,8 @@ You import Three.js yourself (module build, exact allow-listed URL) and pass the
 | `W.fx.hit(point, o)` / `W.fx.flashLight(ms=120, mul=3)` | `o = {color, count=14, spread=5, life=.55, size=.14}` | instanced 3D burst (max 240 live) / brief hemisphere flash |
 | `W.minimap(el, o)` | `el`: a canvas, a container, or `null`; `o = {scale, markers: () => [{pos, color, r}], side, enemyColor, playerColor}` | `{el, update(), remove()}` — props, enemies, markers, player arrow |
 | `W.objective(text)` | kid-language text; `''` hides | the strip element (direction from `YuviKit.dir`) |
+| `W.label(text, pos, o)` | text IN the world — a sign, a terminal readout, a name tag, the givens on a crate; `o = {size=.6 (world units per line), color, bg (false for none), glow, maxWidth=26, billboard=true, rot, parent, snap}`; RTL-aware; `\n` for lines | `{mesh, text, set(text), remove()}` — `set` redraws in place |
+| `W.props.make(kind, {text:'…', label:{…}})` | any prop with a label floating over it (`g.label.set(t)` to change) — a "sign" or "console" prop without `text` is a blank box | the `Group` |
 | `W.raycast(from?, dir?, maxDist=200)` | defaults: player eye + forward | `{point, distance, object, instanceId, normal}` or `null` |
 | `W.update(dt)` / `W.render()` / `W.run()` | — | step player, enemies, projectiles, water, clouds, weather, flocks, fx, minimap / one frame / `YuviKit.loop(dt => { W.update(dt); W.render(); })` |
 | `W.scene / camera / renderer / ground / water / sky / sun / hemi / fill / lights / palette / biome / rand() / add(o) / remove(o) / resize() / dispose() / stats` | — | Three objects; `palette` = 6 hex `[ground, stone, foliage/accent, light, dark/wood, highlight]`; `rand()` seeded — use it for every random decision |
@@ -112,3 +114,4 @@ W.run();                                                // = YuviKit.loop(dt => 
 | enemies teleport / hit test with `Box3.setFromObject` each frame | `W.enemy` FSM + `W.projectiles({targets})` (cached bounding spheres) |
 | `shadows: true` with many lights / `size` 300 | at most the biome sun; shadows only for a small world (≤ 60 units); `size` 80–160 |
 | HUD text drawn in 3D (sprites, TextGeometry) | `YuviKit.hud`, `W.objective(text)`, `YuviKit.screens.message` |
+| a "sign" that is a glowing box with nothing on it; givens that live only on a DOM panel the question covers | `W.label('ברוטו 1400 g\nטרה 400 g', [x, 0, z])` or `props.make('billboard', {text})` in the world AND the same numbers in `YuviUI.ask({givens})` |

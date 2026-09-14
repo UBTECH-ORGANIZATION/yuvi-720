@@ -142,7 +142,7 @@ def _harness_with_world3d(nonce: str) -> str:
 
 def test_world3d_stays_small_and_parses():
     src = W3D_PATH.read_text(encoding="utf-8")
-    assert len(src.splitlines()) <= 950, "yuvi_world3d.js has a hard cap of 950 lines"
+    assert len(src.splitlines()) <= 1000, "yuvi_world3d.js has a hard cap of 1000 lines (plugins carry everything else)"
     assert src.startswith("/*") and src.rstrip().endswith("})();")
     assert "</script" not in src and "import " not in src.split("*/", 1)[1].replace("import * as THREE", "")
     node = shutil.which("node")

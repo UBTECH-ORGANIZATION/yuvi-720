@@ -74,3 +74,4 @@ W.run();                                                                        
 | `W.fps.update(dt)` in your own loop next to `W.run()` | `W.run()` alone — it already steps the module |
 | every enemy a `boss` with `hp: 5000` | mostly `grunt`, one `heavy`, a `sniper` on a roof, a `drone` or `turret` for variety; `setDifficulty('easy')` for young kids |
 | pointer lock at load / firing on the Start click | `ctrl.requestLook()` inside `onStart`; the rig ignores clicks on kit buttons and before Start |
+| `onRetry` kills the squad with `s.kill()` — every `onDown` fires, the "all guards down" branch opens the question the moment the kid retries | `onRetry: () => { W.fps.reset(); level = 1; spawnWave(); }` — `reset()` removes soldiers silently (no callbacks, no drops), clears pickups and respawns the hero; `s.remove()` does it for one soldier |

@@ -38,7 +38,7 @@
 .yu-panel{pointer-events:auto;position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);width:min(92vw,560px);max-height:88vh;overflow:auto;display:flex;flex-direction:column;gap:1.2vh;padding:2vh 3vw;border-radius:1.2rem;border:2px solid var(--yu-accent);background:rgba(0,0,0,.8);box-shadow:0 1vh 3vh rgba(0,0,0,.5);text-align:start;font-size:clamp(1rem,2.6vw,1.3rem);line-height:1.4;outline:0;animation:yu-pop .25s ease-out;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#fff}
 .yu-panel.yu-inline{position:static;transform:none;width:100%;max-width:640px;margin:0 auto}
 .yu-panel bdi{unicode-bidi:isolate;font-variant-numeric:tabular-nums}
-.yu-q{font-weight:800;font-size:1.15em}
+.yu-q{font-weight:800;font-size:1.15em}.yu-givens{display:flex;flex-direction:column;gap:.4vh;margin:.6vh 0 1vh;padding:.8vh 1.2em;border-radius:.6rem;background:rgba(255,255,255,.08);font-weight:700;font-variant-numeric:tabular-nums}.yu-given{white-space:nowrap}
 .yu-hint,.yu-next{opacity:.8;font-size:.9em}
 .yu-next{text-align:end}
 .yu-spk{color:var(--yu-accent);font-weight:800}
@@ -157,6 +157,8 @@
     return new Promise(res => {
       const p = openPanel(o.el, 'yu-ask'); p.id = 'yu-ask';
       mk('div', 'yu-q', p).appendChild(math(parts));
+      // givens: the numbers the kid works from, as rows in the panel — never only on a sign somewhere in the world
+      if (o.givens) { const gv = mk('div', 'yu-givens', p); [].concat(o.givens).forEach(g => { const r = mk('div', 'yu-given', gv); r.setAttribute('dir', dir()); r.appendChild(math(g)); }); }
       if (o.hint) mk('div', 'yu-hint', p).appendChild(math(o.hint));
       let inputs = [], done = false, tm = 0;
       function finish(val, extra) {

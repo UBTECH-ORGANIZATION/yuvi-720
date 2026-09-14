@@ -650,6 +650,8 @@
         if (o.drop !== false && fps.pickups && rand() < (o.drop === true ? 1 : .35)) fps.pickups.spawn(rand() < .6 ? 'ammo' : 'health', [s.pos.x + (rand() - .5), 0, s.pos.z + (rand() - .5)]);
       };
       s.kill = s.powerDown; s.setState = set;
+      // remove(): take the soldier out without the gameplay consequences (no onDown, no drop, no kill count) — for resets
+      s.remove = () => { s.alive = false; s.state = 'down'; const i = fps.soldiers.indexOf(s); if (i >= 0) fps.soldiers.splice(i, 1); if (enemyList) { const j = enemyList.indexOf(s); if (j >= 0) enemyList.splice(j, 1); } const k = downed.indexOf(s); if (k >= 0) downed.splice(k, 1); if (mesh.parent) mesh.parent.remove(mesh); };
       s.dissolve = dt => {   // after power-down: the fall animation, then the body shrinks into the ground and goes away
         s.downT += dt; if (mesh.anim && mesh.anim.update && s.downT < .9) mesh.anim.update(dt);
         if (s.fly) { s.pos.y = Math.max(groundY(s.pos.x, s.pos.z) + .2, s.pos.y - dt * 4); mesh.rotation.y += dt * 6; mesh.rotation.z += dt * 2; }
@@ -670,6 +672,8 @@
       }
       return out;
     }
+    // reset(): everything a retry has to clear — soldiers (silently), pickups, downed bodies, hero state — so onRetry never re-fires onDown callbacks
+    fps.reset = o => { fps.soldiers.slice().forEach(s => s.remove()); downed.slice().forEach(s => s.remove()); if (fps.pickups && fps.pickups.clear) fps.pickups.clear(); if (fps.hero && fps.hero.respawn && !(o && o.hero === false)) fps.hero.respawn(o && o.pos); if (fps.rig && fps.rig.weapons) fps.rig.weapons.forEach(w => { if (w.refill) w.refill(); }); };
     fps.noise = (pos, r) => { const p = toV3(pos, V3); for (let i = 0; i < fps.soldiers.length; i++) { const s = fps.soldiers[i]; if (!s.alive) continue; if (Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < (r || 20)) { s.awareness = Math.max(s.awareness, .7); s.last.copy(p); } } };
 
     // ── pickups: spinning glowing items with magnet pull; objectives: a small list rendered through W.objective ──
