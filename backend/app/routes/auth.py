@@ -26,6 +26,7 @@ from app.auth.repository import (
     update_preferences,
 )
 from app.auth.tokens import TOKEN_LIFETIME, create_session_token
+from app.core.env import password_login_allowed
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import update_learner_state  # type: ignore
 
@@ -98,6 +99,28 @@ CLEARABLE_PREFERENCES = {"teacher_subgroup_id", "teacher_subject"}
 def _cookie_is_secure() -> bool:
     public_url = os.environ.get("PUBLIC_APP_URL") or os.environ.get("FRONTEND_URL") or ""
     return public_url.startswith("https://")
+
+
+async def _moe_logout_url(user_id: Optional[str]) -> Optional[str]:
+    """Where to send the browser after a Ministry-provisioned account logs out.
+
+    Password accounts get `None` and stay on our own landing page.
+    """
+    if not user_id:
+        return None
+    from app.auth.moe import client as moe_client
+    from app.auth.moe import config as moe_config
+
+    if not moe_config.is_enabled():
+        return None
+    document = await get_user_by_id(user_id)
+    if not document or document.get("identity_provider") != "moe":
+        return None
+    try:
+        return await moe_client.build_end_session_url(None)
+    except Exception as exc:
+        print(f"⚠️ MoE logout URL unavailable: {type(exc).__name__}")
+        return None
 
 
 def _ua_version(user_agent: str, *patterns: str) -> Optional[str]:
@@ -183,6 +206,13 @@ def _device_from_request(request: Request) -> dict[str, str]:
 async def login(
     payload: LoginRequest, request: Request, response: Response
 ) -> dict[str, Any]:
+    if not password_login_allowed():
+        # In the cloud the Ministry's OIDC provider is the only way in. A 404
+        # rather than a 403 so the endpoint does not even advertise that a
+        # password path exists somewhere — and it fires before any lookup, so a
+        # seeded or leaked password is never even compared against real data.
+        raise HTTPException(status_code=404, detail="not_found")
+
     document = await get_user_by_username(payload.username)
     if document is None:
         # Burn the same CPU as a real verify so response time cannot be used to
@@ -222,15 +252,21 @@ async def login(
 
 @router.post("/logout")
 async def logout(response: Response, session=Depends(optional_user)) -> dict[str, Any]:
+    redirect_url: Optional[str] = None
     if session and session.get("sid"):
         duration_seconds = max(0.0, time.time() - float(session.get("iat") or time.time()))
         await lrs_reporter.report_session_exit(
             session["sub"], session["sid"], duration_seconds
         )
         await set_current_moe_session(session["sub"], None)
+    if session:
+        # Dropping our cookie alone would leave the Ministry session alive, so
+        # the next "log in" would silently sign the same child straight back in
+        # — on a shared classroom machine that is the wrong child.
+        redirect_url = await _moe_logout_url(session.get("sub"))
     response.delete_cookie(COOKIE_NAME, path="/")
     response.headers.update(_NO_STORE)
-    return {"ok": True}
+    return {"ok": True, "redirect_url": redirect_url}
 
 
 @router.post("/session/suspend")

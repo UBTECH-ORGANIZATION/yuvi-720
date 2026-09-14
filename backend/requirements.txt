@@ -9,7 +9,9 @@ motor
 certifi
 tzdata
 defusedxml>=0.7,<1
-PyJWT>=2.9.0,<3.0
+# `[crypto]` pulls in `cryptography`: the Ministry signs its id_tokens with
+# RS256, and bare PyJWT can only do HMAC.
+PyJWT[crypto]>=2.9.0,<3.0
 azure-communication-email
 azure-storage-blob>=12.20,<13
 aiohttp>=3.10,<4
