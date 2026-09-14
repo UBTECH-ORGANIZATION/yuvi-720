@@ -78,6 +78,13 @@ jobs:
               COACH_TOOL_CALLING_ENABLED=true \
               COACH_DEBUG_TRACE_ENABLED=false \
               SPARK_ENVIRONMENT=dev \
+              MOE_OIDC_ENABLED=true \
+              MOE_OIDC_ISSUER=https://is.remote.education.gov.il/nidp/oauth/nam \
+              MOE_OIDC_REDIRECT_PATH=/api/auth/moe/callback \
+              MOE_OIDC_REDIRECT_URI=https://dev.spark.yuvilab.ai \
+              MOE_OIDC_SCOPES="openid profileEXT eduorg edustudent" \
+              MOE_OIDC_TOKEN_AUTH_METHOD=client_secret_basic \
+              MOE_OIDC_POST_LOGOUT_URL=https://dev.spark.yuvilab.ai \
             --output none
 
       - name: Refuse to deploy Dev against the production database
@@ -161,6 +168,15 @@ jobs:
             SPARK_ENVIRONMENT
             REDIS_CONNECTION_STRING
             SPARK_CACHE
+            MOE_OIDC_CLIENT_ID
+            MOE_OIDC_CLIENT_SECRET
+            MOE_LEARNER_ID_SALT
+            GAME_JOBS_MODE
+            GAME_JOBS_QUEUE
+            GAME_JOBS_SERVICEBUS_NAMESPACE
+            GAMES_STORAGE
+            GAMES_STORAGE_ACCOUNT_URL
+            GAMES_BLOB_CONTAINER
           )
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do
@@ -222,6 +238,34 @@ jobs:
             echo "Production Coach flags must be COACH_TOOL_CALLING_ENABLED=true and COACH_DEBUG_TRACE_ENABLED=false"
             exit 1
           fi
+
+      - name: Verify production has a working login path
+        run: |
+          # Password login is deliberately local-only (app.core.env.password_login_allowed),
+          # so Ministry of Education SSO is the ONLY door into production. Swapping
+          # with it disabled would lock every user out silently. Fail loudly instead.
+          # To unblock: set MOE_OIDC_ENABLED / MOE_OIDC_CLIENT_ID / MOE_OIDC_CLIENT_SECRET /
+          # MOE_LEARNER_ID_SALT on the production slot once MoE issues prod credentials.
+          production_login="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --output json | jq -r '[.[] | select(.name | startswith("MOE_")) | select(.value != null and .value != "")] | map(.name) | join(" ")')"
+          moe_enabled="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='MOE_OIDC_ENABLED'].value | [0]" \
+            --output tsv | tr '[:upper:]' '[:lower:]')"
+          if [[ "$moe_enabled" != "true" && "$moe_enabled" != "1" && "$moe_enabled" != "yes" && "$moe_enabled" != "on" ]]; then
+            echo "MOE_OIDC_ENABLED is not true on the production slot."
+            echo "Password login is local-only, so production would have no login path. Refusing to swap."
+            exit 1
+          fi
+          for setting_name in MOE_OIDC_CLIENT_ID MOE_OIDC_CLIENT_SECRET MOE_LEARNER_ID_SALT; do
+            if ! grep -qw "$setting_name" <<< "$production_login"; then
+              echo "Missing production setting $setting_name; refusing to swap."
+              exit 1
+            fi
+          done
 
       - name: Verify production still owns the production database
         run: |

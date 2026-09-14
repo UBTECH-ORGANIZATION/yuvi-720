@@ -4,7 +4,6 @@ import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
 import { ProfileAvatar } from '../features/badges/ProfileAvatar'
-import { openReportIssue } from '../features/support/ReportIssueDialog'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
 
@@ -199,10 +198,10 @@ export function UserMenu() {
             role="menuitem"
             onClick={() => {
               setOpen(false)
-              openReportIssue()
+              navigate('/support')
             }}
           >
-            <span>{t('support.report.menuTitle')}</span>
+            <span>{t('supportWidget.menuTitle')}</span>
             <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

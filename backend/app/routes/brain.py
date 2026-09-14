@@ -19,6 +19,7 @@ from app.services import kata_catalog
 from app.services.dashboard import project_dashboard, project_hero_metrics
 from app.services.events import get_learner_events
 from app.services.lesson_illustrations import find_for_lesson, localized_alt, public_metadata
+from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
 import uuid
@@ -150,6 +151,19 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     focus and tab switch. Five minutes bounds whatever the version misses.
     """
     safe_id = await _authorized_id(actor, learner_id)
+    # MoE 720 dashboard/viewed. This is the route the dashboard UI actually
+    # calls — `POST /api/generate-dashboard` is the legacy twin, so reporting
+    # only there meant a real student opening their board emitted nothing.
+    # It sits here and not in `_build_dashboard`, which is cached and would
+    # skip the report on every hit.
+    if actor.get("sid"):
+        await lrs_reporter.report_dashboard_viewed(
+            actor["sub"],
+            actor["sid"],
+            "student-personal" if actor["sub"] == safe_id else "student-view",
+            None,
+            subject_learner_id=safe_id,
+        )
     from app.services import cache_store
     dashboard = await cache_store.remember(
         "learner", safe_id, "dash", lang, 300, lambda: _build_dashboard(safe_id, lang),

@@ -146,6 +146,14 @@ def _base(
         extra.append(copy.deepcopy(obj))
     elif hierarchy.get("self"):
         extra.append(copy.deepcopy(hierarchy["self"]))
+        # "ערך ה-parent יהיה הישות הישירה המכילה את האובייקט" (v1.1 §אינטראקציה
+        # עם תוכן). The object here is NOT the content — a conversation, a
+        # reflection — so the entity containing it is the level the learner is
+        # standing on (`self`), not the level above that. We were sending the
+        # unit as the parent of a chat opened inside a component, which the
+        # review read as the wrong parent.
+        if not parent:
+            parent = [copy.deepcopy(hierarchy["self"])]
     context: dict[str, Any] = {
         "contextActivities": {
             "grouping": build_grouping(
@@ -510,6 +518,51 @@ def reflection_completed(
 
 
 # ── Mentor-student meeting ───────────────────────────────────────────────────
+# The ministry's mentoring ladder: `mentoringPhase` is a closed list of ten
+# steps ("הערכים יהיו כפי המופיע בקובץ הזה"). The wire value is `phaseN`; the
+# Hebrew title is what the teacher's form shows, and is what our `meeting_stage`
+# has always stored — so both spellings resolve to the same code.
+MENTORING_PHASES: dict[str, str] = {
+    "phase1": "צעד 1 - בונים אמון",
+    "phase2": "צעד 2 - מתחילים את המסע",
+    "phase3": "צעד 3 - מגדירים פסגות",
+    "phase4": "צעד 4 - מתקדמים בצעדים קטנים",
+    "phase5": "צעד 5 - יוצרים את המזל שלנו",
+    "phase6": "צעד 6 - פועלים לפי שיטת הנוצה",
+    "phase7": "צעד 7 - מבצעים רפלקציה אישית",
+    "phase8": "צעד 8 - מכירים בערך העצמי",
+    "phase9": "צעד 9 - מפתחים מנהיגות אישית",
+    "phase10": "צעד 10 - מנהיגים את חיינו",
+}
+
+_PHASE_BY_TITLE = {
+    re.sub(r"\s+", " ", title).strip(): code for code, title in MENTORING_PHASES.items()
+}
+_PHASE_STEP = re.compile(r"^\s*(?:צעד\s*)?(\d{1,2})\b")
+
+
+def normalize_mentoring_phase(value: Any) -> Optional[str]:
+    """`meeting_stage` → the ministry's `phaseN`, or None.
+
+    Accepts the code itself, the Hebrew step title the teacher picked, or a bare
+    step number. A stage that is not on the ladder (free text a teacher typed)
+    reports nothing — an off-list value is a rejected statement, and the closed
+    list is not ours to extend.
+    """
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if not text:
+        return None
+    key = text.lower().replace(" ", "")
+    if key in MENTORING_PHASES:
+        return key
+    if text in _PHASE_BY_TITLE:
+        return _PHASE_BY_TITLE[text]
+    match = _PHASE_STEP.match(text)
+    if match and f"phase{int(match.group(1))}" in MENTORING_PHASES:
+        return f"phase{int(match.group(1))}"
+    return None
+
+
 def mentor_meeting_completed(
     identity: ReportingIdentity,
     session_id: str,
@@ -528,7 +581,7 @@ def mentor_meeting_completed(
             "mentor": mentor_exid,
             "student": student_exid,
             "meetingDate": meeting_date,
-            "mentoringPhase": mentoring_phase,
+            "mentoringPhase": normalize_mentoring_phase(mentoring_phase),
         }
     )
     return _base(
@@ -848,6 +901,101 @@ def _infer_object_type(hierarchy: dict[str, Any]) -> str:
     return leaf_type or "item"
 
 
+# The path segment a content IRI uses for each catalog level, so a parent the
+# content sent as a bare `{"id": …}` can be typed from the id IT chose.
+_PATH_ACTIVITY_TYPES = {
+    "learning-unit": "learning-unit",
+    "component": "component",
+    "questionnaire": "questionnaire",
+    "question": "question",
+    "video": "video",
+    "audio": "audio",
+    "animation": "animation",
+    "item": "item",
+}
+
+
+def _typed_parent(
+    raw_parent: Any, hierarchy: dict[str, Any]
+) -> Optional[list[dict[str, Any]]]:
+    """Every `parent` entry carries a `definition.type` (review: "parent הגיע עם
+    id בלבד, ללא type").
+
+    The type is never invented: it is taken from the catalog entry with the same
+    id when we resolved one, otherwise read off the content's own IRI path
+    (`…/component/987` → component). An entry we can type neither way is dropped
+    in favour of the catalog's parent — an untyped, unmatchable parent carries
+    no information the LRS can use.
+    """
+    entries = raw_parent if isinstance(raw_parent, list) else [raw_parent]
+    known: dict[str, dict[str, Any]] = {}
+    for candidate in (
+        list(hierarchy.get("parent") or [])
+        + list(hierarchy.get("grouping") or [])
+        + ([hierarchy["self"]] if hierarchy.get("self") else [])
+    ):
+        if isinstance(candidate, dict) and candidate.get("id"):
+            known.setdefault(str(candidate["id"]), candidate)
+
+    typed: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        entry = dict(entry)
+        entry.setdefault("objectType", "Activity")
+        definition = dict(entry.get("definition") or {})
+        if not definition.get("type"):
+            match = known.get(str(entry["id"]))
+            if match:
+                definition = dict(match.get("definition") or {})
+            else:
+                segments = [s for s in str(entry["id"]).split("/") if s]
+                slug = next(
+                    (
+                        _PATH_ACTIVITY_TYPES[s]
+                        for s in reversed(segments)
+                        if s in _PATH_ACTIVITY_TYPES
+                    ),
+                    None,
+                )
+                if not slug:
+                    continue
+                definition["type"] = f"{ACTIVITY}/{slug}"
+        entry["definition"] = definition
+        typed.append(entry)
+    if typed:
+        return typed
+    fallback = list(hierarchy.get("parent") or [])
+    return [copy.deepcopy(e) for e in fallback] or None
+
+
+def _question_name(
+    hierarchy: dict[str, Any], context_extensions: Optional[dict[str, Any]]
+) -> Optional[str]:
+    """The question's own text, from the item's `questions` digest.
+
+    Report 6 asked for `definition.name` on the question in `grouping`; the
+    content sends a bare object, but the catalog already published the text of
+    every question on the screen and the relay already knows which `questionId`
+    this event is about.
+    """
+    question_id = str((context_extensions or {}).get("questionId") or "")
+    if not question_id:
+        return None
+    for row in (hierarchy.get("extensions") or {}).get("questions") or []:
+        if isinstance(row, dict) and str(row.get("questionId") or "") == question_id:
+            text = str(row.get("questionText") or "").strip()
+            return text or None
+    return None
+
+
+# The xAPI Video Profile keys a player puts on `result.extensions`. Their content
+# is already mapped onto the ministry's `mediaPosition`, so forwarding them too
+# republishes the same fact in a vocabulary the 720 spec does not define — which
+# is what the review flagged as a stray `result.extensions.time` on `paused`.
+_VIDEO_PROFILE_PREFIX = "https://w3id.org/xapi/video/extensions/"
+
+
 def enriched_content_statement(
     identity: ReportingIdentity,
     session_id: str,
@@ -909,7 +1057,9 @@ def enriched_content_statement(
         # the content omitted is taken from the catalog level this object IS,
         # never from the level above a question.
         resolved_name = name_he or (
-            None if object_below_self else _catalog_name(hierarchy)
+            _question_name(hierarchy, context_extensions)
+            if object_below_self
+            else _catalog_name(hierarchy)
         )
         if resolved_name and not definition.get("name"):
             definition["name"] = {"he": resolved_name}
@@ -925,6 +1075,14 @@ def enriched_content_statement(
     ctx = dict(raw_statement.get("context") or {})
     context_activities = dict(ctx.get("contextActivities") or {})
     grouping = list(context_activities.get("grouping") or [])
+    # A parent the content sent is kept — it knows its own structure — but never
+    # as the bare `{"id": …}` the review rejected: it is typed here first.
+    if context_activities.get("parent"):
+        typed = _typed_parent(context_activities["parent"], hierarchy)
+        if typed:
+            context_activities["parent"] = typed
+        else:
+            context_activities.pop("parent")
     # The ancestry the ministry requires: the unit and component this item lives
     # in, in `grouping`, and the component in `parent`. The content sends neither
     # (it only knows its own object), so we supply them from the catalog. The
@@ -978,7 +1136,11 @@ def enriched_content_statement(
             result[key] = value
     if result:
         if result.get("extensions"):
-            result["extensions"] = _iri_safe_extensions(result["extensions"])
+            result["extensions"] = {
+                key: value
+                for key, value in _iri_safe_extensions(result["extensions"]).items()
+                if not str(key).startswith(_VIDEO_PROFILE_PREFIX)
+            }
             if not result["extensions"]:
                 result.pop("extensions")
         statement["result"] = result

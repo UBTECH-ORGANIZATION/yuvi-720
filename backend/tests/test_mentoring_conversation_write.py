@@ -159,24 +159,36 @@ class ConversationWriteTest(unittest.IsolatedAsyncioTestCase):
         await self._document(visibility="teacher_only")
         self.assertEqual(self.notify.await_count, 0)
 
-    async def test_a_teacher_talk_is_never_filed_under_the_teachers_session(self):
+    async def test_a_teacher_talk_is_filed_under_the_learners_own_session(self):
         """The actor is the LEARNER; the `sid` the route holds is the teacher's.
 
-        Hanging it on the statement would group the child's event inside
-        someone else's session, so these carry no session activity at all —
-        which `build_grouping` allows, and which is the only honest option: a
-        teacher writing up a talk is not inside a learning session.
+        The ministry requires a session grouping on every statement, so the
+        learner's own live session is the truthful one to file their event
+        under — never the teacher's, when the learner has one of their own.
         """
-        await self._document(lrs_session_id="sid-1")
-        self.assertIsNone(self.meeting.await_args.args[1])
-        self.assertIsNone(self.goal_statement.await_args.args[1])
+        with patch(
+            "app.auth.repository.get_user_by_id",
+            AsyncMock(return_value={"current_moe_session_id": "learner-sid"}),
+        ):
+            await self._document(lrs_session_id="sid-1")
+        self.assertEqual(self.meeting.await_args.args[1], "learner-sid")
+        self.assertEqual(self.goal_statement.await_args.args[1], "learner-sid")
 
-    async def test_a_teacher_talk_reports_even_with_no_session_to_offer(self):
-        """Follows from the above: the session was never the thing that made
-        this reportable, so its absence cannot make it unreportable."""
-        await self._document(lrs_session_id=None)
-        self.assertEqual(self.meeting.await_count, 1)
-        self.assertEqual(self.goal_statement.await_count, 3)
+    async def test_the_acting_session_is_borrowed_only_when_the_learner_has_none(self):
+        """A statement with no session is rejected by the LRS, so rather than
+        drop the record we fall back to the session we do hold."""
+        with patch("app.auth.repository.get_user_by_id", AsyncMock(return_value={})):
+            await self._document(lrs_session_id="sid-1")
+        self.assertEqual(self.meeting.await_args.args[1], "sid-1")
+        self.assertEqual(self.goal_statement.await_args.args[1], "sid-1")
+
+    async def test_a_teacher_talk_with_no_session_anywhere_is_not_reported(self):
+        """Nothing to group it under, and the ledger must not carry a
+        statement the ministry would refuse."""
+        with patch("app.auth.repository.get_user_by_id", AsyncMock(return_value={})):
+            await self._document(lrs_session_id=None)
+        self.assertEqual(self.meeting.await_count, 0)
+        self.assertEqual(self.goal_statement.await_count, 0)
 
     async def test_a_reporting_failure_does_not_lose_the_conversation(self):
         self.meeting.side_effect = RuntimeError("LRS down")

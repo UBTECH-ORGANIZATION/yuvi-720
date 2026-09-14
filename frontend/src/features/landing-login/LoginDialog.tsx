@@ -3,6 +3,7 @@ import { Modal } from '../../components/primitives/Modal'
 import { Icon } from '../../components/primitives/Icon'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth, type AuthUser } from '../../providers/AuthProvider'
+import { fetchAuthProviders, startMoeLogin, type AuthProviders } from '../../services/authProviders'
 import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
 
 /* Sign-in dialog. Opens in place over the landing page so a deep link the user
@@ -13,11 +14,25 @@ const HELLO_INTERVAL_MS = 3600
 
 interface LoginDialogProps {
   open: boolean
+  /** Failure code from a Ministry sign-in that came back here, if any. */
+  authError?: string | null
   onClose: () => void
   onSuccess: (user: AuthUser) => void
 }
 
-export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
+/* Codes the callback can return. Anything else falls back to the generic
+   message rather than echoing an unknown string into the UI. */
+const SSO_ERROR_KEYS: Record<string, string> = {
+  sso_disabled: 'auth.error.ssoUnavailable',
+  sso_unavailable: 'auth.error.ssoUnavailable',
+  provider_unreachable: 'auth.error.ssoUnavailable',
+  sso_denied: 'auth.error.ssoDenied',
+  login_expired: 'auth.error.ssoExpired',
+  state_mismatch: 'auth.error.ssoExpired',
+  bad_callback: 'auth.error.ssoExpired',
+}
+
+export function LoginDialog({ open, authError, onClose, onSuccess }: LoginDialogProps) {
   const { t, direction } = useI18n()
   const { login } = useAuth()
   const [username, setUsername] = useState('')
@@ -26,6 +41,21 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   const [pending, setPending] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [helloIndex, setHelloIndex] = useState(0)
+  /* Unknown until the backend answers. Rendering nothing in the meantime is
+     deliberate: flashing a password form that this deployment refuses would
+     teach learners to look for a door that is not there. */
+  const [providers, setProviders] = useState<AuthProviders | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    void fetchAuthProviders().then((result) => {
+      if (active) setProviders(result)
+    })
+    return () => {
+      active = false
+    }
+  }, [open])
 
   // Yuvi cycles through a few greetings while the learner signs in.
   useEffect(() => {
@@ -100,8 +130,37 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
 
       <div className="auth-forge__card" dir={direction}>
         <h2 className="sp-modal__title" id="auth-dialog-title">{t('auth.dialog.title')}</h2>
-        <p className="sp-modal__subtitle">{t('auth.dialog.subtitle')}</p>
+        <p className="sp-modal__subtitle">
+          {t(providers && !providers.password ? 'auth.dialog.subtitleMoe' : 'auth.dialog.subtitle')}
+        </p>
 
+        {providers?.moe ? (
+          <div className="auth-forge__sso">
+            <button
+              type="button"
+              className="sp-btn sp-btn--gradient sp-btn--pill auth-forge__sso-btn"
+              onClick={() => startMoeLogin()}
+            >
+              {t('auth.moe.action')}
+            </button>
+            <p className="sp-modal__hint">{t('auth.moe.hint')}</p>
+            {providers.password ? (
+              <p className="auth-forge__divider" aria-hidden="true">{t('auth.moe.or')}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {providers && !providers.moe && !providers.password ? (
+          <p className="sp-modal__error" role="alert">{t('auth.error.ssoUnavailable')}</p>
+        ) : null}
+
+        {authError ? (
+          <p className="sp-modal__error" role="alert">
+            {t(SSO_ERROR_KEYS[authError] ?? 'auth.error.ssoFailed')}
+          </p>
+        ) : null}
+
+        {providers?.password ? (
         <form className="sp-modal__form" onSubmit={onSubmit}>
           <div className="sp-modal__field">
             <label className="sp-modal__label" htmlFor="auth-username">{t('auth.field.username')}</label>
@@ -162,6 +221,7 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
             </button>
           </div>
         </form>
+        ) : null}
       </div>
     </Modal>
   )

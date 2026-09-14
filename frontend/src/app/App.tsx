@@ -36,6 +36,7 @@ import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage
 import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { SupportPage } from '../features/support-widget/SupportPage'
 import { LearnerMessageToast } from '../components/LearnerMessageToast'
 import { CheckinGate } from '../features/checkin/CheckinDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
@@ -67,7 +68,8 @@ const PROTECTED_ROUTES = [
   '/learning',
   '/games',
   '/badges',
-  '/tasks'
+  '/tasks',
+  '/support'
 ]
 const TEACHER_ROUTES = ['/teacher']   // covers /teacher and the legacy /teacher-view
 /* The control plane. Guarded separately from the teacher lane: every teacher may
@@ -80,8 +82,9 @@ const ADMIN_ROUTES = ['/admin']
 /* Routes a learner may reach before onboarding is finished. Everything else
    (dashboard, learning world, mentoring, studio) is gated until mapping and
    profile verification are done — otherwise those surfaces render against a
-   half-built brain. */
-const ONBOARDING_ROUTES = ['/learner-mapping', '/results']
+   half-built brain. Support is here because a learner who is stuck in
+   onboarding is exactly the one who needs to reach a human. */
+const ONBOARDING_ROUTES = ['/learner-mapping', '/results', '/support']
 
 function isOnboardingRoute(pathname: string) {
   return ONBOARDING_ROUTES.some((route) => pathname.startsWith(route))
@@ -133,7 +136,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/tasks', '/admin', '/mentoring', '/learning', '/games',
+  '/badges', '/tasks', '/admin', '/mentoring', '/learning', '/games', '/support',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -203,6 +206,8 @@ function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
   // Deliberately outside PROTECTED_ROUTES: someone locked out must still reach it.
   if (pathname.startsWith('/report')) return <PublicReportPage />
+  // Its own screen, in neither shell: asking a person for help is the whole task.
+  if (pathname.startsWith('/support')) return <SupportPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) {

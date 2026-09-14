@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import uuid
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
 
@@ -199,6 +200,26 @@ def configure_telemetry(app, service_name: str = "spark-backend") -> bool:
         return False
 
 
+def _correlation_id() -> str:
+    """The id a developer can search for, whether or not Azure Monitor is on.
+
+    With the exporter running this is the OpenTelemetry trace id, which is exactly
+    what Application Insights stores as `operation_Id`. Without it, a random id
+    still ties a bug report to the console log line for that request.
+    """
+
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        context = span.get_span_context()
+        if context.is_valid:
+            return format(context.trace_id, "032x")
+    except Exception:  # noqa: BLE001 - telemetry must never break a request
+        pass
+    return uuid.uuid4().hex
+
+
 class RequestTimingMiddleware:
     """Time every request, expose it to the browser, and flag the slow ones.
 
@@ -222,6 +243,7 @@ class RequestTimingMiddleware:
             return
 
         started = time.perf_counter()
+        correlation_id = _correlation_id()
 
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
@@ -230,6 +252,10 @@ class RequestTimingMiddleware:
                 headers.append(
                     (b"server-timing", f"app;dur={elapsed_ms:.1f}".encode("latin-1"))
                 )
+                # Same value as `operation_Id` in Application Insights. The support
+                # widget collects it, so a developer reading a filed bug can paste it
+                # into a query and land on the exact request the student hit.
+                headers.append((b"x-correlation-id", correlation_id.encode("latin-1")))
             await send(message)
 
         try:

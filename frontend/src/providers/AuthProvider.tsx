@@ -159,11 +159,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    let redirectUrl: string | null = null
     try {
-      await apiPost('/api/auth/logout', {})
+      const result = await apiPost<{ redirect_url?: string | null }>('/api/auth/logout', {})
+      redirectUrl = result?.redirect_url ?? null
     } finally {
       setUser(null)
     }
+    // A Ministry-provisioned account also has a session at the Ministry.
+    // Dropping only our cookie would let the next click sign the same child
+    // straight back in — on a shared classroom machine, the wrong child.
+    if (redirectUrl) window.location.assign(redirectUrl)
   }, [])
 
   const updatePreferences = useCallback(async (partial: Partial<UserPreferences>) => {
