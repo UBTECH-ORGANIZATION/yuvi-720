@@ -247,3 +247,38 @@ How a game gets them: the plan pass ends with `NEEDS: world3d, ui` (parsed by `m
 **Gates.** The validator samples the canvas 1 s after Start (`first_frame_blank`, a fact for the judge and a hint for the fix: build the scene before Start), `MIN_HEARTBEAT` is 60, and `games_report.py` gained `lines_p50`, `cache_ratio`, `first_frame_blank_rate` and `needs`.
 
 **Targets (phase 1).** 3D game ≤ 350 model-written lines; Opus low ≤ $0.25 and ≤ 150 s p50; judge mean ≥ 4.5; 3D pass-on-first-delivery ≥ 90%; cache_read ≥ 70% of input. Phase 2: hidden exemplars (1–2 similar judged games as style reference, never kid-facing remix), arcade2d, Discuss mode. Phase 3: play outcomes recorded per game, cached style-locked assets.
+
+### v3.1 — the kit becomes a component library (2026-09-14)
+
+Findings from the first AAA-brief FPS ("יריות"): the game came out near-black, the 3D canvas
+shrank to half the frame after the first shot, no enemy ever fired back, the gun was a box, and
+every game on the same component converged on "shoot the labelled crate".
+
+- **Half-screen bug** — `fit_to_frame.js` (ported from vibe-coding-kids) re-measured the page on the
+  first DOM mutation (the kit's fx canvas) with body at `height:auto`, got 910×427 and scaled body to
+  it. Kit games fill the window by contract, so the scaler now stands down when `YuviKit` is mounted;
+  the CSS reset and resize kicks stay.
+- **Readability floor** in `YuviWorld3D.world()`: fog near ≥ 12 % / far ≥ 55 % of `size` unless
+  `fog.force`; dark biomes get an ambient `fill` (.55, cool) and `toneMappingExposure` 1.25; options
+  `exposure`, `fill`, `fillColor`.
+- **Brief fidelity** — AMBITION said "no real-world weapons" and the judge penalised armed enemies, so
+  the plan pass rewrote "enemies that shoot" into "patrols that search". Kid-safe now means stylised
+  (blasters, bolts, paint; enemies power down), "the brief is the spec", and the judge's `age_fit`
+  says stylised combat is fine. The LEARNING_STANCE examples seeded the crate loop for every mass
+  game; `prompts.ANGLES` names a mechanic verb per build (`angle_for(job_id)`) in both the plan and
+  the build prompt.
+- **Plugin architecture** — `YuviWorld3D.use((W, THREE, ctx) => …)` runs after each world is built
+  with the internals (`KINDS`, `matFor`, `textures`, `lights`, `animated`, `propSets`, `enemies`…);
+  `W.props.define(kind, def)` registers prop kinds; the material factory takes a texture name
+  (`t:` per part, `texture`/`textures` per scatter/place/make) resolved through `ctx.textures`.
+  A module may be several files and skill fragments (`modules.REGISTRY[...]["js"]` tuple, first
+  required) and declare `requires`.
+- **Files** — `yuvi_world3d_materials.js` (procedural textures, material and shader presets, ground
+  texturing), `yuvi_world3d_props.js` (≥ 40 prop kinds with variants in industrial / urban / nature /
+  sci-fi / medieval sets + themed `W.props.layout(...)`), `yuvi_world3d_atmo.js` (lighting presets,
+  floodlights with fake volumetrics, weather: rain/storm/snow/fog, puddles, wind, readability
+  self-check), `yuvi_fps.js` (`YuviFPS`: 7 stylised weapon kinds with viewmodel rig, recoil, reload,
+  muzzle flash, ejection, tracers, decals; soldiers/drones/turrets with patrol → detect → cover →
+  attack → search AI that shoot back; player hp/armor; pickups), and a richer `props.character`
+  (joint hierarchy, faces, hair, clothing layers, gear, sockets for held items, aim/crouch/lookAt).
+  Skill fragments: `skills/world3d_{materials,props,atmo}.md`, `skills/fps.md`.

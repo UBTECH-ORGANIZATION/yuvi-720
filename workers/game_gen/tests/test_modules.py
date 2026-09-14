@@ -49,3 +49,27 @@ def test_skill_docs_enter_the_system_message_only_when_needed(monkeypatch):
     assert with_3d.index("YuviKit.init") < with_3d.index("SKILL-WORLD3D") < with_3d.index("WHAT YOU SHIP")
     assert "SKILL-WORLD3D" in prompts.editor_system_message("he", needs=["world3d"])
     assert "NEEDS" in prompts.PLAN_SYSTEM
+
+
+def test_module_files_and_fragments_concatenate_in_order():
+    # world3d is the core file plus every plugin file that exists on disk, core first.
+    text = modules.js_text("world3d")
+    assert text.startswith(modules.js_files("world3d") and (modules.HARNESS_DIR / "yuvi_world3d.js").read_text(encoding="utf-8")[:40])
+    for fname in modules.js_files("world3d")[1:]:
+        path = modules.HARNESS_DIR / fname
+        if path.is_file():
+            assert path.read_text(encoding="utf-8")[:60] in text
+    # Skill fragments join under the main doc, missing ones are skipped silently.
+    skill = modules.skill_text("world3d")
+    assert skill.startswith("# YuviWorld3D")
+
+
+def test_requires_pulls_the_base_module_in():
+    # fps needs world3d: asking for fps yields world3d even before yuvi_fps.js ships.
+    names = modules.resolve(["fps"])
+    assert "world3d" in names
+    assert names.index("world3d") == 0
+    if modules.available("fps"):
+        assert "fps" in names
+    assert modules.requires("fps") == ("world3d",)
+    assert modules.requires("world3d") == ()

@@ -78,7 +78,7 @@ KIT = _skill("core")  # the always-on kit, kept as a name for the tests
 AMBITION = """
 WHAT YOU SHIP (what a senior Phaser 4 / Three.js developer would)
 - The kit already provides the start screen, HUD, pause, game-over/win, audio, particles, shake, input and best score — configure it with `YuviKit.init({...})` and do not re-implement those; spend your lines on the world, the mechanic and the levels.
-- The kid is IN the world: a character or vehicle the kid moves (WASD / arrows, plus mouse look or a follow camera) and acts with — never a form with inputs and a picture behind it. When the brief says shooter, adventure, explore, race or 3D: first-person or third-person in Three.js with a real place — a sky (gradient or skybox), ground with detail, dozens of varied props, fog, key light + ambient, shadows, enemies that move with simple AI — and a loop of move → find → act → reward.
+- The kid is IN the world: a character or vehicle the kid moves (WASD / arrows, plus mouse look or a follow camera) and acts with — never a form with inputs and a picture behind it. When the brief says shooter, adventure, explore, race or 3D: first-person or third-person in Three.js with a real place — a themed layout from the world3d prop library (not plain boxes), textured surfaces, a lighting preset that stays readable, weather, enemies with real AI (the fps module when it is a shooter) — and a loop of move → find → act → reward.
 - The idea is worth telling even when the mechanic is simple: a place, a reason to be there, a signature moment the kid will describe to a friend. Name the levels; put the world's story in three sentences on the start screen (the kit's `subtitle`).
 - A look (one palette, glow, outlines, a background with depth); juice through the kit (particles, shake, flashes, floating score, tweens, sounds) at every hit, pickup and level-up.
 - A curve that keeps adding elements (a new enemy or rule, faster, a twist), a fail state with instant retry (`YuviKit.screens.gameOver`), a satisfying win (`YuviKit.screens.win`).
@@ -273,7 +273,7 @@ PROGRESSION — 4 to 6 named stages, each adding one element or rule.
 FAIL & REWARD — how you lose, what you win, why you retry.
 ENGINE — Canvas 2D, Phaser 4 or Three.js, with one reason.
 SIGNATURE MOMENT — the one thing the kid will remember.
-NEEDS — the last line, English, exactly `NEEDS: <names>` from {world3d, ui, arcade2d} or `NEEDS: none`: world3d for any 3D world (first/third person, driving, flying, shooter, exploration); ui when the game asks questions, shows dialogue, timers or combos; arcade2d for a 2D platformer/runner/top-down with sprites and tiles.
+NEEDS — the last line, English, exactly `NEEDS: <names>` from {world3d, fps, ui, arcade2d} or `NEEDS: none`: world3d for any 3D world (first/third person, driving, flying, shooter, exploration); fps (with world3d) for any shooter — weapons, a viewmodel, enemies that shoot back, health/armor/ammo; ui when the game asks questions, shows dialogue, timers or combos; arcade2d for a 2D platformer/runner/top-down with sprites and tiles.
 Write in the kid's language as a producer describing the game: neutral register, third person, no slang, never address the reader (no "אחי", "bro", "hey you"), no gendered forms. Be concrete and short; no preamble, no closing line."""
 
 
@@ -298,7 +298,7 @@ JUDGE_SYSTEM = """You review browser learning games for kids in grades 7-9. You 
 learning_through_play: 5 = playing well requires thinking with the concept, and its vocabulary sits on objects, HUD and level names; 3 = the concept shows up only in gates or quiz overlays; 1 = the game states the answer and asks the kid to copy it (a copy task), or its RTL text garbles the math (2:4 shown as 4:2); 0 = a generic game, topic absent.
 fun: 5 = a real loop with a curve, choices, a fail state and a reason to retry; 0 = a demo.
 polish: 5 = title screen with controls, juice, sound, one coherent look, an end screen; 0 = bare.
-age_fit: 5 = the right difficulty, vocabulary and tone for the grade; 0 = wrong audience or unsafe content.
+age_fit: 5 = the right difficulty, vocabulary and tone for the grade; 0 = wrong audience or unsafe content. Stylised combat (blasters, bolts, paint, enemies that power down) is age-appropriate for grades 7–9 and must not lower this score; blood, gore, horror or cruelty do.
 Use the checker facts: frames near 0 or canvas_blank true means nothing moves; input_reacts false means the controls may be dead; count those against polish and fun. Never reward questions for their own sake.
 Return ONLY the JSON object."""
 
