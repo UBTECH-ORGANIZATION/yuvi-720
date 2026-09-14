@@ -41,7 +41,7 @@ REGISTRY: dict[str, dict[str, object]] = {
     },
     "fps": {
         "js": "yuvi_fps.js", "skill": "fps.md", "requires": ("world3d",),
-        "tokens": ("YuviFPS",),
+        "tokens": ("YuviFPS", "W.fps.", ".fps.weapon(", ".fps.arms(", ".fps.soldier(", ".fps.squad("),   # the plugin form `W.fps` is how games use it
         "chips": ("shooter", "fps"),
         "words": ("fps", "shooter", "ירי", "יריות", "יורים", "נשק", "כלי נשק", "גוף ראשון", "first person", "gun", "weapon", "إطلاق", "سلاح", "منظور الشخص الأول"),
     },
