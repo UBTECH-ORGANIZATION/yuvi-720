@@ -130,7 +130,9 @@ export function LoginDialog({ open, authError, onClose, onSuccess }: LoginDialog
 
       <div className="auth-forge__card" dir={direction}>
         <h2 className="sp-modal__title" id="auth-dialog-title">{t('auth.dialog.title')}</h2>
-        <p className="sp-modal__subtitle">{t('auth.dialog.subtitle')}</p>
+        <p className="sp-modal__subtitle">
+          {t(providers && !providers.password ? 'auth.dialog.subtitleMoe' : 'auth.dialog.subtitle')}
+        </p>
 
         {providers?.moe ? (
           <div className="auth-forge__sso">

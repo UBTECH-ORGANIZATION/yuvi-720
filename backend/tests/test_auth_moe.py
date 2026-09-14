@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, urlparse
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi.responses import RedirectResponse
 from jwt.algorithms import RSAAlgorithm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -30,8 +31,10 @@ from app.auth.moe import claims as moe_claims
 from app.auth.moe import client as moe_client
 from app.auth.moe import config as moe_config
 from app.auth.moe import discovery, provisioning, state, verify
+from app.auth.moe import redirect as moe_redirect
 from app.auth.moe.client import OidcError
 from app.core import env as core_env
+from app.routes import static_pages
 from app.services import org_repository
 
 ISSUER = "https://stub.example/nidp/oauth/nam"
@@ -87,6 +90,7 @@ class MoeOidcTestCase(unittest.TestCase):
                 "MOE_OIDC_CLIENT_SECRET",
                 "MOE_OIDC_ISSUER",
                 "MOE_OIDC_REDIRECT_PATH",
+                "MOE_OIDC_REDIRECT_URI",
                 "MOE_LEARNER_ID_SALT",
                 "PUBLIC_APP_URL",
                 "SPARK_ENVIRONMENT",
@@ -106,6 +110,8 @@ class MoeOidcTestCase(unittest.TestCase):
                 "SECRET_KEY": "test-signing-secret-value",
             }
         )
+        # The override is opt-in; a developer's own shell must not leak into it.
+        os.environ.pop("MOE_OIDC_REDIRECT_URI", None)
         self._os = os
 
         discovery.reset_cache()
@@ -562,6 +568,97 @@ class ConfigurationTest(MoeOidcTestCase):
         self._os.environ["MOE_LEARNER_ID_SALT"] = ""
         with self.assertRaises(RuntimeError):
             moe_config.learner_id_salt()
+
+
+class RedirectUriTest(MoeOidcTestCase):
+    """The Ministry compares redirect URIs as strings, not as URLs."""
+
+    def test_path_is_used_when_no_override_is_set(self) -> None:
+        self.assertEqual(
+            moe_redirect.redirect_uri(),
+            "https://dev.spark.yuvilab.ai/api/auth/moe/callback",
+        )
+        self.assertFalse(moe_redirect.is_root_callback())
+
+    def test_override_wins_and_is_sent_verbatim(self) -> None:
+        """Registered today is the bare origin — no path, no trailing slash.
+        Adding either turns the authorization request into `invalid_grant`."""
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "https://dev.spark.yuvilab.ai"
+        self.assertEqual(moe_redirect.redirect_uri(), "https://dev.spark.yuvilab.ai")
+        self.assertTrue(moe_redirect.is_root_callback())
+
+        transaction = state.create_transaction()
+        url = run(
+            moe_client.build_authorization_url(
+                state=transaction["state"],
+                nonce=transaction["nonce"],
+                challenge=transaction["code_challenge"],
+            )
+        )
+        query = parse_qs(urlparse(url).query)
+        self.assertEqual(query["redirect_uri"], ["https://dev.spark.yuvilab.ai"])
+
+    def test_trailing_slash_still_counts_as_the_root(self) -> None:
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "https://dev.spark.yuvilab.ai/"
+        self.assertTrue(moe_redirect.is_root_callback())
+
+    def test_blank_override_falls_back_to_the_path(self) -> None:
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "   "
+        self.assertEqual(
+            moe_redirect.redirect_uri(),
+            "https://dev.spark.yuvilab.ai/api/auth/moe/callback",
+        )
+
+
+class RootCallbackTest(MoeOidcTestCase):
+    """The site root doubles as the callback while the origin is what's
+    registered — but only then, and only for a request that carries a code."""
+
+    @staticmethod
+    def _request(query: str):
+        from starlette.requests import Request
+
+        return Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/",
+                "query_string": query.encode(),
+                "headers": [],
+            }
+        )
+
+    def test_plain_page_load_still_serves_the_app(self) -> None:
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "https://dev.spark.yuvilab.ai"
+        response = run(static_pages.root(self._request("")))
+        self.assertNotIsInstance(response, RedirectResponse)
+
+    def test_our_own_error_redirect_does_not_loop(self) -> None:
+        """`_failure` sends the browser to `/?auth_error=…`; if the root treated
+        that as a callback the failure would bounce forever."""
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "https://dev.spark.yuvilab.ai"
+        response = run(static_pages.root(self._request("auth_error=sso_denied")))
+        self.assertNotIsInstance(response, RedirectResponse)
+
+    def test_a_code_at_the_root_is_completed_as_a_login(self) -> None:
+        self._os.environ["MOE_OIDC_REDIRECT_URI"] = "https://dev.spark.yuvilab.ai"
+        response = run(
+            static_pages.root(
+                self._request("code=abc&state=xyz"), code="abc", state="xyz"
+            )
+        )
+        # No transaction cookie on the request, so this lands on the failure
+        # redirect — what matters is that the login path ran at all.
+        self.assertIsInstance(response, RedirectResponse)
+        self.assertIn("auth_error=login_expired", response.headers["location"])
+
+    def test_the_root_ignores_codes_when_the_callback_path_is_registered(self) -> None:
+        response = run(
+            static_pages.root(
+                self._request("code=abc&state=xyz"), code="abc", state="xyz"
+            )
+        )
+        self.assertNotIsInstance(response, RedirectResponse)
 
 
 class LogoutTest(MoeOidcTestCase):

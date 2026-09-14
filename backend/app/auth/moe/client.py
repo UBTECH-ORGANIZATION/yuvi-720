@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 import httpx
 
 from app.auth.moe import config, discovery
+from app.auth.moe import redirect as moe_redirect
 
 
 class OidcError(Exception):
@@ -28,7 +29,7 @@ async def build_authorization_url(*, state: str, nonce: str, challenge: str) -> 
         {
             "response_type": "code",
             "client_id": config.client_id(),
-            "redirect_uri": config.redirect_uri(),
+            "redirect_uri": moe_redirect.redirect_uri(),
             "scope": config.scopes(),
             "state": state,
             "nonce": nonce,
@@ -44,7 +45,7 @@ async def exchange_code(*, code: str, code_verifier: str) -> dict[str, Any]:
     form: dict[str, str] = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": config.redirect_uri(),
+        "redirect_uri": moe_redirect.redirect_uri(),
         "code_verifier": code_verifier,
         "client_id": config.client_id(),
     }
