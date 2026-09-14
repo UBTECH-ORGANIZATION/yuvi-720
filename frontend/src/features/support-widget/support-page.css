@@ -1,0 +1,315 @@
+/* A full screen of chat: header, thread, composer. Logical properties throughout,
+   so the same sheet serves Hebrew, Arabic and English without an RTL override. */
+
+.support-page {
+  display: flex;
+  flex-direction: column;
+  block-size: 100dvh;
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-900);
+}
+
+.support-page__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px clamp(16px, 4vw, 32px);
+  background: var(--sp-surface);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.support-page__head h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.support-page__avatar {
+  inline-size: 34px;
+  block-size: 34px;
+  flex: none;
+}
+
+.support-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: 7px 14px 7px 10px;
+  font: inherit;
+  color: var(--sp-ink-700);
+  background: var(--sp-surface-2);
+  cursor: pointer;
+}
+
+.support-page__back svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+/* The chevron points the way back, which is the other way round in English. */
+html[dir='ltr'] .support-page__back svg {
+  transform: scaleX(-1);
+}
+
+.support-page__live {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #b4232c;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.support-page__live button {
+  border: 1px solid #fff;
+  border-radius: var(--sp-radius-pill);
+  padding: 3px 12px;
+  font: inherit;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+
+.support-page__dot {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.support-page__thread {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block: clamp(16px, 4vw, 28px);
+  /* Full-bleed paper, bubbles held to the same reading column as the composer. */
+  padding-inline: max(clamp(16px, 4vw, 28px), calc((100% - 760px) / 2));
+  /* Spark's own quiet lilac, not a messaging app's paper. */
+  background: var(--sp-bg-subtle);
+}
+
+.support-page__message {
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--sp-radius-lg);
+  line-height: 1.45;
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.support-page__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.support-page__time {
+  flex: none;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+  /* The clock reads left-to-right even in a Hebrew bubble. */
+  direction: ltr;
+}
+
+/* Sides are physical on purpose: what the learner wrote is on the right and the
+   supporter is on the left in every language, so the thread does not mirror out
+   from under someone who switches language mid-conversation. The row also puts
+   each avatar on the outer edge, which is why the direction flips per side. */
+.support-page__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-inline-size: 86%;
+}
+
+.support-page__row.is-mine {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.support-page__row.is-theirs {
+  align-self: flex-start;
+}
+
+html[dir='rtl'] .support-page__row.is-mine {
+  align-self: flex-start;
+  flex-direction: row;
+}
+
+html[dir='rtl'] .support-page__row.is-theirs {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.support-page__row-avatar {
+  inline-size: 30px;
+  block-size: 30px;
+  flex: none;
+}
+
+/* The learner's own picture: a badge coin when they chose one, else initials. */
+.support-page__row-avatar--me {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--sp-primary-700);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.support-page__row.is-mine .support-page__message {
+  background: var(--sp-primary-600);
+  color: #fff;
+  border-end-end-radius: var(--sp-radius-sm);
+}
+
+.support-page__row.is-theirs .support-page__message {
+  background: var(--sp-surface);
+  color: var(--sp-ink-900);
+  border-end-start-radius: var(--sp-radius-sm);
+}
+
+html[dir='rtl'] .support-page__row.is-mine .support-page__message {
+  border-end-end-radius: var(--sp-radius-lg);
+  border-end-start-radius: var(--sp-radius-sm);
+}
+
+html[dir='rtl'] .support-page__row.is-theirs .support-page__message {
+  border-end-start-radius: var(--sp-radius-lg);
+  border-end-end-radius: var(--sp-radius-sm);
+}
+
+.support-page__typing {
+  margin: 0;
+  color: var(--sp-ink-400);
+  font-size: 0.9rem;
+}
+
+.support-page__fallback {
+  margin: auto;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  color: var(--sp-ink-700);
+}
+
+.support-page__report {
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--sp-primary-600);
+  cursor: pointer;
+}
+
+.support-page__consent {
+  display: grid;
+  gap: 10px;
+  padding-block: 14px;
+  /* Full-bleed bar, content held to the same reading column as the thread. */
+  padding-inline: max(clamp(16px, 4vw, 28px), calc((100% - 760px) / 2));
+  background: var(--sp-surface);
+  border-block-start: 1px solid var(--sp-border);
+  font-size: 0.92rem;
+}
+
+.support-page__consent p {
+  margin: 0;
+}
+
+.support-page__consent div,
+.support-page__voice {
+  display: flex;
+  gap: 8px;
+}
+
+.support-page__voice {
+  padding-inline: max(clamp(16px, 4vw, 28px), calc((100% - 760px) / 2));
+  padding-block: 10px;
+}
+
+.support-page__consent button,
+.support-page__voice button {
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-pill);
+  padding: 8px 16px;
+  font: inherit;
+  color: var(--sp-ink-700);
+  background: var(--sp-surface-2);
+  cursor: pointer;
+}
+
+.support-page__consent button.primary {
+  border-color: transparent;
+  color: #fff;
+  background: var(--sp-primary-600);
+}
+
+/* The composer needs a label for screen readers; the placeholder is not one.
+   This app has no global utility class for that, so it lives here. */
+.support-page__sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.support-page__composer {
+  display: flex;
+  gap: 10px;
+  padding-block: 14px;
+  padding-block-end: max(14px, env(safe-area-inset-bottom));
+  padding-inline: max(clamp(16px, 4vw, 28px), calc((100% - 760px) / 2));
+  background: var(--sp-surface);
+  border-block-start: 1px solid var(--sp-border);
+}
+
+.support-page__composer input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: 12px 18px;
+  font: inherit;
+  color: var(--sp-ink-900);
+  background: var(--sp-surface-2);
+}
+
+.support-page__composer input:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+.support-page__composer button {
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  padding: 12px 24px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--sp-primary-600);
+  cursor: pointer;
+}
+
+.support-page__composer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
