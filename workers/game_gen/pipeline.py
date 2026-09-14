@@ -205,6 +205,10 @@ def _format_result_for_llm(result: ValidationResult, attempts_left: int) -> str:
     elif (getattr(result, "phases", None) or {}).get("first_frame_blank"):
         lines.append("The canvas was still flat 1 s after Start: build the whole scene before Start (while the title "
                      "screen shows) and draw the first frame the moment onStart runs.")
+    overlaps = (getattr(result, "phases", None) or {}).get("hud_overlap")
+    if overlaps:
+        lines.append("On-screen panels overlap each other: " + "; ".join(str(o) for o in overlaps[:4])
+                     + ". Put every panel you add through `YuviKit.dock(el, region)` (regions stack their children) instead of your own fixed/absolute placement.")
     lines.append(f"Fix these and call the tool again with the FULL corrected HTML. Attempts left: {attempts_left}.")
     return "\n".join(lines)
 
@@ -215,6 +219,7 @@ def _facts_from(result: ValidationResult, html: str) -> dict[str, Any]:
         "clicked_start": result.clicked_start, "play_score": result.play_score,
         "html_lines": html.count("\n") + 1,
         "first_frame_blank": (result.phases or {}).get("first_frame_blank"),
+        "hud_overlap": (result.phases or {}).get("hud_overlap"),
     }
 
 

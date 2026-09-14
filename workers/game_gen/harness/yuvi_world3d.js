@@ -862,8 +862,10 @@
     function objective(text) {
       if (!objEl) {
         objEl = document.createElement('div'); objEl.id = 'yw-objective';
-        Object.assign(objEl.style, { position: 'absolute', left: '50%', bottom: '4vh', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.55)', color: '#fff', padding: '.7vh 2.4vw', borderRadius: '.9rem', font: '700 clamp(.9rem,2.4vw,1.3rem) system-ui,sans-serif', whiteSpace: 'nowrap', zIndex: 2, textShadow: '0 1px 3px #000', pointerEvents: 'none' });
-        objEl.setAttribute('dir', kit() ? kit().dir : 'auto'); uiRoot().appendChild(objEl);
+        Object.assign(objEl.style, { background: 'rgba(0,0,0,.55)', color: '#fff', padding: '.7vh 2.4vw', borderRadius: '.9rem', font: '700 clamp(.9rem,2.4vw,1.3rem) system-ui,sans-serif', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', pointerEvents: 'none', maxWidth: '80vw', overflow: 'hidden', textOverflow: 'ellipsis' });
+        objEl.setAttribute('dir', kit() ? kit().dir : 'auto');
+        // The bottom dock stacks it with whatever panels the game docks there; without the kit it sits at the bottom on its own.
+        if (kit() && kit().dock) kit().dock(objEl, 'bottom'); else { Object.assign(objEl.style, { position: 'absolute', left: '50%', bottom: '4vh', transform: 'translateX(-50%)', zIndex: 2 }); uiRoot().appendChild(objEl); }
       }
       objEl.textContent = text == null ? '' : String(text); objEl.style.display = text ? '' : 'none';
       return objEl;

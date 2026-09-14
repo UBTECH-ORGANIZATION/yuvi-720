@@ -156,14 +156,14 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertEqual(edited.status_code, 200, edited.text)
         job = self._run(store.get_job(edited.json()["job_id"]))
         self.assertEqual(job["payload"]["model"], "claude-sonnet-5", "the default moved; the game did not")
-        self.assertEqual(job["payload"]["reasoning_effort"], "medium")
+        self.assertEqual(job["payload"]["reasoning_effort"], "low", "edits are patch-shaped: low, escalated by the pipeline when needed")
         self.assertFalse(job["payload"]["plan"], "only creates run the pitch pre-pass")
         self.assertTrue(job["payload"]["judge"])
         self._run(store.update_status(gid, "ready"))
         fixed = self.client.post(f"/api/games/{gid}/report-bug", json={"errors": [{"message": "TypeError"}]})
         self.assertEqual(fixed.status_code, 200, fixed.text)
         fix = self._run(store.get_job(fixed.json()["job_id"]))
-        self.assertEqual((fix["payload"]["model"], fix["payload"]["reasoning_effort"]), ("claude-sonnet-5", "medium"))
+        self.assertEqual((fix["payload"]["model"], fix["payload"]["reasoning_effort"]), ("claude-sonnet-5", "low"))
 
     def test_job_instrumentation_is_shown_to_admins_only(self):
         created = self._create()

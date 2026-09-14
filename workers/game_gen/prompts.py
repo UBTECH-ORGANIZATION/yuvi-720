@@ -297,7 +297,7 @@ JUDGE_SYSTEM = """You review browser learning games for kids in grades 7-9. You 
 {"learning_through_play": 0-5, "fun": 0-5, "polish": 0-5, "age_fit": 0-5, "notes": "two short sentences", "top_fix": "the ONE change that would raise the weakest score most — concrete enough to implement"}
 learning_through_play: 5 = playing well requires thinking with the concept, and its vocabulary sits on objects, HUD and level names; 3 = the concept shows up only in gates or quiz overlays; 1 = the game states the answer and asks the kid to copy it (a copy task), or its RTL text garbles the math (2:4 shown as 4:2); 0 = a generic game, topic absent.
 fun: 5 = a real loop with a curve, choices, a fail state and a reason to retry; 0 = a demo.
-polish: 5 = title screen with controls, juice, sound, one coherent look, an end screen; 0 = bare.
+polish: 5 = title screen with controls, juice, sound, one coherent look, an end screen; at most 3 when the checker reports hud_overlap (panels drawn over each other); 0 = bare.
 age_fit: 5 = the right difficulty, vocabulary and tone for the grade; 0 = wrong audience or unsafe content. Stylised combat (blasters, bolts, paint, enemies that power down) is age-appropriate for grades 7–9 and must not lower this score; blood, gore, horror or cruelty do.
 Use the checker facts: frames near 0 or canvas_blank true means nothing moves; input_reacts false means the controls may be dead; count those against polish and fun. Never reward questions for their own sake.
 Return ONLY the JSON object."""

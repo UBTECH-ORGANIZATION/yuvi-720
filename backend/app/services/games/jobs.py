@@ -18,9 +18,11 @@ context is the worker's business, not the card's.
 
 ## Model and effort
 
-``model`` / ``reasoning_effort`` come from the GAME row (decided at create:
-an admin's pick or ``GAME_MODEL_DEFAULT``; ``medium`` with deep thinking,
-``low`` otherwise) so edits and fixes stay on the model that wrote the game.
+``model`` comes from the GAME row (decided at create: an admin's pick or
+``GAME_MODEL_DEFAULT``) so edits and fixes stay on the model that wrote the
+game. ``reasoning_effort`` is the game's for a create (``medium`` with deep
+thinking, ``low`` otherwise) and always ``low`` for edits and fixes — they are
+patch-shaped, and the worker escalates to ``medium`` once when a patch fails.
 ``model`` None means the worker's own default. ``judge`` is always on —
 the worker's judge never discards a finished game, it asks for one revision.
 ``plan`` (the mini pitch pre-pass) runs for creates only.
@@ -192,7 +194,9 @@ async def enqueue(
         "learner_title": (learner_title or "")[:40],
         # The game row decides; an edit never changes the model that wrote it.
         "model": game.get("model") or default_model(),
-        "reasoning_effort": game.get("reasoning_effort") or "low",
+        # A create thinks as hard as the kid asked; an edit or a fix is patch-shaped
+        # and runs low — the pipeline escalates to medium once if the patch fails.
+        "reasoning_effort": (game.get("reasoning_effort") or "low") if kind == "create" else "low",
         "judge": True,
         "plan": kind == "create",
         # An edit keeps the runtime modules its version was built against.

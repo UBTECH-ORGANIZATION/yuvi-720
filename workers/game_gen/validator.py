@@ -215,6 +215,37 @@ _YUVI_STATE_JS = """() => {
 # Samples every visible canvas across a few animation frames (so WebGL canvases
 # without preserveDrawingBuffer are read while their frame is still live) and
 # counts distinct quantised colours + luminance spread.
+# Overlapping on-screen panels: two visible text boxes (HUD strips, mission
+# cards, legends) whose rectangles intersect by more than a quarter of the
+# smaller one. Kit screens (start/pause/end) and ancestor/descendant pairs are
+# skipped. A fact for the fix ("dock it") and for the judge, not a failure.
+_OVERLAP_JS = """() => {
+  const out = [], boxes = [];
+  const skip = n => n.closest('.yk-screen') || n.id === 'yk-root' || n.id === 'yf-hud' || n.id === 'yf-cross';
+  for (const n of document.querySelectorAll('body *, #yk-root *')) {
+    if (!(n instanceof HTMLElement) || skip(n)) continue;
+    const cs = getComputedStyle(n);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0 || cs.pointerEvents === 'none' && !n.textContent.trim()) continue;
+    const text = (n.innerText || '').trim();
+    if (text.length < 2) continue;
+    // only the outermost text box of a stack: a child that is just part of its parent's text is not a panel
+    if (n.parentElement && (n.parentElement.innerText || '').trim() === text && !skip(n.parentElement) && n.parentElement.tagName !== 'BODY') continue;
+    const r = n.getBoundingClientRect();
+    if (r.width < 24 || r.height < 12 || r.right < 0 || r.bottom < 0 || r.left > innerWidth || r.top > innerHeight) continue;
+    boxes.push({ n, r, label: (n.id ? '#' + n.id : n.className && typeof n.className === 'string' ? '.' + n.className.split(' ')[0] : n.tagName.toLowerCase()) + ' "' + text.slice(0, 24).replace(/\\s+/g, ' ') + '"' });
+  }
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const a = boxes[i], b = boxes[j];
+    if (a.n.contains(b.n) || b.n.contains(a.n)) continue;
+    const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+    if (w <= 0 || h <= 0) continue;
+    const small = Math.min(a.r.width * a.r.height, b.r.width * b.r.height);
+    if (w * h > small * .25) out.push(a.label + ' × ' + b.label);
+    if (out.length >= 6) return out;
+  }
+  return out;
+}"""
+
 _CANVAS_SAMPLE_JS = """async () => {
     const canvases = Array.from(document.querySelectorAll('canvas'))
         .filter(c => c.width > 0 && c.height > 0 && c.offsetWidth > 0 && c.offsetHeight > 0);
@@ -531,6 +562,14 @@ async def validate_html(
                 # on screen), and fall back to the title screen taken before
                 # Start when the game asks at once.
                 early_png: Optional[bytes] = title_png
+                if clicked:
+                    try:
+                        await page.wait_for_timeout(min(1200, interaction_settle_ms))
+                        overlaps = await page.evaluate(_OVERLAP_JS)
+                        if overlaps:
+                            phases["hud_overlap"] = list(overlaps)[:6]
+                    except Exception as e:  # noqa: BLE001
+                        log.warning("overlap probe failed: %s", e)
                 if screenshot:
                     window_ms = max(interaction_settle_ms, POSTER_WINDOW_MS)
                     waited = 0

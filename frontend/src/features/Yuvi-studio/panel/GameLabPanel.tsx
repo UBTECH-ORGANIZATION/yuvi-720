@@ -280,10 +280,11 @@ function GameCard({
           )}
         </div>
         <div className="ys-gamelab-card__meta">
-          <span className={`ys-gamelab-status is-${tone}`} role="status">
-            {busy && <i className="ys-gamelab-status__shimmer" aria-hidden />}
-            {busy && stage && stage !== 'queued' ? t(`studio.gamelab.stage.${stage}`) : t(`studio.gamelab.status.${game.status}`)}
-          </span>
+          {/* The strip below says where a build is and the play button says "ready";
+              only a failure needs a word of its own. */}
+          {game.status === 'failed' && (
+            <span className={`ys-gamelab-status is-${tone}`} role="status">{t('studio.gamelab.status.failed')}</span>
+          )}
           <span className="ys-gamelab-card__stat">
             <Icon name="spark" size={12} />
             {game.sparks_spent} {t('rewards.currency')}

@@ -251,7 +251,7 @@
     const flashMat = new THREE.SpriteMaterial({ map: flashTex, color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     function makeFlash(parent, sz, noDepth) { const s = new THREE.Sprite(noDepth ? new THREE.SpriteMaterial({ map: flashTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false }) : flashMat); s.scale.setScalar(sz); s.visible = false; noRay(s); s.renderOrder = 5; if (parent) parent.add(s); return { s: s, t: 0, sz: sz }; }
     const flashes = [];
-    function flashOn(f, color) { f.t = .06; f.s.visible = true; f.s.material.rotation = rand() * 6.2832; f.s.scale.setScalar(f.sz * (.8 + rand() * .5)); if (color && f.s.material !== flashMat) f.s.material.color.set(color); if (flashes.indexOf(f) < 0) flashes.push(f); }
+    function flashOn(f, color) { f.t = .06; f.n = 0; f.s.visible = true; f.s.material.rotation = rand() * 6.2832; f.s.scale.setScalar(f.sz * (.8 + rand() * .5)); if (color && f.s.material !== flashMat) f.s.material.color.set(color); if (flashes.indexOf(f) < 0) flashes.push(f); }
     let flashLight = null, flashLightT = 0;
     if (lights.length < LIGHT_CAP) { flashLight = new THREE.PointLight('#ffc070', 0, 7, 2); flashLight.visible = false; scene.add(flashLight); lights.push(flashLight); }
     const lightAt = (p, col, i) => { if (!flashLight) return; flashLight.position.copy(p); if (col) flashLight.color.set(col); flashLight.intensity = i || 6; flashLight.visible = true; flashLightT = .07; };
@@ -265,9 +265,9 @@
     }
     const tracers = { mesh: new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .85, fog: false }), 24), n: 24, items: [], next: 0 };
     tracers.mesh.frustumCulled = false; noRay(tracers.mesh); tracers.mesh.count = 0; scene.add(tracers.mesh);
-    for (let i = 0; i < 24; i++) tracers.items.push({ on: false, t: 0, life: .07, a: new THREE.Vector3(), b: new THREE.Vector3(), w: .02 });
+    for (let i = 0; i < 24; i++) tracers.items.push({ on: false, t: 0, life: .07, a: new THREE.Vector3(), b: new THREE.Vector3(), w: .02, n: 0 });
     function tracer(a, b, color, life, width) {
-      const i = tracers.next = (tracers.next + 1) % tracers.n, t = tracers.items[i]; t.on = true; t.t = 0; t.life = life || .07; t.a.copy(a); t.b.copy(b); t.w = width || .02;
+      const i = tracers.next = (tracers.next + 1) % tracers.n, t = tracers.items[i]; t.on = true; t.t = 0; t.n = 0; t.life = life || .07; t.a.copy(a); t.b.copy(b); t.w = width || .02;
       C.set(color || '#7cf0ff'); tracers.mesh.setColorAt(i, C); if (tracers.mesh.instanceColor) tracers.mesh.instanceColor.needsUpdate = true; tracers.mesh.count = tracers.n;
     }
     const decals = { items: [], n: 48, next: 0, mats: {} };
@@ -286,7 +286,7 @@
       else if (pc) { const k = kitOf(); if (k && Math.hypot(pc.pos.x - point.x, pc.pos.z - point.z) < radius * 3) k.fx.shake(6, 180); }
     }
     function fxUpdate(dt) {
-      for (let i = flashes.length - 1; i >= 0; i--) { const f = flashes[i]; if ((f.t -= dt) <= 0) { f.s.visible = false; flashes.splice(i, 1); } }
+      for (let i = flashes.length - 1; i >= 0; i--) { const f = flashes[i]; f.n = (f.n || 0) + 1; if ((f.t -= dt) <= 0 && f.n > 2) { f.s.visible = false; flashes.splice(i, 1); } }
       if (flashLight && flashLight.visible && (flashLightT -= dt) <= 0) { flashLight.visible = false; flashLight.intensity = 0; }
       if (shells.mesh.count) { let any = false; for (let i = 0; i < shells.n; i++) { const s = shells.items[i]; if (!s.on) { M.makeScale(0, 0, 0); shells.mesh.setMatrixAt(i, M); continue; } any = true;
           s.t += dt; s.v.y -= 9.8 * dt; s.p.addScaledVector(s.v, dt); s.spin += dt * 20; const gy = groundY(s.p.x, s.p.z);
@@ -294,8 +294,8 @@
           if (s.t > 1.4) s.on = false; M.compose(s.p, Q.setFromAxisAngle(V.set(1, 0, .4).normalize(), s.spin), V2.set(1, 1, 1)); shells.mesh.setMatrixAt(i, M); }
         shells.mesh.instanceMatrix.needsUpdate = true; if (!any) shells.mesh.count = 0; }
       if (tracers.mesh.count) { let any = false; for (let i = 0; i < tracers.n; i++) { const t = tracers.items[i]; if (!t.on) { M.makeScale(0, 0, 0); tracers.mesh.setMatrixAt(i, M); continue; } any = true;
-          t.t += dt; if (t.t > t.life) { t.on = false; M.makeScale(0, 0, 0); tracers.mesh.setMatrixAt(i, M); continue; }
-          const len = t.a.distanceTo(t.b), k = 1 - t.t / t.life; V.copy(t.a).lerp(t.b, .5); V2.copy(t.b).sub(t.a).normalize(); Q.setFromUnitVectors(FWD, V2);
+          t.t += dt; t.n++; if (t.t > t.life && t.n > 2) { t.on = false; M.makeScale(0, 0, 0); tracers.mesh.setMatrixAt(i, M); continue; }
+          const len = t.a.distanceTo(t.b), k = Math.max(.3, 1 - t.t / t.life); V.copy(t.a).lerp(t.b, .5); V2.copy(t.b).sub(t.a).normalize(); Q.setFromUnitVectors(FWD, V2);
           M.compose(V, Q, V3.set(t.w * (.5 + k), t.w * (.5 + k), len)); tracers.mesh.setMatrixAt(i, M); }
         tracers.mesh.instanceMatrix.needsUpdate = true; if (!any) tracers.mesh.count = 0; }
     }
@@ -331,7 +331,8 @@
       rig.reload = () => { const w = rig.current; return !!(w && w.reload()); };
       rig.hitMarker = ko => { ui.hit(ko); rig.stats.hits++; fps.hits++; play(ko ? 'buzz' : 'hit'); };
       const cone = (dir, deg, out) => { out.copy(dir); if (deg <= 0) return out; V4.set(rand() - .5, rand() - .5, rand() - .5).cross(dir); if (V4.lengthSq() < 1e-6) V4.set(1, 0, 0); return out.applyAxisAngle(V4.normalize(), deg * D2R * Math.sqrt(rand())); };
-      function updateHud() { const k = kitOf(), w = rig.current; if (!k || !w) return; if (k.hud.get('ammo') !== undefined) k.hud.set('ammo', w.mag + ' / ' + w.ammo); if (k.hud.get('weapon') !== undefined) k.hud.set('weapon', w.name); }
+      let hudStr = '';   // the rig is usually built before YuviKit.init, so the HUD is refreshed lazily whenever the ammo text changes
+      function updateHud() { const k = kitOf(), w = rig.current; if (!k || !w) return; const str = w.mag + ' / ' + w.ammo; if (str === hudStr) return; if (k.hud.get('ammo') !== undefined) { k.hud.set('ammo', str); hudStr = str; } if (k.hud.get('weapon') !== undefined) k.hud.set('weapon', w.name); }
       function sysFor(w) {
         if (w.sys) return w.sys; const cfg = w.config, col = w.accent;
         w.sys = W.projectiles({ speed: cfg.speed, gravity: cfg.gravity || 0, radius: .12, pool: cfg.splash ? 8 : 24, life: 4, color: col, targets: () => fps.soldiers,
@@ -385,7 +386,7 @@
         camera.getWorldQuaternion(Q).invert(); if (sun) vSun.position.copy(sun.position).normalize().applyQuaternion(Q).multiplyScalar(5); vHemi.position.copy(UP).applyQuaternion(Q);
       }
       rig.update = dt => {
-        const w = rig.current; ui.update(dt); if (!w) return;
+        const w = rig.current; ui.update(dt); if (!w) return; updateHud();
         const k = kitOf(), inp = k ? k.input : null, moving = ctrl.onGround && Math.hypot(ctrl.vel.x, ctrl.vel.z) > .6, speed = Math.hypot(ctrl.vel.x, ctrl.vel.z);
         rig.sprinting = moving && !!inp && (inp.pressed('ShiftLeft') || inp.pressed('ShiftRight')) && speed > 7;
         const cfg = w.config;
@@ -397,7 +398,8 @@
         } else { rig.mouseDown = false; }
         for (let i = 0; i < rig.weapons.length; i++) rig.weapons[i].update(dt);
         // recoil springs (k 250, c 32) and camera recovery
-        S.kzv += (-250 * S.kz - 32 * S.kzv) * dt; S.kz += S.kzv * dt; S.krxv += (-220 * S.krx - 30 * S.krxv) * dt; S.krx += S.krxv * dt; S.kry = damp(S.kry, 0, 14, dt);
+        for (let n = Math.ceil(dt * 120), h = dt / (n || 1); n > 0; n--) { S.kzv += (-250 * S.kz - 32 * S.kzv) * h; S.kz += S.kzv * h; S.krxv += (-220 * S.krx - 30 * S.krxv) * h; S.krx += S.krxv * h; }   // substepped: stable on slow frames
+        S.kry = damp(S.kry, 0, 14, dt);
         const rp = S.camPitch * (1 - Math.exp(-dt * 9)), ry = S.camYaw * (1 - Math.exp(-dt * 9)); ctrl.pitch -= rp; ctrl.yaw -= ry; S.camPitch -= rp; S.camYaw -= ry;
         // sway from the look delta (ctrl already consumed YuviKit.input.look, so the yaw/pitch change is the delta)
         const dy = lerpAngle(S.prevYaw, ctrl.yaw, 1) - S.prevYaw + ry, dp = ctrl.pitch - S.prevPitch + rp; S.prevYaw = ctrl.yaw; S.prevPitch = ctrl.pitch;
@@ -510,7 +512,7 @@
       const P = mesh.parts || {}, ud = mesh.userData;
       const s = { kind: 'soldier', arch: name, mesh: mesh, pos: mesh.position, state: 'patrol', alive: true, hp: (+o.hp || A.hp), maxHp: (+o.hp || A.hp), awareness: 0, sees: false, last: new THREE.Vector3(), timer: 0, wait: 0, wp: 0, accent: accent, fly: !!A.fly, fixed: !!A.fixed,
         hover: +o.hover || A.hover || 0, burst: 0, shots: 0, shotT: 0, pauseT: .6, hurtT: 9, cover: null, peek: 0, cycles: 0, phase: 1, orbit: rnd() * 6.28, percT: rnd() * .1, sinceEngage: 0, moved: false, strafeT: rnd() * 4, engaged: false, scale: mesh.scale.x || 1,
-        speed: o.speed != null ? +o.speed : A.speed, sight: +o.sight || A.sight, fov: (+o.fov || A.fov) * D2R, reaction: o.reaction != null ? +o.reaction : .5, accuracy: +o.accuracy || 1, dmg: o.damage != null ? +o.damage : A.dmg, range: o.range || A.range, onSee: o.onSee, onShoot: o.onShoot, onDown: o.onDown, onHurt: o.onHurt, id: fps.soldiers.length };
+        speed: o.speed != null ? +o.speed : A.speed, sight: +o.sight || A.sight, fov: (+o.fov || A.fov) * D2R, reaction: o.reaction != null ? +o.reaction : .5, hunt: o.hunt === false ? 0 : (o.hunt != null ? +o.hunt : 6), huntT: 0, accuracy: +o.accuracy || 1, dmg: o.damage != null ? +o.damage : A.dmg, range: o.range || A.range, onSee: o.onSee, onShoot: o.onShoot, onDown: o.onDown, onHurt: o.onHurt, id: fps.soldiers.length };
       mesh.userData.fpsSoldier = s; if (!mesh.parent) scene.add(mesh);
       if (o.pos) { toV3(o.pos, mesh.position); mesh.position.y = groundY(mesh.position.x, mesh.position.z) + (s.fly ? s.hover : 0); }
       const wps = (o.waypoints || []).map(w => toV3(w)); if (wps.length && !o.pos) { mesh.position.copy(wps[0]); mesh.position.y = groundY(wps[0].x, wps[0].z) + (s.fly ? s.hover : 0); }
@@ -581,11 +583,14 @@
           case 'patrol':
             if (s.awareness >= 1) { set('engage'); s.engaged = true; cb(s.onSee); break; } if (s.awareness >= .4) { set('alert'); break; }
             if (s.fixed) { mesh.parts.head.rotation.y += dt * .5; break; }
+            // hunt: a patrol that has not seen the player for `hunt` seconds walks toward where the player is (never shoots until it sees) — enemies come to the kid even when spawned far away
+            if (s.hunt && T && !(fps.hero && fps.hero.dead) && (s.huntT += dt) > s.hunt && d < s.sight * 3.5) { s.huntT = 0; s.last.copy(T.pos); s.hunting = true; set('alert'); break; }
             if (wps.length) { if (moveTo(wps[s.wp].x, wps[s.wp].z, dt, s.speed * .55)) { s.wait += dt; if (s.wait > 1) { s.wp = (s.wp + 1) % wps.length; s.wait = 0; } } } else mesh.rotation.y += dt * .4;
             break;
           case 'alert':
-            if (s.awareness >= 1) { set('engage'); cb(s.onSee); break; } if (s.awareness <= 0 && s.timer > 2.5) { set('patrol'); break; }
-            if (s.fixed) faceTo(s.last.x, s.last.z, dt, 3); else if (!s.fly) { faceTo(s.last.x, s.last.z, dt); if (s.timer > .6) moveTo(s.last.x, s.last.z, dt, s.speed * .5); }
+            if (s.awareness >= 1) { s.hunting = false; set('engage'); cb(s.onSee); break; } if (s.awareness <= 0 && s.timer > (s.hunting ? 16 : 2.5)) { s.hunting = false; set('patrol'); break; }
+            if (s.fixed) faceTo(s.last.x, s.last.z, dt, 3); else if (!s.fly) { faceTo(s.last.x, s.last.z, dt); if (s.timer > .6 && moveTo(s.last.x, s.last.z, dt, s.speed * (s.hunting ? .8 : .5)) && s.hunting) { s.hunting = false; set('patrol'); } }
+            else if (s.hunting) moveTo(s.last.x, s.last.z, dt, s.speed * .8, false);
             break;
           case 'engage': {
             if (!T) { set('patrol'); break; } s.sinceEngage += dt;
@@ -716,7 +721,7 @@
     fps.setDifficulty = level => { const e = level === 'easy', h = level === 'hard'; fps.difficulty = e ? .5 : h ? 1.4 : 1; fps.difficultyPause = e ? 1.5 : h ? .8 : 1; fps.difficultyPlayer = e ? 1.4 : h ? .85 : 1; return fps; };
     Object.assign(fps, { weapon: weapon, arms: arms, player: player, soldier: soldier, squad: squad, pickups: pickups, objectives: objectives, fx: { flash: flashOn, tracer: tracer, splat: splat, sparks: sparks, splash: splash, shell: ejectShell }, overlay: domOverlay,
       kinds: Object.keys(WEAPONS), archetypes: Object.keys(ARCH), skins: Object.keys(SKINS), model: buildWeapon, downed: downed });
-    W.fps = fps; return fps;
+    W.fps = fps; window.YuviFPS.last = fps; return fps;
   }
 
   window.YuviFPS = { attach: attach, weapons: Object.keys(WEAPONS), archetypes: Object.keys(ARCH), skins: Object.keys(SKINS), WEAPONS: WEAPONS, ARCH: ARCH, version: 1 };

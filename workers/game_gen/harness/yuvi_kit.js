@@ -53,6 +53,13 @@
 #yk-root .yk-float{position:absolute;font-weight:900;font-size:clamp(1rem,3vw,1.6rem);text-shadow:0 2px 4px #000;white-space:nowrap;animation:yk-float .9s ease-out forwards;z-index:3}
 @keyframes yk-float{from{transform:translate(-50%,0);opacity:1}to{transform:translate(-50%,-10vh);opacity:0}}
 #yk-root .yk-flash{position:absolute;inset:0;opacity:.7;transition:opacity .15s;z-index:3}
+#yk-root .yk-dock{position:absolute;display:flex;flex-direction:column;gap:1vh;z-index:2;pointer-events:none;max-width:46vw}
+#yk-root .yk-dock>*{pointer-events:auto}
+#yk-root .yk-dock-bottom{left:50%;bottom:3vh;transform:translateX(-50%);align-items:center;max-width:80vw}
+#yk-root .yk-dock-top{left:50%;top:9vh;transform:translateX(-50%);align-items:center;max-width:80vw}
+#yk-root .yk-dock-bottom-left{left:1.2vw;bottom:3vh;align-items:flex-start}#yk-root .yk-dock-bottom-right{right:1.2vw;bottom:3vh;align-items:flex-end}
+#yk-root .yk-dock-top-left{left:1.2vw;top:9vh;align-items:flex-start}#yk-root .yk-dock-top-right{right:1.2vw;top:9vh;align-items:flex-end}
+#yk-root .yk-dock-left{left:1.2vw;top:50%;transform:translateY(-50%);align-items:flex-start}#yk-root .yk-dock-right{right:1.2vw;top:50%;transform:translateY(-50%);align-items:flex-end}
 #yk-root .yk-toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:rgba(0,0,0,.7);border:2px solid var(--yk-accent);border-radius:1rem;padding:1.2vh 3vw;font-size:clamp(1rem,3vw,1.6rem);font-weight:800;z-index:4;white-space:nowrap}
 #yk-joy{position:absolute;left:4vw;bottom:4vh;width:24vmin;height:24vmin;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);pointer-events:auto;touch-action:none;z-index:5}
 #yk-knob{position:absolute;left:50%;top:50%;width:42%;height:42%;border-radius:50%;background:var(--yk-accent);transform:translate(-50%,-50%);opacity:.9}
@@ -381,6 +388,16 @@
     try { if (window.YuviLearn && YuviLearn.progress) YuviLearn.progress(Object.assign({ outcome: kind }, score != null ? { score: score } : {})); } catch (e) {}
   }
   let toast = null, toastTimer = 0;
+  // ── dock: eight stacking regions for any panel the game (or a module) puts on screen — stacked, never overlapping ──
+  const DOCK_REGIONS = ['top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'left', 'right'];
+  const docks = {};
+  function dock(node, region) {
+    if (!root) mount();
+    region = DOCK_REGIONS.indexOf(region) >= 0 ? region : 'bottom';
+    if (!docks[region]) { docks[region] = el('div', 'yk-dock yk-dock-' + region, null, root); docks[region].setAttribute('dir', DIR); }
+    if (node && node.nodeType) { ['position', 'left', 'right', 'top', 'bottom', 'transform'].forEach(k => { node.style[k] = ''; }); docks[region].appendChild(node); }
+    return docks[region];
+  }
   function message(text, ms) {
     if (!root) mount();
     if (!toast) toast = el('div', 'yk-toast', '', root);
@@ -450,6 +467,7 @@
     fx: { particles: particles, shake: shake, float: float, flash: flash },
     input: { keys: I.keys, axis: axis, pressed: c => I.keys.has(c), on: (name, fn) => { (I.handlers[name] = I.handlers[name] || []).push(fn); },
       pointerLock: pointerLock, get look() { const r = { dx: L.dx, dy: L.dy }; L.dx = L.dy = 0; return r; } },
+    dock: dock,
     screens: { gameOver: o => endScreen('over', o), win: o => endScreen('win', o), message: message, hide: hideScreen },
     tween: tween, time: TM, tick: tick, loop: loop,
     best: { get: () => B.v, set: bestSet }
