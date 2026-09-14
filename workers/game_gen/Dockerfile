@@ -24,10 +24,11 @@ RUN pip install -r workers/game_gen/requirements.txt -r workers/game_gen/require
     && python -m playwright install --with-deps chromium \
     # Chromium runs at a lower CPU priority than the worker: a 3D game rendered in
     # software must not starve the Service Bus keepalives and lock renewals.
-    && bin="$(ls -d /ms-playwright/chromium_headless_shell-*/chrome-linux/headless_shell 2>/dev/null | head -1)" \
-    && [ -n "$bin" ] || bin="$(ls -d /ms-playwright/chromium-*/chrome-linux/chrome | head -1)" \
+    && bin="$(find /ms-playwright -type f \( -name headless_shell -o -name chrome \) -path '*chromium*' | sort | head -1)" \
+    && echo "chromium binary: $bin" && test -n "$bin" && test -x "$bin" \
     && printf '#!/bin/sh\nexec nice -n 10 %s "$@"\n' "$bin" > /usr/local/bin/chromium-nice \
-    && chmod +x /usr/local/bin/chromium-nice
+    && chmod +x /usr/local/bin/chromium-nice \
+    && /usr/local/bin/chromium-nice --version
 ENV CHROMIUM_EXECUTABLE=/usr/local/bin/chromium-nice
 
 # backend/app plus the root modules it imports (learner_state & co.); no server.py.

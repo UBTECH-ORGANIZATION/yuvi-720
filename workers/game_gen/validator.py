@@ -376,8 +376,19 @@ async def _shared_browser():  # noqa: ANN202
         pw = await async_playwright().start()
         # CHROMIUM_EXECUTABLE (the image sets a `nice` wrapper) keeps a software
         # WebGL render from starving the worker's own event loop and bus link.
+        # A wrapper that is missing or fails to launch must not take the
+        # validator down with it: fall back to Playwright's own Chromium.
         executable = (os.environ.get("CHROMIUM_EXECUTABLE") or "").strip() or None
-        browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS, executable_path=executable)
+        if executable and not os.access(executable, os.X_OK):
+            log.warning("CHROMIUM_EXECUTABLE %s is not executable; using Playwright's Chromium", executable)
+            executable = None
+        try:
+            browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS, executable_path=executable)
+        except Exception as exc:  # noqa: BLE001
+            if executable is None:
+                raise
+            log.warning("Chromium wrapper %s failed to launch (%s); using Playwright's Chromium", executable, exc)
+            browser = await pw.chromium.launch(headless=True, args=CHROMIUM_ARGS)
         _shared.update({"pw": pw, "browser": browser, "loop": loop})
         return browser
 

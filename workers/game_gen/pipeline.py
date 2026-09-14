@@ -36,7 +36,7 @@ from .patch_engine import (
 )
 from .html_utils import extract_html
 from .usage import UsageTotals, estimate_cost_usd, record_to_ledger
-from .validator import ValidationResult, categorize_error, validate_html
+from .validator import ValidationResult, categorize_error, close_shared_browser, validate_html
 
 
 async def _ledger(spec: "JobSpec", operation: str, timer: Any, model: str, usage: Any, error: Optional[str]) -> None:
@@ -283,9 +283,21 @@ async def _submit(state: _State, progress: ProgressFn, html: str, title: str, su
                                       html_lines=html_lines, error_classes=["validator_error"]))
         return _Outcome(False, f"The validator could not run the game: {exc}. Check the HTML is complete and try again.",
                         "validator_error")
+    if result.validator_error:
+        # The browser could not run the game at all (a launch failure, a
+        # driver crash). One relaunch, then — if it happens again — the game
+        # passes open, but the attempt says so and the judge sees it.
+        log.warning("validator infrastructure failure: %s — relaunching once", result.validator_error)
+        try:
+            await close_shared_browser()
+            result = await _validate_candidate(state, html)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("relaunch failed: %s", exc)
     elapsed = time.perf_counter() - started
     state.timings["validate_s"].append(round(elapsed, 3))
     ok = bool(result.ok)
+    if result.validator_error:
+        progress({"type": "validate", "attempt": idx, "warning": "validator_unavailable", "detail": result.validator_error[:200]})
     if not ok:
         _cancel_judge(state)
     classes = sorted({categorize_error(str(e.get("message") or ""))[0] for e in result.errors})
@@ -295,6 +307,9 @@ async def _submit(state: _State, progress: ProgressFn, html: str, title: str, su
         reason = f"{len(result.errors)} error(s): " + str(result.errors[0].get("message") or "")[:160]
     else:
         reason = "validation_failed"
+    if result.validator_error:
+        reason = f"validator unavailable ({result.validator_error[:120]}) — passed open"
+        classes = sorted(set(classes) | {"validator_unavailable"})
     state.attempts.append(Attempt(idx, tool_name, ok, list(result.errors), reason, elapsed,
                                   model_s=state.last_model_s, output_tokens=state.last_output_tokens,
                                   html_lines=html_lines, error_classes=classes, play_score=result.play_score,
