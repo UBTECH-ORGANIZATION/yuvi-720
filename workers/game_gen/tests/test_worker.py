@@ -130,7 +130,7 @@ def test_success_path_stores_version_and_rings_bell(fakes, monkeypatch):
 def test_spec_defaults_when_the_payload_is_sparse(monkeypatch):
     monkeypatch.delenv("COPILOT_MODEL", raising=False)
     spec = worker.spec_from_job({"_id": "j", "game_id": "g", "learner_id": "l", "payload": {"context": {}}})
-    assert spec.model == "claude-sonnet-5" and spec.reasoning_effort == "low" and spec.judge and spec.plan
+    assert spec.model == "claude-opus-5" and spec.reasoning_effort == "low" and spec.judge and spec.plan
     assert spec.pack.component_id == "" and spec.pack.language == "he"
 
 
@@ -150,7 +150,7 @@ def test_failure_path_marks_failed_and_notifies(fakes, monkeypatch):
     job = fakes.store.jobs["j1"]
     assert job["status"] == "failed" and job["error_class"] == "no_valid_submission"
     assert job["timings"]["total_s"] >= 0 and job["attempts_detail"][0]["error_classes"] == ["scope"]
-    assert job["judge"] is None and job["model"] == "claude-sonnet-5"
+    assert job["judge"] is None and job["model"] == "claude-opus-5"
     assert fakes.store.games["g1"]["errors_last"][0]["message"].startswith("1 error(s)")
     assert fakes.notify.bells == [("game_failed", "g1", 0)]
 
