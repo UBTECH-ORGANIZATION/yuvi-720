@@ -815,50 +815,122 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   addRounded(gamelab, brushedMat, [0.09, 0.03, 0.13], [0.44, 0.835, 0.12], 0.015)
 
   // Screen: the Yuvi mark (the same PNG as the avatar's chest badge) over a
-  // quiet code rain — bars, not glyphs, so it never needs translating.
+  // code rain of digits and math signs — glyphs every language reads, so it
+  // never needs translating. Idle it drizzles; while a game builds it pours:
+  // faster columns, longer trails, a light sweeping down the glass, bursts of
+  // bright rows, the odd glitch slice, and a dial turning around the mark.
   const rain = (() => {
-    const W = 256, H = 160
+    const W = rich ? 384 : 256, H = rich ? 240 : 160
     const { canvas, ctx } = canvasOf(W, H)
     const texture = new THREE.CanvasTexture(canvas)
     texture.colorSpace = THREE.SRGBColorSpace
     track(texture)
     const material = track(new THREE.MeshBasicMaterial({
-      map: texture, transparent: true, opacity: 0.94, toneMapped: false, side: THREE.DoubleSide,
+      map: texture, transparent: true, opacity: 0.96, toneMapped: false, side: THREE.DoubleSide,
     }))
-    const COLS = 18
+    const GLYPHS = '0123456789+−×÷=<>≠√π{}[]()%'
+    // Big glyphs: the monitor is a hand's width on screen, so the rain has
+    // to read from across the room, not up close.
+    const COLS = rich ? 16 : 12
     const colW = W / COLS
+    const cell = rich ? 15 : 13
+    const TRAIL_MAX = 24
+    ctx.font = `700 ${cell}px ui-monospace, Menlo, Consolas, monospace`
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'center'
     // Each column falls at its own pace from its own start, so the rain never
-    // reads as a single repeating wipe.
-    const speed = Array.from({ length: COLS }, (_, i) => 22 + ((i * 7919) % 23))
-    const offset = Array.from({ length: COLS }, (_, i) => (i * 104729) % H)
+    // reads as a single repeating wipe; every column owns its glyphs, which
+    // churn faster the harder the desk works.
+    const speed = Array.from({ length: COLS }, (_, i) => 26 + ((i * 7919) % 29))
+    const offset = Array.from({ length: COLS }, (_, i) => (i * 104729) % (H + 80))
+    const trail = Array.from({ length: COLS }, (_, i) => 6 + ((i * 31) % 5))
+    let seed = 7
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+    const pick = () => GLYPHS[Math.floor(rand() * GLYPHS.length)]
+    const glyph = Array.from({ length: COLS }, () => Array.from({ length: TRAIL_MAX }, pick))
     const mark = new Image()
     mark.src = yuviMarkUrl
     mark.onload = () => { markReady = true }
     let markReady = false
     const paint = (t: number, energy: number, wash: number, pulse: number) => {
-      ctx.fillStyle = 'rgba(6,9,30,1)'
+      // A deep panel, lit toward the centre so the glass reads as switched on.
+      const bg = ctx.createRadialGradient(W / 2, H / 2, H * 0.1, W / 2, H / 2, W * 0.75)
+      bg.addColorStop(0, `rgba(${12 + energy * 18},${26 + energy * 38},${70 + energy * 60},1)`)
+      bg.addColorStop(1, `rgba(${4 + energy * 2},${6 + energy * 4},${22 + energy * 14},1)`)
+      ctx.fillStyle = bg
       ctx.fillRect(0, 0, W, H)
+      const churn = 0.02 + energy * 0.12
       for (let c = 0; c < COLS; c++) {
-        const head = (offset[c] + t * speed[c] * (1 + energy * 1.6)) % (H + 60)
-        for (let k = 0; k < 9; k++) {
-          const y = head - k * 9
-          if (y < 0 || y > H) continue
-          const a = (1 - k / 9) * (0.14 + energy * 0.4)
-          ctx.fillStyle = k === 0 ? `rgba(210,250,255,${0.55 + energy * 0.45})` : `rgba(78,238,240,${a})`
-          ctx.fillRect(c * colW + 3, y, colW - 6, 5)
+        // Idle: every other column sleeps and the rain is a drizzle.
+        if (!energy && c % 2) continue
+        const len = Math.min(TRAIL_MAX, trail[c] + Math.round(energy * 6))
+        const head = (offset[c] + t * speed[c] * (1 + energy * 2.2)) % (H + len * cell)
+        const x = c * colW + colW / 2
+        for (let k = 0; k < len; k++) {
+          const y = head - k * cell
+          if (y < -cell || y > H) continue
+          if (rand() < churn) glyph[c][k] = pick()
+          if (k === 0) {
+            ctx.fillStyle = `rgba(240,255,255,${0.85 + energy * 0.15})`
+            if (rich) { ctx.shadowColor = 'rgba(140,245,255,0.95)'; ctx.shadowBlur = 10 + energy * 10 }
+          } else {
+            const a = (1 - k / len) * (0.25 + energy * 0.6)
+            ctx.fillStyle = k < len / 2 ? `rgba(78,238,240,${a})` : `rgba(130,120,255,${a})`
+            ctx.shadowBlur = 0
+          }
+          ctx.fillText(glyph[c][k], x, y)
         }
+        ctx.shadowBlur = 0
+      }
+      if (energy > 0) {
+        // A bright row of data sweeps through now and then.
+        const burst = (t * 0.9) % 1
+        if (burst < 0.18) {
+          const y = (burst / 0.18) * H
+          ctx.fillStyle = `rgba(160,248,255,${0.35 * (1 - burst / 0.18) * energy})`
+          ctx.fillRect(0, y, W, 2)
+        }
+        // A slice shifts sideways for one frame every second or so.
+        if (rand() < 0.12 * energy) {
+          const y = Math.floor(rand() * H), h = 4 + Math.floor(rand() * 10), dx = (rand() - 0.5) * 24
+          ctx.drawImage(canvas, 0, y, W, h, dx, y, W, h)
+        }
+        // A slow band of light rolling down the glass.
+        const sweep = ((t * 0.35) % 1) * (H + 60) - 30
+        const band = ctx.createLinearGradient(0, sweep - 30, 0, sweep + 30)
+        band.addColorStop(0, 'rgba(120,245,255,0)')
+        band.addColorStop(0.5, `rgba(120,245,255,${0.12 * energy})`)
+        band.addColorStop(1, 'rgba(120,245,255,0)')
+        ctx.fillStyle = band
+        ctx.fillRect(0, sweep - 30, W, 60)
       }
       // The mark: centred, breathing while a game builds, with a soft cyan
-      // halo behind it so it reads as lit from within, not pasted on.
+      // halo behind it so it reads as lit from within, not pasted on. While
+      // building, two arcs turn around it like a dial that never quite fills.
       if (markReady) {
-        const size = 104 * (1 + pulse * 0.08 + wash * 0.1)
+        const size = H * 0.62 * (1 + pulse * 0.06 + wash * 0.1)
         const cx = W / 2, cy = H / 2
-        const halo = ctx.createRadialGradient(cx, cy, size * 0.15, cx, cy, size * 0.7)
-        halo.addColorStop(0, `rgba(120,245,255,${0.22 + pulse * 0.25})`)
+        const halo = ctx.createRadialGradient(cx, cy, size * 0.15, cx, cy, size * 0.8)
+        halo.addColorStop(0, `rgba(120,245,255,${0.3 + pulse * 0.35 + energy * 0.2})`)
         halo.addColorStop(1, 'rgba(120,245,255,0)')
         ctx.fillStyle = halo
         ctx.fillRect(0, 0, W, H)
-        ctx.globalAlpha = 0.96
+        if (energy > 0) {
+          const r = size * 0.66
+          ctx.lineWidth = 3
+          ctx.lineCap = 'round'
+          ctx.strokeStyle = `rgba(78,238,240,${0.22 * energy})`
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke()
+          const a0 = t * 2.4, span = Math.PI * (0.55 + pulse * 0.35)
+          ctx.strokeStyle = `rgba(200,252,255,${(0.7 + pulse * 0.3) * energy})`
+          if (rich) { ctx.shadowColor = 'rgba(140,245,255,1)'; ctx.shadowBlur = 10 }
+          ctx.beginPath(); ctx.arc(cx, cy, r, a0, a0 + span); ctx.stroke()
+          ctx.lineWidth = 2
+          ctx.strokeStyle = `rgba(160,140,255,${0.8 * energy})`
+          ctx.beginPath(); ctx.arc(cx, cy, r + 6, -a0 * 0.6, -a0 * 0.6 + span * 0.4); ctx.stroke()
+          ctx.shadowBlur = 0
+        }
+        ctx.globalAlpha = 0.97
         ctx.drawImage(mark, cx - size / 2, cy - size / 2, size, size)
         ctx.globalAlpha = 1
       }
@@ -884,6 +956,52 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), rain.material)
   screen.position.set(0, 1.38, -0.19)
   gamelab.add(screen)
+
+  // Glass over the panel: a fixed reflection along the top edge, and a
+  // diagonal sheen that slides across while a game builds — the screen reads
+  // as glossy rather than a matte print of the rain.
+  const screenGlassTex = (() => {
+    const { canvas, ctx } = canvasOf(256, 128)
+    const top = ctx.createLinearGradient(0, 0, 0, 128)
+    top.addColorStop(0, 'rgba(255,255,255,0.3)')
+    top.addColorStop(0.3, 'rgba(255,255,255,0)')
+    ctx.fillStyle = top
+    ctx.fillRect(0, 0, 256, 128)
+    return track(new THREE.CanvasTexture(canvas))
+  })()
+  const screenSheenTex = (() => {
+    const { canvas, ctx } = canvasOf(256, 128)
+    const g = ctx.createLinearGradient(0, 128, 256, 0)
+    g.addColorStop(0.36, 'rgba(255,255,255,0)')
+    g.addColorStop(0.48, 'rgba(255,255,255,0.5)')
+    g.addColorStop(0.52, 'rgba(255,255,255,0.75)')
+    g.addColorStop(0.64, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, 256, 128)
+    const texture = track(new THREE.CanvasTexture(canvas))
+    texture.wrapS = THREE.RepeatWrapping
+    return texture
+  })()
+  const screenGlassMat = track(new THREE.MeshBasicMaterial({
+    map: screenGlassTex, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+  }))
+  const screenSheenMat = track(new THREE.MeshBasicMaterial({
+    map: screenSheenTex, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+  }))
+  const screenGlass = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), screenGlassMat)
+  screenGlass.position.set(0, 1.38, -0.186)
+  gamelab.add(screenGlass)
+  const screenSheen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), screenSheenMat)
+  screenSheen.position.set(0, 1.38, -0.184)
+  gamelab.add(screenSheen)
+  // The bezel's light strips: top and bottom edges that glow with the build.
+  const bezelMat = track(new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.3, toneMapped: false }))
+  for (const y of [1.066, 1.694]) {
+    const strip = new THREE.Mesh(track(new THREE.BoxGeometry(0.98, 0.008, 0.014)), bezelMat)
+    strip.position.set(0, y, -0.186)
+    gamelab.add(strip)
+  }
+
   const screenGlowMat = track(new THREE.MeshBasicMaterial({
     map: radialTexture('rgba(78,238,240,0.35)', 'rgba(78,238,240,0)'),
     transparent: true, opacity: 0.45, depthWrite: false,
@@ -909,14 +1027,19 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   updaters.push((t) => {
     gameLabNow = t
     const building = gameLabMode === 'building'
+    const lift = building ? 1 : 0
     // Flash: a bright bloom that decays over about a second.
     const flash = Math.max(0, 1 - (t - gameLabFlashAt) / 1.1)
     const pulse = building ? Math.sin(t * 4.2) * 0.5 + 0.5 : 0
-    if (screenLight) screenLight.intensity = 1.2 + pulse * 2.2 + flash * 6
-    screenGlowMat.opacity = 0.4 + pulse * 0.3 + flash * 0.5
-    screenGlow.scale.setScalar(1 + (reduceMotion ? 0 : pulse * 0.1) + flash * 0.6)
-    // The rain repaints at 10 fps (static on weak machines), never per frame.
-    const fps = rich ? 10 : 3
+    if (screenLight) screenLight.intensity = 1.2 + lift * 1.4 + pulse * 3.2 + flash * 6
+    screenGlowMat.opacity = 0.45 + lift * 0.4 + pulse * 0.3 + flash * 0.5
+    screenGlow.scale.setScalar(1 + lift * 0.35 + (reduceMotion ? 0 : pulse * 0.12) + flash * 0.6)
+    bezelMat.opacity = 0.3 + lift * (0.3 + pulse * 0.4) + flash * 0.4
+    screenSheenMat.opacity = building ? 0.42 + pulse * 0.15 : 0.22
+    screenSheenTex.offset.x = building && !reduceMotion ? -((t * 0.22) % 1) : 0.15
+    // The rain repaints at up to 24 fps while building, slower idle, and
+    // barely at all on weak machines — never per frame.
+    const fps = rich ? (building ? 24 : 8) : (building ? 8 : 3)
     if (t - gameLabLastPaint >= 1 / fps) {
       gameLabLastPaint = t
       rain.paint(t, building ? 1 : 0, flash, reduceMotion ? (building ? 0.5 : 0) : pulse)

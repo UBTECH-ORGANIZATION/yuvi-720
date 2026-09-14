@@ -149,6 +149,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const mountRef = useRef<HTMLDivElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<YuviAvatarHandle | null>(null)
+  /** The desk's base state, replayed onto a room built after it was set: a
+   *  build already running when the studio opens must pulse from frame one. */
+  const gameLabStateRef = useRef<GameLabState>('idle')
   const mutedRef = useRef(muted)
   const onYClickRef = useRef(onYClick)
   const onAvatarClickRef = useRef(onAvatarClick)
@@ -231,7 +234,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     focus: (view) => controllerRef.current?.focus(view),
     walkTo: (x, z, station = null) => controllerRef.current?.walkTo(x, z, station),
     recenter: () => controllerRef.current?.recenter(),
-    setGameLabState: (state) => controllerRef.current?.setGameLabState(state),
+    setGameLabState: (state) => {
+      if (state !== 'ready') gameLabStateRef.current = state
+      controllerRef.current?.setGameLabState(state)
+    },
   }), [])
 
   useEffect(() => {
@@ -819,6 +825,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
     const setGameLabState = (state: GameLabState) => room?.setGameLabState(state)
     controllerRef.current = { equip, setColors, applyDesign, focus, walkTo, recenter, setGameLabState }
+    setGameLabState(gameLabStateRef.current)
     applyDesign(design, false)
     castShadows(robot)
 

@@ -53,6 +53,33 @@ export function isBusyStatus(status: GameStatus | string): boolean {
   return GAME_BUSY_STATUSES.includes(status as GameStatus)
 }
 
+/** Where a build is, as the card tells it: waiting, then the strip
+ *  thinking → writing → checking → judging. */
+export type BuildStage = 'queued' | 'thinking' | 'writing' | 'checking' | 'judging'
+/** The strip's nodes in order; `queued` sits before the first one. */
+export const BUILD_PIPE: BuildStage[] = ['thinking', 'writing', 'checking', 'judging']
+
+const EVENT_STAGE: Record<string, BuildStage> = {
+  plan: 'thinking', build: 'thinking', thinking: 'thinking',
+  code: 'writing', patching: 'writing', tool: 'writing', summary: 'writing', revise: 'writing',
+  validate: 'checking', validated: 'checking', judge: 'judging',
+}
+const PHASE_STAGE: Record<string, BuildStage> = {
+  thinking: 'thinking', writing: 'writing', validating: 'checking', judging: 'judging',
+}
+const STATUS_STAGE: Partial<Record<GameStatus, BuildStage>> = {
+  queued: 'queued', planning: 'thinking', building: 'thinking', validating: 'checking', fixing: 'writing',
+}
+
+/** The finest signal wins: a live frame's event, then the build snapshot's
+ *  phase, then the row's status. Null once the game is not building. */
+export function buildStage(status: GameStatus | string, event?: string, phase?: string): BuildStage | null {
+  if (!isBusyStatus(status)) return null
+  if (event && EVENT_STAGE[event]) return EVENT_STAGE[event]
+  if (phase && PHASE_STAGE[phase]) return PHASE_STAGE[phase]
+  return STATUS_STAGE[status as GameStatus] ?? 'thinking'
+}
+
 /** Deep link from the lesson page: `?station=gamelab&objective=&component=`. */
 export interface GameLabPreselect {
   open: boolean

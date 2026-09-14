@@ -1234,6 +1234,41 @@
   .ys-gamelab-card.is-building, .ys-gamelab-build__bars i, .ys-gamelab-build__scan, .ys-gamelab-build__icon { animation: none; }
 }
 
+/* The build strip: four steps, the done ones ticked, the current one lit and
+   breathing, the rest waiting. It is the card's answer to "what is Yuvi
+   doing right now?" — and it reads without the words. */
+.ys-gamelab-pipe { display: flex; align-items: flex-start; margin: 4px 0 2px; padding: 0; list-style: none; }
+.ys-gamelab-pipe li {
+  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; line-height: 1.15; text-align: center; color: var(--ys-ink-soft);
+}
+.ys-gamelab-pipe li::before {
+  content: ''; position: absolute; inset-block-start: 10px; inset-inline-end: 50%;
+  inline-size: 100%; block-size: 2px; background: var(--ys-sunken);
+}
+.ys-gamelab-pipe li:first-child::before { display: none; }
+.ys-gamelab-pipe li.is-done::before, .ys-gamelab-pipe li.is-now::before { background: #4eeef0; }
+.ys-gamelab-pipe__dot {
+  position: relative; z-index: 1; display: grid; place-items: center; inline-size: 22px; block-size: 22px;
+  border-radius: 50%; font-size: 11px; font-style: normal; line-height: 1;
+  background: var(--ys-surface); border: 2px solid var(--ys-sunken);
+}
+.ys-gamelab-pipe li.is-done .ys-gamelab-pipe__dot {
+  background: linear-gradient(135deg, #4eeef0, #6f5bff); border-color: transparent; color: #fff; font-size: 12px;
+}
+.ys-gamelab-pipe li.is-now { color: #0d7d8c; }
+.ys-gamelab-pipe li.is-now .ys-gamelab-pipe__dot {
+  border-color: #4eeef0; background: rgba(78, 238, 240, .18);
+  animation: ys-gamelab-pipe-pulse 1.6s ease-out infinite;
+}
+.ys-gamelab-pipe li.is-next { opacity: .5; }
+@keyframes ys-gamelab-pipe-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(78, 238, 240, .6); }
+  100% { box-shadow: 0 0 0 9px rgba(78, 238, 240, 0); }
+}
+[data-theme='dark'] .ys-gamelab-pipe li.is-now { color: #8ff0f6; }
+@media (prefers-reduced-motion: reduce) { .ys-gamelab-pipe li.is-now .ys-gamelab-pipe__dot { animation: none; } }
+
 .ys-gamelab-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: auto; }
 .ys-gamelab-card__actions .ys-btn { display: inline-flex; align-items: center; gap: 5px; min-block-size: 36px; }
 .ys-gamelab-danger { color: var(--ys-danger); }

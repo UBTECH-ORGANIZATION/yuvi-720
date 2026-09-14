@@ -10,8 +10,8 @@ import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
 import { SegmentedNav } from './SegmentedNav'
 import {
-  TITLE_MAX, VIBE_MAX, createErrorKey, findComponent, findObjective, genreIcon, isBusyStatus, mergeUpdates,
-  orderComponents, orderObjectives, statusTone, upsertGame, type GameLabPreselect, type GameLabTab,
+  BUILD_PIPE, TITLE_MAX, VIBE_MAX, buildStage, createErrorKey, findComponent, findObjective, genreIcon, isBusyStatus,
+  mergeUpdates, orderComponents, orderObjectives, statusTone, upsertGame, type BuildStage, type GameLabPreselect, type GameLabTab,
 } from './gameLabModel'
 import type { GameLabActivity } from '../useGameLabActivity'
 
@@ -171,7 +171,7 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
             <GameCard
               key={game.game_id}
               game={game}
-              event={activity.frames[game.game_id]?.value.event}
+              stage={cardStage(game, activity)}
               onDeleted={() => remove(game.game_id)}
             />
           ))}
@@ -192,13 +192,24 @@ function upsertGameAtEnd(list: LearnerGame[], game: LearnerGame): LearnerGame[] 
   return list.some((row) => row.game_id === game.game_id) ? list : [...list, game]
 }
 
+/** The step a busy card shows: the newer of the last live frame and the last
+ *  snapshot read decides, the row's status is the fallback. */
+function cardStage(game: LearnerGame, activity: GameLabActivity): BuildStage | null {
+  const frame = activity.frames[game.game_id]
+  const phase = activity.phases[game.game_id]
+  const event = frame && (!phase || frame.at >= phase.at) ? frame.value.event : undefined
+  return buildStage(game.status, event, phase?.value)
+}
+
+const STAGE_ICON: Record<BuildStage, string> = { queued: '⏳', thinking: '🧠', writing: '✍️', checking: '🧪', judging: '⚖️' }
+
 /** A game on the shelf: its name, objective, state and cost. Changing and
  * fixing happen inside the player, so the card only plays or deletes. */
 function GameCard({
-  game, event, onDeleted,
+  game, stage, onDeleted,
 }: {
   game: LearnerGame
-  event: string | undefined
+  stage: BuildStage | null
   onDeleted: () => void
 }) {
   const { t } = useI18n()
@@ -211,9 +222,9 @@ function GameCard({
   // A building game opens too: the page shows Yuvi's live console (thinking
   // pulse, then the code as it streams), which is half the fun of making one.
   const openable = playable || busy
-  // Only steps with words of their own; the code stream and tool pings stay quiet.
-  const stepKey = event && ['plan', 'build', 'validate', 'fix', 'judge'].includes(event) ? `games.step.${event}` : ''
-  const stepLabel = stepKey ? t(stepKey) : ''
+  // The strip lights the node the build is at; before the first node the
+  // pill alone says the build is about to start.
+  const stageAt = stage ? BUILD_PIPE.indexOf(stage) : -1
 
   // Straight to the game page — never through the lesson screen.
   const play = () => navigate(gamePlayPath(game.game_id, 'studio'))
@@ -271,8 +282,7 @@ function GameCard({
         <div className="ys-gamelab-card__meta">
           <span className={`ys-gamelab-status is-${tone}`} role="status">
             {busy && <i className="ys-gamelab-status__shimmer" aria-hidden />}
-            {t(`studio.gamelab.status.${game.status}`)}
-            {busy && stepLabel && <em><bdi dir="auto">{stepLabel}</bdi></em>}
+            {busy && stage && stage !== 'queued' ? t(`studio.gamelab.stage.${stage}`) : t(`studio.gamelab.status.${game.status}`)}
           </span>
           <span className="ys-gamelab-card__stat">
             <Icon name="spark" size={12} />
@@ -280,6 +290,19 @@ function GameCard({
             <em className="ys-gamelab-card__usd">${(game.sparks_spent / 100).toFixed(2)}</em>
           </span>
         </div>
+        {busy && stage && (
+          <ol className="ys-gamelab-pipe" aria-label={t('studio.gamelab.pipe.label')}>
+            {BUILD_PIPE.map((step, i) => {
+              const state = i < stageAt ? 'done' : i === stageAt ? 'now' : 'next'
+              return (
+                <li key={step} className={`is-${state}`} aria-current={state === 'now' ? 'step' : undefined}>
+                  <i className="ys-gamelab-pipe__dot" aria-hidden>{state === 'done' ? '✓' : STAGE_ICON[step]}</i>
+                  <span>{t(`studio.gamelab.pipe.${step}`)}</span>
+                </li>
+              )
+            })}
+          </ol>
+        )}
         {!confirmDelete && (
           <div className="ys-gamelab-card__actions">
             <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={play} disabled={!openable}>

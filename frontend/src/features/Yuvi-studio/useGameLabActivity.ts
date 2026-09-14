@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getGame, isBusy, isGameFrame, listGames, type GameFrame, type LearnerGame } from '../../services/games'
+import { getGame, getGameLive, isBusy, isGameFrame, listGames, type GameFrame, type GameLive, type LearnerGame } from '../../services/games'
 import { subscribe } from '../../services/realtime'
 import type { Stamped } from './panel/gameLabModel'
 import type { GameLabState } from './YuviLabRoom'
@@ -17,7 +17,11 @@ import type { GameLabState } from './YuviLabRoom'
  * publishes `{type:'game'}` frames as it goes), a 15 s poll of every game we
  * believe is busy (the fallback when a frame is missed), and whatever the
  * panel reports through `noteGame` after it created or refetched a game.
+ * The build snapshot (`/live`) is read for every busy game on seed and on each
+ * poll, so a card opened mid-build shows the right step before a frame lands.
  */
+export type LivePhase = NonNullable<GameLive['phase']>
+
 export interface GameLabActivity {
   state: GameLabState
   /** Bumps once per completed build — the desk flashes on each bump. */
@@ -26,6 +30,8 @@ export interface GameLabActivity {
   snapshots: Record<string, Stamped<LearnerGame>>
   /** The latest live frame per game, keyed by id, stamped with arrival time. */
   frames: Record<string, Stamped<GameFrame>>
+  /** The build snapshot's phase per busy game, stamped with when it was read. */
+  phases: Record<string, Stamped<LivePhase>>
   busyIds: string[]
   /** `at`: when the game was fetched (defaults to now) — a page's request start, for a list. */
   noteGame: (game: LearnerGame, at?: number) => void
@@ -37,6 +43,7 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
   const [busyIds, setBusyIds] = useState<string[]>([])
   const [snapshots, setSnapshots] = useState<Record<string, Stamped<LearnerGame>>>({})
   const [frames, setFrames] = useState<Record<string, Stamped<GameFrame>>>({})
+  const [phases, setPhases] = useState<Record<string, Stamped<LivePhase>>>({})
   const [flashKey, setFlashKey] = useState(0)
   const busyRef = useRef(new Set<string>())
 
@@ -46,6 +53,14 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     if (busy) busyRef.current.add(gameId)
     else busyRef.current.delete(gameId)
     setBusyIds([...busyRef.current])
+  }, [])
+
+  const notePhase = useCallback(async (gameId: string) => {
+    const at = Date.now()
+    try {
+      const live = await getGameLive(gameId)
+      if (live.active && live.phase) setPhases((current) => ({ ...current, [gameId]: { value: live.phase!, at } }))
+    } catch { /* the row's status still gives the card a coarse step */ }
   }, [])
 
   const noteGame = useCallback((game: LearnerGame, at: number = Date.now()) => {
@@ -66,11 +81,11 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     listGames({ limit: 20 })
       .then((page) => {
         if (!active) return
-        for (const game of page.items) if (isBusy(game)) mark(game.game_id, true)
+        for (const game of page.items) if (isBusy(game)) { mark(game.game_id, true); void notePhase(game.game_id) }
       })
       .catch(() => { /* the desk simply idles until a frame or the panel says otherwise */ })
     return () => { active = false }
-  }, [enabled, mark])
+  }, [enabled, mark, notePhase])
 
   // Live frames share the learner's one stream with the bell.
   useEffect(() => {
@@ -92,7 +107,9 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     const tick = async () => {
       for (const gameId of [...busyRef.current]) {
         try {
-          noteGame(await getGame(gameId))
+          const game = await getGame(gameId)
+          noteGame(game)
+          if (isBusy(game)) void notePhase(gameId)
         } catch (error) {
           // Gone (deleted elsewhere) is an answer; anything else waits for the next tick.
           if ((error as { status?: number }).status === 404) mark(gameId, false)
@@ -101,13 +118,14 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     }
     const id = window.setInterval(() => { void tick() }, POLL_MS)
     return () => window.clearInterval(id)
-  }, [enabled, busyIds.length, noteGame, mark])
+  }, [enabled, busyIds.length, noteGame, notePhase, mark])
 
   return {
     state: busyIds.length ? 'building' : 'idle',
     flashKey,
     snapshots,
     frames,
+    phases,
     busyIds,
     noteGame,
   }

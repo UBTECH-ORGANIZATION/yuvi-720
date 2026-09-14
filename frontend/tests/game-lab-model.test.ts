@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
-  applyFrame, createErrorKey, mergeUpdates, orderComponents, orderObjectives, readPreselect, upsertGame,
+  applyFrame, buildStage, createErrorKey, mergeUpdates, orderComponents, orderObjectives, readPreselect, upsertGame,
 } from '../src/features/Yuvi-studio/panel/gameLabModel.ts'
 import type { GameFrame, LearnerGame, PickerObjective } from '../src/services/games.ts'
 
@@ -105,5 +105,22 @@ describe('create failures', () => {
     assert.equal(createErrorKey({ status: 429 }), 'studio.gamelab.error.cap')
     assert.equal(createErrorKey({ status: 422 }), 'studio.gamelab.error.blocked')
     assert.equal(createErrorKey(new Error('boom')), 'studio.gamelab.error.create')
+  })
+})
+
+describe('the build strip', () => {
+  it('reads the finest signal: the frame event, then the snapshot phase, then the row status', () => {
+    assert.equal(buildStage('building', 'validate', 'thinking'), 'checking')
+    assert.equal(buildStage('building', 'code'), 'writing')
+    assert.equal(buildStage('building', undefined, 'judging'), 'judging')
+    assert.equal(buildStage('validating'), 'checking')
+    assert.equal(buildStage('fixing'), 'writing')
+    assert.equal(buildStage('planning', 'plan'), 'thinking')
+    assert.equal(buildStage('queued'), 'queued')
+  })
+
+  it('has no step once the game is not building', () => {
+    assert.equal(buildStage('ready', 'judge'), null)
+    assert.equal(buildStage('failed'), null)
   })
 })
