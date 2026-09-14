@@ -195,6 +195,8 @@ async def enqueue(
         "reasoning_effort": game.get("reasoning_effort") or "low",
         "judge": True,
         "plan": kind == "create",
+        # An edit keeps the runtime modules its version was built against.
+        "needs": list((store.version_entry(game, None) or {}).get("needs") or []) if kind != "create" else [],
         "feature": FEATURE,
         "context": context,
     }

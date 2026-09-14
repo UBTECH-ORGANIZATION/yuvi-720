@@ -116,6 +116,7 @@ def spec_from_job(job: dict[str, Any]) -> JobSpec:
         reasoning_effort=str(payload.get("reasoning_effort") or "low"),
         judge=bool(payload.get("judge", True)),
         plan=bool(payload.get("plan", True)),
+        needs=[str(n) for n in (payload.get("needs") or [])],
         max_ai_credits=float(os.environ["GAME_MAX_AI_CREDITS"]) if os.environ.get("GAME_MAX_AI_CREDITS") else None,
         usage_context=usage_context(
             actor_id=str(job["learner_id"]), game_id=str(job["game_id"]), job_id=str(job["_id"]), operation="game.build",
@@ -533,11 +534,13 @@ async def handle_job(job: dict[str, Any]) -> JobResult:
         )
         if _accepts_kwarg(store.add_version, "judge"):
             version_kwargs["judge"] = result.judge
+        if _accepts_kwarg(store.add_version, "needs"):
+            version_kwargs["needs"] = list(result.needs or [])
         entry = await store.add_version(game_id, **version_kwargs)
         persist_s = time.perf_counter() - t_persist
         await store.update_job(job_id, status="done", finished_at=time.time(), usage_summary=usage_summary, error_class=None,
                                timings=timings(persist_s), attempts_detail=attempts_detail, judge=result.judge,
-                               model=spec.model, reasoning_effort=spec.reasoning_effort)
+                               model=spec.model, reasoning_effort=spec.reasoning_effort, needs=list(result.needs or []))
         game = await store.get_game(game_id) or game
         kind_map = {"create": "game_ready", "edit": "game_edit_ready", "fix": "game_fix_ready"}
         await notify.notify_game(kind_map.get(kind, "game_ready"), game, int(entry["v"]))

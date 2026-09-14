@@ -508,7 +508,9 @@ async def read_game_html(
         },
         "language": language,
     }
-    fragment = harness.build_harness(learn_data)
+    modules_for = getattr(harness, "modules_for", None)
+    needs = modules_for(entry.get("needs"), html) if modules_for else []
+    fragment = harness.build_harness(learn_data, modules=needs) if modules_for else harness.build_harness(learn_data)
     return HTMLResponse(
         content=harness.inject_harness(html, fragment),
         headers={

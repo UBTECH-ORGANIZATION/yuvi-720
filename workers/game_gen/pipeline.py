@@ -25,7 +25,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-from . import prompts
+from . import modules, prompts
 from .code_utils import validate_and_fix_code
 from .context_pack import ContextPack
 from .copilot_session import HeadlessCopilotSession
@@ -104,6 +104,7 @@ class JobSpec:
     plan: bool = True                # create only: the mini pitch pre-pass
     plan_model: str = PLAN_MODEL
     design_doc: str = ""             # a pitch given by the caller skips the plan pass
+    needs: list[str] = field(default_factory=list)  # opt-in runtime modules (edits: the version's; creates: the pitch's)
     # Yuvi UsageContext (or None when running standalone); one ledger row per turn.
     usage_context: Optional[Any] = None
 
@@ -148,6 +149,7 @@ class JobResult:
     model: str = DEFAULT_MODEL
     design_brief: str = ""
     timings: dict[str, Any] = field(default_factory=dict)
+    needs: list[str] = field(default_factory=list)
 
 
 def _new_timings() -> dict[str, Any]:
@@ -169,6 +171,7 @@ class _State:
         self.accepted_facts: dict[str, Any] = {}
         self.screenshot: Optional[bytes] = None
         self.current_html: str = spec.current_html
+        self.needs: list[str] = list(spec.needs)
         self.nonce = "validate"
         self.timings = _new_timings()
         self.last_model_s = 0.0
@@ -199,6 +202,9 @@ def _format_result_for_llm(result: ValidationResult, attempts_left: int) -> str:
             lines.append(f"- {err.get('category', 'error')}{phase}: {err.get('message', '')[:300]}{where}{hint}")
     if getattr(result, "canvas_blank", False):
         lines.append("The screen stayed blank after Start — nothing rendered. Check the game loop and canvas sizing.")
+    elif (getattr(result, "phases", None) or {}).get("first_frame_blank"):
+        lines.append("The canvas was still flat 1 s after Start: build the whole scene before Start (while the title "
+                     "screen shows) and draw the first frame the moment onStart runs.")
     lines.append(f"Fix these and call the tool again with the FULL corrected HTML. Attempts left: {attempts_left}.")
     return "\n".join(lines)
 
@@ -208,6 +214,7 @@ def _facts_from(result: ValidationResult, html: str) -> dict[str, Any]:
         "heartbeat": result.heartbeat, "canvas_blank": result.canvas_blank, "errors": len(result.errors),
         "clicked_start": result.clicked_start, "play_score": result.play_score,
         "html_lines": html.count("\n") + 1,
+        "first_frame_blank": (result.phases or {}).get("first_frame_blank"),
     }
 
 
@@ -236,7 +243,10 @@ async def _await_judge(state: _State, spec: JobSpec, totals: UsageTotals, progre
 
 async def _validate_candidate(state: _State, html: str) -> ValidationResult:
     fixed = validate_and_fix_code(html)
-    harness = build_harness(state.spec.pack.to_learn_data(), nonce=state.nonce)
+    # The same modules the served game will get: the job's needs plus what
+    # the HTML reveals (the model may reach for a module the pitch missed).
+    state.needs = modules.resolve(state.needs, html=fixed)
+    harness = build_harness(state.spec.pack.to_learn_data(), nonce=state.nonce, modules=state.needs)
     return await validate_html(inject_harness(fixed, harness))
 
 
@@ -348,6 +358,168 @@ def parse_edit_delivery(text: str, current_html: str) -> dict[str, Any]:
     if html and "<script" in html.lower():
         return {"html": html, "summary": summary, "mode": "rewrite", "error": None, "ops": []}
     return {"html": None, "summary": summary, "mode": "none", "error": "no patches and no ```html block in the reply", "ops": []}
+
+
+async def _run_text_edit(session: Any, state: _State, progress: ProgressFn, prompt: str,
+                         totals: UsageTotals, spec: "JobSpec", operation: str,
+                         max_deliveries: int = MAX_SUBMISSIONS) -> Optional[str]:
+    """Edits and fixes: patches (or a full game) as reply text, so the change
+    streams to the kid and the SDK can continue a cut-off block. A patch
+    that does not apply is answered with one request for the full game; a
+    patch that applies but fails validation is answered with the findings
+    and the renumbered file, up to `max_deliveries`."""
+    next_prompt = prompt
+    asked_full = False
+    for _ in range(max_deliveries):
+        timer = _timer()
+        turn = await session.send(next_prompt)
+        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+        state.note_turn(turn)
+        if turn.error:
+            return str(turn.error)
+        parsed = parse_edit_delivery(turn.text or "", state.current_html)
+        if parsed["html"] is None:
+            state.attempts.append(Attempt(len(state.attempts) + 1, "text-edit", False,
+                                          [{"message": parsed["error"] or "no delivery"}], parsed["mode"], 0.0,
+                                          model_s=state.last_model_s, output_tokens=state.last_output_tokens,
+                                          error_classes=["no_delivery"]))
+            progress({"type": "patch", "status": "rejected", "mode": parsed["mode"], "error": parsed["error"]})
+            if asked_full or max_deliveries <= 1:
+                break
+            asked_full = True
+            next_prompt = (f"Your patches could not be applied ({parsed['error']}). Reply with `SUMMARY: …` and then the "
+                           "COMPLETE updated game in ONE ```html block, <!DOCTYPE html> to </html>, with the change "
+                           "the kid asked for. No patches this time.")
+            continue
+        progress({"type": "patch", "status": "applied", "mode": parsed["mode"], "ops": len(parsed["ops"])})
+        outcome = await _submit(state, progress, parsed["html"], state.accepted_title or "", parsed["summary"], "text-edit")
+        if outcome.ok:
+            return None
+        if outcome.error == "max_submissions":
+            break
+        # The next patch must target the file as it is now.
+        state.current_html = parsed["html"]
+        numbered = number_lines(parsed["html"])
+        findings = outcome.text.replace(
+            "call the tool again with the FULL corrected HTML",
+            "reply with `SUMMARY: …` and then PATCHES against the numbering below, or the FULL corrected game in ONE ```html block",
+        )
+        next_prompt = f"{findings}\n\nCURRENT GAME (line-numbered, after your change):\n{numbered}"
+    return None
+
+
+async def _run_text_delivery(session: Any, state: _State, progress: ProgressFn, prompt: str,
+                             totals: UsageTotals, spec: "JobSpec", operation: str) -> Optional[str]:
+    """Creates: the game is a ```html block in the reply. It streams to the
+    kid as text, and the SDK can auto-continue a block cut by the output cap.
+    A failed validation is answered with the findings and the numbered file,
+    and the repair comes back as line PATCHES (a few hundred tokens) rather
+    than the whole game again; the model may still send the full game when
+    the fix is large. Up to MAX_SUBMISSIONS deliveries, then one escalation
+    (see _escalate) at a higher effort."""
+    next_prompt = prompt
+    mode = "full"
+    for _ in range(MAX_SUBMISSIONS):
+        timer = _timer()
+        turn = await session.send(next_prompt)
+        totals.add(operation, turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
+        await _ledger(spec, operation, timer, spec.model, turn.usage, turn.error)
+        state.note_turn(turn)
+        if turn.error:
+            return str(turn.error)
+        if mode == "patch":
+            parsed_edit = parse_edit_delivery(turn.text or "", state.current_html)
+            if parsed_edit["html"] is None:
+                state.attempts.append(Attempt(len(state.attempts) + 1, "text", False,
+                                              [{"message": parsed_edit["error"] or "no delivery"}], parsed_edit["mode"], 0.0,
+                                              model_s=state.last_model_s, output_tokens=state.last_output_tokens,
+                                              error_classes=["no_delivery"]))
+                progress({"type": "patch", "status": "rejected", "mode": parsed_edit["mode"], "error": parsed_edit["error"]})
+                next_prompt = (f"Your patches could not be applied ({parsed_edit['error']}). Reply with the TITLE/BRIEF/SUMMARY "
+                               "lines and then the COMPLETE corrected game in ONE ```html block, <!DOCTYPE html> to </html>.")
+                mode = "full"
+                continue
+            progress({"type": "patch", "status": "applied", "mode": parsed_edit["mode"], "ops": len(parsed_edit["ops"])})
+            html, title, summary, brief = parsed_edit["html"], state.accepted_title or "", parsed_edit["summary"], ""
+        else:
+            parsed = parse_text_delivery(turn.text or "")
+            html = parsed["html"]
+            if not html or "<script" not in html.lower():
+                state.attempts.append(Attempt(len(state.attempts) + 1, "text", False, [{"message": "incomplete html"}],
+                                              "incomplete", 0.0, model_s=state.last_model_s,
+                                              output_tokens=state.last_output_tokens, error_classes=["incomplete"]))
+                if turn.usage.output_tokens >= OUTPUT_CAP_HINT_TOKENS:
+                    # The budget went on reasoning and the block never closed: ask
+                    # for a smaller game rather than the same one again.
+                    progress({"type": "build", "status": "shrink", "output_tokens": turn.usage.output_tokens})
+                    next_prompt = prompts.SHRINK_PROMPT
+                else:
+                    next_prompt = ("I did not receive a complete game. Reply with the TITLE/BRIEF/SUMMARY lines and then the "
+                                   "COMPLETE game in ONE ```html block, <!DOCTYPE html> to </html>.")
+                continue
+            title, summary, brief = parsed["title"], parsed["summary"], parsed["brief"]
+            if title.strip():
+                state.accepted_title = state.accepted_title or title.strip()[:60]
+        outcome = await _submit(state, progress, html, title, summary, "text", brief)
+        if outcome.ok:
+            return None
+        if outcome.error == "max_submissions":
+            break
+        # Repair as patches: the file as it stands, numbered, plus the findings.
+        state.current_html = html
+        next_prompt = _repair_prompt(outcome.text, html)
+        mode = "patch"
+    return await _escalate(state, progress, totals, spec)
+
+
+def _repair_prompt(findings: str, html: str) -> str:
+    findings = findings.replace(
+        "call the tool again with the FULL corrected HTML",
+        "reply with `SUMMARY: …` and then line PATCHES (REPLACE_LINES / INSERT_AFTER / DELETE_LINES) against the "
+        "numbering below — or the COMPLETE corrected game in ONE ```html block if the fix is large",
+    )
+    return f"{findings}\n\nCURRENT GAME (line-numbered):\n{number_lines(html)}"
+
+
+async def _escalate(state: _State, progress: ProgressFn, totals: UsageTotals, spec: "JobSpec") -> Optional[str]:
+    """After MAX_SUBMISSIONS failed deliveries: one more repair in a fresh
+    session at a higher effort (low → medium), same model, edit-shaped, with
+    the last candidate and the checker's findings. Never changes the effort
+    of the running session (that would drop its cache)."""
+    last = state.current_html
+    failed = [a for a in state.attempts if not a.ok and a.errors]
+    if not last or not failed or spec.reasoning_effort not in ("low", "minimal"):
+        return None
+    findings = _errors_block(failed[-1].errors)
+    effort = "medium"
+    progress({"type": "build", "status": "escalate", "model": spec.model, "reasoning_effort": effort})
+    session = HeadlessCopilotSession(
+        model=spec.model,
+        reasoning_effort=effort,
+        system_message=prompts.editor_system_message(spec.pack.language, needs=state.needs),
+        session_id=f"{spec.job_id}-escalate",
+        on_progress=progress,
+        tools=[],
+        max_ai_credits=spec.max_ai_credits,
+        timeout_s=900,
+    )
+    prompt = prompts.edit_prompt(
+        "The automatic checker found these problems; fix them so the game runs, keeping everything else as it is",
+        number_lines(last), errors_block=findings, language=spec.pack.language,
+    )
+    state.attempt_cap += 1
+    try:
+        await session.start()
+        return await _run_text_edit(session, state, progress, prompt, totals, spec, "game.fix", max_deliveries=1)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("escalation failed: %s", exc)
+        return None
+    finally:
+        try:
+            await session.close()
+        except Exception:
+            pass
 
 
 async def _run_text_edit(session: Any, state: _State, progress: ProgressFn, prompt: str,
@@ -597,12 +769,15 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         timings["plan_s"] = round(time.perf_counter() - t0, 3)
 
     if spec.kind == "create":
-        system = prompts.builder_system_message(language)
+        state.needs = modules.resolve(spec.needs, modules.parse_needs(design_doc) or modules.infer(spec.inspirations, spec.vibe))
+        progress({"type": "plan", "status": "needs", "needs": list(state.needs)})
+        system = prompts.builder_system_message(language, needs=state.needs)
         prompt = prompts.create_prompt(spec.pack, vibe=spec.vibe, inspirations=spec.inspirations,
                                        learner_title=spec.learner_title, design_doc=design_doc,
                                        genre=spec.genre, clarifications=spec.clarifications)
     else:
-        system = prompts.editor_system_message(language)
+        state.needs = modules.resolve(spec.needs, html=spec.current_html)
+        system = prompts.editor_system_message(language, needs=state.needs)
         full_rewrite = len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD
         numbered = spec.current_html if full_rewrite else number_lines(spec.current_html)
         prompt = prompts.edit_prompt(
@@ -683,4 +858,5 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         error=error,
         model=spec.model,
         timings=timings,
+        needs=list(state.needs),
     )

@@ -45,7 +45,8 @@ POSTER_STEP_MS = 1500             # thumbnail: sample play every 1.5 s while no 
 POSTER_WINDOW_MS = 4500           # …for this long after Start (three samples)
 PLAY_INPUT_MS = 700               # play score: hold the pointer / keys this long
 PLAY_SAMPLE_MS = 600              # play score: idle frames counted over this long
-MIN_HEARTBEAT = 30                # rAF ticks the harness must have counted
+MIN_HEARTBEAT = 60                # rAF ticks the harness must have counted (a 3D scene that stalls shows here)
+FIRST_FRAME_MS = 1000             # after Start the canvas must show something this fast (build the scene before Start)
 CHROMIUM_ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist"]
 
 IGNORED_ERROR_PATTERNS = [
@@ -501,6 +502,17 @@ async def validate_html(
                 lap("title_shot")
                 clicked = await _click_start_buttons(page)
                 lap("start")
+                # First-frame gate: a scene built inside onStart, or a loop
+                # that never draws, leaves the canvas flat right after Start.
+                # A fact for the judge and a hint for the fix, not a failure
+                # by itself (the poster window still decides canvas_blank).
+                if clicked:
+                    try:
+                        await page.wait_for_timeout(FIRST_FRAME_MS)
+                        early = await page.evaluate(_CANVAS_SAMPLE_JS)
+                        phases["first_frame_blank"] = bool(early and early.get("has_canvas") and early.get("blank"))
+                    except Exception as e:  # noqa: BLE001
+                        log.warning("first-frame sample failed: %s", e)
                 # The thumbnail is the game itself, never a question overlay.
                 # The bridge counts questions asked and answered, so "a
                 # question is open" is exact: capture play frames only while

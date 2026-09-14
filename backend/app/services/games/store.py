@@ -371,9 +371,10 @@ async def add_version(
     game_id: str, *, blob_path: str, sha256: str, source: str, summary: str = "",
     title: Optional[str] = None, thumb_blob_path: Optional[str] = None,
     sparks: int = 0, design_brief: Optional[str] = None,
-    judge: Optional[dict[str, Any]] = None,
+    judge: Optional[dict[str, Any]] = None, needs: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    """Append a built version and make it current. The game becomes `ready`
+    """Append a built version and make it current. `needs` names the opt-in
+    runtime modules the game was built against; serving injects exactly those. The game becomes `ready`
     and its error list is cleared — whatever was broken, this build replaced it.
 
     `judge` is the worker's verdict on this version (scores, notes, whether a
@@ -397,6 +398,7 @@ async def add_version(
         "source": source,
         "summary": (summary or "")[:300],
         "judge": dict(judge) if isinstance(judge, dict) else None,
+        "needs": [str(n) for n in (needs or [])],
     }
     fields: dict[str, Any] = {
         "versions": versions + [entry],

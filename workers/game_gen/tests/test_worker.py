@@ -117,7 +117,7 @@ def test_success_path_stores_version_and_rings_bell(fakes, monkeypatch):
     job = fakes.store.jobs["j1"]
     assert job["status"] == "done" and job["usage_summary"]["cost_usd"] == 0.25
     assert job["model"] == "claude-sonnet-5" and job["reasoning_effort"] == "medium"
-    assert job["judge"] == JUDGE and fakes.store.version_kwargs == [{"judge": JUDGE}]
+    assert job["judge"] == JUDGE and fakes.store.version_kwargs == [{"judge": JUDGE, "needs": []}]
     assert job["attempts_detail"][0]["n"] == 1 and job["attempts_detail"][0]["play_score"]["frames"] == 50
     t = job["timings"]
     assert t["model_s"] == [30.0] and t["plan_s"] == 6.0 and t["judge_s"] == 4.0

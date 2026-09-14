@@ -13,10 +13,13 @@ patches when the judge is unhappy.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Iterable
 
+from . import modules
 from .config import get_language_rule
 from .context_pack import ContextPack
+
+SKILLS_DIR = modules.SKILLS_DIR
 
 try:  # the curated CDN list is owned by libraries.py (ported from vibe)
     from .libraries import library_prompt_block
@@ -64,23 +67,13 @@ Questions are optional. If you ask any, they are yours: you write them and you k
 THE ANSWER IS NEVER IN THE PROMPT. The kid gets the givens and works out the result: "the ramp rises 3 and runs 4 — set the ratio" is learning; "the ratio is 3:4, type it" is a copy task worth nothing. Randomise the givens every round so there is no pattern to memorise; after a miss show the right answer WITH the reason (one line), then a similar round.
 """.strip()
 
-KIT = """
-THE KIT (already in the page — configure it, never re-implement it)
-`YuviKit.init({...})` gives you the start screen, HUD, pause, game-over / win, audio, particles, shake, input and the best score from ONE spec:
-  title, subtitle, controls: [{keys:"WASD / חיצים", does:"תנועה"}, …]      // the start screen (title + controls + the Start button — the kit renders that button; do not add another)
-  palette: ["#bg", "#accent", …]  → CSS vars --yk-1..n and YuviKit.palette
-  hud: [{id:"score", label:"ניקוד", value:0}, {id:"lives", label:"חיים", value:3}, {id:"level", label:"שלב", value:1}, …]   // labels in the kid's language
-  sounds: {hit:"blip", pickup:"coin", hurt:"buzz", win:"fanfare", lose:"down", shoot:"pew"}   // presets: blip coin buzz fanfare down pew jump explode powerup click, or {type, freq, to?, ms}
-  music: {bpm:120, notes:["C4","E4","G4",0,…]} | "none"      touch: {joystick:true, buttons:[{id:"fire", label:"🔥", key:"Space"}]}   storage: {best:"my-game-best"}
-  onStart: () => {…}, onPause: (paused) => {…}, onRetry: () => {…}       // onStart runs on the Start click; onRetry after game over / win
-YuviKit.hud.set({score:120, lives:2}) / .add("score", 10) / .get("score")       YuviKit.audio.play("hit") / .mute(bool) / .toggle()
-YuviKit.fx.particles({x, y, color, count, el: canvas}) / .shake(8, 250) / .float("+10", {x, y, el: canvas}) / .flash("#fff")   // x,y in screen px, or in `el`'s pixels when `el` is given
-YuviKit.input.axis() → {x:-1..1, y:-1..1} (WASD + arrows + joystick) / .pressed("Space") / .keys (Set of codes) / .on("fire", fn)   // fn runs only while playing
-YuviKit.input.pointerLock(canvas) from `onStart` for first-person / mouse-look (the kit handles the lost-lock pause + "click to aim" overlay; no-op on touch) and read `YuviKit.input.look` → {dx, dy} each frame (movement since the last read, only while locked).
-YuviKit.screens.gameOver({score, reason}) / .win({score}) / .message(text, ms) / .hide()     // end screens keep the best score and offer Retry
-YuviKit.loop(dt => update(dt); draw())   // rAF loop that runs only while started and not paused; or YuviKit.tick() for your own loop.   YuviKit.tween(obj, {x:100}, 300, "easeOut") → Promise.   YuviKit.paused / .started
-Learning helper (optional): `await YuviLearn.mount({text, answers, correct}, el)` renders a question into `el` and resolves `{correct, answer}`; `YuviLearn.progress({score, level})`, `YuviLearn.done({score})` tell Yuvi how the run went. A game with no questions is fine.
-""".strip()
+def _skill(name: str) -> str:
+    """A skill doc from ``skills/<name>.md``; the core one is always loaded."""
+    path = SKILLS_DIR / f"{name}.md"
+    return path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+
+
+KIT = _skill("core")  # the always-on kit, kept as a name for the tests
 
 AMBITION = """
 WHAT YOU SHIP (what a senior Phaser 4 / Three.js developer would)
@@ -144,17 +137,27 @@ HOW TO DELIVER AN EDIT
 """.strip()
 
 
-def _common_blocks() -> list[str]:
-    return [IDENTITY, LEARNING_STANCE, KIT, AMBITION, TECH_RULES + "\n" + library_prompt_block()]
+def _common_blocks(needs: Iterable[str] | None = None) -> list[str]:
+    """Fixed order — the prefix is what the model's cache keys on: identity,
+    stance, the core kit, then one skill doc per needed module (registry
+    order), then ambition and the tech rules. The job's brief comes last, in
+    the user turn, so everything before it is shared across jobs."""
+    blocks = [IDENTITY, LEARNING_STANCE, KIT]
+    for name in modules.resolve(needs):
+        doc = modules.skill_text(name)
+        if doc:
+            blocks.append(doc)
+    blocks += [AMBITION, TECH_RULES + "\n" + library_prompt_block()]
+    return blocks
 
 
-def builder_system_message(language: str = "he", delivery: str = "text") -> str:
+def builder_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None) -> str:
     """`delivery` is accepted for older callers; everything is text delivery."""
-    return "\n\n".join([*_common_blocks(), DELIVERY_TEXT, get_language_rule(language)])
+    return "\n\n".join([*_common_blocks(needs), DELIVERY_TEXT, get_language_rule(language)])
 
 
-def editor_system_message(language: str = "he", delivery: str = "text") -> str:
-    return "\n\n".join([*_common_blocks(), EDIT_TEXT, get_language_rule(language)])
+def editor_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None) -> str:
+    return "\n\n".join([*_common_blocks(needs), EDIT_TEXT, get_language_rule(language)])
 
 
 def _inspiration_lines(inspirations: list[str] | None, genre: str = "open") -> str:
@@ -248,6 +251,7 @@ PROGRESSION — 4 to 6 named stages, each adding one element or rule.
 FAIL & REWARD — how you lose, what you win, why you retry.
 ENGINE — Canvas 2D, Phaser 4 or Three.js, with one reason.
 SIGNATURE MOMENT — the one thing the kid will remember.
+NEEDS — the last line, English, exactly `NEEDS: <names>` from {world3d, ui, arcade2d} or `NEEDS: none`: world3d for any 3D world (first/third person, driving, flying, shooter, exploration); ui when the game asks questions, shows dialogue, timers or combos; arcade2d for a 2D platformer/runner/top-down with sprites and tiles.
 Write in the kid's language as a producer describing the game: neutral register, third person, no slang, never address the reader (no "אחי", "bro", "hey you"), no gendered forms. Be concrete and short; no preamble, no closing line."""
 
 

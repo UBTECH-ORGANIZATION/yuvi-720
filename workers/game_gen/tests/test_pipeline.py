@@ -231,7 +231,8 @@ def test_plan_pass_feeds_design_doc(stub_validator):
     build_prompt = FakeSession.prompts[0]
     assert "PITCH (a strong starting point" in build_prompt and "ספינת מטען" in build_prompt
     plan_events = [e for e in events if e["type"] == "plan"]
-    assert [e["status"] for e in plan_events] == ["start", "done"] and plan_events[1]["text"].startswith("HOOK")
+    assert [e["status"] for e in plan_events][:2] == ["start", "done"] and plan_events[1]["text"].startswith("HOOK")
+    assert plan_events[-1]["status"] == "needs"  # the modules the pitch named (or the brief implied)
     assert "game.plan" in result.usage.by_operation and result.timings["plan_s"] >= 0
 
 

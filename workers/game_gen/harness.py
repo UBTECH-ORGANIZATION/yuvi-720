@@ -17,7 +17,9 @@ import json
 import re
 import secrets
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
+
+from . import modules as modules_mod
 
 HARNESS_DIR = Path(__file__).parent / "harness"
 _HEAD_RE = re.compile(r"<head[^>]*>", re.IGNORECASE)
@@ -37,11 +39,15 @@ def _json_script(var: str, payload: Any) -> str:
     return f"<script>window.{var} = {blob};</script>"
 
 
-def build_harness(learn_data: dict[str, Any], *, nonce: str | None = None) -> str:
+def build_harness(learn_data: dict[str, Any], *, nonce: str | None = None,
+                  modules: Iterable[str] | None = None) -> str:
     """Return the HTML fragment to place at the top of ``<head>``.
 
     ``learn_data`` is ``ContextPack.to_learn_data()``:
     ``{component: {id, title}, objective: {id, title}, language}``.
+    ``modules`` names the opt-in runtimes this game needs (see ``modules.py``);
+    they follow the kit, in registry order, and an unknown or unshipped name
+    is skipped rather than failing the page.
     """
     parts = [
         _json_script("__YUVI_NONCE", nonce or secrets.token_hex(8)),
@@ -52,7 +58,15 @@ def build_harness(learn_data: dict[str, Any], *, nonce: str | None = None) -> st
         _script(_read("yuvi_learn.js")),
         _script(_read("yuvi_kit.js")),
     ]
+    for name in modules_mod.resolve(modules):
+        parts.append(_script(modules_mod.js_text(name)))
     return "\n".join(parts)
+
+
+def modules_for(needs: Iterable[str] | None, html: str = "") -> list[str]:
+    """The modules a served game gets: what its version recorded, plus what
+    its HTML reveals (old games and edits recorded nothing)."""
+    return modules_mod.resolve(needs, html=html)
 
 
 def inject_harness(html: str, harness_fragment: str) -> str:
