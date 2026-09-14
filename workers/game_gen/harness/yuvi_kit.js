@@ -24,9 +24,9 @@
 (function () {
   if (window.YuviKit) return;
   const STR = {
-    he: { start: 'התחל', again: 'שוב', resume: 'המשך', paused: 'הפסקה', score: 'ניקוד', best: 'שיא', over: 'המשחק נגמר', win: 'ניצחת!', esc: 'Escape = הפסקה', aim: 'לחצו כדי לכוון', focus: 'לחצו על המשחק כדי להמשיך' },
-    en: { start: 'Start', again: 'Again', resume: 'Resume', paused: 'Paused', score: 'Score', best: 'Best', over: 'Game over', win: 'You win!', esc: 'Escape = pause', aim: 'Click to aim', focus: 'Click the game to continue' },
-    ar: { start: 'ابدأ', again: 'مرة أخرى', resume: 'متابعة', paused: 'توقف مؤقت', score: 'النقاط', best: 'الأفضل', over: 'انتهت اللعبة', win: 'فزت!', esc: 'Escape = إيقاف مؤقت', aim: 'انقر للتصويب', focus: 'انقر على اللعبة للمتابعة' }
+    he: { start: 'התחל', again: 'שוב', resume: 'המשך', paused: 'הפסקה', score: 'ניקוד', best: 'שיא', over: 'המשחק נגמר', win: 'ניצחת!', esc: 'Escape = הפסקה', aim: 'לחצו כדי לכוון', focus: 'לחצו על המשחק כדי להמשיך', help: 'איך משחקים?', noKeys: 'משחקים עם העכבר או במגע' },
+    en: { start: 'Start', again: 'Again', resume: 'Resume', paused: 'Paused', score: 'Score', best: 'Best', over: 'Game over', win: 'You win!', esc: 'Escape = pause', aim: 'Click to aim', focus: 'Click the game to continue', help: 'How to play', noKeys: 'Play with the mouse or touch' },
+    ar: { start: 'ابدأ', again: 'مرة أخرى', resume: 'متابعة', paused: 'توقف مؤقت', score: 'النقاط', best: 'الأفضل', over: 'انتهت اللعبة', win: 'فزت!', esc: 'Escape = إيقاف مؤقت', aim: 'انقر للتصويب', focus: 'انقر على اللعبة للمتابعة', help: 'كيف نلعب؟', noKeys: 'العب بالفأرة أو باللمس' }
   };
   const rawLang = (window.YuviLearn && window.YuviLearn.language) || (window.__YUVI_LEARN_DATA || {}).language || 'he';
   const LANG = STR[rawLang] ? rawLang : 'en';
@@ -123,6 +123,8 @@
     pause.addEventListener('click', () => { if (S.started && !S.over) setPause(!S.paused); });
     A.btn = el('button', 'yk-ib', '🔊', H.bar); A.btn.type = 'button'; A.btn.removeAttribute('dir');
     A.btn.addEventListener('click', () => setMute(!A.muted));
+    const help = el('button', 'yk-ib', '❔', H.bar); help.type = 'button'; help.removeAttribute('dir'); help.title = T.help; help.setAttribute('aria-label', T.help);
+    help.addEventListener('click', showHelp);
     (items || []).forEach(hudItem);
   }
 
@@ -348,11 +350,25 @@
     const sc = screen('start');
     el('h1', 'yk-title', cfg.title || document.title || 'Yuvi', sc);
     if (cfg.subtitle) el('p', 'yk-sub', cfg.subtitle, sc);
-    if (cfg.controls && cfg.controls.length) {
-      const list = el('div', 'yk-ctls', null, sc);
-      cfg.controls.forEach(c => { const row = el('div', 'yk-ctl', null, list); el('kbd', null, c.keys || '', row); el('span', null, c.does || '', row); });
-    }
+    controlsList(cfg, sc);
     button(sc, T.start, doStart);
+  }
+  function controlsList(cfg, parent) {
+    if (!(cfg.controls && cfg.controls.length)) return null;
+    const list = el('div', 'yk-ctls', null, parent);
+    cfg.controls.forEach(c => { const row = el('div', 'yk-ctl', null, list); el('kbd', null, c.keys || '', row); el('span', null, c.does || '', row); });
+    return list;
+  }
+  // "How to play" — the HUD's ❔ button: pauses and shows the same controls list as the start screen, so the kid never has to remember the keys.
+  function showHelp() {
+    if (!S.started || S.over) return;
+    if (S.paused && S.screen && S.screen.id === 'yk-help') { setPause(false); return; }
+    if (S.paused) hideScreen(); else { S.paused = true; try { if (A.ctx) A.ctx.suspend().catch(() => {}); } catch (e) {} try { if (S.cfg.onPause) S.cfg.onPause(true); } catch (e) { console.error(e); } }
+    const sc = screen('help');
+    el('div', 'yk-title', T.help, sc);
+    if (!controlsList(S.cfg, sc)) el('p', 'yk-sub', T.noKeys, sc);
+    el('div', 'yk-sub', T.esc, sc);
+    button(sc, T.resume, () => { S.blurPaused = false; setPause(false); });
   }
   function doStart() {
     if (S.started) return;

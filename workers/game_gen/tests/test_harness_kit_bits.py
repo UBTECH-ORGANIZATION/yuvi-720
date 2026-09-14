@@ -101,3 +101,35 @@ def test_loops_share_one_clock_and_docks_stack():
     assert p.get("mapDocked") is True, p
     assert p.get("facing") == -1, p            # avatar spawns facing -z, so a level at z < spawn is in view
     assert p.get("safeTop", 0) > 0, p
+
+
+HELP_GAME = """<!DOCTYPE html>
+<html lang="he"><head><meta charset="UTF-8"><title>help</title></head><body style="margin:0">
+<canvas id="c" width="400" height="300"></canvas>
+<script>
+const cx = document.getElementById('c').getContext('2d');
+const probe = (window.__yuvi.help = { btn: false, shownPaused: null, rows: 0, resumed: null, titleRows: 0 });
+YuviKit.init({ title: 'help', controls: [{ keys: 'WASD', does: 'תנועה' }, { keys: 'רווח', does: 'קפיצה' }], hud: [{ id: 'score', label: 'ניקוד', value: 0 }], onStart: () => {
+  setTimeout(() => {
+    const b = Array.from(document.querySelectorAll('#yk-hud .yk-ib')).find(x => x.textContent === '❔'); probe.btn = !!b;
+    b.click(); probe.shownPaused = YuviKit.paused; probe.rows = document.querySelectorAll('#yk-help .yk-ctl').length;
+    document.querySelector('#yk-help .yk-btn').click(); probe.resumed = !YuviKit.paused && !document.querySelector('#yk-help');
+  }, 300);
+} });
+probe.titleRows = document.querySelectorAll('#yk-start .yk-ctl').length;
+let t = 0; YuviKit.loop(dt => { t += dt; cx.fillStyle = '#123'; cx.fillRect(0, 0, 400, 300); cx.fillStyle = '#fc0'; cx.fillRect(100 + Math.sin(t) * 50, 120, 60, 60); });
+</script></body></html>"""
+
+
+@pytest.mark.slow
+def test_hud_help_button_shows_the_controls_and_pauses():
+    if not chromium_available():
+        pytest.skip("Playwright Chromium not installed")
+    res = validate_html_sync(HELP_GAME, preinject_html=build_harness(LEARN, nonce="help1", modules=[]), settle_ms=1000, interaction_settle_ms=1500, screenshot=False)
+    assert res.validator_error is None
+    assert res.errors == [], res.errors
+    p = (res.yuvi_state or {}).get("help") or {}
+    assert p.get("btn") is True, p
+    assert p.get("titleRows") == 2, p
+    assert p.get("shownPaused") is True and p.get("rows") == 2, p
+    assert p.get("resumed") is True, p
