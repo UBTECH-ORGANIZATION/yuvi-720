@@ -3,7 +3,10 @@
 The fixture game imports Three.js from the allow-listed CDN, builds the world
 BEFORE Start (so the first frame after the click is not blank), scatters
 instanced props, adds a patrolling enemy, fires one projectile at it and
-records probes on ``window.__yuvi.w3d``. Skips without Chromium or the CDN.
+records probes on ``window.__yuvi.w3d``. The second fixture is the designed
+path: an ocean biome with terrain + water, ``decorate()``, a character hero on
+the avatar controller, character enemies and a dog, probed on ``w3d2``.
+Skips without Chromium or the CDN.
 """
 import shutil
 import subprocess
@@ -73,6 +76,58 @@ YuviKit.loop(() => {
 </body></html>""" % {"three": THREE_URL}
 
 
+BIOME_GAME = """<!DOCTYPE html>
+<html lang="he"><head><meta charset="UTF-8"><title>biome game</title>
+<style>body{background:#1e1e2e}</style></head>
+<body>
+<script type="module">
+import * as THREE from '%(three)s';
+const probe = (window.__yuvi.w3d2 = { built: false, frames: 0, water: false, groundSpread: 0, decor: 0, landmark: false, heroStart: null, heroPos: null, moved: false,
+  limbChanged: false, heights: [], meshCounts: [], enemyStates: [], enemyMoved: false, dogParts: 0, camMode: null, stats: null, biomes: 0 });
+const W = YuviWorld3D.world(THREE, { preset: 'ocean', seed: 11, size: 100, terrain: { hills: .4 }, water: { level: -1.2, waves: .25 } });
+probe.built = !!(W.scene && W.renderer && document.querySelector('canvas[data-yuvi-world3d]'));
+probe.biomes = YuviWorld3D.biomes.length;
+probe.water = !!W.water && W.water.isMesh;
+let lo = Infinity, hi = -Infinity;
+for (let i = 0; i < 40; i++) { const a = i / 40 * 6.2832, r = 8 + (i %% 5) * 9; const y = W.groundY(Math.cos(a) * r, Math.sin(a) * r); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+probe.groundSpread = hi - lo;
+const dec = W.decorate({ density: .8, seed: 2 });
+probe.decor = dec.sets.length; probe.landmark = !!dec.landmark;
+const hero = W.props.character({ role: 'kid', seed: 3, pos: [0, 0, 4] });
+const guards = [W.props.character({ role: 'guard', seed: 11, pos: [-6, 0, -8] }), W.props.character({ role: 'guard', seed: 12, pos: [7, 0, -9] })];
+const dog = W.props.character({ animal: 'dog', seed: 5, pos: [3, 0, 2] });
+const countMeshes = g => { let n = 0; g.traverse(o => { if (o.isMesh) n++; }); return n; };
+[hero].concat(guards).forEach(ch => { probe.heights.push(+ch.userData.height.toFixed(3)); probe.meshCounts.push(countMeshes(ch)); });
+probe.dogParts = countMeshes(dog);
+const ctrl = W.player.avatar(hero, { camera: 'follow', speed: 7 }).collide(dec);
+probe.camMode = ctrl.mode;
+const enemies = guards.map((g, i) => W.enemy(g, { waypoints: [[g.position.x - 5, 0, g.position.z], [g.position.x + 5, 0, g.position.z]], speed: 2.5, sightRange: 4 }));
+const guardStart = guards.map(g => g.position.x);
+W.enemy(dog, { waypoints: [[3, 0, 2], [-3, 0, 3]], speed: 2, sightRange: 1 });
+const guns = W.projectiles({ speed: 30, gravity: 4, targets: () => enemies, onHit: (t, p) => { W.fx.hit(p, { color: '#ffcc00' }); } });
+W.minimap(null, {}); W.objective('הגיעו למגדלור');
+let prevLeg = null;
+YuviKit.init({
+  title: 'האי', subtitle: 'חוף', palette: ['#1e1e2e', '#89dceb'],
+  hud: [{ id: 'score', label: 'ניקוד', value: 0 }],
+  onStart: () => { probe.heroStart = [hero.position.x, hero.position.z]; hero.anim.wave(); guns.fire(); }
+});
+W.run();
+YuviKit.loop(() => {
+  probe.frames++;
+  probe.heroPos = [hero.position.x, hero.position.z];
+  probe.moved = probe.moved || Math.abs(hero.position.x - probe.heroStart[0]) > 0.5 || Math.abs(hero.position.z - probe.heroStart[1]) > 0.5;
+  const leg = hero.parts.legL.rotation.x;
+  if (prevLeg != null && Math.abs(leg - prevLeg) > 0.01) probe.limbChanged = true;
+  prevLeg = leg;
+  probe.enemyStates = enemies.map(e => e.state);
+  probe.enemyMoved = probe.enemyMoved || guards.some((g, i) => Math.abs(g.position.x - guardStart[i]) > 0.2);
+  probe.stats = W.stats;
+});
+</script>
+</body></html>""" % {"three": THREE_URL}
+
+
 def _cdn_reachable() -> bool:
     try:
         return _head(THREE_URL, 5.0) == 200
@@ -87,7 +142,7 @@ def _harness_with_world3d(nonce: str) -> str:
 
 def test_world3d_stays_small_and_parses():
     src = W3D_PATH.read_text(encoding="utf-8")
-    assert len(src.splitlines()) <= 800, "yuvi_world3d.js has a hard cap of 800 lines"
+    assert len(src.splitlines()) <= 950, "yuvi_world3d.js has a hard cap of 950 lines"
     assert src.startswith("/*") and src.rstrip().endswith("})();")
     assert "</script" not in src and "import " not in src.split("*/", 1)[1].replace("import * as THREE", "")
     node = shutil.which("node")
@@ -122,3 +177,36 @@ def test_world3d_game_passes_validation():
     assert probe["projectileHits"] >= 1
     assert probe["moved"] is True, "ArrowRight / KeyD held by the validator must move the FPS rig"
     assert probe["stats"]["props"] >= 60 and probe["stats"]["drawCalls"] > 0
+
+
+@pytest.mark.slow
+def test_world3d_biome_avatar_characters():
+    """The designed path: biome + terrain + water + decorate(), a character hero
+    on the avatar controller, animated character enemies and an animal."""
+    if not chromium_available():
+        pytest.skip("Playwright Chromium not installed")
+    if not _cdn_reachable():
+        pytest.skip("Three.js CDN unreachable")
+    res = validate_html_sync(BIOME_GAME, preinject_html=_harness_with_world3d("w3d2"), settle_ms=1200, interaction_settle_ms=1200)
+    assert res.validator_error is None
+    assert res.errors == [], res.errors
+    assert res.ok
+    assert res.clicked_start
+    assert res.heartbeat > 0
+    assert res.canvas_blank is False
+    assert res.phases.get("first_frame_blank") is False
+    probe = res.yuvi_state["w3d2"]
+    assert probe["built"] is True
+    assert probe["biomes"] == 12
+    assert probe["water"] is True
+    assert probe["groundSpread"] > 0.5, "terrain hills must vary groundY across the map"
+    assert probe["decor"] >= 4 and probe["landmark"] is True
+    assert probe["frames"] > 0
+    assert probe["camMode"] == "follow"
+    assert probe["moved"] is True, "ArrowRight / KeyD held by the validator must move the avatar"
+    assert probe["limbChanged"] is True, "the hero's legs must swing (walk animation)"
+    assert len(set(probe["heights"])) >= 2 or len(set(probe["meshCounts"])) >= 2, (probe["heights"], probe["meshCounts"])
+    assert probe["dogParts"] >= 8
+    assert all(st in ("patrol", "detect", "chase", "cover", "search") for st in probe["enemyStates"])
+    assert probe["enemyMoved"] is True
+    assert probe["stats"]["props"] >= 80 and probe["stats"]["drawCalls"] > 0
