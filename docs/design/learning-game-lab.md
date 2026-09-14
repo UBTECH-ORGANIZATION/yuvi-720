@@ -225,3 +225,25 @@ vibe-coding-kids modules to port (paths under `src/backend/`): `agent/session.py
 - Opus builds take minutes; kids leave the page. Mitigation: everything is asynchronous, bell + chime, studio prop feedback, build survives navigation.
 - Client-side game code can be inspected by the kid; correct answers are never in it (server grading).
 - Playwright + Copilot CLI in one image is heavy (~1.5 GB). Acceptable for a scale-to-zero worker.
+
+## v3 — a fixed runtime the model builds on (2026-09-14, in progress)
+
+**Why.** Cost and time are linear in output tokens (a 3D FPS on Opus 5: 30k of 33k tokens were output, $0.79 of $0.82). The research on Base44 and the game platforms (Rosebud, Bitmagic, KAPLAY) points to one lever above all: a fixed platform the model writes *against*, taught by small skill docs, so a game is a few hundred lines of game logic rather than a thousand lines of plumbing. Policy since 2026-09-14: **Opus 5 only** for game code — `low` by default, `medium` for deep thinking; the mini model writes only the pitch and the judge.
+
+**Opt-in runtime modules** (`workers/game_gen/modules.py`, injected after the core kit by `harness.build_harness(modules=)`):
+
+| Module | Global | What it owns |
+|---|---|---|
+| `harness/yuvi_world3d.js` | `YuviWorld3D` | scene presets (sky, fog, tone mapping, lights, palette as data), instanced procedural props, first-person and third-person controllers on the kit's input and pointer lock, enemy FSM (patrol → detect → chase → cover → search), projectiles with gravity, hit effects, minimap, objectives, dispose |
+| `harness/yuvi_ui.js` | `YuviUI` | question panels with bidi-safe math (`<bdi dir=ltr>` per expression), dialogue, timers, combos, banners; delegates grading to `YuviLearn` |
+| `harness/yuvi_arcade2d.js` (phase 2) | `YuviArcade` | primitive sprites, tilemaps, camera follow, parallax, AABB physics |
+
+How a game gets them: the plan pass ends with `NEEDS: world3d, ui` (parsed by `modules.parse_needs`), the brief's chips and words infer a fallback (`modules.infer`), and the HTML is sniffed for the globals (`modules.sniff`) so an edit or an old game never loses a module. The version entry records `needs`; serving injects exactly those (`routes.read_game_html` → `harness.modules_for`). The kit is a floor, never a scaffold: raw Three.js and Canvas stay allowed, and the brief always wins.
+
+**Skills.** `workers/game_gen/skills/<name>.md` (core always; one per module in play) enter the system message in a fixed order after the core kit and before the ambition block — the prefix the model's prompt cache keys on. Each skill is an API table, one canonical usage and a WRONG → RIGHT table (Base44's anti-hallucination device). Effort and tools never change inside a session.
+
+**Repairs.** A failed delivery is answered with the findings and the numbered file; the repair comes back as line patches (a few hundred tokens) or a full game when the fix is large. After `MAX_SUBMISSIONS` one escalation runs in a fresh session at `medium`, edit-shaped, same model (`pipeline._escalate`).
+
+**Gates.** The validator samples the canvas 1 s after Start (`first_frame_blank`, a fact for the judge and a hint for the fix: build the scene before Start), `MIN_HEARTBEAT` is 60, and `games_report.py` gained `lines_p50`, `cache_ratio`, `first_frame_blank_rate` and `needs`.
+
+**Targets (phase 1).** 3D game ≤ 350 model-written lines; Opus low ≤ $0.25 and ≤ 150 s p50; judge mean ≥ 4.5; 3D pass-on-first-delivery ≥ 90%; cache_read ≥ 70% of input. Phase 2: hidden exemplars (1–2 similar judged games as style reference, never kid-facing remix), arcade2d, Discuss mode. Phase 3: play outcomes recorded per game, cached style-locked assets.
