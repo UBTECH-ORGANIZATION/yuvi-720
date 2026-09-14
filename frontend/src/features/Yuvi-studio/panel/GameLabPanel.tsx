@@ -16,7 +16,6 @@ import {
 import type { GameLabActivity } from '../useGameLabActivity'
 
 /** Admin bake-off choices; empty means the deployment default. */
-const GAME_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'gpt-5.6-sol', 'claude-opus-4.8']
 
 const PAGE_SIZE = 12
 
@@ -327,8 +326,6 @@ function CreateWizard({
 }) {
   const { t } = useI18n()
   const { user } = useAuth()
-  // The model select is an admin's bake-off tool; the server ignores the
-  // field for anyone else, so it is not even shown to them.
   const isAdmin = Boolean(user?.roles.includes('admin'))
   const [subjects, setSubjects] = useState<PickerSubject[] | null>(null)
   const [subject, setSubject] = useState<string | null>(null)
@@ -339,7 +336,6 @@ function CreateWizard({
   const [vibe, setVibe] = useState('')
   const [name, setName] = useState('')
   const [deep, setDeep] = useState(false)
-  const [model, setModel] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const preselected = useRef(false)
@@ -388,7 +384,6 @@ function CreateWizard({
         title: name.trim().slice(0, TITLE_MAX),
         device: isTouch ? 'touch' : 'keyboard',
         deep_thinking: deep,
-        ...(isAdmin && model ? { model } : {}),
       })
       onCreated(game)
     } catch (error) {
@@ -544,24 +539,7 @@ function CreateWizard({
             </span>
           </button>
 
-          {isAdmin && (
-            <label className="ys-gamelab-field">
-              <span className="ys-subhead">{t('studio.gamelab.model')}</span>
-              <select className="ys-gamelab-input" value={model} onChange={(change) => setModel(change.target.value)}>
-                <option value="">{t('studio.gamelab.model.auto')}</option>
-                {GAME_MODELS.map((id) => <option key={id} value={id}>{id}</option>)}
-              </select>
-            </label>
-          )}
 
-          <p className="ys-gamelab-hint">
-            <Icon name={isTouch ? 'hand' : 'chip'} size={14} />
-            {t(isTouch ? 'studio.gamelab.device.touch' : 'studio.gamelab.device.keyboard')}
-          </p>
-          <p className="ys-gamelab-rule">
-            <Icon name="lightbulb" size={14} />
-            {t('studio.gamelab.rule')}
-          </p>
 
           {createError && <p className="ys-note" role="alert">{createError}</p>}
           <button type="button" className="ys-btn ys-btn--primary ys-gamelab-create" onClick={() => void create()} disabled={creating}>
