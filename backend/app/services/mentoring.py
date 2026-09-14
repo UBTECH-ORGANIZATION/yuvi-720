@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named, apply_brain_updates, get_brain
-from app.services import goal_progress, rewards
+from app.services import goal_progress, progression, rewards
+from app.services.progression import ledger as progression_ledger
 from learner_state import normalize_learner_id  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "mentoring.json"
@@ -182,6 +183,33 @@ async def _raw_conversations(lid: str) -> list[dict[str, Any]]:
         except Exception as exc:
             print(f"⚠️ mentoring read failed, using fallback: {exc}")
     return [r for r in _read_fallback() if r.get("learner_id") == lid and not r.get("deleted")]
+
+
+def _first_goal_id_from_records(records: list[dict[str, Any]]) -> Optional[str]:
+    """Choose the earliest persisted goal deterministically, including deleted rows."""
+    candidates: list[tuple[str, str, str]] = []
+    for record in records:
+        _ensure_goals(record)
+        created_at = str(record.get("created_at") or "")
+        conversation_id = str(record.get("id") or "")
+        for goal in record.get("goals") or []:
+            goal_id = str(goal.get("id") or "")
+            if goal_id:
+                candidates.append((created_at, conversation_id, goal_id))
+    return min(candidates)[2] if candidates else None
+
+
+async def _first_persisted_goal_id(lid: str) -> Optional[str]:
+    collection = _get_collection_named("mentoring_conversations")
+    if collection is not None:
+        try:
+            rows = [row async for row in collection.find({"learner_id": lid})]
+        except Exception as exc:
+            print(f"⚠️ first objective read failed, using fallback: {exc}")
+            rows = [row for row in _read_fallback() if row.get("learner_id") == lid]
+    else:
+        rows = [row for row in _read_fallback() if row.get("learner_id") == lid]
+    return _first_goal_id_from_records(rows)
 
 
 async def _load_conversation(lid: str, conversation_id: str) -> Optional[dict[str, Any]]:
@@ -380,10 +408,21 @@ async def update_goal_progress(
     # encouragement). The amount is this goal's own price, split by stage, and
     # is idempotent per goal+stage, so re-saving pays nothing.
     reward = await rewards.grant_goal_stage(lid, goal_id, progress_stage, goal.get("reward_value"))
+    first_goal_id = await _first_persisted_goal_id(lid)
+    remembered_first = await progression_ledger.remember_first_objective(
+        lid, first_goal_id or goal_id
+    )
+    xp_reward = await progression.award_objective_stage(
+        lid,
+        goal_id,
+        progress_stage,
+        is_first=remembered_first == goal_id,
+    )
     record = dict(record)
     record.pop("teacher_only_note", None)
     record["goals"] = _active_goals(record)
     record["reward"] = reward
+    record["xpReward"] = xp_reward
     return record
 
 
@@ -408,10 +447,14 @@ async def request_goal_help(
     await _project_goals(lid)
     # Asking for help is a self-regulation win, so it earns sparks (once).
     reward = await rewards.grant_help_request(lid, goal_id)
+    xp_reward = await progression.record_qualifying_help(
+        lid, f"mentoring:{conversation_id}:{goal_id}"
+    )
     record = dict(record)
     record.pop("teacher_only_note", None)
     record["goals"] = _active_goals(record)
     record["reward"] = reward
+    record["xpReward"] = xp_reward
     return record
 
 

@@ -3,6 +3,7 @@
 
 import { apiDelete, apiGet, apiPost, apiPut } from './api'
 import type { RewardGrant } from './rewards'
+import type { XpAwardReceipt } from './progression'
 
 export type GoalProgressStage = 'chosen' | 'started' | 'progressed' | 'summarized'
 
@@ -39,6 +40,7 @@ export interface MentoringConversation {
   created_at?: string
   /** Sparks granted by the action that returned this record (progress/help). */
   reward?: RewardGrant
+  xpReward?: XpAwardReceipt
 }
 
 export function createMentoring(conv: MentoringConversation) {

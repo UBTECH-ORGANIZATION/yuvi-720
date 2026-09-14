@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import { getShop, purchaseAsset, type PurchaseResult, type ShopItem } from '../../services/rewards'
+import { LEVEL_REWARD_EVENT } from '../../services/progression'
 import { useRewards } from '../../providers/RewardsProvider'
 import type { YuviAvatarHandle } from './YuviAvatar3D'
 import {
@@ -73,6 +74,12 @@ export function useStudioDesign(autoLoad = true) {
   }, [refreshSavedDesign, setWallet])
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
+  useEffect(() => {
+    if (!autoLoad) return
+    const refreshUnlocks = () => { void load() }
+    window.addEventListener(LEVEL_REWARD_EVENT, refreshUnlocks)
+    return () => window.removeEventListener(LEVEL_REWARD_EVENT, refreshUnlocks)
+  }, [autoLoad, load])
 
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
   /** True when this room prop has to be earned and has not been. */

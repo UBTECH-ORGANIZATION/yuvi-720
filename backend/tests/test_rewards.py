@@ -43,8 +43,10 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(repeat["reason"], "owned")
             self.assertEqual(repeat["wallet"]["balance"], result["wallet"]["balance"])
         self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], SHOPPING_BALANCE - sum(expected.values()))
-        for kind in ("parkSwings", "parkTree", "loftArcadeCabinet", "loftRacingSimulator"):
+        for kind in ("parkSwings", "loftArcadeCabinet", "loftRacingSimulator"):
             self.assertIsNotNone(catalog.price_of(kind), kind)
+        for kind in ("parkTree", "parkBasketSwing", "parkCarousel", "rocketModel"):
+            self.assertIsNone(catalog.price_of(kind), kind)
 
     async def test_unaffordable_furniture_never_grants_ownership(self) -> None:
         result = await rewards.purchase_asset(LEARNER, "sportsCableMachine")
@@ -90,6 +92,14 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first["granted"], 10)
         self.assertEqual(replay["granted"], 0)
         self.assertEqual(replay["wallet"]["balance"], 10)
+
+    async def test_personal_path_opening_sparks_are_granted_once(self) -> None:
+        first = await rewards.grant_personal_path_started(LEARNER)
+        replay = await rewards.grant_personal_path_started(LEARNER)
+
+        self.assertEqual(first["granted"], 50)
+        self.assertEqual(replay["granted"], 0)
+        self.assertTrue(replay["duplicate"])
 
     async def test_goal_value_drives_the_payout(self) -> None:
         cheap = await rewards.grant_goal_stage(LEARNER, "cheap", "summarized", pricing.GOAL_VALUE_MIN)
@@ -248,32 +258,18 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(result["reason"], "not_for_sale")
 
-    async def test_creator_loft_requires_unique_component_completions_before_spending(self) -> None:
-        with patch.object(wallet, "count_distinct_completed_components", return_value=9):
-            result = await rewards.purchase_asset(LEARNER, "layout:creatorLoft")
-        self.assertFalse(result["ok"])
-        self.assertEqual(result["reason"], "prerequisite")
-        self.assertEqual(result["completedComponents"], 9)
-        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 0)
-
-    async def test_catalog_exposes_both_world_progress_requirements(self) -> None:
-        worlds = {item["id"]: item for item in catalog.catalog_for_client(completed_components=6) if item["id"].startswith("layout:")}
-        self.assertEqual(worlds["layout:sportsArena"]["completedComponents"], 6)
-        self.assertEqual(worlds["layout:sportsArena"]["price"], 1000)
-        self.assertEqual(worlds["layout:creatorLoft"]["completedComponents"], 10)
-        self.assertEqual(worlds["layout:creatorLoft"]["completedComponentsCurrent"], 6)
-        self.assertEqual(worlds["layout:creatorLoft"]["price"], 1000)
-
-    async def test_creator_loft_spends_server_price_and_grants_a_room_unlock(self) -> None:
-        wallet_state = await wallet._load_wallet(LEARNER)
-        wallet_state["balance"] = 1000
-        await wallet._store_wallet(LEARNER, wallet_state)
-        with patch.object(wallet, "count_distinct_completed_components", return_value=10):
-            result = await rewards.purchase_asset(LEARNER, "layout:creatorLoft")
-        self.assertTrue(result["ok"])
-        self.assertEqual(result["price"], 1000)
-        self.assertIn("layout:creatorLoft", self._room_unlocks)
-        self.assertEqual(result["wallet"]["balance"], 0)
+    async def test_xp_level_items_and_layouts_are_not_for_sale(self) -> None:
+        level_only_ids = {
+            "neon", "stringLights", "globe", "telescope", "starProjector",
+            "trophies", "dragonwings", "layout:sportsArena", "layout:creatorLoft",
+        }
+        catalog_ids = {item["id"] for item in catalog.catalog_for_client()}
+        self.assertTrue(level_only_ids.isdisjoint(catalog_ids))
+        for asset_id in level_only_ids:
+            self.assertIsNone(catalog.price_of(asset_id), asset_id)
+            result = await rewards.purchase_asset(LEARNER, asset_id)
+            self.assertFalse(result["ok"], asset_id)
+            self.assertEqual(result["reason"], "not_for_sale", asset_id)
 
     async def test_ledger_records_every_movement(self) -> None:
         await rewards.grant_goal_stage(LEARNER, "g1", "started", GOAL_VALUE)

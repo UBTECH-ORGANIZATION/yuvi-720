@@ -37,7 +37,8 @@ export function createPlaygroundEnvironment(options: { floorY: number; rich: boo
   }
   kit.batch(walls)
   const roof = kit.group(group, 'playground-roof')
-  const ceiling = kit.mesh(roof, kit.geometry('playground-ceiling', () => new THREE.PlaneGeometry(48.8, 58.5)), kit.material('stone', 0x7595aa), [0, 12, 3.45])
+  const ceilingMaterial = kit.material('stone', 0x7595aa)
+  const ceiling = kit.mesh(roof, kit.geometry('playground-ceiling', () => new THREE.PlaneGeometry(48.8, 58.5)), ceilingMaterial, [0, 12, 3.45])
   ceiling.rotation.x = Math.PI / 2
   ceiling.castShadow = false
   const fanMaterial = kit.material('steel', 0x7b8580)
@@ -69,7 +70,12 @@ export function createPlaygroundEnvironment(options: { floorY: number; rich: boo
     if (!action) return false
     action.activate(); return true
   }
-  return { group, floorMaterial: paving, setLabels: wallsContent.setLabels,
+  return { group, floorMaterial: paving,
+    setWallColor: (color: number) => {
+      wall.color.setHex(color)
+      ceilingMaterial.color.setHex(color).multiplyScalar(0.72)
+    },
+    setLabels: wallsContent.setLabels,
     update: (elapsed: number) => motion.updates.forEach((update) => update(elapsed)),
     interact, actions: motion.actions, ready: kit.ready, assetFailures: kit.failures,
     dispose: () => { motion.actions.length = 0; motion.updates.length = 0; kit.dispose() },

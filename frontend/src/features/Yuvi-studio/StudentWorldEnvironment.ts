@@ -20,6 +20,7 @@ interface EnvironmentOptions {
 export interface StudentWorldEnvironment {
   group: THREE.Group
   floorMaterial: THREE.MeshStandardMaterial
+  setWallColor: (color: number) => void
   interact?: (raycaster: THREE.Raycaster) => boolean
   setLabels: (translate: LoftTranslator) => void
   update: (elapsed: number) => void
@@ -82,7 +83,8 @@ function createIndoorWorldEnvironment(options: EnvironmentOptions): StudentWorld
   right.rotation.y = -Math.PI / 2
   right.position.x = HALF_X
   group.add(right)
-  const ceiling = new THREE.Mesh(track(new THREE.PlaneGeometry(HALF_X * 2, DEPTH)), standard(palette.dark))
+  const ceilingMaterial = standard(palette.dark)
+  const ceiling = new THREE.Mesh(track(new THREE.PlaneGeometry(HALF_X * 2, DEPTH)), ceilingMaterial)
   ceiling.rotation.x = Math.PI / 2
   ceiling.position.set(0, floorY + 12, MID_Z)
   group.add(ceiling)
@@ -563,6 +565,10 @@ function createIndoorWorldEnvironment(options: EnvironmentOptions): StudentWorld
   return {
     group,
     floorMaterial,
+    setWallColor: (color) => {
+      wallMaterial.color.setHex(color)
+      ceilingMaterial.color.setHex(color).multiplyScalar(0.55)
+    },
     setLabels: (translate) => setLabels(translate),
     update: (elapsed) => { if (!reduceMotion) animated.forEach((animate) => animate(elapsed)) },
     dispose: () => {

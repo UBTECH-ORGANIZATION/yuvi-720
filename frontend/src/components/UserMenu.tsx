@@ -3,10 +3,12 @@ import { navigate, useRoute } from '../app/router'
 import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
+import { useProgression } from '../providers/ProgressionProvider'
 import { ProfileAvatar } from '../features/badges/ProfileAvatar'
 import { openReportIssue } from '../features/support/ReportIssueDialog'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
+import { XpAwardPopup } from './XpAwardPopup'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -33,6 +35,7 @@ export function UserMenu() {
   const { t, language, setLanguage } = useI18n()
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { status: progression } = useProgression()
   const { startTour } = useTour()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -41,6 +44,23 @@ export function UserMenu() {
      gallery to edit, and offering one was learner chrome leaking through. */
   const route = useRoute()
   const inTeacherApp = route.startsWith('/teacher') || route.startsWith('/admin')
+  const showProgression = !inTeacherApp && progression !== null
+  const xpMaximum = progression?.xpToNext ?? Math.max(1, progression?.currentLevelXp ?? 1)
+  const xpNow = progression?.currentLevelXp ?? 0
+  const progressPercent = Math.max(0, Math.min(100, (progression?.progress ?? 0) * 100))
+  const progressText = progression?.nextLevel
+    ? t('progression.tooltip', {
+        remaining: String(Math.max(0, (progression.xpToNext ?? 0) - xpNow)),
+        nextLevel: String(progression.nextLevel),
+        current: String(xpNow),
+        required: String(progression.xpToNext ?? 0)
+      })
+    : t('progression.maxLevel')
+  const frameTier = progression && progression.level >= 30
+    ? 'prestige'
+    : progression && progression.level >= 22
+      ? 'animated'
+      : progression && progression.level >= 11 ? 'level' : null
 
   useEffect(() => {
     if (!open) return
@@ -80,26 +100,67 @@ export function UserMenu() {
   return (
     <div className="user-menu" ref={rootRef}>
       <button
-        className="user-menu__trigger"
+        className={`user-menu__trigger${showProgression ? ' user-menu__trigger--progression' : ''}`}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t('auth.menu.open')}
+        aria-label={showProgression && progression
+          ? t('progression.accountAria', {
+              name: user.display_name,
+              level: String(progression.level)
+            })
+          : t('auth.menu.open')}
         data-tour="learner.profileMenu"
         onClick={() => setOpen((value) => !value)}
       >
-        <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
-        <span className="user-menu__name" dir="auto">{user.display_name}</span>
+        {showProgression && progression ? (
+          <>
+            <span className="user-menu__medal" aria-hidden="true">
+              <span>{t('progression.level')}</span>
+              <strong>{progression.level}</strong>
+            </span>
+            <span className="user-menu__identity">
+              <span className="user-menu__name" dir="auto">{user.display_name}</span>
+              <span className="user-menu__xp" dir="ltr">
+                {progression.nextLevel
+                  ? t('progression.ratio', { current: String(xpNow), required: String(progression.xpToNext ?? 0) })
+                  : t('progression.maxLevel')}
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
+            <span className="user-menu__name" dir="auto">{user.display_name}</span>
+          </>
+        )}
         <svg className="user-menu__chevron" viewBox="0 0 24 24" aria-hidden="true">
           <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
+        {showProgression && progression ? (
+          <>
+            <span
+              className="user-menu__progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={xpMaximum}
+              aria-valuenow={xpNow}
+              aria-valuetext={progressText}
+            >
+              <span style={{ inlineSize: `${progressPercent}%` }} />
+            </span>
+            <span className="user-menu__progress-tip" role="tooltip">{progressText}</span>
+          </>
+        ) : null}
       </button>
+
+      {showProgression ? <XpAwardPopup paused={open} /> : null}
 
       {open && (
         <div className="user-menu__pop" role="menu">
           <div className="user-menu__head">
             {inTeacherApp ? (
-              <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
+              <ProfileAvatar className={`user-menu__head-avatar${frameTier ? ` is-${frameTier}-frame` : ''}`} fallback={initialsOf(user.display_name)} />
             ) : (
               <button
                 className="user-menu__avatar-edit"
@@ -108,7 +169,7 @@ export function UserMenu() {
                 aria-label={t('badges.menuEdit')}
                 title={t('badges.menuEdit')}
               >
-                <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
+                <ProfileAvatar className={`user-menu__head-avatar${frameTier ? ` is-${frameTier}-frame` : ''}`} fallback={initialsOf(user.display_name)} />
                 <span className="user-menu__pencil" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
                     <path

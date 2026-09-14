@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>מערכת XP וניצוצות | מסמך אפיון מוצר</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #657086;
+      --paper: #f7f8fb;
+      --surface: #ffffff;
+      --line: #dfe4ec;
+      --navy: #13233f;
+      --blue: #2367d1;
+      --cyan: #12a9b4;
+      --yellow: #f5c542;
+      --coral: #e65d4f;
+      --green: #208760;
+      --soft-blue: #eaf2ff;
+      --soft-yellow: #fff6d8;
+      --soft-cyan: #e4f7f7;
+      --soft-coral: #fff0ed;
+      --radius: 8px;
+      --shadow: 0 14px 34px rgba(23, 32, 51, .09);
+      font-family: "Noto Sans Hebrew", "Rubik", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(35, 103, 209, .035) 1px, transparent 1px),
+        linear-gradient(rgba(35, 103, 209, .035) 1px, transparent 1px),
+        var(--paper);
+      background-size: 28px 28px;
+      line-height: 1.65;
+    }
+    a { color: inherit; }
+    button, input { font: inherit; }
+    code, .mono { direction: ltr; unicode-bidi: isolate; font-family: Consolas, "Courier New", monospace; }
+
+    .topline { block-size: 5px; background: linear-gradient(90deg, var(--coral), var(--yellow) 33%, var(--cyan) 66%, var(--blue)); }
+    .shell { width: min(1180px, calc(100% - 32px)); margin-inline: auto; }
+
+    .masthead {
+      padding-block: 34px 26px;
+      border-block-end: 1px solid var(--line);
+      background: rgba(255, 255, 255, .9);
+    }
+    .masthead__row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { width: 154px; height: auto; object-fit: contain; }
+    .status { display: inline-flex; align-items: center; gap: 8px; color: var(--green); font-weight: 800; font-size: 13px; }
+    .status::before { content: ""; inline-size: 9px; block-size: 9px; border-radius: 50%; background: currentColor; }
+    .eyebrow { margin: 26px 0 7px; color: var(--blue); font-size: 13px; font-weight: 850; }
+    h1 { margin: 0; max-inline-size: 880px; font-size: clamp(34px, 5vw, 66px); line-height: 1.06; letter-spacing: 0; }
+    .lede { max-inline-size: 780px; margin: 18px 0 0; color: var(--muted); font-size: 18px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 22px; }
+    .meta span { padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 12px; font-weight: 750; }
+
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 36px; align-items: start; padding-block: 32px 72px; }
+    .toc { position: sticky; inset-block-start: 18px; border-inline-start: 3px solid var(--yellow); padding-inline-start: 16px; }
+    .toc strong { display: block; margin-block-end: 8px; font-size: 13px; }
+    .toc a { display: block; padding-block: 5px; color: var(--muted); text-decoration: none; font-size: 13px; }
+    .toc a:hover, .toc a:focus-visible { color: var(--blue); }
+
+    main { min-inline-size: 0; }
+    section { scroll-margin-block-start: 24px; margin-block-end: 54px; }
+    .section-no { color: var(--coral); font: 800 13px/1 Consolas, monospace; }
+    h2 { margin: 6px 0 18px; font-size: 30px; line-height: 1.2; letter-spacing: 0; }
+    h3 { margin: 30px 0 12px; font-size: 19px; letter-spacing: 0; }
+    p { margin: 0 0 14px; }
+    .muted { color: var(--muted); }
+    .callout { padding: 16px 18px; border-inline-start: 4px solid var(--blue); background: var(--soft-blue); border-radius: var(--radius); }
+    .callout strong { color: var(--navy); }
+    .callout--warn { border-color: var(--yellow); background: var(--soft-yellow); }
+    .callout--green { border-color: var(--green); background: #eaf7f1; }
+
+    .duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .economy {
+      position: relative;
+      min-block-size: 210px;
+      padding: 24px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      color: #fff;
+    }
+    .economy--sparks { background: var(--navy); }
+    .economy--xp { background: #136f78; }
+    .economy__mark { font-size: 42px; font-weight: 900; line-height: 1; color: var(--yellow); }
+    .economy h3 { margin: 16px 0 6px; font-size: 25px; }
+    .economy p { margin: 0; color: rgba(255,255,255,.82); }
+    .economy__rule { margin-block-start: 20px; padding-block-start: 14px; border-block-start: 1px solid rgba(255,255,255,.2); font-weight: 800; }
+
+    .principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; counter-reset: principle; }
+    .principle { counter-increment: principle; padding: 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); }
+    .principle::before { content: counter(principle, decimal-leading-zero); display: block; margin-block-end: 9px; color: var(--coral); font: 800 12px/1 Consolas, monospace; }
+    .principle b { display: block; margin-block-end: 3px; }
+    .principle span { color: var(--muted); font-size: 14px; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; min-inline-size: 650px; }
+    th, td { padding: 12px 14px; border-block-end: 1px solid var(--line); text-align: start; vertical-align: top; }
+    th { position: sticky; inset-block-start: 0; background: #eef2f7; color: var(--navy); font-size: 12px; font-weight: 850; }
+    tr:last-child td { border-block-end: 0; }
+    tbody tr:hover { background: #f8fbff; }
+    .num { direction: ltr; text-align: center; font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+    .xp { color: var(--blue); }
+    .zero { color: var(--muted); }
+
+    .rule-list, .check-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+    .rule-list li, .check-list li { position: relative; padding-inline-start: 28px; }
+    .rule-list li::before { content: ""; position: absolute; inset-inline-start: 4px; inset-block-start: .65em; inline-size: 8px; block-size: 8px; background: var(--cyan); transform: rotate(45deg); }
+    .check-list { counter-reset: checks; }
+    .check-list li { counter-increment: checks; padding: 13px 50px 13px 14px; border-block-end: 1px solid var(--line); }
+    .check-list li::before { content: counter(checks); position: absolute; inset-inline-start: auto; inset-inline-end: 4px; inset-block-start: 11px; inline-size: 30px; block-size: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--soft-cyan); color: #086871; font-size: 12px; font-weight: 900; }
+
+    .curve-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-block-end: 16px; }
+    .stat { padding: 15px; border-block-start: 4px solid var(--blue); background: var(--surface); box-shadow: var(--shadow); border-radius: var(--radius); }
+    .stat b { display: block; font-size: 23px; line-height: 1.2; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    summary { cursor: pointer; padding: 14px 16px; color: var(--navy); font-weight: 850; }
+    details .table-wrap { border: 0; border-block-start: 1px solid var(--line); border-radius: 0; }
+
+    .reward-path { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .reward { padding: 15px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .reward__level { color: var(--coral); font: 900 12px/1 Consolas, monospace; }
+    .reward b { display: block; margin-block: 8px 4px; }
+    .reward small { color: var(--muted); }
+    .reward--catalog { border-color: #f0ca4d; background: var(--soft-yellow); }
+
+    .design-grid { display: grid; gap: 16px; margin-block: 18px; }
+    .design-option { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .design-option__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-block-end: 14px; }
+    .design-option__head h3 { margin: 0 0 3px; font-size: 17px; }
+    .design-option__head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .design-option__tag { flex: none; padding: 4px 8px; border-radius: 999px; background: var(--soft-blue); color: var(--blue); font-size: 11px; font-weight: 850; }
+    .appbar-demo { direction: ltr; min-block-size: 92px; padding: 16px; border: 1px solid #cfd6e3; border-radius: var(--radius); background: #f8fafc; }
+    .appbar-demo__row { display: flex; align-items: center; gap: 10px; }
+    .appbar-demo__spacer { flex: 1; }
+    .demo-logo { color: var(--navy); font-size: 12px; font-weight: 900; }
+    .account-demo { position: relative; flex: none; }
+    .account-button { position: relative; display: inline-flex; align-items: center; border: 1px solid #ccd5e4; background: #fff; color: var(--ink); cursor: pointer; text-align: start; outline: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+    .account-button:hover { border-color: #8ea8d5; }
+    .account-button:active { transform: translateY(1px); }
+    .account-button:focus-visible, .account-button[aria-expanded="true"] { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(35,103,209,.2); }
+    .account-button__avatar { flex: none; inline-size: 34px; block-size: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--soft-yellow); color: #806000; font-weight: 900; }
+    .account-button__identity { min-inline-size: 0; direction: rtl; }
+    .account-button__name { display: block; overflow: hidden; color: var(--ink); font-size: 13px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+    .account-button__level { color: var(--blue); font-size: 11px; font-weight: 900; white-space: nowrap; }
+    .account-button__chevron { flex: none; color: var(--muted); transition: transform .15s ease; }
+    .account-button[aria-expanded="true"] .account-button__chevron { transform: rotate(180deg); }
+    .account-button__track { display: block; overflow: hidden; block-size: 6px; border-radius: 999px; background: #dce5f2; }
+    .account-button__fill { display: block; inline-size: 53.333%; block-size: 100%; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+    .account-button__tip { position: absolute; inset-block-end: calc(100% + 9px); inset-inline-start: 50%; z-index: 4; inline-size: max-content; max-inline-size: 260px; padding: 8px 10px; border-radius: 6px; background: var(--navy); color: #fff; direction: rtl; font-size: 12px; font-weight: 650; transform: translateX(-50%) translateY(4px); opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
+    .account-button:hover .account-button__tip, .account-button:focus .account-button__tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .account-menu-demo { position: absolute; inset-block-start: calc(100% + 8px); inset-inline-end: 0; z-index: 3; display: none; inline-size: 210px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: 0 16px 32px rgba(23,32,51,.18); direction: rtl; color: var(--ink); }
+    .account-menu-demo.is-open { display: block; }
+    .account-menu-demo strong, .account-menu-demo span { display: block; padding: 7px 9px; }
+    .account-menu-demo span { border-block-start: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .account-button--rail { gap: 10px; min-inline-size: 292px; padding: 7px 10px; border-radius: 999px; }
+    .account-button--rail .account-button__identity { inline-size: 90px; }
+    .account-button--rail .account-button__progress { inline-size: 105px; direction: rtl; }
+    .account-button--rail .account-button__progress-head { display: flex; justify-content: space-between; gap: 8px; margin-block-end: 5px; }
+    .account-button--stack { display: grid; grid-template-columns: auto minmax(110px, 1fr) auto; gap: 4px 10px; min-inline-size: 236px; padding: 7px 10px; border-radius: 10px; }
+    .account-button--stack .account-button__avatar { grid-row: 1 / 3; }
+    .account-button--stack .account-button__chevron { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+    .account-button--stack .account-button__identity { grid-column: 2; display: flex; justify-content: space-between; gap: 8px; }
+    .account-button--stack .account-button__track { grid-column: 2; }
+    .account-button--medal { gap: 9px; min-inline-size: 230px; padding: 7px 12px 11px 8px; border-radius: 999px; overflow: visible; }
+    .account-button--medal .account-button__medal { flex: none; inline-size: 40px; block-size: 40px; display: grid; place-items: center; border: 2px solid #f1c541; border-radius: 50%; background: var(--navy); color: #fff; font-size: 10px; font-weight: 900; line-height: 1.05; text-align: center; }
+    .account-button--medal .account-button__identity { flex: 1; }
+    .account-button--medal .account-button__track { position: absolute; inset-inline: 18px; inset-block-end: 4px; block-size: 4px; }
+    .demo-caption { margin: 10px 0 0; color: var(--muted); direction: rtl; font-size: 12px; }
+
+    .architecture { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 8px; }
+    .arch-node { display: grid; place-items: center; min-block-size: 104px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: center; font-weight: 800; }
+    .arch-arrow { align-self: center; color: var(--coral); font-size: 24px; }
+    .codebox { direction: ltr; overflow-x: auto; padding: 16px; border-radius: var(--radius); background: var(--navy); color: #dbeafe; font: 12px/1.65 Consolas, monospace; text-align: left; white-space: pre; }
+
+    .phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .phase { padding: 19px; border-block-start: 5px solid var(--cyan); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .phase:nth-child(2) { border-color: var(--yellow); }
+    .phase:nth-child(3) { border-color: var(--coral); }
+    .phase h3 { margin: 0 0 10px; }
+    .phase ul { margin: 0; padding-inline-start: 20px; color: var(--muted); font-size: 14px; }
+
+    footer { padding-block: 28px; border-block-start: 1px solid var(--line); background: var(--navy); color: #fff; }
+    footer p { margin: 0; color: rgba(255,255,255,.72); }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; display: flex; flex-wrap: wrap; gap: 5px 15px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+      .toc strong { inline-size: 100%; }
+      .toc a { padding: 2px 0; }
+      .reward-path { grid-template-columns: repeat(2, 1fr); }
+      .curve-summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1180px); }
+      .masthead__row { align-items: flex-start; }
+      .brand { width: 120px; }
+      .duo, .principles, .phases, .reward-path { grid-template-columns: 1fr; }
+      h1 { font-size: 37px; }
+      h2 { font-size: 25px; }
+      .design-option__head { display: block; }
+      .design-option__tag { display: inline-block; margin-block-start: 8px; }
+      .appbar-demo__row { flex-wrap: wrap; }
+      .appbar-demo__spacer { display: none; }
+      .account-demo { max-inline-size: 100%; }
+      .account-button--rail, .account-button--stack, .account-button--medal { min-inline-size: 0; inline-size: min(100%, 292px); }
+      .account-button--rail .account-button__progress { flex: 1; min-inline-size: 74px; }
+      .architecture { grid-template-columns: 1fr; }
+      .arch-arrow { transform: rotate(90deg); justify-self: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .account-button, .account-button__chevron, .account-button__tip { transition: none; }
+    }
+    @media print {
+      body { background: #fff; font-size: 10pt; }
+      .topline, .toc { display: none; }
+      .shell { width: 100%; }
+      .layout { display: block; padding-block: 20px; }
+      section { break-inside: avoid; margin-block-end: 28px; }
+      details > summary { display: none; }
+      details:not([open]) > *:not(summary) { display: block; }
+      .economy, .phase, .stat { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topline" aria-hidden="true"></div>
+  <header class="masthead">
+    <div class="shell">
+      <div class="masthead__row">
+        <img class="brand" src="../../shared/brand/yuvilab-spark-light.png" alt="Yuvilab Spark" />
+        <span class="status">סטטוס: מוצע</span>
+      </div>
+      <p class="eyebrow">מסמך אפיון מוצר · גרסה עברית</p>
+      <h1>מערכת XP וניצוצות</h1>
+      <p class="lede">מודל התקדמות משחקי שמפריד בין מטבע שניתן להוציא לבין ניסיון מצטבר וקבוע, ומחבר הישגים לימודיים לתגמולים ברורים בלי להפוך אותם לציון.</p>
+      <div class="meta">
+        <span>רמות 1–50</span><span>ללא טבלת מובילים</span><span>מבוסס אירועים אמיתיים</span><span>RTL / LTR</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell layout">
+    <nav class="toc" aria-label="תוכן עניינים">
+      <strong>במסמך</strong>
+      <a href="#decision">החלטת מוצר</a>
+      <a href="#rules">כללי צבירת XP</a>
+      <a href="#curve">עקומת הרמות</a>
+      <a href="#rewards">תגמולי רמות</a>
+      <a href="#appbar">עיצוב פס ה-XP</a>
+      <a href="#architecture">מודל וארכיטקטורה</a>
+      <a href="#rollout">השקה בשלבים</a>
+      <a href="#acceptance">קריטריוני קבלה</a>
+    </nav>
+
+    <main>
+      <section id="decision">
+        <span class="section-no">01</span>
+        <h2>החלטת המוצר</h2>
+        <div class="duo">
+          <article class="economy economy--sparks">
+            <div class="economy__mark">✦</div>
+            <h3>ניצוצות</h3>
+            <p>מטבע שניתן לצבור, לקבל ממורה ולהוציא בסטודיו של יובי על פריטים וחוויות.</p>
+            <div class="economy__rule">צוברים · בוחרים · מוציאים</div>
+          </article>
+          <article class="economy economy--xp">
+            <div class="economy__mark">XP</div>
+            <h3>נקודות ניסיון</h3>
+            <p>התקדמות קבועה שאינה ניתנת להוצאה, להעברה, לאיפוס או להפחתה. ה-XP קובע את הרמה.</p>
+            <div class="economy__rule">מתקדמים · עולים רמה · פותחים תגמולים</div>
+          </article>
+        </div>
+        <div class="callout" style="margin-block-start:14px">
+          <strong>XP אינו מחליף ניצוצות.</strong> הוא גם אינו ציון, אינו עדות לשליטה בחומר ואינו בסיס להשוואה בין תלמידים. תגים, רצפים, שליטה בתוכנית הלימודים והתקדמות לימודית ממשיכים להתקיים בנפרד.
+        </div>
+
+        <h3>עקרונות מחייבים</h3>
+        <div class="principles">
+          <div class="principle"><b>פעולה משמעותית, לא נכונות</b><span>אין מכפיל לפי ציון, מהירות, שליטה או שימוש מופחת ברמזים.</span></div>
+          <div class="principle"><b>אירוע אחד, תגמול אחד</b><span>לכל הענקה מפתח אידמפוטנטי שמחובר לאירוע סמכותי.</span></div>
+          <div class="principle"><b>ללא צבירה מלאכותית</b><span>רענון, שליחה חוזרת, אירוע כפול או לחיצות חוזרות לא מייצרים XP נוסף.</span></div>
+          <div class="principle"><b>ללא ענישה</b><span>XP ופריטים שנפתחו נשארים לצמיתות; כישלון או הפסקה אינם מפחיתים דבר.</span></div>
+          <div class="principle"><b>ללא דירוג תלמידים</b><span>ההתקדמות אישית בלבד. אין טבלת מובילים ואין דגל תשומת לב על בסיס XP נמוך.</span></div>
+          <div class="principle"><b>שקיפות</b><span>התלמיד רואה למה קיבל XP ומה ייפתח ברמה הבאה.</span></div>
+          <div class="principle"><b>השרת הוא הסמכות</b><span>הלקוח אינו שולח כמות XP, רמה, תגמול או בונוס זמן.</span></div>
+          <div class="principle"><b>נגישות ולוקליזציה</b><span>עברית, ערבית ואנגלית, תמיכה בכיווניות ובהפחתת תנועה.</span></div>
+        </div>
+      </section>
+
+      <section id="rules">
+        <span class="section-no">02</span>
+        <h2>כללי צבירת XP</h2>
+        <p>בגרסה הראשונה, <strong>רק</strong> האירועים הבאים מעניקים XP. הערכים נשמרים בקונפיגורציה גרסתית בצד השרת ואינם משוכפלים ב-React.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>אירוע סמכותי</th><th>XP</th><th>תחום מניעת כפילות</th><th>כלל</th></tr></thead>
+            <tbody>
+              <tr><td>השלמת מודול למידה</td><td class="num xp">15</td><td><span class="mono">learner + module ID</span></td><td>רק לאחר השלמת כל הרכיבים הנדרשים; רכיב בודד מעניק 0.</td></tr>
+              <tr><td>השלמת יעד למידה</td><td class="num xp">50</td><td><span class="mono">learner + learning-goal ID</span></td><td>רק לאחר השלמת כל המודולות הנדרשות ביעד.</td></tr>
+              <tr><td>השלמת משימת מורה</td><td class="num xp">20</td><td><span class="mono">learner + Teacher Quest ID</span></td><td>רק במצב סיום מלא ושמור; התקדמות חלקית מעניקה 0.</td></tr>
+              <tr><td>התחלת היעד האישי הראשון</td><td class="num xp">20</td><td><span class="mono">learner + objective + stage</span></td><td>חל רק על היעד האישי הראשון של התלמיד.</td></tr>
+              <tr><td>התקדמות ביעד האישי הראשון</td><td class="num xp">30</td><td><span class="mono">learner + objective + stage</span></td><td>רק לאחר שינוי שלב שנשמר.</td></tr>
+              <tr><td>השלמת היעד האישי הראשון</td><td class="num xp">50</td><td><span class="mono">learner + objective + stage</span></td><td>היעד הראשון יכול להעניק 100 XP במצטבר.</td></tr>
+              <tr><td>השלמת יעד אישי שני ואילך</td><td class="num xp">50</td><td><span class="mono">learner + objective + stage</span></td><td>התחלה והתקדמות מעניקות 0; רק השלמה מזכה.</td></tr>
+              <tr><td>בקשת העזרה המזכה ה-30</td><td class="num xp">15</td><td><span class="mono">learner + milestone 30</span></td><td>אבן דרך מצטברת, פעם אחת.</td></tr>
+              <tr><td>בקשת העזרה המזכה ה-60</td><td class="num xp">15</td><td><span class="mono">learner + milestone 60</span></td><td>אבן דרך מצטברת, פעם אחת.</td></tr>
+              <tr><td>בקשת העזרה המזכה ה-90</td><td class="num xp">15</td><td><span class="mono">learner + milestone 90</span></td><td>אבן הדרך האחרונה; אין XP נוסף עבור עזרה אחריה.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>היררכיית הלמידה</h3>
+        <div class="architecture" aria-label="היררכיית תוכן הלמידה">
+          <div class="arch-node">מקצוע<br><small>מתמטיקה / מדעים</small></div><div class="arch-arrow">←</div>
+          <div class="arch-node">יעד למידה<br><small>50 XP בהשלמה</small></div><div class="arch-arrow">←</div>
+          <div class="arch-node">מודולה ← רכיבים<br><small>15 XP למודולה · 0 לרכיב</small></div>
+        </div>
+        <p class="muted" style="margin-block-start:10px">אם הרכיב האחרון משלים גם את המודולה וגם את יעד הלמידה, מתקבל אישור מאוחד של 65 XP: ‏15 עבור המודולה ו-50 עבור היעד.</p>
+
+        <h3>הבהרות ואי-הענקה</h3>
+        <ul class="rule-list">
+          <li>סיום מודולה ויעד נגזרים מגרף תוכנית לימודים שבבעלות השרת ומראיות השלמה שמורות. הלקוח אינו מכריז על השלמה.</li>
+          <li>משימת מורה מעניקה בדיוק 20 XP ללא קשר לכמות הניצוצות שבחר המורה. טיוטה, שיוך, פתיחה, ביצוע חלקי או הגשה שאינה במצב סיום מעניקים 0 XP.</li>
+          <li>היעד האישי הראשון נקבע לפי זמן יצירה ומזהה יציבים. מחיקה, ארכוב או יצירה מחדש אינם מאפסים את זהותו.</li>
+          <li>בקשת עזרה מזכה היא בקשה שמורה ומכוונת לרמז, הסבר, עזרת יובי או עזרת מורה. ניסיון חוזר טכני ואירוע כפול נספרים פעם אחת.</li>
+          <li>אבני הדרך 30, 60 ו-90 הן לכל החיים, בכל המקצועות והמודולות. הן אינן מתאפסות ביום, בשנת לימודים או בעליית רמה. המקסימום הוא 45 XP.</li>
+          <li>מחמאת מורה יכולה להעניק ניצוצות, אך לעולם לא XP.</li>
+          <li>אין XP על רכיב בודד, משימת מורה חלקית, התחלה/התקדמות ביעד אישי שני ואילך, בקשות עזרה בין אבני דרך, כניסה, זמן מסך, פתיחת הסטודיו, קנייה, ציוד פריט, מספר הודעות או צפייה פסיבית.</li>
+        </ul>
+      </section>
+
+      <section id="curve">
+        <span class="section-no">03</span>
+        <h2>עקומת הרמות</h2>
+        <div class="curve-summary">
+          <div class="stat"><b>1</b><span>רמת פתיחה ב-0 XP</span></div>
+          <div class="stat"><b>15–24</b><span>טווח צפוי בשנת לימודים פעילה</span></div>
+          <div class="stat"><b>54,650</b><span>XP מצטבר לכניסה לרמה 30</span></div>
+          <div class="stat"><b>50</b><span>רמת תצוגה מרבית</span></div>
+        </div>
+        <p>העקומה נגישה עד רמה 10, מואטת עד רמה 20, תובענית עד רמה 29 ושאפתנית במיוחד מרמה 30. היא נשמרת כטבלה מפורשת עם גרסה; שינוי עתידי מחייב מיגרציה או החלטת עונה חדשה.</p>
+        <details open>
+          <summary>טבלת XP מלאה לרמות 1–50</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>רמה נוכחית</th><th>XP לרמה הבאה</th><th>XP מצטבר לרמה הבאה</th></tr></thead>
+              <tbody>
+                <tr><td class="num">1</td><td class="num">100</td><td class="num">100</td></tr>
+                <tr><td class="num">2</td><td class="num">125</td><td class="num">225</td></tr>
+                <tr><td class="num">3</td><td class="num">150</td><td class="num">375</td></tr>
+                <tr><td class="num">4</td><td class="num">175</td><td class="num">550</td></tr>
+                <tr><td class="num">5</td><td class="num">200</td><td class="num">750</td></tr>
+                <tr><td class="num">6</td><td class="num">225</td><td class="num">975</td></tr>
+                <tr><td class="num">7</td><td class="num">250</td><td class="num">1,225</td></tr>
+                <tr><td class="num">8</td><td class="num">275</td><td class="num">1,500</td></tr>
+                <tr><td class="num">9</td><td class="num">300</td><td class="num">1,800</td></tr>
+                <tr><td class="num">10</td><td class="num">350</td><td class="num">2,150</td></tr>
+                <tr><td class="num">11</td><td class="num">400</td><td class="num">2,550</td></tr>
+                <tr><td class="num">12</td><td class="num">450</td><td class="num">3,000</td></tr>
+                <tr><td class="num">13</td><td class="num">500</td><td class="num">3,500</td></tr>
+                <tr><td class="num">14</td><td class="num">550</td><td class="num">4,050</td></tr>
+                <tr><td class="num">15</td><td class="num">600</td><td class="num">4,650</td></tr>
+                <tr><td class="num">16</td><td class="num">650</td><td class="num">5,300</td></tr>
+                <tr><td class="num">17</td><td class="num">700</td><td class="num">6,000</td></tr>
+                <tr><td class="num">18</td><td class="num">750</td><td class="num">6,750</td></tr>
+                <tr><td class="num">19</td><td class="num">800</td><td class="num">7,550</td></tr>
+                <tr><td class="num">20</td><td class="num">900</td><td class="num">8,450</td></tr>
+                <tr><td class="num">21</td><td class="num">1,100</td><td class="num">9,550</td></tr>
+                <tr><td class="num">22</td><td class="num">1,350</td><td class="num">10,900</td></tr>
+                <tr><td class="num">23</td><td class="num">1,700</td><td class="num">12,600</td></tr>
+                <tr><td class="num">24</td><td class="num">2,100</td><td class="num">14,700</td></tr>
+                <tr><td class="num">25</td><td class="num">2,600</td><td class="num">17,300</td></tr>
+                <tr><td class="num">26</td><td class="num">3,250</td><td class="num">20,550</td></tr>
+                <tr><td class="num">27</td><td class="num">4,050</td><td class="num">24,600</td></tr>
+                <tr><td class="num">28</td><td class="num">5,050</td><td class="num">29,650</td></tr>
+                <tr><td class="num">29</td><td class="num">25,000</td><td class="num">54,650</td></tr>
+                <tr><td class="num">30</td><td class="num">35,000</td><td class="num">89,650</td></tr>
+                <tr><td class="num">31</td><td class="num">50,000</td><td class="num">139,650</td></tr>
+                <tr><td class="num">32</td><td class="num">70,000</td><td class="num">209,650</td></tr>
+                <tr><td class="num">33</td><td class="num">100,000</td><td class="num">309,650</td></tr>
+                <tr><td class="num">34</td><td class="num">140,000</td><td class="num">449,650</td></tr>
+                <tr><td class="num">35</td><td class="num">200,000</td><td class="num">649,650</td></tr>
+                <tr><td class="num">36</td><td class="num">280,000</td><td class="num">929,650</td></tr>
+                <tr><td class="num">37</td><td class="num">400,000</td><td class="num">1,329,650</td></tr>
+                <tr><td class="num">38</td><td class="num">560,000</td><td class="num">1,889,650</td></tr>
+                <tr><td class="num">39</td><td class="num">800,000</td><td class="num">2,689,650</td></tr>
+                <tr><td class="num">40</td><td class="num">1,100,000</td><td class="num">3,789,650</td></tr>
+                <tr><td class="num">41</td><td class="num">1,600,000</td><td class="num">5,389,650</td></tr>
+                <tr><td class="num">42</td><td class="num">2,200,000</td><td class="num">7,589,650</td></tr>
+                <tr><td class="num">43</td><td class="num">3,100,000</td><td class="num">10,689,650</td></tr>
+                <tr><td class="num">44</td><td class="num">4,400,000</td><td class="num">15,089,650</td></tr>
+                <tr><td class="num">45</td><td class="num">6,200,000</td><td class="num">21,289,650</td></tr>
+                <tr><td class="num">46</td><td class="num">8,800,000</td><td class="num">30,089,650</td></tr>
+                <tr><td class="num">47</td><td class="num">12,400,000</td><td class="num">42,489,650</td></tr>
+                <tr><td class="num">48</td><td class="num">17,500,000</td><td class="num">59,989,650</td></tr>
+                <tr><td class="num">49</td><td class="num">25,000,000</td><td class="num">84,989,650</td></tr>
+                <tr><td class="num">50</td><td class="num">—</td><td class="num">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section id="rewards">
+        <span class="section-no">04</span>
+        <h2>תגמולים בעליית רמה</h2>
+        <p>תגמולי רמה מתקבלים אוטומטית באותו תהליך שרושם את חציית הסף. אם נחצו כמה רמות בבת אחת, כל תגמול חסר מוענק פעם אחת בלבד.</p>
+        <div class="reward-path">
+          <div class="reward"><span class="reward__level">LEVEL 2</span><b>30 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 3</span><b>שלט ניאון</b><small><span class="mono">neon</span> · היה 40 ניצוצות</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 4</span><b>40 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 5</span><b>אסימון רמז נוסף</b><small>למודולה עתידית</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 6</span><b>שרשרת אורות</b><small><span class="mono">stringLights</span> · הייתה 30 ניצוצות</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 7</span><b>50 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 8</span><b>גלובוס</b><small><span class="mono">globe</span> · היה 40 ניצוצות</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 9</span><b>5 דקות בונוס</b><small>שימוש חד-פעמי בסטודיו</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 10</span><b>ערכת צלילים + 25 ניצוצות</b><small>לחדר של יובי</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 11</span><b>מסגרת רמה</b><small>לקוסמטיקת הפרופיל</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 12</span><b>60 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 13</span><b>ערכת פוסטרים</b><small>לסטודיו</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 14</span><b>אסימון רמז נוסף</b><small>פיגום נוסף, לא תשובה</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 15</span><b>טלסקופ</b><small><span class="mono">telescope</span> · היה 90 ניצוצות</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 16</span><b>70 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 17</span><b>ערכת אנימציות ליובי</b><small>אנימציות מנוחה</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 18</span><b>5 דקות בונוס</b><small>שימוש חד-פעמי בסטודיו</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 19</span><b>80 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 20</span><b>מקרן כוכבים</b><small><span class="mono">starProjector</span> + ערכת חדר + אסימון רמז</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 21</span><b>90 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 22</span><b>מסגרת רמה מונפשת</b><small>לקוסמטיקת הפרופיל</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 23</span><b>גביעים</b><small><span class="mono">trophies</span> + מדף תצוגה</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 24</span><b>10 דקות בונוס</b><small>שימוש חד-פעמי בסטודיו</small></div>
+          <div class="reward reward--catalog"><span class="reward__level">LEVEL 25</span><b>כנפי דרקון + 50 ניצוצות</b><small><span class="mono">dragonwings</span> · היו 120 ניצוצות</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 26</span><b>אסימון רמז נוסף</b><small>עד יתרה מרבית של 3</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 27</span><b>ערכת אווירה פרימיום</b><small>לחדר של יובי</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 28</span><b>120 ניצוצות</b><small>תגמול מטבע</small></div>
+          <div class="reward"><span class="reward__level">LEVEL 29</span><b>אנדרטת מסע אישית</b><small>לחדר של יובי</small></div>
+        </div>
+
+        <h3>שבעת פריטי הקטלוג שהופכים לתגמולי רמה</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>רמה</th><th>פריט</th><th>מזהה יציב</th><th>מחיר קודם</th><th>יעד פתיחה</th></tr></thead>
+            <tbody>
+              <tr><td class="num">3</td><td>שלט ניאון</td><td class="mono">neon</td><td class="num">40</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">6</td><td>שרשרת אורות</td><td class="mono">stringLights</td><td class="num">30</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">8</td><td>גלובוס</td><td class="mono">globe</td><td class="num">40</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">15</td><td>טלסקופ</td><td class="mono">telescope</td><td class="num">90</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">20</td><td>מקרן כוכבים</td><td class="mono">starProjector</td><td class="num">70</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">23</td><td>גביעים</td><td class="mono">trophies</td><td class="num">50</td><td class="mono">room_unlocks</td></tr>
+              <tr><td class="num">25</td><td>כנפי דרקון</td><td class="mono">dragonwings</td><td class="num">120</td><td class="mono">avatar_unlocks</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout callout--warn" style="margin-block-start:14px">
+          עם השקת XP, שבעת הפריטים יוצאים ממכירה והופכים לפריטי רמה בלבד. בעלים קיימים שומרים אותם לצמיתות ללא החזר ניצוצות; כשהם מגיעים לרמה המתאימה, פתיחת הפריט היא פעולה אידמפוטנטית ושאר תגמולי הרמה עדיין מתקבלים.
+        </div>
+
+        <h3>רמות יוקרה 30–50</h3>
+        <p>כל רמת יוקרה מעניקה וריאציה קבועה למסגרת הרמה ועוד 100 ניצוצות. ברמות 30, 35, 40, 45 ו-50 מתקבל גם חפץ ייחודי לחדר. תגמולים אלה אינם פותחים תוכן לימודי, משנים שליטה, חושפים תשובות או מייצרים מעמד השוואתי.</p>
+
+        <h3>מגבלות תגמולים</h3>
+        <ul class="rule-list">
+          <li><strong>אסימון רמז:</strong> מוסיף שלב פיגום אחד רק לאחר שמוצתה שרשרת הרמזים הרגילה. אינו חושף תשובה. יתרה מרבית: 3.</li>
+          <li><strong>זמן סטודיו:</strong> בונוס חד-פעמי שמופעל לשעה הנוכחית. ניתן להפעיל עד 10 דקות נוספות בשעה; המכסה הרגילה נשארת 20 דקות.</li>
+          <li><strong>בונוס ניצוצות:</strong> נרשם בארנק וביומן הקיימים עם מפתח רמה אידמפוטנטי ואינו צורך את מכסת הניצוצות היומית.</li>
+          <li><strong>קוסמטיקה:</strong> נפתחת דרך מסלולי השרת הקיימים. אין להקצות פריט נוסף שכבר מתקבל ממיפוי, תג או רצף.</li>
+        </ul>
+      </section>
+
+      <section id="appbar">
+        <span class="section-no">05</span>
+        <h2>שלוש חלופות לעיצוב כפתור החשבון ופס ה-XP</h2>
+        <p>מחוון ה-XP יכול להחליף חזותית את כפתור שם התלמיד הקיים ולהפוך לחלק ממנו. בכל החלופות הכפתור נשאר אותו משטח אינטראקטיבי: לחיצה עליו ממשיכה לפתוח את תפריט החשבון הקיים, וריחוף או מיקוד מציגים את ערכי ה-XP המדויקים.</p>
+
+        <div class="design-grid">
+          <article class="design-option">
+            <div class="design-option__head">
+              <div><h3>חלופה א׳ · מסילת התקדמות אופקית</h3><p>השם וה-XP מוצגים זה לצד זה בכפתור רחב אחד. מתאימה למסך רחב ולסריקה מהירה.</p></div>
+              <span class="design-option__tag">ברורה ומפורטת</span>
+            </div>
+            <div class="appbar-demo" aria-label="חלופה א: מסילת התקדמות אופקית">
+              <div class="appbar-demo__row">
+                <span class="demo-logo">YUVILAB SPARK</span><span class="appbar-demo__spacer"></span>
+                <div class="account-demo">
+                  <button class="account-button account-button--rail" type="button" aria-expanded="false" aria-haspopup="menu" aria-controls="account-menu-a" aria-label="יובל כהן, רמה 15. פתיחת תפריט החשבון">
+                    <span class="account-button__avatar" aria-hidden="true">י</span>
+                    <span class="account-button__identity"><span class="account-button__name">יובל כהן</span></span>
+                    <span class="account-button__progress" role="progressbar" aria-valuemin="0" aria-valuemax="600" aria-valuenow="320" aria-valuetext="רמה 15, נצברו 320 מתוך 600 XP, נדרשים עוד 280 XP לרמה 16">
+                      <span class="account-button__progress-head"><span class="account-button__level">רמה 15</span><span class="account-button__level">XP</span></span>
+                      <span class="account-button__track"><span class="account-button__fill"></span></span>
+                    </span>
+                    <span class="account-button__chevron" aria-hidden="true">⌄</span>
+                    <span class="account-button__tip" role="tooltip">נדרשים עוד 280 XP לרמה 16 · 320 מתוך 600 XP</span>
+                  </button>
+                  <div class="account-menu-demo" id="account-menu-a" role="menu"><strong>תפריט החשבון נשאר</strong><span>פרופיל · שפה · תצוגה · יציאה</span></div>
+                </div>
+              </div>
+              <p class="demo-caption">לחיצה פותחת את התפריט. ריחוף או מיקוד מציגים את המספרים המדויקים.</p>
+            </div>
+          </article>
+
+          <article class="design-option">
+            <div class="design-option__head">
+              <div><h3>חלופה ב׳ · זהות בשתי שורות</h3><p>שם ורמה בשורה העליונה, פס התקדמות מתחתיהם. קומפקטית ושומרת על קריאות גבוהה.</p></div>
+              <span class="design-option__tag">מאוזנת</span>
+            </div>
+            <div class="appbar-demo" aria-label="חלופה ב: זהות בשתי שורות">
+              <div class="appbar-demo__row">
+                <span class="demo-logo">YUVILAB SPARK</span><span class="appbar-demo__spacer"></span>
+                <div class="account-demo">
+                  <button class="account-button account-button--stack" type="button" aria-expanded="false" aria-haspopup="menu" aria-controls="account-menu-b" aria-label="יובל כהן, רמה 15. פתיחת תפריט החשבון">
+                    <span class="account-button__avatar" aria-hidden="true">י</span>
+                    <span class="account-button__identity"><span class="account-button__name">יובל כהן</span><span class="account-button__level">רמה 15</span></span>
+                    <span class="account-button__track" role="progressbar" aria-valuemin="0" aria-valuemax="600" aria-valuenow="320" aria-valuetext="נצברו 320 מתוך 600 XP, נדרשים עוד 280 XP לרמה 16"><span class="account-button__fill"></span></span>
+                    <span class="account-button__chevron" aria-hidden="true">⌄</span>
+                    <span class="account-button__tip" role="tooltip">נדרשים עוד 280 XP לרמה 16 · 320 מתוך 600 XP</span>
+                  </button>
+                  <div class="account-menu-demo" id="account-menu-b" role="menu"><strong>תפריט החשבון נשאר</strong><span>פרופיל · שפה · תצוגה · יציאה</span></div>
+                </div>
+              </div>
+              <p class="demo-caption">לחיצה פותחת את אותו תפריט; פס ה-XP הוא חלק מהכפתור ולא יעד לחיצה נפרד.</p>
+            </div>
+          </article>
+
+          <article class="design-option">
+            <div class="design-option__head">
+              <div><h3>חלופה ג׳ · מדליית רמה</h3><p>הרמה מקבלת נוכחות חזקה במדליה, ופס ה-XP הופך לקו התקדמות בקצה התחתון.</p></div>
+              <span class="design-option__tag">משחקית ובולטת</span>
+            </div>
+            <div class="appbar-demo" aria-label="חלופה ג: מדליית רמה">
+              <div class="appbar-demo__row">
+                <span class="demo-logo">YUVILAB SPARK</span><span class="appbar-demo__spacer"></span>
+                <div class="account-demo">
+                  <button class="account-button account-button--medal" type="button" aria-expanded="false" aria-haspopup="menu" aria-controls="account-menu-c" aria-label="יובל כהן, רמה 15. פתיחת תפריט החשבון">
+                    <span class="account-button__medal" aria-hidden="true">רמה<br>15</span>
+                    <span class="account-button__identity"><span class="account-button__name">יובל כהן</span><span class="account-button__level">320 / 600 XP</span></span>
+                    <span class="account-button__chevron" aria-hidden="true">⌄</span>
+                    <span class="account-button__track" role="progressbar" aria-valuemin="0" aria-valuemax="600" aria-valuenow="320" aria-valuetext="רמה 15, נצברו 320 מתוך 600 XP, נדרשים עוד 280 XP לרמה 16"><span class="account-button__fill"></span></span>
+                    <span class="account-button__tip" role="tooltip">נדרשים עוד 280 XP לרמה 16 · 320 מתוך 600 XP</span>
+                  </button>
+                  <div class="account-menu-demo" id="account-menu-c" role="menu"><strong>תפריט החשבון נשאר</strong><span>פרופיל · שפה · תצוגה · יציאה</span></div>
+                </div>
+              </div>
+              <p class="demo-caption">לחיצה פותחת את אותו תפריט. המדליה והפס אינם משנים את פעולת החשבון.</p>
+            </div>
+          </article>
+        </div>
+
+        <h3>דרישות UI מחייבות</h3>
+        <ul class="rule-list">
+          <li>יש לבחור חלופה חזותית אחת. היא רשאית להחליף את מבנה התצוגה של <span class="mono">.user-menu__trigger</span> ולשלב בתוכו את הרמה ואת פס ה-XP.</li>
+          <li>חוזה ההתנהגות נשאר ללא שינוי: אותו כפתור, אותה פעולת לחיצה, אותו <span class="mono">aria-expanded</span> ואותו תפריט חשבון קיים.</li>
+          <li>במצב מנוחה מוצגים שם התלמיד, הרמה הנוכחית ופס התקדמות. אין יעד לחיצה נוסף, נתיב, דיאלוג או פאנל התקדמות.</li>
+          <li>החישוב מגיע מערכי השרת: <span class="mono">(total_xp - level_start) / (next_level_xp - level_start)</span>, מוגבל ל-0%–100%.</li>
+          <li>ריחוף או מיקוד מציגים את ה-XP המדויק שנותר ואת היחס הנוכחי/נדרש. לרכיב יש <span class="mono">role="progressbar"</span> וערכי ARIA מלאים.</li>
+          <li>הפריסה משתמשת במאפיינים לוגיים עבור RTL/LTR. רוחב יציב מונע קפיצות; באנימציה משתנה רק מילוי הפס והיא מבוטלת בהעדפת הפחתת תנועה.</li>
+          <li>במובייל מקצרים קודם את הפס ושומרים את השם ואת תווית הרמה. אין חפיפה עם התפריט, הארנק, ההתראות או הסטודיו.</li>
+          <li>ברמה 50 מוצגים פס מלא וטקסט רמה מרבית. בכשל טעינת XP חוזרים להצגת כפתור החשבון הרגיל; התפריט נשאר פעיל.</li>
+        </ul>
+        <div class="callout callout--green" style="margin-block-start:14px"><strong>הפרדת משמעות:</strong> הארנק ממשיך להציג ניצוצות שניתן להוציא. פס ה-XP מציג התקדמות קבועה; לחיצה על הכפתור המשולב מיועדת רק לפתיחת תפריט החשבון הקיים.</div>
+      </section>
+
+      <section id="architecture">
+        <span class="section-no">06</span>
+        <h2>מודל נתונים וארכיטקטורה</h2>
+        <p>XP הוא מצב כלכלת-משחק והתקדמות, לא אמונה על התלמיד ולא שליטה לימודית. הוא נשמר לצד הארנק במבנה ייעודי ואינו נכנס להקשר שנשלח ל-AI.</p>
+        <div class="architecture" aria-label="זרימת הענקת XP">
+          <div class="arch-node">אירוע סמכותי<br><small>מודולה · יעד · משימה · עזרה</small></div><div class="arch-arrow">←</div>
+          <div class="arch-node">כללי התקדמות<br><small>גרסה + מניעת כפילות</small></div><div class="arch-arrow">←</div>
+          <div class="arch-node">יומן + מצב<br><small>XP · רמה · זכאויות</small></div>
+        </div>
+
+        <h3>מסמך <span class="mono">learner_progression</span></h3>
+        <pre class="codebox">{
+  "_id": "pseudonymous_learner_id",
+  "total_xp": 4650,
+  "level": 15,
+  "rules_version": 1,
+  "milestones": {
+    "first_objective_id": "objective_001",
+    "qualifying_help_requests": 60,
+    "claimed_help_thresholds": [30, 60]
+  },
+  "entitlements": {
+    "extra_hint_tokens": 1,
+    "studio_bonus_minutes": 5
+  },
+  "claimed_level_rewards": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+}</pre>
+
+        <h3>שירותים ונתיבים</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>רכיב</th><th>אחריות</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">curve.py</td><td>ספי רמות מפורשים וחישובי רמה טהורים.</td></tr>
+              <tr><td class="mono">rules.py</td><td>מיפוי אירועי מקור לכמויות XP, אבני דרך ומפתחות סיבה.</td></tr>
+              <tr><td class="mono">ledger.py</td><td>תביעות אידמפוטנטיות, עדכון התקדמות והיסטוריה.</td></tr>
+              <tr><td class="mono">rewards.py</td><td>הסדרת תגמולי רמה לניצוצות, פריטים, רמזים וזמן סטודיו.</td></tr>
+              <tr><td class="mono">GET /api/progression/status</td><td>XP, רמה, סף ותגמול הבאים וזכאויות.</td></tr>
+              <tr><td class="mono">GET /api/progression/ledger</td><td>היסטוריית XP אחרונה ללא מידע מזהה.</td></tr>
+              <tr><td class="mono">POST /api/progression/hint-token/use</td><td>צריכת אסימון עבור רכיב/שאלה פעילים לאחר מיצוי רמזים רגילים.</td></tr>
+              <tr><td class="mono">POST /api/progression/studio-bonus/activate</td><td>הפעלת בונוס זמן מוגבל בשעה הנוכחית.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-block-start:10px">אין נתיב ציבורי כללי להענקת XP. נקודות נכנסות רק מתהליכים פנימיים שמאמתים השלמת מודולה/יעד, סיום משימת מורה, שלבי יעד אישי ואבני דרך של עזרה.</p>
+      </section>
+
+      <section id="rollout">
+        <span class="section-no">07</span>
+        <h2>מיגרציה והשקה</h2>
+        <div class="callout callout--warn"><strong>אין לשחזר XP היסטורי באופן מלאכותי.</strong> הטלמטריה ההיסטורית עלולה להיות חלקית או כפולה בין ספקי תוכן.</div>
+        <ol>
+          <li>כל תלמיד קיים מתחיל ברמה 1 וב-0 XP ביום ההשקה.</li>
+          <li>יתרות ניצוצות, רכישות, תגים, רצפים ופריטים קיימים נשמרים ללא שינוי.</li>
+          <li>מי שרכש אחד משבעת הפריטים המומרים שומר אותו ללא החזר. הגעה לרמה המתאימה אינה מעניקה בעלות כפולה.</li>
+          <li>ניתן להעניק פריט "לומד מוקדם" קבוע ושקוף, אך לא להמציא XP היסטורי.</li>
+          <li>הממשק עולה מאחורי <span class="mono">XP_SYSTEM_ENABLED</span>: תחילה משתמשי דמו, אחר כך כיתה פנימית ולבסוף כלל התלמידים.</li>
+          <li>אחרי שבועיים ושישה שבועות בודקים התפלגות XP ליום, רמות, תמהיל מקורות, דחיית כפילויות וכשלי תגמול.</li>
+        </ol>
+
+        <h3>שלבי מסירה</h3>
+        <div class="phases">
+          <article class="phase"><h3>שלב 1 · ליבה</h3><ul><li>עקומה, כללים, יומן וסטטוס</li><li>מודולות, יעדי למידה ומשימות מורה</li><li>יעדים אישיים ואבני דרך בעזרה</li><li>פס XP, הודעה ועליית רמה</li></ul></article>
+          <article class="phase"><h3>שלב 2 · זכאויות</h3><ul><li>אסימוני רמז</li><li>בונוס זמן לסטודיו</li><li>פריטי רמה לחדר ולאווטאר</li></ul></article>
+          <article class="phase"><h3>שלב 3 · תפעול</h3><ul><li>דוח כלכלה מצרפי ללא דירוג</li><li>גרסאות כללים וכלי תיקון</li><li>התראות חריגה ובדיקת איזון</li></ul></article>
+        </div>
+      </section>
+
+      <section id="acceptance">
+        <span class="section-no">08</span>
+        <h2>קריטריוני קבלה</h2>
+        <ol class="check-list">
+          <li>תלמיד חדש מתחיל ב-0 XP וברמה 1, ללא שינוי בארנק הניצוצות.</li>
+          <li>רכיב בודד מעניק 0 XP; השלמת כל רכיבי המודולה מעניקה 15 XP פעם אחת.</li>
+          <li>השלמת כל המודולות ביעד למידה מעניקה 50 XP פעם אחת, בנוסף ל-15 XP של המודולה האחרונה.</li>
+          <li>משימת מורה חלקית מעניקה 0; מצב סיום שמור מעניק בדיוק 20 XP ללא תלות בניצוצות.</li>
+          <li>היעד האישי הראשון מעניק 20/30/50 XP בשלבי התחלה/התקדמות/השלמה; כל יעד מאוחר יותר מעניק 50 רק בהשלמה.</li>
+          <li>בקשות עזרה 1–29 מעניקות 0; בקשות 30, 60 ו-90 מעניקות 15 כל אחת; לאחר 90 מתקבל 0.</li>
+          <li>אירועים כפולים, פתיחה מחדש או שליחה חוזרת אינם מעניקים XP נוסף.</li>
+          <li>מחמאת מורה יכולה לשנות ניצוצות אך לעולם לא XP.</li>
+          <li>חציית כמה רמות מעניקה כל תגמול פעם אחת ומציגה אישור מאוחד.</li>
+          <li>כשל בהענקת תגמול ניתן לתיקון ואינו מכפיל XP או תגמול.</li>
+          <li>XP אינו נשלח ל-AI ואינו מוצג כשליטה, ציון או השוואה.</li>
+          <li>כל הממשק עובד בעברית ובערבית RTL ובאנגלית LTR, כולל רמה 50.</li>
+          <li>שבעת פריטי הקטלוג אינם מוצעים עוד לרכישה ונפתחים ברמות שנקבעו.</li>
+          <li>כפתור החשבון מציג שם, רמה והתקדמות; ריחוף ומיקוד מגלים מספרים מדויקים.</li>
+          <li>לחיצה על כל אחת מהחלופות פותחת את תפריט החשבון הקיים; שילוב ה-XP אינו מוסיף פעולת לחיצה אחרת.</li>
+        </ol>
+
+        <h3>התאמה לדרישות 720</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>תכונה</th><th>התאמה</th></tr></thead>
+            <tbody>
+              <tr><td>F1 · מסירה מותאמת</td><td>רמז נוסף הוא פיגום מוגבל, אינו משנה שליטה ואינו חושף תשובה.</td></tr>
+              <tr><td>F3 · מלווה למידה</td><td>חגיגות והסברים זמינים במעטפת המשותפת; בקשת עזרה מוצגת בחיוב.</td></tr>
+              <tr><td>F4 · דשבורד תלמיד</td><td>XP הוא התקדמות מעורבות אישית ומופרד בבירור מהתקדמות בתוכנית ומציונים.</td></tr>
+              <tr><td>F5 · יעדים אישיים</td><td>היעד הראשון מתגמל שלבים; הבאים מתגמלים השלמה בלבד בלי לשנות את כללי הניצוצות.</td></tr>
+              <tr><td>F6 · תצוגת מורה</td><td>כל תצוגה עתידית מבוססת ראיות וללא השוואה; XP נמוך לבדו אינו יוצר דגל.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-block-start:10px">אירועי XP הם אירועי מוצר פנימיים. דיווחי xAPI של משרד החינוך נשארים הראיה הקנונית ואינם משתנים או מוחלפים בפעלים מומצאים.</p>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <div class="shell"><strong>Yuvilab Spark · מערכת XP וניצוצות</strong><p>מסמך מוצר בעברית, נגזר מהאפיון המאושר בתיקיית <span class="mono">docs/design</span>.</p></div>
+  </footer>
+  <script>
+    document.querySelectorAll('.account-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        const menu = document.getElementById(button.getAttribute('aria-controls'))
+        const willOpen = button.getAttribute('aria-expanded') !== 'true'
+        document.querySelectorAll('.account-button[aria-expanded="true"]').forEach((openButton) => {
+          openButton.setAttribute('aria-expanded', 'false')
+          document.getElementById(openButton.getAttribute('aria-controls'))?.classList.remove('is-open')
+        })
+        button.setAttribute('aria-expanded', String(willOpen))
+        menu?.classList.toggle('is-open', willOpen)
+      })
+    })
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.account-demo')) return
+      document.querySelectorAll('.account-button[aria-expanded="true"]').forEach((button) => {
+        button.setAttribute('aria-expanded', 'false')
+        document.getElementById(button.getAttribute('aria-controls'))?.classList.remove('is-open')
+      })
+    })
+  </script>
+</body>
+</html>

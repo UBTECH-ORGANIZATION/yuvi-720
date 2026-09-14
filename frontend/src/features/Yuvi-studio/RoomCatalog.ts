@@ -249,11 +249,229 @@ const LEAF_DEEP = 0x1f7a4a
 const at = (obj: THREE.Object3D, x: number, y: number, z: number) => { obj.position.set(x, y, z); return obj }
 const flat = (mesh: THREE.Mesh) => { mesh.rotation.x = -Math.PI / 2; return mesh }
 
+const LEVEL_DISPLAY_ITEMS: RoomItemSpec[] = [
+  {
+    id: 'studio_wall_decals_03', category: 'wall', placement: 'wall', radius: 0.75, height: 0.9,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const colors = [0x43c5b8, 0xf4c95d, 0xeb6f92]
+      for (let index = 0; index < 3; index += 1) {
+        const badge = kit.tor(0.22 + index * 0.05, 0.035, kit.mat('emissive', colors[index]))
+        badge.position.set((index - 1) * 0.5, index % 2 ? 0.18 : -0.1, 0)
+        group.add(badge)
+      }
+      return group
+    },
+  },
+  {
+    id: 'studio_desk_accessory_08', category: 'desk', placement: 'floor', radius: 0.34, height: 0.62,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(0.56, 0.08, 0.42, 0.03, kit.mat('wood', 0x8c6546)), 0, 0.04, 0))
+      group.add(at(kit.rbox(0.4, 0.36, 0.05, 0.025, kit.mat('dark', 0x243c52)), 0, 0.28, 0))
+      group.add(at(kit.plane(0.32, 0.25, kit.mat('emissive', 0x62d7e8)), 0, 0.28, 0.028))
+      return group
+    },
+  },
+  {
+    id: 'studio_posters_13', category: 'wall', placement: 'wall', radius: 0.9, height: 1.05,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const colors = [0x1c566f, 0xc95c76, 0x368568]
+      for (let index = 0; index < 3; index += 1) {
+        group.add(at(kit.rbox(0.48, 0.72, 0.035, 0.025, kit.mat('wood', 0x74543b)), (index - 1) * 0.55, index === 1 ? 0.12 : 0, 0))
+        group.add(at(kit.plane(0.4, 0.64, kit.mat('matte', colors[index])), (index - 1) * 0.55, index === 1 ? 0.12 : 0, 0.022))
+      }
+      return group
+    },
+  },
+  {
+    id: 'studio_display_shelf_23', category: 'desk', placement: 'floor', radius: 0.85, height: 1.7,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('metal', 0x344c62)
+      for (const x of [-0.7, 0.7]) group.add(at(kit.box(0.07, 1.65, 0.38, frame), x, 0.825, 0))
+      for (const y of [0.12, 0.58, 1.04, 1.5]) {
+        group.add(at(kit.rbox(1.45, 0.07, 0.42, 0.025, kit.mat('wood', 0x9a6b40)), 0, y, 0))
+      }
+      for (const [x, y, color] of [[-0.42, 0.36, 0xf4c95d], [0.28, 0.82, 0x43c5b8], [0, 1.29, 0xeb6f92]] as const) {
+        group.add(at(kit.sph(0.14, kit.mat('gloss', color)), x, y, 0))
+      }
+      return group
+    },
+  },
+  {
+    id: 'personal_journey_monument_29', category: 'nature', placement: 'floor', radius: 0.9, height: 1.85,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.cyl(0.62, 0.78, 0.22, kit.mat('stone' as MatKind, 0x596b76), 8), 0, 0.11, 0))
+      for (let level = 0; level < 5; level += 1) {
+        const step = at(kit.rbox(0.82 - level * 0.1, 0.2, 0.34, 0.035, kit.mat('metal', level % 2 ? 0x43c5b8 : 0xf4c95d)), 0, 0.36 + level * 0.27, 0)
+        step.position.x = (level - 2) * 0.1
+        group.add(step)
+      }
+      group.add(at(kit.sph(0.2, kit.mat('emissive', 0xf8fbff)), 0.2, 1.72, 0))
+      return group
+    },
+  },
+  ...[30, 35, 40, 45, 50].map((level, index): RoomItemSpec => ({
+    id: `prestige_room_object_${level}`,
+    category: 'nature', placement: 'floor', radius: 0.72 + index * 0.06, height: 1.2 + index * 0.12,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const accent = [0x58c9b5, 0x5a9bd5, 0xe8799c, 0xf1b94f, 0xe9edf4][index]
+      group.add(at(kit.cyl(0.45, 0.58, 0.18, kit.mat('metal', 0x31495c), 18), 0, 0.09, 0))
+      const crystal = at(kit.cone(0.34 + index * 0.035, 0.82 + index * 0.1, kit.mat('glass', accent)), 0, 0.67 + index * 0.05, 0)
+      crystal.rotation.z = Math.PI
+      group.add(crystal)
+      for (let orbit = 0; orbit < 2 + index; orbit += 1) {
+        const ring = at(kit.tor(0.42 + orbit * 0.06, 0.016, kit.mat('emissive', accent)), 0, 0.78 + index * 0.05, 0)
+        ring.rotation.set(Math.PI / 2 + orbit * 0.33, orbit * 0.5, 0)
+        group.add(ring)
+      }
+      group.add(at(kit.halo(1.1 + index * 0.15, accent, 0.28), 0, 0.72, 0))
+      return group
+    },
+  })),
+]
+
 /* ── catalog ────────────────────────────────────────────────────────────────
    Every entry answers "what would a kid actually want in their room?" — the
    list is deliberately long, because the whole point of the room is that two
    learners' rooms should not look alike. */
 export const ROOM_ITEMS: RoomItemSpec[] = [
+  ...LEVEL_DISPLAY_ITEMS,
+  {
+    id: 'level_furniture_05', category: 'light', placement: 'floor', radius: 0.62, height: 1.45,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.cyl(0.32, 0.38, 0.1, kit.mat('metal', 0x27445b), 24), 0, 0.05, 0))
+      group.add(at(kit.cyl(0.035, 0.05, 1.08, kit.mat('metal', 0xa9b8c8), 12), 0, 0.62, 0))
+      const orb = at(kit.sph(0.2, kit.mat('emissive', 0x5ce1e6)), 0, 1.2, 0)
+      group.add(orb, at(kit.halo(0.92, 0x5ce1e6, 0.42), 0, 1.2, 0))
+      for (const angle of [-0.65, 0, 0.65]) {
+        const ring = at(kit.tor(0.31, 0.018, kit.mat('metal', 0xf4c95d)), 0, 1.2, 0)
+        ring.rotation.set(Math.PI / 2 + angle, angle * 0.45, 0)
+        group.add(ring)
+      }
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_09', category: 'desk', placement: 'floor', radius: 0.78, height: 1.65,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const wood = kit.mat('wood', 0x765238)
+      group.add(at(kit.cyl(0.13, 0.22, 1.42, wood, 12), 0, 0.71, 0))
+      const colors = [0x31b981, 0xf4c95d, 0x50a7db, 0xeb6f92]
+      for (let index = 0; index < 4; index += 1) {
+        const side = index % 2 ? 1 : -1
+        const y = 0.46 + index * 0.29
+        const branch = at(kit.box(0.72, 0.06, 0.22, wood), side * 0.3, y, 0)
+        branch.rotation.z = side * 0.14
+        group.add(branch)
+        for (let book = 0; book < 3; book += 1) {
+          group.add(at(kit.rbox(0.1, 0.24, 0.16, 0.018, kit.mat('matte', colors[(index + book) % colors.length])), side * (0.12 + book * 0.17), y + 0.14, 0))
+        }
+      }
+      group.add(at(kit.sph(0.18, kit.mat('leaf', 0x43a86b)), 0, 1.55, 0))
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_14', category: 'desk', placement: 'floor', radius: 1.05, height: 0.82,
+    tintable: true, tint: '#38b7b0',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const edge = kit.mat('metal', 0x33495d)
+      const top = at(kit.rbox(1.75, 0.1, 0.82, 0.05, kit.sheer(tint, 0.5, true)), 0, 0.76, 0)
+      group.add(top)
+      for (const x of [-0.7, 0.7]) {
+        const leg = at(kit.box(0.1, 0.7, 0.1, edge), x, 0.36, 0)
+        leg.rotation.z = x * 0.12
+        group.add(leg)
+      }
+      const prism = at(kit.cone(0.2, 0.32, kit.mat('glass', 0xa8f5ff)), 0, 0.99, 0)
+      prism.rotation.z = Math.PI
+      group.add(prism, at(kit.halo(0.78, tint, 0.25), 0, 0.8, 0))
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_17', category: 'seating', placement: 'floor', radius: 1.0, height: 0.92,
+    tintable: true, tint: '#255e88',
+    walkSurfaces: [{ width: 1.35, depth: 0.62, height: 0.34 }],
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const seat = kit.mat('fabric', tint)
+      group.add(at(kit.rbox(1.48, 0.3, 0.7, 0.14, seat), 0, 0.32, 0))
+      const back = at(kit.tor(0.62, 0.18, seat), 0, 0.76, -0.28)
+      back.scale.set(1.2, 1, 0.7)
+      group.add(back)
+      for (const x of [-0.42, 0.42]) {
+        group.add(at(kit.sph(0.17, kit.mat('fabric', 0xf4c95d)), x, 0.56, -0.05))
+      }
+      for (const [x, y] of [[-0.42, 1.02], [0.04, 1.22], [0.48, 0.96]] as const) {
+        group.add(at(kit.sph(0.035, kit.mat('emissive', 0xf8fbff)), x, y, -0.39))
+      }
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_18', category: 'tech', placement: 'floor', radius: 0.72, height: 1.55,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.cyl(0.38, 0.46, 0.12, kit.mat('dark', 0x233847), 24), 0, 0.06, 0))
+      group.add(at(kit.cyl(0.035, 0.035, 1.25, kit.mat('metal', 0xaebdc8), 10), 0, 0.7, 0))
+      const colors = [0xf15b67, 0xf4c95d, 0x43c5b8, 0x5d8fda]
+      for (let index = 0; index < 4; index += 1) {
+        const y = 0.46 + index * 0.28
+        const bar = at(kit.box(0.78 - index * 0.08, 0.035, 0.035, kit.mat('metal', 0x718696)), 0, y, 0)
+        bar.rotation.y = index * 0.7
+        group.add(bar)
+        group.add(at(kit.sph(0.1, kit.mat('gloss', colors[index])), Math.cos(index * 0.7) * (0.34 - index * 0.03), y, Math.sin(index * 0.7) * (0.34 - index * 0.03)))
+      }
+      group.add(at(kit.halo(1.35, 0x43c5b8, 0.18), 0, 0.08, 0))
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_24', category: 'nature', placement: 'floor', radius: 0.75, height: 1.28,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.cyl(0.5, 0.56, 0.14, kit.mat('wood', 0x73513b), 24), 0, 0.07, 0))
+      const dome = at(kit.sph(0.53, kit.mat('glass', 0xbbeeff)), 0, 0.7, 0)
+      dome.scale.y = 1.08
+      group.add(dome)
+      group.add(at(kit.cyl(0.43, 0.45, 0.12, kit.mat('matte', 0x375c49), 24), 0, 0.2, 0))
+      for (let index = 0; index < 7; index += 1) {
+        const angle = index * 2.4
+        const leaf = at(kit.sph(0.13, kit.mat('leaf', index % 2 ? 0x4eb477 : 0x267a55)), Math.cos(angle) * 0.22, 0.4 + (index % 3) * 0.16, Math.sin(angle) * 0.22)
+        leaf.scale.set(0.55, 1.35, 0.42)
+        leaf.rotation.z = Math.cos(angle) * 0.55
+        group.add(leaf)
+      }
+      group.add(at(kit.sph(0.07, kit.mat('emissive', 0xf4c95d)), 0, 0.72, 0))
+      return group
+    },
+  },
+  {
+    id: 'level_furniture_26', category: 'light', placement: 'floor', radius: 1.12, height: 1.9,
+    tintable: true, tint: '#65d7c4',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const frame = kit.mat('metal', 0x344c62)
+      for (const x of [-0.72, 0.72]) {
+        group.add(at(kit.cyl(0.08, 0.12, 1.5, frame, 14), x, 0.75, 0))
+        group.add(at(kit.rbox(0.36, 0.12, 0.42, 0.04, frame), x, 0.06, 0))
+      }
+      const arch = at(kit.tor(0.72, 0.085, kit.mat('emissive', tint)), 0, 1.48, 0)
+      group.add(arch)
+      const veil = at(kit.plane(1.25, 1.42, kit.sheer(tint, 0.22, true)), 0, 0.84, 0)
+      group.add(veil, at(kit.halo(1.9, tint, 0.28), 0, 0.85, -0.02))
+      return group
+    },
+  },
   /* ── seating ─────────────────────────────────────────────────────────── */
   {
     id: 'rug', category: 'seating', placement: 'floor', radius: 1.1, height: 0.03,

@@ -13,7 +13,8 @@ import { PLAYGROUND_EDITABLE_DEFAULTS } from './PlaygroundItems.ts'
 
 export type RoomStyleId = 'lab' | 'wood' | 'carpet' | 'meadow' | 'court'
 export type WallStyleId = 'lab' | 'warm' | 'sky' | 'forest' | 'space'
-export type MoodId = 'studio' | 'sunset' | 'night' | 'party'
+export type MoodId = 'studio' | 'sunset' | 'night' | 'party' | 'aqua' | 'rose' | 'arcade' | 'aurora'
+export type SoundThemeId = 'classic' | 'orbit'
 export type GamingRoomTitleId = 'gaming' | 'babylon' | 'playground'
 export const GAMING_ROOM_TITLE_IDS: GamingRoomTitleId[] = ['gaming', 'babylon', 'playground']
 
@@ -59,6 +60,7 @@ export interface RoomWorldDesign {
   floor: RoomStyleId
   wall: WallStyleId
   mood: MoodId
+  sound: SoundThemeId
   items: RoomItem[]
   storedItems: RoomItem[]
   /** The title the learner chose after entering Yubi's Gaming Room. */
@@ -77,6 +79,7 @@ export interface RoomDesign {
   floor: RoomStyleId
   wall: WallStyleId
   mood: MoodId
+  sound: SoundThemeId
   items: RoomItem[]
   /** Temporarily hidden props that cannot currently be placed in the active room shell. */
   storedItems: RoomItem[]
@@ -89,7 +92,8 @@ export interface RoomDesign {
 
 export const ROOM_STYLES: RoomStyleId[] = ['lab', 'wood', 'carpet', 'meadow', 'court']
 export const WALL_STYLES: WallStyleId[] = ['lab', 'warm', 'sky', 'forest', 'space']
-export const MOODS: MoodId[] = ['studio', 'sunset', 'night', 'party']
+export const MOODS: MoodId[] = ['studio', 'sunset', 'night', 'party', 'aqua', 'rose', 'arcade', 'aurora']
+export const SOUND_THEMES: SoundThemeId[] = ['classic', 'orbit']
 
 /** Hard cap. A room full of 200 props is not a design, it is a frame-rate bug. */
 export const MAX_ROOM_ITEMS = 60
@@ -159,6 +163,7 @@ const DEFAULT_WORLD = (items: RoomItem[] = []): RoomWorldDesign => ({
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
+  sound: 'classic',
   items: items.map((item) => ({ ...item })),
   storedItems: [],
 })
@@ -177,6 +182,7 @@ export const DEFAULT_ROOM: RoomDesign = {
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
+  sound: 'classic',
   items: [],
   storedItems: [],
   stations: DEFAULT_STATIONS,
@@ -196,6 +202,7 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
       floor: world.floor,
       wall: world.wall,
       mood: world.mood,
+      sound: world.sound,
       items: world.items.map(cloneItem),
       storedItems: world.storedItems.map(cloneItem),
       ...(world.gamingRoomTitle ? { gamingRoomTitle: world.gamingRoomTitle } : {}),
@@ -205,6 +212,7 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
     floor: room.floor,
     wall: room.wall,
     mood: room.mood,
+    sound: room.sound,
     items: room.items.map(cloneItem),
     storedItems: room.storedItems.map(cloneItem),
     stations: {
@@ -227,6 +235,7 @@ function activeWorldSnapshot(room: RoomDesign): RoomWorldDesign {
     floor: room.floor,
     wall: room.wall,
     mood: room.mood,
+    sound: room.sound,
     items: room.items.filter((item) => !isSharedWorldItem(item)).map((item) => ({ ...item })),
     storedItems: room.storedItems.filter((item) => !isSharedWorldItem(item)).map((item) => ({ ...item })),
     ...(room.worlds[room.activeLayoutId].gamingRoomTitle ? { gamingRoomTitle: room.worlds[room.activeLayoutId].gamingRoomTitle } : {}),
@@ -255,6 +264,7 @@ export function switchRoomWorld(room: RoomDesign, activeLayoutId: RoomLayoutId):
     floor: destination.floor,
     wall: destination.wall,
     mood: destination.mood,
+    sound: destination.sound,
     items: [...destination.items.map((item) => ({ ...item })), ...sharedItems.map((item) => ({ ...item }))],
     storedItems: destination.storedItems.map((item) => ({ ...item })),
   }
@@ -318,6 +328,7 @@ export function normalizeRoom(raw: unknown, options: { sportsArenaOwned?: boolea
   if (ROOM_STYLES.includes(record.floor as RoomStyleId)) base.floor = record.floor as RoomStyleId
   if (WALL_STYLES.includes(record.wall as WallStyleId)) base.wall = record.wall as WallStyleId
   if (MOODS.includes(record.mood as MoodId)) base.mood = record.mood as MoodId
+  if (SOUND_THEMES.includes(record.sound as SoundThemeId)) base.sound = record.sound as SoundThemeId
 
   if (Array.isArray(record.items)) {
     for (const entry of record.items) {
@@ -369,6 +380,7 @@ export function normalizeRoom(raw: unknown, options: { sportsArenaOwned?: boolea
         floor: normalized.floor,
         wall: normalized.wall,
         mood: normalized.mood,
+        sound: normalized.sound,
         items: normalized.items.filter((item) => !isSharedWorldItem(item)),
         storedItems: normalized.storedItems.filter((item) => !isSharedWorldItem(item)),
         ...([1, 2].includes((rawWorld as Record<string, unknown>).sportsStarterVersion as number)

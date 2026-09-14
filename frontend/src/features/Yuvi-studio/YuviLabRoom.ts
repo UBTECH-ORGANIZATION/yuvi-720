@@ -19,7 +19,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
-import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
+import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type SoundThemeId, type StationId, type WallStyleId } from './RoomDesign'
 import { roomLayout, walkSurfaceHeightAt as layoutWalkSurfaceHeightAt, wallAnchorAt, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 import { createStudentWorldEnvironment } from './StudentWorldEnvironment'
 export type LabRoomQuality = 'high' | 'low'
@@ -93,7 +93,7 @@ export interface LabRoom {
   /** Lit patch of floor the walkthrough points at. `aim` adds a facing arrow. */
   setTarget: (spot: { x: number; z: number; radius: number; aim?: number } | null) => void
   /** Floor, wall and lighting mood. */
-  setRoomStyle: (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => void
+  setRoomStyle: (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId; sound: SoundThemeId }) => void
   setLabels: (translate: (key: string) => string) => void
   /** Footprints Yuvi must walk around. */
   blockers: () => LabRoomCircle[]
@@ -398,11 +398,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   legacyShell.push(ceiling)
 
   let interactEnvironment: (raycaster: THREE.Raycaster) => boolean = () => false
+  let setEnvironmentWallColor: ((color: number) => void) | null = null
   if (layoutId !== 'lab') {
     legacyShell.forEach((mesh) => { mesh.visible = false })
     const environment = createStudentWorldEnvironment({ id: layoutId, floorY: FLOOR_Y, rich, reduceMotion })
     group.add(environment.group)
     floorStyleMaterial = environment.floorMaterial
+    setEnvironmentWallColor = environment.setWallColor
     labelSetters.push(environment.setLabels)
     updaters.push((elapsed) => environment.update(elapsed))
     disposables.push(environment)
@@ -2258,6 +2260,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     sunset: { fog: 0x2a1024, warm: 1.5, accent: 0.75, window: 0.7 },
     night: { fog: 0x02030c, warm: 0.5, accent: 1.25, window: 0.35 },
     party: { fog: 0x160a34, warm: 0.8, accent: 1.7, window: 0.5 },
+    aqua: { fog: 0x04252b, warm: 0.72, accent: 1.45, window: 0.65 },
+    rose: { fog: 0x2b0b1d, warm: 1.15, accent: 1.42, window: 0.58 },
+    arcade: { fog: 0x12052b, warm: 0.62, accent: 2, window: 0.4 },
+    aurora: { fog: 0x061c23, warm: 0.82, accent: 1.82, window: 0.8 },
   }
   let moodWarm = 1
   let moodAccent = 1
@@ -2265,8 +2271,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const defaultFloorNormal = floorStyleMaterial.normalMap
   const defaultFloorRoughness = floorStyleMaterial.roughnessMap
 
-  const setRoomStyle = (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => {
-    if (layoutId === 'adventurePark') return
+  const setRoomStyle = (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId; sound: SoundThemeId }) => {
     const texture = makeFloorTexture(style.floor)
     floorStyleMaterial.map = texture ?? defaultFloorMap
     if (layoutId === 'creatorLoft') {
@@ -2278,6 +2283,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     const tint = WALL_TINTS[style.wall] ?? WALL_TINTS.lab
     wallMat.color.setHex(tint)
     ceilMat.color.setHex(tint).multiplyScalar(0.32)
+    setEnvironmentWallColor?.(tint)
 
     const mood = MOOD_SETTINGS[style.mood] ?? MOOD_SETTINGS.studio
     moodWarm = mood.warm

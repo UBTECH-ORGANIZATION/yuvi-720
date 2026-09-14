@@ -11,7 +11,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  DEFAULT_ROOM, DEFAULT_STATIONS, cloneRoom, resetRoom, sameRoom,
+  DEFAULT_ROOM, DEFAULT_STATIONS, cloneRoom, normalizeRoom, resetRoom, sameRoom, switchRoomWorld,
   type RoomDesign,
 } from '../src/features/Yuvi-studio/RoomDesign.ts'
 
@@ -78,4 +78,18 @@ test('wall anchors are cleared with the reset arrangement', () => {
   })
   const fresh = resetRoom(room)
   assert.deepEqual(fresh.storedItems, [])
+})
+
+test('legacy rooms normalize to the classic sound theme', () => {
+  const legacy = cloneRoom(DEFAULT_ROOM) as RoomDesign & { sound?: string }
+  delete legacy.sound
+  assert.equal(normalizeRoom(legacy).sound, 'classic')
+})
+
+test('earned sound themes persist through cloning and world switches', () => {
+  const room = cloneRoom(DEFAULT_ROOM)
+  room.sound = 'orbit'
+  room.worlds.sportsArena.sound = 'orbit'
+  assert.equal(cloneRoom(room).sound, 'orbit')
+  assert.equal(switchRoomWorld(room, 'sportsArena').sound, 'orbit')
 })

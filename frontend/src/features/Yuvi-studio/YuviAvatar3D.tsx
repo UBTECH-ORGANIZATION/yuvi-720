@@ -14,7 +14,7 @@ import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
 import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
 import { useI18n } from '../../i18n/I18nProvider'
-import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
+import type { MoodId, RoomItem, RoomStations, RoomStyleId, SoundThemeId, StationId, WallStyleId } from './RoomDesign'
 import { pointInLayout, projectPointIntoLayout, roomLayout, wallAnchorTransform, type RoomLayoutId } from './RoomLayouts.ts'
 
 /** Camera framings the studio can request when the learner switches category. */
@@ -124,7 +124,7 @@ interface Props {
   /** Where the two walk-in stations stand. A new identity re-syncs them. */
   stations?: RoomStations | null
   /** Floor, wall and lighting mood chosen by the learner. */
-  roomStyle?: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null
+  roomStyle?: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId; sound: SoundThemeId } | null
   /** Per-room wording applied to in-world canvas labels. */
   roomLabelOverrides?: Record<string, string>
   /** Prop currently being positioned — shown as a hologram under the pointer. */
@@ -1141,19 +1141,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         audioCtx = audioCtx || new (window.AudioContext || (window as any).webkitAudioContext)()
         const now = audioCtx.currentTime
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain()
-        osc.type = 'sawtooth'
-        osc.frequency.setValueAtTime(220, now)
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.18)
-        osc.frequency.exponentialRampToValueAtTime(660, now + 0.32)
+        const orbitTheme = roomStyleRef.current?.sound === 'orbit'
+        osc.type = orbitTheme ? 'sine' : 'sawtooth'
+        osc.frequency.setValueAtTime(orbitTheme ? 330 : 220, now)
+        osc.frequency.exponentialRampToValueAtTime(orbitTheme ? 1320 : 880, now + 0.18)
+        osc.frequency.exponentialRampToValueAtTime(orbitTheme ? 990 : 660, now + 0.32)
         gain.gain.setValueAtTime(0.0001, now)
         gain.gain.exponentialRampToValueAtTime(0.12, now + 0.04)
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42)
-        const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 900; filter.Q.value = 4
+        const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = orbitTheme ? 1400 : 900; filter.Q.value = 4
         osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination)
         osc.start(now); osc.stop(now + 0.44)
         const osc2 = audioCtx.createOscillator(); const g2 = audioCtx.createGain()
-        osc2.type = 'triangle'; osc2.frequency.setValueAtTime(1320, now + 0.1)
-        osc2.frequency.exponentialRampToValueAtTime(2640, now + 0.3)
+        osc2.type = 'triangle'; osc2.frequency.setValueAtTime(orbitTheme ? 1760 : 1320, now + 0.1)
+        osc2.frequency.exponentialRampToValueAtTime(orbitTheme ? 3520 : 2640, now + 0.3)
         g2.gain.setValueAtTime(0.0001, now + 0.1); g2.gain.exponentialRampToValueAtTime(0.05, now + 0.16); g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
         osc2.connect(g2); g2.connect(audioCtx.destination); osc2.start(now + 0.1); osc2.stop(now + 0.42)
       } catch { /* no audio */ }
@@ -1635,7 +1636,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           }
           if (roomStyleRef.current !== appliedRoomStyle) {
             appliedRoomStyle = roomStyleRef.current
-            if (appliedRoomStyle) room.setRoomStyle(appliedRoomStyle)
+            if (appliedRoomStyle) {
+              room.setRoomStyle(appliedRoomStyle)
+              playgroundLighting?.setMood(appliedRoomStyle.mood)
+            }
           }
           // The ghost belongs to what is being carried, not to pointer movement:
           // dropping a prop has to take the hologram with it even if the mouse

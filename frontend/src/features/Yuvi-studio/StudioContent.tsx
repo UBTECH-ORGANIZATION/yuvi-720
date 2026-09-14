@@ -12,7 +12,7 @@ import { normalizeDesign, type YuviColors, type YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
 import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
-import { GAMING_ROOM_TITLE_IDS, MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, WALL_STYLES, type GamingRoomTitleId, type RoomItem, type StationId } from './RoomDesign'
+import { GAMING_ROOM_TITLE_IDS, MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, SOUND_THEMES, WALL_STYLES, type GamingRoomTitleId, type RoomItem, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { playgroundGiftPosition } from './PlaygroundLayout.ts'
 import { roomStandingSpot } from './YuviLabRoom'
@@ -268,8 +268,8 @@ export function StudioContent({
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
   const roomStyle = useMemo(
-    () => ({ floor: roomState.room.floor, wall: roomState.room.wall, mood: roomState.room.mood }),
-    [roomState.room.floor, roomState.room.wall, roomState.room.mood],
+    () => ({ floor: roomState.room.floor, wall: roomState.room.wall, mood: roomState.room.mood, sound: roomState.room.sound }),
+    [roomState.room.floor, roomState.room.wall, roomState.room.mood, roomState.room.sound],
   )
   // A prop being carried is drawn as the ghost under the cursor, so the room
   // must not also draw it standing at the spot it is being moved from.
@@ -301,7 +301,7 @@ export function StudioContent({
   const activeStations = visitorRoomDesign?.stations ?? roomState.room.stations
   const activeLayoutId = visitorRoomDesign?.activeLayoutId ?? roomState.room.activeLayoutId
   const activeRoomStyle = visitorRoomDesign
-    ? { floor: visitorRoomDesign.floor, wall: visitorRoomDesign.wall, mood: visitorRoomDesign.mood }
+    ? { floor: visitorRoomDesign.floor, wall: visitorRoomDesign.wall, mood: visitorRoomDesign.mood, sound: visitorRoomDesign.sound }
     : roomStyle
   const gamingRoomTitle = (visitorRoomDesign ?? roomState.room).worlds.creatorLoft.gamingRoomTitle
   const roomLabelOverrides = useMemo(() => gamingRoomTitle
@@ -757,6 +757,7 @@ export function StudioContent({
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
             priceOf={priceOf}
+            isRoomUnlocked={isRoomUnlocked}
             hasSportsArena={isRoomUnlocked('layout:sportsArena')}
             hasCreatorLoft={isRoomUnlocked('layout:creatorLoft')}
             onBuyRoom={(kind) => { setPurchaseError(null); setPending({ id: kind, labelKey: `YuviStudio.room.item.${kind}`, roomKind: kind }) }}
@@ -1457,7 +1458,7 @@ function RoomColorDialog({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, worldSelector, footer, isPropLocked, requirementFor, priceOf, hasSportsArena, hasCreatorLoft, onBuyRoom, surpriseRewards, t,
+  state, placing, setPlacing, onLeave, worldSelector, footer, isPropLocked, requirementFor, priceOf, isRoomUnlocked, hasSportsArena, hasCreatorLoft, onBuyRoom, surpriseRewards, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
@@ -1469,6 +1470,7 @@ function RoomPanel({
   isPropLocked: (kind: string) => boolean
   requirementFor: (id: string) => string | undefined
   priceOf: (id: string) => number | null
+  isRoomUnlocked: (id: string) => boolean
   hasSportsArena: boolean
   hasCreatorLoft: boolean
   onBuyRoom: (kind: string) => void
@@ -1507,7 +1509,22 @@ function RoomPanel({
     { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor },
     { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall },
     { key: 'mood', options: MOODS, value: room.mood, set: state.setMood },
+    { key: 'sound', options: SOUND_THEMES, value: room.sound, set: state.setSound },
   ]
+  const styleEntitlement = (key: string, id: string) => {
+    if (key === 'mood' && (id === 'aqua' || id === 'rose')) return 'room_ambient_lights_06'
+    if (key === 'sound' && id === 'orbit') return 'room_audio_theme_10'
+    if (key === 'mood' && id === 'arcade') return 'room_theme_20'
+    if (key === 'mood' && id === 'aurora') return 'premium_room_ambience_27'
+    return null
+  }
+  const unlockTip = (id: string) => {
+    const requirement = requirementFor(id)
+    const level = requirement?.match(/^YuviStudio\.unlock\.level\.(\d+)$/)?.[1]
+    return level
+      ? t('YuviStudio.unlock.level', { level })
+      : t(requirement ?? 'YuviStudio.unlock.achievement')
+  }
 
   return (
     <StationPanel
@@ -1581,7 +1598,7 @@ function RoomPanel({
                 selected={!placing?.uid && placing?.kind === spec.id}
                 locked={locked}
                 price={price}
-                tip={locked && price === null ? t(requirementFor(spec.id) ?? 'YuviStudio.unlock.achievement') : undefined}
+                tip={locked && price === null ? unlockTip(spec.id) : undefined}
                 disabled={full}
                 onClick={() => locked ? (price === null ? undefined : onBuyRoom(spec.id)) : pick(spec.id)}
               />
@@ -1599,16 +1616,22 @@ function RoomPanel({
             <div key={style.key} className="ys-general-style">
               <h2 className="ys-section__title">{t(`YuviStudio.room.${style.key}`)}</h2>
               <div className="ys-chips">
-                {style.options.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`ys-chip${style.value === id ? ' is-active' : ''}`}
-                    onClick={() => style.set(id)}
-                  >
-                    {t(`YuviStudio.room.${style.key}.${id}`)}
-                  </button>
-                ))}
+                {style.options.map((id) => {
+                  const entitlement = styleEntitlement(style.key, id)
+                  const locked = entitlement ? !isRoomUnlocked(entitlement) : false
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`ys-chip${style.value === id ? ' is-active' : ''}${locked ? ' is-locked' : ''}`}
+                      disabled={locked}
+                      title={locked ? unlockTip(entitlement!) : undefined}
+                      onClick={() => { if (!locked) style.set(id) }}
+                    >
+                      {t(`YuviStudio.room.${style.key}.${id}`)}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ))}

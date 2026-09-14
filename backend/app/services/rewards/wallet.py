@@ -390,6 +390,19 @@ async def grant_goal_stage(
     )
 
 
+async def grant_personal_path_started(learner_id: str) -> dict[str, Any]:
+    """Grant the one-time Spark reward for opening a completed personal path."""
+    lid = normalize_learner_id(learner_id)
+    return await _grant(
+        lid,
+        f"earn:{lid}:onboarding:personal_path_started",
+        50,
+        "onboarding.personal_path_started",
+        {"event": "personal_path_started"},
+        count_daily=False,
+    )
+
+
 def is_teacher_spark_amount(raw: Any) -> bool:
     """Whether ``raw`` is one of the amounts a teacher may attach to a good word."""
     try:
@@ -438,6 +451,21 @@ async def grant_help_request(learner_id: str, goal_id: str) -> dict[str, Any]:
         "goal.help",
         {"goal_id": goal_id, "stage": "help"},
         goal_id=goal_id,
+    )
+
+
+async def grant_level_sparks(
+    learner_id: str, level: int, amount: int
+) -> dict[str, Any]:
+    """Grant the server-configured Sparks bonus for one reached XP level."""
+    lid = normalize_learner_id(learner_id)
+    return await _grant(
+        lid,
+        f"earn:{lid}:level:{int(level)}",
+        int(amount),
+        "xp.level",
+        {"level": int(level)},
+        count_daily=False,
     )
 
 

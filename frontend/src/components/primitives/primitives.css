@@ -1497,3 +1497,120 @@ textarea[dir="auto"]:placeholder-shown {
   display: grid;
   gap: 4px;
 }
+
+.user-menu__trigger--progression {
+  position: relative;
+  min-inline-size: 188px;
+  block-size: 52px;
+  padding: 5px 10px 8px 5px;
+  border-radius: 12px;
+  overflow: visible;
+}
+
+.user-menu__medal {
+  inline-size: 42px;
+  block-size: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-content: center;
+  border: 2px solid #f4c95d;
+  border-radius: 50%;
+  background: #173f5f;
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .18), 0 2px 5px rgba(23, 63, 95, .2);
+  text-align: center;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.user-menu__medal strong {
+  display: block;
+  margin-block-start: 2px;
+  color: #f4c95d;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.user-menu__identity {
+  min-inline-size: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.user-menu__xp {
+  color: var(--sp-ink-400);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.user-menu__progress {
+  position: absolute;
+  inset-inline: 10px;
+  inset-block-end: 3px;
+  block-size: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sp-border);
+}
+
+.user-menu__progress > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: #22a06b;
+  transition: inline-size .35s ease;
+}
+
+.user-menu__progress-tip {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + 7px);
+  z-index: 70;
+  inline-size: max-content;
+  max-inline-size: min(280px, 80vw);
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: var(--sp-ink-900);
+  color: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.user-menu__trigger--progression:hover .user-menu__progress-tip,
+.user-menu__trigger--progression:focus-visible .user-menu__progress-tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-menu__progress > span,
+  .user-menu__progress-tip { transition: none; }
+}
+
+.user-menu__head-avatar.is-level-frame {
+  box-shadow: 0 0 0 3px #f4c95d, 0 0 0 6px rgba(23, 63, 95, .16);
+}
+.user-menu__head-avatar.is-animated-frame {
+  box-shadow: 0 0 0 3px #43c5b8, 0 0 0 6px rgba(244, 201, 93, .35);
+  animation: profileFramePulse 2.4s ease-in-out infinite;
+}
+.user-menu__head-avatar.is-prestige-frame {
+  box-shadow: 0 0 0 3px #f4c95d, 0 0 0 7px #173f5f, 0 0 18px rgba(67, 197, 184, .5);
+}
+
+@keyframes profileFramePulse {
+  50% { box-shadow: 0 0 0 3px #f4c95d, 0 0 0 7px rgba(67, 197, 184, .38); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-menu__head-avatar.is-animated-frame { animation: none; }
+}

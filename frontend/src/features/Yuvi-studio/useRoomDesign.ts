@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, moveOrRestoreRoomItem, newItemUid, normalizeRoom, resetRoom, sameRoom, switchRoomWorld, syncActiveWorld,
-  type GamingRoomTitleId, type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallAnchor, type WallStyleId,
+  type GamingRoomTitleId, type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type SoundThemeId, type StationId, type WallAnchor, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
 import { reconcileItemsForLayout, reconcileStationsForLayout, roomLayout, wallAnchorAt, type RoomLayoutId } from './RoomLayouts.ts'
@@ -112,6 +112,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
+  const setSound = (sound: SoundThemeId) => setRoom((prev) => ({ ...prev, sound }))
   const setGamingRoomTitle = async (gamingRoomTitle: GamingRoomTitleId) => {
     const current = cloneRoom(roomRef.current)
     const next = cloneRoom(current)
@@ -231,7 +232,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear, materializeWeeklyReward,
-    setFloor, setWall, setMood, setGamingRoomTitle, setActiveLayout, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
+    setFloor, setWall, setMood, setSound, setGamingRoomTitle, setActiveLayout, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

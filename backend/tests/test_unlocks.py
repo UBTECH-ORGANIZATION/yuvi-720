@@ -45,17 +45,18 @@ class UnlockRuleTests(unittest.TestCase):
         self.assertIn("trophyShelf", got)
         self.assertNotIn("podium", got)
 
-    def test_subject_coin_unlocks_its_own_prop(self) -> None:
+    def test_subject_coin_does_not_bypass_a_level_only_prop(self) -> None:
         got = unlocks.satisfied_ids([badge("science")], 0)
-        self.assertIn("rocketModel", got)
+        self.assertNotIn("rocketModel", got)
         self.assertNotIn("mathBoard", got)
 
     def test_regular_catalog_props_can_be_priced_or_starter_free(self) -> None:
         from app.services.rewards.catalog import CATALOG
 
-        for asset_id in ("telescope", "storage", "cactus", "bonsai"):
+        for asset_id in ("storage", "cactus", "bonsai"):
             self.assertEqual(CATALOG[asset_id]["slot"], "room", asset_id)
             self.assertGreater(CATALOG[asset_id]["price"], 0, asset_id)
+        self.assertNotIn("telescope", CATALOG)
         for asset_id in ("desk", "bookshelf", "plant", "banner", "frames"):
             self.assertNotIn(asset_id, CATALOG, asset_id)
 

@@ -10,6 +10,28 @@
 import { trackApiCall } from './telemetry'
 
 export const UNAUTHORIZED_EVENT = 'spark:unauthorized'
+const XP_AWARD_EVENT = 'spark:xp-award'
+
+function publishXpAwards(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return
+  const row = payload as Record<string, unknown>
+  const candidates = Array.isArray(row.xpRewards)
+    ? row.xpRewards
+    : row.xpReward ? [row.xpReward] : []
+  const receipts = candidates.filter((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false
+    const receipt = candidate as Record<string, unknown>
+    return Number(receipt.awarded) > 0 && receipt.duplicate !== true
+  })
+  if (!receipts.length) return
+  const reward = row.reward && typeof row.reward === 'object'
+    ? row.reward as Record<string, unknown>
+    : null
+  const sparks = Number(reward?.granted ?? row.sparks ?? 0)
+  window.dispatchEvent(new CustomEvent(XP_AWARD_EVENT, {
+    detail: { receipts, sparks: Number.isFinite(sparks) ? sparks : 0 }
+  }))
+}
 
 export class UnauthorizedError extends Error {
   constructor(path: string) {
@@ -63,7 +85,9 @@ async function request<T>(method: string, path: string, body?: unknown, init?: R
       } catch { /* not JSON — the status is all we have */ }
       throw failure
     }
-    return await (response.json() as Promise<T>)
+    const payload = await (response.json() as Promise<T>)
+    publishXpAwards(payload)
+    return payload
   } finally {
     // In `finally` so aborted and failed calls are measured too: a request that
     // times out is the worst latency there is, and counting only the successes

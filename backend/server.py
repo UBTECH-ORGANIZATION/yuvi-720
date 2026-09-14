@@ -38,6 +38,7 @@ from app.routes.notifications import router as notifications_router
 from app.routes.me import router as me_router
 from app.routes.teacher_assistant import router as teacher_assistant_router
 from app.routes.mentoring import router as mentoring_router
+from app.routes.progression import router as progression_router
 from app.routes.rewards import router as rewards_router
 from app.routes.campaign import router as campaign_router
 from app.routes.contact import router as contact_router
@@ -137,6 +138,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         school_calendar, studio_surprises, teacher_alerts,
         teacher_insights_store, timetable, weekly_digest, wellbeing,
     )
+    from app.services.progression import ledger as progression_ledger
     from app.services.rewards import wallet
 
     index_steps = (
@@ -178,6 +180,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("mentoring_conversations", mentoring.ensure_indexes),
         # The Sparks ledger, read newest-first per learner.
         ("reward_ledger", wallet.ensure_indexes),
+        # XP history, read newest-first for the learner's transparent timeline.
+        ("xp_ledger", progression_ledger.ensure_indexes),
         # Coach decision history, read newest-first per learner.
         ("tutor_decisions", tutor_decision.ensure_indexes),
     )
@@ -290,6 +294,7 @@ def create_app() -> FastAPI:
     app.include_router(teacher_assistant_router)
     app.include_router(admin_org_router)
     app.include_router(mentoring_router)
+    app.include_router(progression_router)
     app.include_router(rewards_router)
     app.include_router(profile_router)
     app.include_router(dashboard_router)

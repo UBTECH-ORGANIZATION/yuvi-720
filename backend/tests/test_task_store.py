@@ -198,7 +198,11 @@ class WhatTheChildReceives(unittest.TestCase):
                     launch, KID, answers={"q1": 1}, language="he")
                 return result, await store.get_attempt(launch, KID)
 
-            with patch("app.services.learner_activity.record", AsyncMock()):
+            with patch("app.services.learner_activity.record", AsyncMock()), \
+                    patch(
+                        "app.services.progression.award_teacher_quest_completed",
+                        AsyncMock(return_value={"awarded": 20}),
+                    ) as award_xp:
                 result, attempt = run(scenario())
 
             self.assertNotIn("score", result)
@@ -207,6 +211,32 @@ class WhatTheChildReceives(unittest.TestCase):
             # The teacher's number exists — it is simply not in the child's payload.
             self.assertEqual(attempt["score"], 100)
             self.assertEqual(attempt["status"], "submitted")
+            self.assertEqual(result["xpReward"]["awarded"], 20)
+            award_xp.assert_awaited_once()
+
+    def test_a_partial_submission_does_not_award_teacher_quest_xp(self):
+        with _Isolated():
+            async def scenario():
+                task_id = await _task_with({
+                    "questions": [
+                        PRACTICE_V1["questions"][0],
+                        {**PRACTICE_V1["questions"][0], "id": "q2"},
+                    ]
+                })
+                launch = await _open(task_id)
+                return await attempts.submit(
+                    launch, KID, answers={"q1": 1}, language="he"
+                )
+
+            with patch("app.services.learner_activity.record", AsyncMock()), \
+                    patch(
+                        "app.services.progression.award_teacher_quest_completed",
+                        AsyncMock(),
+                    ) as award_xp:
+                result = run(scenario())
+
+            self.assertIsNone(result["xpReward"])
+            award_xp.assert_not_awaited()
 
     def test_after_submitting_the_explanation_is_released(self):
         with _Isolated():

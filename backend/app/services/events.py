@@ -905,6 +905,7 @@ async def ingest_statement(
     else:
         is_new = _fallback_append(event)
 
+    xp_rewards: list[dict[str, Any]] = []
     if is_new:
         # Kata's content self-routes ACROSS component boundaries: measured
         # 29/07, three seconds after `completed` on `…-01-03` it emitted
@@ -938,6 +939,10 @@ async def ingest_statement(
             await _record_content_support(event, effective_state)
         except Exception as exc:  # analytics must never break ingest
             print(f"⚠️ content support record failed: {type(exc).__name__}")
+        try:
+            xp_rewards = await _settle_progression(event, effective_state)
+        except Exception as exc:
+            print(f"⚠️ progression settlement failed: {type(exc).__name__}")
         if is_component_completion(event):
             try:
                 from app.agents import sessions
@@ -988,7 +993,46 @@ async def ingest_statement(
             await _forward_to_moe_lrs(statement, launch, event["learner_id"], event)
         except Exception as exc:
             print(f"⚠️ MoE LRS forward skipped: {type(exc).__name__}")
-    return {"stored": True, "duplicate": not is_new, "event_id": event["_id"]}
+    return {
+        "stored": True,
+        "duplicate": not is_new,
+        "event_id": event["_id"],
+        "xpRewards": xp_rewards,
+    }
+
+
+async def _settle_progression(
+    event: dict[str, Any], effective_state: Optional[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Settle XP only from persisted evidence and deterministic projections."""
+    from app.services import kata_catalog, learning_progress, progression
+
+    rewards: list[dict[str, Any]] = []
+    objective_id = event.get("objective_id")
+    if effective_state and effective_state.get("objective_achieved_now") and objective_id:
+        rewards.append(
+            await progression.award_learning_goal_completed(
+                event["learner_id"], str(objective_id)
+            )
+        )
+
+    unit_id = event.get("unit_id")
+    if not unit_id or not is_component_completion(event):
+        return rewards
+    await kata_catalog.ensure_loaded()
+    unit = kata_catalog.get_unit(str(unit_id))
+    if unit is None:
+        return rewards
+    roadmap = await learning_progress.project_unit_roadmap(
+        unit, event["learner_id"], explain=True
+    )
+    if roadmap.get("unit_state") == "completed":
+        rewards.append(
+            await progression.award_module_completed(
+                event["learner_id"], str(unit_id), str(objective_id) if objective_id else None
+            )
+        )
+    return rewards
 
 
 async def _record_content_support(
@@ -1426,6 +1470,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     verb = event["verb"]
     set_updates: dict[str, Any] = {}
     inc_updates: dict[str, float] = {}
+    objective_achieved_now = False
 
     # Read prior state once (reused by the scoring block below) so the sticky
     # question rule can compare against where the learner just was.
@@ -1660,6 +1705,9 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         )
         entry["objective_id"] = objective_id
         merged_entry = dict(entry)
+        objective_achieved_now = bool(
+            merged_entry.get("achieved") and not prior_entry.get("achieved")
+        )
         # Counters go through $inc so concurrent deliveries never lose one (B-7).
         for counter in ("attempts", "successes", "failures"):
             delta = int(entry.get(counter) or 0) - int(prior_entry.get(counter) or 0)
@@ -1717,6 +1765,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         "component_id": event.get("launch") or prior_state.get("component_id"),
         "item_id": set_updates.get("current_state.item_id", prior_state.get("item_id")),
         "question_id": set_updates.get("current_state.question_id", prior_state.get("question_id")),
+        "objective_achieved_now": objective_achieved_now,
     }
 
 
