@@ -109,6 +109,22 @@ async def moe_callback(
     state: Optional[str] = None,
     error: Optional[str] = None,
 ) -> Response:
+    return await complete_login(request, code=code, state=state, error=error)
+
+
+async def complete_login(
+    request: Request,
+    *,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+) -> Response:
+    """Turn an authorization code into a session.
+
+    Lives apart from the route because the Ministry may return the browser to
+    the site root instead of the dedicated path (see `app.auth.moe.redirect`),
+    and both entry points must behave identically.
+    """
     if not moe_config.is_enabled():
         return _failure("sso_disabled")
     if error:

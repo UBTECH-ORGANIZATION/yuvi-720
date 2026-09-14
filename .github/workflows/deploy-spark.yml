@@ -81,6 +81,7 @@ jobs:
               MOE_OIDC_ENABLED=true \
               MOE_OIDC_ISSUER=https://is.remote.education.gov.il/nidp/oauth/nam \
               MOE_OIDC_REDIRECT_PATH=/api/auth/moe/callback \
+              MOE_OIDC_REDIRECT_URI=https://dev.spark.yuvilab.ai \
               MOE_OIDC_SCOPES="openid profileEXT eduorg edustudent" \
               MOE_OIDC_TOKEN_AUTH_METHOD=client_secret_basic \
               MOE_OIDC_POST_LOGOUT_URL=https://dev.spark.yuvilab.ai \
