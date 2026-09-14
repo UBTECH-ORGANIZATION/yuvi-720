@@ -23,6 +23,25 @@ class OidcError(Exception):
         self.code = code
 
 
+def _describe(response: httpx.Response) -> str:
+    """Why the provider said no — never the body, which may carry a token.
+
+    An OAuth refusal is JSON. Anything else means something in front of the
+    Ministry answered instead, and an HTML 403 from an IP filter reads nothing
+    like `invalid_client` — a distinction that was invisible while only the
+    status code was logged.
+    """
+    content_type = response.headers.get("content-type", "")
+    if "json" in content_type:
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if isinstance(payload, dict):
+            return f"{payload.get('error')}: {payload.get('error_description')}"[:200]
+    return f"non-JSON body, content-type={content_type or 'unknown'}"
+
+
 async def build_authorization_url(*, state: str, nonce: str, challenge: str) -> str:
     endpoint = await discovery.endpoint("authorization_endpoint")
     query = urlencode(
@@ -67,7 +86,10 @@ async def exchange_code(*, code: str, code_verifier: str) -> dict[str, Any]:
         raise OidcError("provider_unreachable")
 
     if response.status_code >= 400:
-        print(f"⚠️ MoE token exchange rejected: HTTP {response.status_code}")
+        print(
+            f"⚠️ MoE token exchange rejected: HTTP {response.status_code}"
+            f" — {_describe(response)}"
+        )
         raise OidcError("token_exchange_failed")
     try:
         payload = response.json()
@@ -97,7 +119,10 @@ async def fetch_userinfo(access_token: str) -> dict[str, Any]:
                 },
             )
         if response.status_code >= 400:
-            print(f"⚠️ MoE userinfo rejected: HTTP {response.status_code}")
+            print(
+                f"⚠️ MoE userinfo rejected: HTTP {response.status_code}"
+                f" — {_describe(response)}"
+            )
             return {}
         payload = response.json()
     except (httpx.HTTPError, ValueError):

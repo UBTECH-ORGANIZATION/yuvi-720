@@ -53,7 +53,14 @@ async def metadata() -> dict[str, Any]:
     try:
         document = await _get_json(config.discovery_url())
     except Exception as exc:
-        print(f"⚠️ MoE OIDC discovery failed, using documented endpoints: {type(exc).__name__}")
+        # The status matters: a timeout is an outage, a 403 on an anonymous
+        # document means something is refusing us before the Ministry sees it.
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        suffix = f" HTTP {status}" if status else ""
+        print(
+            "⚠️ MoE OIDC discovery failed, using documented endpoints: "
+            f"{type(exc).__name__}{suffix}"
+        )
         document = dict(_FALLBACK_METADATA)
     _metadata = {**_FALLBACK_METADATA, **document}
     _metadata_expires_at = now + config.jwks_ttl_seconds()
