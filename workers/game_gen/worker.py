@@ -668,6 +668,7 @@ async def run_servicebus_loop() -> None:  # pragma: no cover - needs Azure
         from azure.identity.aio import DefaultAzureCredential  # type: ignore
         client = ServiceBusClient(namespace, credential=DefaultAzureCredential())
     log.info("worker %s receiving from %s (%s)", REPLICA, queue, namespace or "connection string")
+    _install_shutdown_requeue(store)
     async with client:
         while True:
             try:
@@ -700,26 +701,77 @@ def _job_is_live(job: dict[str, Any], now: Optional[float] = None) -> bool:
     return (now if now is not None else time.time()) - seen < LIVE_JOB_FRESH_S
 
 
+_CURRENT_JOB: dict[str, Optional[str]] = {"id": None}
+
+
+def _install_shutdown_requeue(store: Any) -> None:  # pragma: no cover
+    """On SIGTERM (a roll, a scale-in) mark the job in flight `queued` so the
+    redelivered message is run at once by whoever receives it next."""
+    import signal
+
+    loop = asyncio.get_event_loop()
+
+    def on_term() -> None:
+        job_id = _CURRENT_JOB.get("id")
+        if job_id:
+            log.warning("shutdown with job %s in flight: marking it queued for the next receiver", job_id)
+            loop.create_task(store.update_job(job_id, status="queued"))
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, on_term)
+    except (NotImplementedError, RuntimeError):
+        pass
+
+
 async def _handle_servicebus_message(receiver: Any, msg: Any, store: Any) -> None:  # pragma: no cover
     body = json.loads(str(msg))
     job = await store.get_job(str(body.get("job_id") or ""))
     if not job or job.get("status") in ("done",):
         await receiver.complete_message(msg)
         return
-    if _job_is_live(job):
-        log.warning("job %s: redelivered while a run is live (delivery %s); skipping the duplicate",
-                    job.get("_id"), getattr(msg, "delivery_count", "?"))
-        await receiver.complete_message(msg)
-        return
     renew = asyncio.create_task(_renew_session(receiver))
     try:
+        if _job_is_live(job):
+            # Another run holds this job (a lost lock re-delivered it). Watch
+            # it rather than drop the message: if that run finishes, complete;
+            # if its row stops moving (the replica died — a roll, an OOM),
+            # take the job over. Dropping the message here orphaned a build
+            # once (2026-09-14): the draining replica was killed 6 s in.
+            job = await _watch_live_job(job, store)
+            if job is None:
+                await receiver.complete_message(msg)
+                return
+            log.warning("job %s: the live run went quiet; taking it over", job.get("_id"))
+        _CURRENT_JOB["id"] = str(job.get("_id") or "")
         await handle_job(job)
         await receiver.complete_message(msg)
     except Exception:
         log.exception("job %s crashed", job.get("_id"))
         await receiver.abandon_message(msg)
     finally:
+        _CURRENT_JOB["id"] = None
         renew.cancel()
+
+
+LIVE_WATCH_POLL_S = 15
+LIVE_WATCH_MAX_S = 45 * 60
+
+
+async def _watch_live_job(job: dict[str, Any], store: Any) -> Optional[dict[str, Any]]:
+    """Poll a job another run holds. Returns None once it is finished (nothing
+    to do) or the fresh row once it is ours to run (queued again, or stale)."""
+    job_id = str(job["_id"])
+    log.warning("job %s: redelivered while a run is live; watching it", job_id)
+    waited = 0.0
+    while waited < LIVE_WATCH_MAX_S:
+        await asyncio.sleep(LIVE_WATCH_POLL_S)
+        waited += LIVE_WATCH_POLL_S
+        row = await store.get_job(job_id)
+        if not row or row.get("status") in ("done", "failed"):
+            return None
+        if row.get("status") == "queued" or not _job_is_live(row):
+            return row
+    return None
 
 
 async def _renew_session(receiver: Any) -> None:  # pragma: no cover
