@@ -24,9 +24,9 @@
 (function () {
   if (window.YuviKit) return;
   const STR = {
-    he: { start: 'התחל', again: 'שוב', resume: 'המשך', paused: 'הפסקה', score: 'ניקוד', best: 'שיא', over: 'המשחק נגמר', win: 'ניצחת!', esc: 'Escape = הפסקה', aim: 'לחצו כדי לכוון' },
-    en: { start: 'Start', again: 'Again', resume: 'Resume', paused: 'Paused', score: 'Score', best: 'Best', over: 'Game over', win: 'You win!', esc: 'Escape = pause', aim: 'Click to aim' },
-    ar: { start: 'ابدأ', again: 'مرة أخرى', resume: 'متابعة', paused: 'توقف مؤقت', score: 'النقاط', best: 'الأفضل', over: 'انتهت اللعبة', win: 'فزت!', esc: 'Escape = إيقاف مؤقت', aim: 'انقر للتصويب' }
+    he: { start: 'התחל', again: 'שוב', resume: 'המשך', paused: 'הפסקה', score: 'ניקוד', best: 'שיא', over: 'המשחק נגמר', win: 'ניצחת!', esc: 'Escape = הפסקה', aim: 'לחצו כדי לכוון', focus: 'לחצו על המשחק כדי להמשיך' },
+    en: { start: 'Start', again: 'Again', resume: 'Resume', paused: 'Paused', score: 'Score', best: 'Best', over: 'Game over', win: 'You win!', esc: 'Escape = pause', aim: 'Click to aim', focus: 'Click the game to continue' },
+    ar: { start: 'ابدأ', again: 'مرة أخرى', resume: 'متابعة', paused: 'توقف مؤقت', score: 'النقاط', best: 'الأفضل', over: 'انتهت اللعبة', win: 'فزت!', esc: 'Escape = إيقاف مؤقت', aim: 'انقر للتصويب', focus: 'انقر على اللعبة للمتابعة' }
   };
   const rawLang = (window.YuviLearn && window.YuviLearn.language) || (window.__YUVI_LEARN_DATA || {}).language || 'he';
   const LANG = STR[rawLang] ? rawLang : 'en';
@@ -208,8 +208,16 @@
     if (!e.repeat) { fire(e.code); if (I.keymap[e.code]) fire(I.keymap[e.code]); }
   });
   window.addEventListener('keyup', e => I.keys.delete(e.code));
-  window.addEventListener('blur', () => I.keys.clear());
-  window.addEventListener('pointerdown', () => { if (A.ctx && A.ctx.state === 'suspended' && !S.paused) A.ctx.resume().catch(() => {}); }, true);
+  // Keys reach the game only while its frame holds keyboard focus. When the
+  // focus leaves (a click on the chat beside the game, a tab switch) the game
+  // pauses and says so; the next click inside brings focus and play back.
+  // Without this the kid stands still with no clue why (seen 2026-09-14).
+  window.addEventListener('blur', () => { I.keys.clear(); if (playing()) { S.blurPaused = true; setPause(true, 'focus'); } });
+  window.addEventListener('pointerdown', () => {
+    try { window.focus(); } catch (e) {}
+    if (A.ctx && A.ctx.state === 'suspended' && !S.paused) A.ctx.resume().catch(() => {});
+    if (S.paused && S.blurPaused) { S.blurPaused = false; setPause(false); }
+  }, true);
   function axis() {
     let x = I.joy.x, y = I.joy.y;
     for (const k in AX) if (I.keys.has(k)) { x += AX[k][0]; y += AX[k][1]; }
@@ -345,13 +353,13 @@
     hideScreen(); bootAudio(); TM.last = 0;
     try { if (S.cfg.onStart) S.cfg.onStart(); } catch (e) { console.error(e); }
   }
-  function setPause(p) {
+  function setPause(p, why) {
     p = !!p;
     if (!S.started || S.over || p === S.paused) return;
     S.paused = p;
     if (!p) hideScreen();
     else if (wantLock()) aimOverlay();
-    else { const sc = screen('pause'); el('div', 'yk-title', T.paused, sc); el('div', 'yk-sub', T.esc, sc); button(sc, T.resume, () => setPause(false)); }
+    else { const sc = screen('pause'); el('div', 'yk-title', T.paused, sc); el('div', 'yk-sub', why === 'focus' ? T.focus : T.esc, sc); button(sc, T.resume, () => { S.blurPaused = false; setPause(false); }); }
     try { if (A.ctx) (p ? A.ctx.suspend() : A.ctx.resume()).catch(() => {}); } catch (e) {}
     try { if (S.cfg.onPause) S.cfg.onPause(p); } catch (e) { console.error(e); }
   }

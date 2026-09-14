@@ -662,6 +662,7 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
             title={game.title}
             sandbox="allow-scripts allow-pointer-lock"
             srcDoc={html}
+            onLoad={(event) => event.currentTarget.focus()}
           />
         ) : status === 'failed' ? (
           <div className="game-player__state" role="alert">
