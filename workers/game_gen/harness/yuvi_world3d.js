@@ -144,6 +144,7 @@
     const V = new THREE.Vector3(), V2 = new THREE.Vector3(), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), C = new THREE.Color(), C2 = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
     const toV3 = (v, out) => { out = out || new THREE.Vector3(); if (!v) return out.set(0, 0, 0); if (Array.isArray(v)) return out.set(+v[0] || 0, +v[1] || 0, +v[2] || 0); if (v.isVector3) return out.copy(v); if (v.position) return out.copy(v.position); return out.set(+v.x || 0, +v.y || 0, +v.z || 0); };
     const animated = [];                                  // {update(dt)} of world pieces (water, clouds, ambient, flocks)
+    const ctx = {};                                       // filled for plugins once W exists (see the end of world())
 
     // ── renderer ──
     let renderer;
@@ -164,11 +165,22 @@
     const scene = new THREE.Scene();
     const fogColor = new THREE.Color(P.fog[0]);
     scene.background = fogColor;
-    if (opts.fog !== false) scene.fog = new THREE.Fog(fogColor, size * (opts.fog && opts.fog.near != null ? opts.fog.near / size : P.fog[1]), size * (opts.fog && opts.fog.far != null ? opts.fog.far / size : P.fog[2]));
+    // Fog is clamped to a readable floor: a game that asked for near 5 / far 60 on a 130-unit world was grey mush two steps
+    // from the player. `fog: {near, far, force: true}` bypasses the floor for a deliberate whiteout.
+    if (opts.fog !== false) {
+      const fo = opts.fog || {}, force = !!fo.force;
+      let near = fo.near != null ? +fo.near : size * P.fog[1], far = fo.far != null ? +fo.far : size * P.fog[2];
+      if (!force) { near = Math.max(near, size * .12); far = Math.max(far, size * .55, near + size * .3); }
+      scene.fog = new THREE.Fog(fogColor, near, far);
+    }
     const camera = new THREE.PerspectiveCamera(70, (window.innerWidth || 640) / (window.innerHeight || 360), .1, Math.max(400, size * 2.8));
     camera.position.set(0, 2.2, half * .35); camera.lookAt(0, 1, 0);
     const hemi = new THREE.HemisphereLight(P.hemi[0], P.hemi[1], P.hemi[2]); scene.add(hemi);
     const sun = new THREE.DirectionalLight(P.sun[0], P.sun[1]); sun.position.set(P.sun[2][0], P.sun[2][1], P.sun[2][2]); scene.add(sun);
+    // Never black on black: dark biomes get a cool ambient fill and a little more exposure so the ground, props and
+    // enemies read at a glance; the lamps and windows still carry the mood. `fill: 0` / `exposure: 1` opt out.
+    const fill = new THREE.AmbientLight(opts.fillColor || (dark ? '#4a5a8a' : '#ffffff'), opts.fill != null ? +opts.fill : (dark ? .55 : .15)); scene.add(fill);
+    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = opts.exposure != null ? +opts.exposure : (dark ? 1.25 : 1.05);
     if (shadows) {
       sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
       const sc = sun.shadow.camera; sc.left = sc.bottom = -half; sc.right = sc.top = half; sc.near = 1; sc.far = size * 3;
@@ -302,8 +314,17 @@
     flock('birds', opts.birds != null ? opts.birds : P.birds); flock('fish', opts.fish != null ? opts.fish : P.fish);
 
     // ── materials + part geometry ──
-    const mats = {};
-    const matFor = (hex, unlit, alpha) => { const k = (unlit ? 'u' : 'l') + hex + (alpha || ''); return mats[k] || (mats[k] = unlit ? new THREE.MeshBasicMaterial({ color: hex, transparent: !!alpha, opacity: alpha || 1 }) : new THREE.MeshLambertMaterial({ color: hex, flatShading: true, transparent: !!alpha, opacity: alpha || 1 })); };
+    const mats = {}, textures = {}, texCache = {};
+    // A texture name resolves through the plugin registry (`ctx.textures[name] = (THREE, ctx) => Texture | {map, bumpMap, bumpScale, emissiveMap}`); unknown names fall back to flat colour.
+    const texFor = name => { if (!name) return null; if (texCache[name] !== undefined) return texCache[name]; const f = textures[name]; let t = null; try { t = f ? f(THREE, ctx) : null; } catch (e) { warn('texture "' + name + '": ' + (e && e.message)); } if (!t && f === undefined) warn('unknown texture "' + name + '" — flat colour used'); return (texCache[name] = t && t.isTexture ? { map: t } : (t || null)); };
+    const matFor = (hex, unlit, alpha, tex) => {
+      const k = (unlit ? 'u' : 'l') + hex + (alpha || '') + (tex ? '#' + tex : '');
+      if (mats[k]) return mats[k];
+      const T = tex ? texFor(tex) : null, base = { color: hex, transparent: !!alpha, opacity: alpha || 1 };
+      if (T) { base.map = T.map || null; if (T.bumpMap) { base.bumpMap = T.bumpMap; base.bumpScale = T.bumpScale || .02; } if (T.emissiveMap && !unlit) { base.emissiveMap = T.emissiveMap; base.emissive = new THREE.Color(T.emissive || '#ffffff'); } }
+      return (mats[k] = unlit ? new THREE.MeshBasicMaterial(base) : new THREE.MeshLambertMaterial(Object.assign({ flatShading: !T }, base)));
+    };
+    const texOf = (p, o) => (o && o.textures && o.textures[p.c]) || (o && o.texture && !unlitFor(p) ? o.texture : null) || p.t || null;
     const GEO = { box: a => new THREE.BoxGeometry(a[0], a[1], a[2]), cyl: a => new THREE.CylinderGeometry(a[0], a[1], a[2], a[3]), cone: a => new THREE.ConeGeometry(a[0], a[1], a[2]),
       sphere: a => new THREE.SphereGeometry(a[0], a[1], a[2]), dodeca: a => new THREE.DodecahedronGeometry(a[0], a[1]), octa: a => new THREE.OctahedronGeometry(a[0], a[1]) };
     function partGeo(p) { const g = GEO[p.g](p.a); if (p.rz) g.rotateZ(p.rz); if (p.rx) g.rotateX(p.rx); if (p.s) g.scale(p.s[0], p.s[1], p.s[2]); g.translate(p.p[0], p.p[1], p.p[2]); return g; }
@@ -343,7 +364,7 @@
         p.y = Kd.float && water ? water.level - .1 : (p.y || groundY(p.x, p.z)); return p; });
       const parts = partsOf(Kd, o);
       const meshes = parts.map(p => {
-        const m = new THREE.InstancedMesh(partGeo(p), matFor(partColor(p, o), unlitFor(p)), Math.max(1, positions.length));
+        const m = new THREE.InstancedMesh(partGeo(p), matFor(partColor(p, o), unlitFor(p), 0, texOf(p, o)), Math.max(1, positions.length));
         positions.forEach((q, i) => {
           M.compose(V.set(q.x, q.y, q.z), Q.setFromAxisAngle(UP, q.rot), V2.set(q.s, q.s, q.s)); m.setMatrixAt(i, M);
           C.set(partColor(p, o)).multiplyScalar(q.tint); m.setColorAt(i, C);
@@ -364,7 +385,7 @@
       const Kd = KINDS[kind]; o = o || {};
       if (!Kd) { warn('props.make: unknown kind "' + kind + '"'); return new THREE.Group(); }
       const g = new THREE.Group(); g.name = kind;
-      partsOf(Kd, o).forEach(p => { const m = new THREE.Mesh(partGeo(p), matFor(partColor(p, o), unlitFor(p))); m.castShadow = shadows && !p.e; g.add(m); });
+      partsOf(Kd, o).forEach(p => { const m = new THREE.Mesh(partGeo(p), matFor(partColor(p, o), unlitFor(p), 0, texOf(p, o))); m.castShadow = shadows && !p.e; g.add(m); });
       const s = +o.scale || 1; g.scale.set(s, s, s); g.userData.radius = Kd.r * s;
       if (Kd.light && o.light !== false && lights.length < LIGHT_CAP) { const pl = new THREE.PointLight(Kd.light.c, Kd.light.i * (dark ? 1.3 : .6), Kd.light.d * s, 1.6); pl.position.set(0, Kd.light.y, 0); g.add(pl); lights.push(pl); }
       if (o.pos) { toV3(o.pos, g.position); if (o.snap !== false) g.position.y += Kd.float && water ? water.level - .1 : groundY(g.position.x, g.position.z); }
@@ -864,17 +885,26 @@
     requestAnimationFrame(() => { if (!started) { for (let i = 0; i < animated.length; i++) animated[i].update(0); render(); } });   // first frame after the game's synchronous setup
 
     const W = {
-      scene: scene, camera: camera, renderer: renderer, ground: ground, water: water, sky: sky, sun: sun, hemi: hemi, lights: lights, palette: palette, size: size, preset: P, biome: P, terrain: T,
+      scene: scene, camera: camera, renderer: renderer, ground: ground, water: water, sky: sky, sun: sun, hemi: hemi, fill: fill, lights: lights, palette: palette, size: size, preset: P, biome: P, terrain: T,
       add: o => { if (o && o.isObject3D) scene.add(o); else warn('add(obj): not an Object3D'); return o; },
       remove: o => { if (o && o.isObject3D) scene.remove(o); return o; },
       update: update, render: render, run: run, resize: resize, dispose: dispose, raycast: raycast, rand: rand, groundY: groundY, decorate: decorate,
-      props: { scatter: scatter, place: place, make: make, character: character, actor: o => character(Object.assign({ kind: 'human', role: 'villager' }, o || {})), kinds: Object.keys(KINDS), variants: { tree: Object.keys(KINDS.tree.variants) }, roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), sets: propSets },
+      props: { scatter: scatter, place: place, make: make, character: character, actor: o => character(Object.assign({ kind: 'human', role: 'villager' }, o || {})), get kinds() { return Object.keys(KINDS); }, get variants() { const v = {}; for (const k in KINDS) if (KINDS[k].variants) v[k] = Object.keys(KINDS[k].variants); return v; }, roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), sets: propSets,
+        define: (name, def) => { if (!name || !def || !Array.isArray(def.parts)) { warn('props.define(name, {r, jit, parts[, variants, light, soft, float]}) — parts required'); return; } KINDS[name] = Object.assign({ r: .6, jit: [1, 1] }, def); } },
       player: player, enemy: enemy, enemies: enemies, projectiles: projectiles,
       fx: { hit: fxHit, flashLight: flashLight }, minimap: minimap, objective: objective,
       get stats() { const r = renderer.info.render; return { objects: scene.children.length, drawCalls: r.calls, triangles: r.triangles, enemies: enemies.length, props: propSets.reduce((n, h) => n + h.positions.length, 0), fx: FX.active, lights: lights.length }; }
     };
+    // ── plugins: the other world3d files (materials, props, atmosphere) and the fps module extend W here ──
+    Object.assign(ctx, { W: W, THREE: THREE, scene: scene, camera: camera, renderer: renderer, opts: opts, P: P, dark: dark, size: size, half: half, K: K, palette: palette, rand: rand, seedNum: seedNum, mulberry32: mulberry32,
+      KINDS: KINDS, ROLES: ROLES, SKIN: SKIN, HAIRC: HAIRC, ANIMALS: ANIMALS, PRESETS: PRESETS, GEO: GEO, partGeo: partGeo, matFor: matFor, textures: textures, roleHex: roleHex, partColor: partColor, unlitFor: unlitFor,
+      hemi: hemi, sun: sun, fill: fill, lights: lights, LIGHT_CAP: LIGHT_CAP, animated: animated, propSets: propSets, enemies: enemies, player: player, groundY: groundY, collide: collide, toV3: toV3, clamp: clamp, kit: kit, warn: warn, shadows: shadows, water: water, fogColor: fogColor, V: V, V2: V2, M: M, Q: Q, C: C, UP: UP });
+    for (let i = 0; i < PLUGINS.length; i++) { try { PLUGINS[i](W, THREE, ctx); } catch (e) { warn('plugin ' + (PLUGINS[i].name || i) + ' failed: ' + (e && e.message)); console.error(e); } }
     return W;
   }
 
-  window.YuviWorld3D = { world: world, presets: Object.keys(PRESETS), biomes: Object.keys(PRESETS), kinds: Object.keys(KINDS), roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), seed: s => mulberry32(seedNum(s)) };
+  const PLUGINS = [];
+  window.YuviWorld3D = { world: world, presets: Object.keys(PRESETS), biomes: Object.keys(PRESETS), get kinds() { return Object.keys(KINDS); }, roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), seed: s => mulberry32(seedNum(s)),
+    // `YuviWorld3D.use((W, THREE, ctx) => { … })` — called for every world created after registration; ctx exposes the internals (KINDS, matFor, textures, lights, …).
+    use: fn => { if (typeof fn === 'function') PLUGINS.push(fn); }, plugins: PLUGINS };
 })();

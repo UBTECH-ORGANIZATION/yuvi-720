@@ -59,10 +59,10 @@ _THINK_IN = {
 LEARNING_STANCE = """
 LEARNING THROUGH PLAY
 The learning idea (the LEARNING block) is not a quiz to bolt on — it is the mechanic. Playing well should require thinking with the concept, and the concept's vocabulary should sit on the objects, the HUD and the level names, so a kid absorbs it by playing.
-- mass, gross / tare / net → the ship hauls crates; the HUD shows gross, tare and net; to lift off the kid must dump tare, never cargo.
 - coordinates → the play field IS a grid with axes; targets spawn at (x, y); the kid aims or types coordinates to hit them.
 - chemical formulas → enemies are molecules; the kid assembles the right formula from atom pickups to break their shield.
 - word roots / grammar → platforms are words; only the ones with the right root bear weight.
+These are the shape of the idea, not a menu: for YOUR topic invent the mechanic from the ANGLE given in the brief (sorting, estimating, balancing, converting, decoding, building, timing, comparing…) so two games on the same topic play differently — the crate-with-a-label-on-it loop is the default to avoid.
 Questions are optional. If you ask any, they are yours: you write them and you know the answers. Never gate the whole game behind a quiz; let the idea live in every move.
 THE ANSWER IS NEVER IN THE PROMPT. The kid gets the givens and works out the result: "the ramp rises 3 and runs 4 — set the ratio" is learning; "the ratio is 3:4, type it" is a copy task worth nothing. Randomise the givens every round so there is no pattern to memorise; after a miss show the right answer WITH the reason (one line), then a similar round.
 """.strip()
@@ -84,7 +84,8 @@ WHAT YOU SHIP (what a senior Phaser 4 / Three.js developer would)
 - A curve that keeps adding elements (a new enemy or rule, faster, a twist), a fail state with instant retry (`YuviKit.screens.gameOver`), a satisfying win (`YuviKit.screens.win`).
 - As long as it needs, in one delivery. Structure it (classes for entities, a config block for tuning, `YuviKit.loop` for the frame) and write it all in one pass — no TODOs, no "add more later".
 - Readable: strong contrast between player, enemies and background; in 3D a bright ambient plus a key light, light far fog and a visible ground — never black on black.
-- Kid-safe: cartoon targets, no blood, no real-world weapons, no scary imagery. Warm tone.
+- Kid-safe means stylised, not toothless: blasters, bolts, paint and foam instead of realistic firearms; enemies that fall, power down or dissolve — never blood, gore or horror. Tension, sprint-and-cover combat and boss fights are welcome; cruelty is not.
+- The brief is the spec. When the kid asks for an FPS with three weapons, reloads, enemy AI that shoots back, rain and floodlights, ship exactly that (the fps + world3d modules carry it) and put the learning inside it — never trade the asked-for game for a quieter one, and never ship an unarmed "guard walks around" version of a shooter.
 """.strip()
 
 TECH_RULES = """
@@ -183,6 +184,27 @@ def _titles_line(pack: ContextPack) -> str:
     return " · ".join(bits)
 
 
+#: One is drawn per build (seeded by the job) and named in the brief: the mechanic's
+#: verb. It is what keeps ten games on "mass" from all being "shoot the labelled crate".
+ANGLES = (
+    "sorting — the kid classifies things by the concept under time pressure",
+    "estimating — the kid judges a quantity by eye/feel, then the world reveals the truth",
+    "balancing — the kid keeps a system in equilibrium (scales, loads, budgets) while it is disturbed",
+    "converting — the kid translates between units, forms or representations to unlock things",
+    "decoding — the concept is a cipher the kid learns to read; reading it reveals the path or the weak spot",
+    "building — the kid assembles something from parts and only the right structure works",
+    "timing — the kid acts at the moment the concept says to (a rhythm, a threshold, a crossing)",
+    "comparing — the kid must pick the larger / smaller / equal, with the givens hidden in the world",
+    "routing — the kid plans a path or an order through the world where the concept sets the cost of each step",
+    "targeting — the kid aims at the thing the concept singles out, computed from givens shown around it",
+)
+
+
+def angle_for(seed: str) -> str:
+    """A stable pick from ANGLES for a job id."""
+    return ANGLES[sum(ord(ch) for ch in str(seed)) % len(ANGLES)]
+
+
 def _learning_block(pack: ContextPack) -> str:
     desc = pack.learning_description.strip() or "(no description yet — design from the titles below)"
     return f"LEARNING — make this the mechanic:\n{desc}\nTitles: {_titles_line(pack)}"
@@ -190,7 +212,7 @@ def _learning_block(pack: ContextPack) -> str:
 
 def create_prompt(pack: ContextPack, *, vibe: str = "", inspirations: list[str] | None = None,
                   learner_title: str = "", design_doc: str = "", genre: str = "open",
-                  clarifications: dict[str, str] | None = None) -> str:
+                  clarifications: dict[str, str] | None = None, angle: str = "") -> str:
     """The build request: the kid's brief, the learning paragraph, the pitch
     (when the plan pass ran) — the design itself is the model's call."""
     extra = ""
@@ -208,7 +230,7 @@ Design and build a learning game for a kid. The design is yours: choose the genr
 
 The kid's brief: "{vibe.strip() or 'make the most impressive game you can for this idea'}"{_inspiration_lines(inspirations, genre)}{extra}{named}
 
-{_learning_block(pack)}{pitch}
+{_learning_block(pack)}{_angle_line(angle)}{pitch}
 
 Device: {pack.device}. Language: {pack.language}.
 
@@ -255,14 +277,18 @@ NEEDS — the last line, English, exactly `NEEDS: <names>` from {world3d, ui, ar
 Write in the kid's language as a producer describing the game: neutral register, third person, no slang, never address the reader (no "אחי", "bro", "hey you"), no gendered forms. Be concrete and short; no preamble, no closing line."""
 
 
-def plan_prompt(pack: ContextPack, vibe: str = "", inspirations: list[str] | None = None) -> str:
+def _angle_line(angle: str) -> str:
+    return f"\nANGLE for this build (the mechanic's verb — build the loop around it): {angle}" if angle else ""
+
+
+def plan_prompt(pack: ContextPack, vibe: str = "", inspirations: list[str] | None = None, angle: str = "") -> str:
     think = _THINK_IN.get(pack.language, "")
     return f"""{think}
 Pitch a learning game. Language of the pitch: {pack.language}. Device: {pack.device}.
 
 The kid's brief: "{vibe.strip() or 'make the most impressive game you can for this idea'}"{_inspiration_lines(inspirations)}
 
-{_learning_block(pack)}"""
+{_learning_block(pack)}{_angle_line(angle)}"""
 
 
 # ── Judge v2 ─────────────────────────────────────────────────────────────────

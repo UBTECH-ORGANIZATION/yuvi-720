@@ -561,7 +561,7 @@ async def _run_plan(spec: JobSpec, totals: UsageTotals, progress: ProgressFn) ->
         await session.start()
         progress({"type": "plan", "status": "start", "model": spec.plan_model})
         timer = _timer()
-        turn = await session.send(prompts.plan_prompt(spec.pack, spec.vibe, spec.inspirations))
+        turn = await session.send(prompts.plan_prompt(spec.pack, spec.vibe, spec.inspirations, angle=prompts.angle_for(spec.job_id)))
         totals.add("game.plan", turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
         await _ledger(spec, "game.plan", timer, spec.plan_model, turn.usage, turn.error)
         if turn.error:
@@ -698,7 +698,8 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         system = prompts.builder_system_message(language, needs=state.needs)
         prompt = prompts.create_prompt(spec.pack, vibe=spec.vibe, inspirations=spec.inspirations,
                                        learner_title=spec.learner_title, design_doc=design_doc,
-                                       genre=spec.genre, clarifications=spec.clarifications)
+                                       genre=spec.genre, clarifications=spec.clarifications,
+                                       angle=prompts.angle_for(spec.job_id))
     else:
         state.needs = modules.resolve(spec.needs, html=spec.current_html)
         system = prompts.editor_system_message(language, needs=state.needs)

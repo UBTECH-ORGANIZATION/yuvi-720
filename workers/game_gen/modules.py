@@ -17,10 +17,12 @@ from typing import Iterable
 HARNESS_DIR = Path(__file__).parent / "harness"
 SKILLS_DIR = Path(__file__).parent / "skills"
 
-#: name → js file, skill doc, globals that reveal it in HTML, chips that imply it.
+#: name → js file(s) (the first is required, the rest are optional plugins injected after it),
+#: skill doc, globals that reveal it in HTML, chips that imply it, modules it requires.
 REGISTRY: dict[str, dict[str, object]] = {
     "world3d": {
-        "js": "yuvi_world3d.js", "skill": "world3d.md",
+        "js": ("yuvi_world3d.js", "yuvi_world3d_materials.js", "yuvi_world3d_props.js", "yuvi_world3d_atmo.js"),
+        "skill": ("world3d.md", "world3d_materials.md", "world3d_props.md", "world3d_atmo.md"),
         "tokens": ("YuviWorld3D",),
         "chips": ("3d", "shooter", "fps", "adventure", "race", "explore"),
         "words": ("3d", "תלת", "ثلاثي", "fps", "גוף ראשון", "first person", "third person", "מעוף", "world"),
@@ -37,6 +39,12 @@ REGISTRY: dict[str, dict[str, object]] = {
         "chips": ("platformer", "arcade", "runner", "topdown"),
         "words": ("פלטפורמה", "platformer", "arcade", "מסלול 2d", "2d"),
     },
+    "fps": {
+        "js": "yuvi_fps.js", "skill": "fps.md", "requires": ("world3d",),
+        "tokens": ("YuviFPS",),
+        "chips": ("shooter", "fps"),
+        "words": ("fps", "shooter", "ירי", "יריות", "יורים", "נשק", "כלי נשק", "גוף ראשון", "first person", "gun", "weapon", "إطلاق", "سلاح", "منظور الشخص الأول"),
+    },
 }
 ORDER = tuple(REGISTRY)  # injection and prompt order, fixed for the cache
 _NEEDS_RE = re.compile(r"^\s*NEEDS\s*[:：]\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
@@ -46,18 +54,40 @@ def known(name: str) -> bool:
     return name in REGISTRY
 
 
+def js_files(name: str) -> tuple[str, ...]:
+    js = REGISTRY[name]["js"]
+    return tuple(js) if isinstance(js, (tuple, list)) else (str(js),)
+
+
 def available(name: str) -> bool:
-    """The module's JS exists on disk (a module can be registered before it ships)."""
-    return known(name) and (HARNESS_DIR / str(REGISTRY[name]["js"])).is_file()
+    """The module's main JS exists on disk (a module can be registered before it ships)."""
+    return known(name) and (HARNESS_DIR / js_files(name)[0]).is_file()
 
 
 def js_text(name: str) -> str:
-    return (HARNESS_DIR / str(REGISTRY[name]["js"])).read_text(encoding="utf-8")
+    """The module's script: its main file plus every plugin file that exists, in order."""
+    parts = []
+    for i, fname in enumerate(js_files(name)):
+        path = HARNESS_DIR / fname
+        if i == 0 or path.is_file():
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
+def requires(name: str) -> tuple[str, ...]:
+    return tuple(REGISTRY[name].get("requires", ()))  # type: ignore[arg-type]
 
 
 def skill_text(name: str) -> str:
-    path = SKILLS_DIR / str(REGISTRY[name]["skill"])
-    return path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+    """The module's skill doc: one file, or a main doc plus the fragments that exist."""
+    skill = REGISTRY[name]["skill"]
+    names = tuple(skill) if isinstance(skill, (tuple, list)) else (str(skill),)
+    parts = []
+    for fname in names:
+        path = SKILLS_DIR / fname
+        if path.is_file():
+            parts.append(path.read_text(encoding="utf-8").strip())
+    return "\n\n".join(p for p in parts if p)
 
 
 def parse_needs(text: str) -> list[str]:
@@ -93,6 +123,9 @@ def resolve(*sources: Iterable[str] | None, html: str = "") -> list[str]:
     for src in sources:
         names.update(str(n).lower() for n in (src or []))
     names.update(sniff(html))
+    for n in list(names):  # a module pulls in what it requires (fps → world3d)
+        if n in REGISTRY:
+            names.update(requires(n))
     return [n for n in ORDER if n in names and available(n)]
 
 

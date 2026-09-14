@@ -142,6 +142,13 @@
   function fit() {
     raf = 0;
     if (!document.body) return;
+    // Kit games fill the window by contract (100vw × 100vh, resize handled),
+    // and their layout is absolute/percentage based: measuring the page with
+    // body collapsed to `height:auto` returns a wrong box, and scaling body to
+    // it shrank the 3D canvas to half the frame after the first DOM mutation
+    // (a shot spawning the fx canvas). The scaler is for legacy fixed-size
+    // games only; the CSS reset and the resize kicks still apply.
+    if (window.YuviKit || document.querySelector('canvas[data-yuvi-world3d], #yk-root')) { restoreOriginalBodyStyle(); return; }
     captureOriginalBodyStyle();
     var vp = viewport();
     var nat = naturalBounds();
