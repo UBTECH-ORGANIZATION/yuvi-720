@@ -109,6 +109,16 @@ class AdminOrgTest(unittest.TestCase):
         self.assertEqual(view["granted_via"][0]["teacher_id"], "alice")
         self.assertEqual(view["granted_via"][0]["group_id"], "g1")
 
+    def test_shared_group_peers_are_deduplicated_and_exclude_requester(self):
+        run(admin_org.save_group("root", {"id": "g2", "school_id": "s1", "name": "Group Two"}))
+        run(admin_org.enroll_learner("root", "kid2", "g1"))
+        run(admin_org.enroll_learner("root", "kid1", "g2"))
+        run(admin_org.enroll_learner("root", "kid2", "g2"))
+
+        from app.brain import org
+
+        self.assertEqual(run(org.learners_sharing_a_group("kid1")), ["kid2"])
+
     # ── guardrails ───────────────────────────────────────────────────────────
 
     def test_unlinking_last_teacher_of_a_populated_group_is_refused(self):

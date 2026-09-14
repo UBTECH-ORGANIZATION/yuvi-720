@@ -496,6 +496,12 @@ def is_component_completion(event: dict[str, Any]) -> bool:
     return _object_tail(object_id) == component_id
 
 
+async def count_distinct_completed_components(learner_id: str) -> int:
+    """Count real component-level completions once per component for unlocks."""
+    events = await get_learner_events(learner_id, limit=EVENT_FETCH_CEILING)
+    return len({str(event.get("launch")) for event in events if is_component_completion(event)})
+
+
 def _context_extensions(statement: dict[str, Any]) -> dict[str, Any]:
     ctx = statement.get("context") or {}
     ext = ctx.get("extensions") if isinstance(ctx, dict) else None

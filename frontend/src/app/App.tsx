@@ -341,6 +341,12 @@ export function App() {
     if (!pathname.startsWith(target)) navigate(target)
   }, [user, stage, pathname, isTeacher])
 
+  // Friends' rooms now opens inside Yuvi Studio. Keep old bookmarks useful
+  // while removing the separate community screen from the learner experience.
+  useEffect(() => {
+    if (routePath.startsWith('/yuvi-studio/community')) navigate('/yuvi-studio', { replace: true })
+  }, [routePath])
+
   // Signed out on a protected URL → go to the landing page for real. As an
   // effect (not during render) so the address bar actually changes; `replace`
   // so Back does not return to a page that would just bounce again. Safe on a

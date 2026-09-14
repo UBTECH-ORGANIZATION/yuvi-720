@@ -45,7 +45,9 @@ from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
+from app.routes.room_community import router as room_community_router
 from app.routes.studio_surprises import router as studio_surprises_router
+from app.routes.studio_time import router as studio_time_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.learning_content import router as learning_content_router
 from app.routes.checkin import router as checkin_router
@@ -277,7 +279,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
+    app.include_router(room_community_router)
     app.include_router(studio_surprises_router)
+    app.include_router(studio_time_router)
     app.include_router(brain_router)
     app.include_router(badges_router)
     app.include_router(xapi_router)

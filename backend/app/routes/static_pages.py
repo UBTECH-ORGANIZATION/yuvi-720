@@ -83,7 +83,7 @@ def mount_static_assets(app: FastAPI) -> None:
     #
     # Mounted per directory rather than mounting the build root at "/", which
     # would sit in front of the API routers and the SPA shell.
-    for public_dir in ("moments",):
+    for public_dir in ("moments", "models"):
         directory = REACT_APP_DIR / public_dir
         if directory.exists():
             app.mount(

@@ -60,12 +60,14 @@ KIND_PINNED_NEXT = "pinned_next"
 # the symmetric half of the drastic-change warning: silent reversal in either
 # direction is the failure mode.
 KIND_MODEL_OVERRIDE = "model_override"
+# A learner in the same group liked the recipient's shared Yuvi Studio room.
+KIND_ROOM_LIKED = "room_liked"
 
 KINDS = (
     KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_GOAL_COMPLETED,
     KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
     KIND_TASK_ASSIGNED, KIND_DEADLINE_REMINDER, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
-    KIND_PINNED_NEXT, KIND_MODEL_OVERRIDE,
+    KIND_PINNED_NEXT, KIND_MODEL_OVERRIDE, KIND_ROOM_LIKED,
 )
 
 # One person can be both. `gal` is a learner AND a teacher, and a bell that

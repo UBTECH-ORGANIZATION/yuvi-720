@@ -6,12 +6,14 @@ events instead of duplicating them. ``--remove`` deletes only these rows.
 Run:
   py scripts/seed_gal_calendar.py
   py scripts/seed_gal_calendar.py --remove
+    py scripts/seed_gal_calendar.py --local
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -21,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.brain.repository import _get_collection_named  # noqa: E402
 from app.core.env import ensure_env_loaded  # noqa: E402
+from app.services import org_repository, timetable  # noqa: E402
 
 
 ensure_env_loaded()
@@ -29,6 +32,8 @@ COLLECTION = "calendar_events"
 LEARNER_ID = "gal"
 CREATOR_ID = "gal"
 SEED_TAG = "demo-gal-calendar-week"
+GROUP_ID = "gal-class"
+SCHOOL_ID = "school-rabin"
 ISRAEL_TIMEZONE = ZoneInfo("Asia/Jerusalem")
 
 
@@ -89,32 +94,115 @@ def _events() -> list[dict]:
     return rows
 
 
+def _lesson_slots() -> list[dict]:
+    now = datetime.now(ISRAEL_TIMEZONE).replace(second=0, microsecond=0)
+    today = now.date()
+    day_end = datetime.combine(today, time(23, 59), ISRAEL_TIMEZONE)
+    active_end = min(now + timedelta(minutes=35), day_end)
+    active_start = now - timedelta(minutes=10)
+    weekday = (today.weekday() + 1) % 7
+    later_days = [today + timedelta(days=offset) for offset in (1, 2, 3)]
+    rows = [{
+        "_id": "seed-gal-calendar-active-lesson",
+        "group_id": GROUP_ID,
+        "school_id": SCHOOL_ID,
+        "subgroup_id": None,
+        "subject": "שיעור מדעים פעיל עכשיו",
+        "subject_key": "science",
+        "teacher_name": "גל",
+        "room": "כיתה 7",
+        "weekday": weekday,
+        "start_time": active_start.time().isoformat(timespec="minutes"),
+        "end_time": active_end.time().isoformat(timespec="minutes"),
+        "valid_from": today.isoformat(),
+        "valid_to": today.isoformat(),
+        "created_by": CREATOR_ID,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "active": True,
+        "seed_tag": SEED_TAG,
+    }]
+    for index, (day, subject) in enumerate(zip(
+        later_days,
+        ("מתמטיקה", "היסטוריה", "אנגלית"),
+    ), 1):
+        rows.append({
+            "_id": f"seed-gal-calendar-lesson-{index}",
+            "group_id": GROUP_ID,
+            "school_id": SCHOOL_ID,
+            "subgroup_id": None,
+            "subject": subject,
+            "subject_key": subject.lower(),
+            "teacher_name": "גל",
+            "room": "כיתה 7",
+            "weekday": (day.weekday() + 1) % 7,
+            "start_time": "10:00",
+            "end_time": "10:45",
+            "valid_from": day.isoformat(),
+            "valid_to": day.isoformat(),
+            "created_by": CREATOR_ID,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "active": True,
+            "seed_tag": SEED_TAG,
+        })
+    return rows
+
+
 def _collection():
     collection = _get_collection_named(COLLECTION)
     if collection is None:
-        print("No Mongo/Cosmos connection configured; nothing was written.")
-        sys.exit(1)
+        print("No Mongo/Cosmos connection configured; skipping free calendar events.")
     return collection
+
+
+async def _ensure_gal_class() -> None:
+    await org_repository.upsert_school(
+        SCHOOL_ID, name="בית ספר רבין, נתניה", moe_code=None, city="נתניה",
+    )
+    await org_repository.upsert_group(
+        GROUP_ID, school_id=SCHOOL_ID, name="הכיתה של גל",
+        subject="math", grade="ז", year=None,
+    )
+    await org_repository.enroll_learner(LEARNER_ID, GROUP_ID, school_id=SCHOOL_ID)
 
 
 async def seed() -> None:
     collection = _collection()
     events = _events()
-    for event in events:
-        await collection.replace_one({"_id": event["_id"]}, event, upsert=True)
-    print(f"Seeded {len(events)} calendar events for {LEARNER_ID}.")
+    lessons = _lesson_slots()
+    await _ensure_gal_class()
+    if collection is not None:
+        for event in events:
+            await collection.replace_one({"_id": event["_id"]}, event, upsert=True)
+    for lesson in lessons:
+        await timetable.save_slot(lesson)
+    event_count = len(events) if collection is not None else 0
+    print(f"Seeded {event_count} calendar events and {len(lessons)} lessons for {LEARNER_ID}.")
     for event in events:
         print(f"  {event['start_at'][:10]}  {event['title']}")
     print("Remove later with: py scripts/seed_gal_calendar.py --remove")
 
 
 async def remove() -> None:
-    result = await _collection().delete_many({"seed_tag": SEED_TAG})
-    print(f"Removed {result.deleted_count} seeded calendar events.")
+    collection = _collection()
+    event_count = 0
+    if collection is not None:
+        result = await collection.delete_many({"seed_tag": SEED_TAG})
+        event_count = result.deleted_count
+    lesson_count = 0
+    for lesson in _lesson_slots():
+        if await timetable.deactivate_slot(lesson["_id"]):
+            lesson_count += 1
+    print(f"Removed {event_count} seeded calendar events and {lesson_count} lessons.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--remove", action="store_true")
+    parser.add_argument("--local", action="store_true")
     args = parser.parse_args()
+    if args.local:
+        os.environ.pop("MONGODB_CONNECTION_STRING", None)
+        os.environ["SPARK_STORAGE"] = "json"
     asyncio.run(remove() if args.remove else seed())

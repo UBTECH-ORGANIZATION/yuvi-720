@@ -3,6 +3,7 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStudioDesign } from './useStudioDesign'
 import { navigate } from '../../app/router'
+import { enterStudio, getStudioTime, leaveStudio, type StudioTimeBudget } from '../../services/api'
 import '../../styles/Yuvi-studio.css'
 
 /* This provider wraps the whole app, but the studio it can open is a Three.js
@@ -20,6 +21,12 @@ const STUDIO_FALLBACK_PATH = '/student-dashboard'
 interface StudioTransitionValue {
   /** Fly Yuvi from a source robot canvas into the studio (shared-element). */
   openStudio: (sourceEl: HTMLElement | null) => void
+  enterStudio: () => Promise<StudioTimeBudget>
+  leaveStudio: () => Promise<StudioTimeBudget | null>
+  refreshStudioTime: () => Promise<StudioTimeBudget | null>
+  studioTime: StudioTimeBudget | null
+  activeStudioRemainingSeconds: number | null
+  setActiveStudioRemainingSeconds: (seconds: number | null) => void
   isOpen: boolean
   /**
    * The route the overlay was opened from. While the overlay is up the address
@@ -59,6 +66,8 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
   const studio = useStudioDesign(false) // loaded on demand when the studio opens
   const [phase, setPhase] = useState<Phase>('closed')
   const [backgroundPath, setBackgroundPath] = useState<string | null>(null)
+  const [studioTime, setStudioTime] = useState<StudioTimeBudget | null>(null)
+  const [activeStudioRemainingSeconds, setActiveStudioRemainingSeconds] = useState<number | null>(null)
   const sourceElRef = useRef<HTMLElement | null>(null)
   const runRef = useRef(0)
   // A portal burst fired at the launcher's spot on the way in and on the way
@@ -72,6 +81,38 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
   const selfNavRef = useRef(false)
 
   const currentPath = () => `${window.location.pathname}${window.location.search}`
+
+  const refreshStudioTime = useCallback(async () => {
+    try {
+      const next = await getStudioTime()
+      setStudioTime(next)
+      return next
+    } catch {
+      return null
+    }
+  }, [])
+
+  const startStudioTime = useCallback(async () => {
+    const next = await enterStudio()
+    setStudioTime(next)
+    setActiveStudioRemainingSeconds(next.allowed ? next.remaining_seconds : null)
+    return next
+  }, [])
+
+  const stopStudioTime = useCallback(async () => {
+    setActiveStudioRemainingSeconds(null)
+    try {
+      const next = await leaveStudio()
+      setStudioTime(next)
+      return next
+    } catch {
+      return null
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshStudioTime()
+  }, [refreshStudioTime])
 
   const fireBurst = useCallback((kind: 'in' | 'out', rect?: DOMRect | null) => {
     if (prefersReducedMotion() || !rect || rect.width === 0) return
@@ -126,6 +167,8 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
 
   const openStudio = useCallback(async (sourceEl: HTMLElement | null) => {
     if (phase !== 'closed') return
+    const time = await startStudioTime()
+    if (!time.allowed) return
     const run = ++runRef.current
     sourceElRef.current = sourceEl
     // Measure NOW: navigating away unmounts a route-scoped launcher, and a
@@ -163,9 +206,10 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
       el.style.removeProperty('--ys-from')
     }
     setPhase('open')
-  }, [phase, studio])
+  }, [phase, startStudioTime, studio])
 
   const closeStudio = useCallback(async () => {
+    void stopStudioTime()
     const run = ++runRef.current
     const el = stageEl()
     const natural = el?.getBoundingClientRect()
@@ -199,13 +243,23 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
     // 'closing' keeps a full-screen overlay mounted over the page and unmounts
     // the companion Yuvi, which reads to the learner as a frozen dashboard.
     if (runRef.current === run) setPhase('closed')
-  }, [backgroundPath])
+  }, [backgroundPath, stopStudioTime])
 
   const overlayMounted = phase !== 'closed'
   const overlayVisible = phase === 'opening' || phase === 'open'
 
   return (
-    <StudioTransitionCtx.Provider value={{ openStudio, isOpen: overlayMounted, backgroundPath }}>
+    <StudioTransitionCtx.Provider value={{
+      openStudio,
+      enterStudio: startStudioTime,
+      leaveStudio: stopStudioTime,
+      refreshStudioTime,
+      studioTime,
+      activeStudioRemainingSeconds,
+      setActiveStudioRemainingSeconds,
+      isOpen: overlayMounted,
+      backgroundPath,
+    }}>
       {children}
       {overlayMounted && (
         <div className={`studio-overlay${overlayVisible ? ' is-visible' : ''}`}>

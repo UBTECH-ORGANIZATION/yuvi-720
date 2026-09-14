@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_learner
 from app.services import rewards, unlock_sync, unlocks
+from app.services.events import count_distinct_completed_components
 from learner_state import get_learner_state  # type: ignore
 
 
@@ -30,8 +31,9 @@ async def read_catalog(learner_id: str = Depends(require_learner)):
     state = await get_learner_state(learner_id)
     owned_avatar = state.get("avatar_unlocks") or earned["avatar_unlocks"]
     owned_props = state.get("room_unlocks") or earned["room_unlocks"]
+    completed_components = await count_distinct_completed_components(learner_id)
     return JSONResponse(content={
-        "items": rewards.catalog_for_client(owned_avatar),
+        "items": rewards.catalog_for_client([*owned_avatar, *owned_props], completed_components=completed_components),
         "wallet": await rewards.get_wallet(learner_id),
         "unlocks": unlocks.catalog_for_client(owned_avatar, owned_props),
         "roomUnlocks": sorted(owned_props),

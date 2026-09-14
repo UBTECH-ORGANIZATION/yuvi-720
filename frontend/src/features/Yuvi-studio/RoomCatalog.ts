@@ -3,7 +3,7 @@
 /**
  * Room prop catalog — everything a learner can put in their own room.
  *
- * Same contract as YuviAssets: each entry is a pure procedural builder that
+ * Same contract as YuviAssets: each entry is a resource-owned builder that
  * returns a self-contained THREE.Group authored in FLOOR-LOCAL space (origin on
  * the floor, +Z toward the front of the room). The room module positions and
  * rotates the group; a builder never touches the scene.
@@ -11,12 +11,23 @@
  * House rules:
  *  - geometry and materials come from the shared kit so 60 props do not
  *    allocate 600 GPU objects
- *  - nothing casts a shadow (the room has exactly one shadow-casting light and
- *    it belongs to Yuvi); props are grounded with a blob instead
+ *  - detailed loft meshes cast shadows in rich mode; simpler props use blobs
  *  - anything that glows is emissive/additive geometry, never a real light
  */
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { createRoomModelCache } from './RoomModelCache'
+import { createLoftFabrication, type LoftTranslator } from './LoftFabrication'
+import { buildLoftCabinet, LOFT_CABINET_BOUNDS } from './LoftCabinets'
+import { buildSportsEquipment } from './SportsEquipment'
+import { SPORTS_ARTWORK_KINDS, SPORTS_LEGACY_ARTWORK_KINDS, SPORTS_NEW_ITEM_BOUNDS } from './SportsArenaCatalog'
+import type { SportsArenaArtwork } from './SportsArtwork'
+import { batchSportsMeshes } from './SportsMeshBatch'
+import { createPlaygroundKit } from './PlaygroundKit'
+import { buildPlaygroundRide, PLAYGROUND_RIDE_BOUNDS, type PlaygroundRideKind } from './PlaygroundCatalog'
+import { buildPlaygroundEquipment } from './PlaygroundEquipment.ts'
+import { PLAYGROUND_EQUIPMENT, type PlaygroundEquipmentKind } from './PlaygroundItems.ts'
+export { SPORTS_ARENA_STARTER_PROP_IDS } from './SportsArenaCatalog'
 
 export type RoomItemCategory = 'seating' | 'desk' | 'play' | 'nature' | 'light' | 'tech' | 'wall'
 export type RoomItemPlacement = 'floor' | 'wall'
@@ -33,6 +44,10 @@ export interface RoomItemSpec {
   tintable?: boolean
   /** Default tint for tintable props. */
   tint?: string
+  /** Low top surfaces Yuvi can step onto, in catalog-local coordinates. */
+  walkSurfaces?: Array<{ x?: number; z?: number; width: number; depth: number; height: number }>
+  /** Optional smaller hard obstacle inside a broadly walkable item. Zero means fully walkable. */
+  walkBlockerRadius?: number
   build: (kit: RoomKit, tint: THREE.Color) => THREE.Object3D
 }
 
@@ -41,6 +56,14 @@ export type MatKind =
 
 export interface RoomKit {
   rich: boolean
+  playground: (kind: PlaygroundRideKind, tint: THREE.Color) => THREE.Group
+  playgroundEquipment: (kind: PlaygroundEquipmentKind) => THREE.Group
+  loft: (kind: string, tint: THREE.Color) => THREE.Group
+  sports: (kind: string, tint: THREE.Color) => THREE.Group
+  sportsPrint: (artwork: SportsArenaArtwork) => THREE.Material
+  gymSignPrint: () => THREE.Material
+  setLabels: (translate: LoftTranslator) => void
+  model: (id: 'gamepad' | 'gaming_console' | 'rubber_duck_toy' | 'digital_wrist_watch', size: readonly [number, number, number]) => THREE.Group
   mat: (kind: MatKind, color?: THREE.ColorRepresentation) => THREE.Material
   box: (w: number, h: number, d: number, mat: THREE.Material) => THREE.Mesh
   rbox: (w: number, h: number, d: number, r: number, mat: THREE.Material) => THREE.Mesh
@@ -58,10 +81,14 @@ export interface RoomKit {
 /* ── shared kit ─────────────────────────────────────────────────────────────
    One kit per room instance. It owns every geometry/material it hands out and
    returns a disposer, so the room's own dispose() stays a one-liner. */
-export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => void } {
+export function createRoomKit(rich: boolean): { kit: RoomKit; ready: () => Promise<void>; dispose: () => void } {
   const disposables: Array<{ dispose: () => void }> = []
+  const models = createRoomModelCache()
+  const fabrication = createLoftFabrication(rich)
+  let playground: ReturnType<typeof createPlaygroundKit> | undefined
   const geoCache = new Map<string, THREE.BufferGeometry>()
   const matCache = new Map<string, THREE.Material>()
+  const sportsCache = new Map<string, THREE.Group>()
 
   const geo = <T extends THREE.BufferGeometry>(key: string, make: () => T): T => {
     let cached = geoCache.get(key) as T | undefined
@@ -130,6 +157,29 @@ export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => voi
 
   const kit: RoomKit = {
     rich,
+    playground: (kind, tint) => buildPlaygroundRide(playground ??= createPlaygroundKit(rich), kind, tint),
+    playgroundEquipment: (kind) => buildPlaygroundEquipment(playground ??= createPlaygroundKit(rich), kind),
+    sportsPrint: (artwork) => fabrication.print(artwork),
+    gymSignPrint: () => fabrication.print('gymSign', 'YuviStudio.room.gymSign.title'),
+    loft: (kind, tint) => buildLoftCabinet(fabrication, kind, tint, kit.model),
+    sports: (kind, tint) => {
+      const key = `${kind}:${tint.getHexString()}`
+      let prototype = sportsCache.get(key)
+      if (!prototype) {
+        prototype = buildSportsEquipment(kind, {
+          ...kit,
+          mat: (finish, color) => {
+            const finishes = { metal: 'steel', gloss: 'paint', matte: 'rubber', dark: 'rubber', fabric: 'cloth', glass: 'glass' } as const
+            return finishes[finish] ? fabrication.material(finishes[finish], color ?? 0xffffff) : mat(finish, color)
+          },
+        }, tint)
+        batchSportsMeshes(prototype, (geometry) => disposables.push(geometry))
+        sportsCache.set(key, prototype)
+      }
+      return prototype.clone(true)
+    },
+    setLabels: fabrication.setLabels,
+    model: (id, size) => models.model(`/models/creator-loft/${id}/${id}.gltf`, size),
     mat,
     box: (w, h, d, material) => new THREE.Mesh(geo(`b${w}|${h}|${d}`, () => new THREE.BoxGeometry(w, h, d)), material),
     rbox: (w, h, d, r, material) => new THREE.Mesh(geo(`r${w}|${h}|${d}|${r}`, () => new RoundedBoxGeometry(w, h, d, rich ? 3 : 1, r)), material),
@@ -170,11 +220,19 @@ export function createRoomKit(rich: boolean): { kit: RoomKit; dispose: () => voi
 
   return {
     kit,
+    ready: async () => {
+      await playground?.ready()
+      if (playground?.failures.length) throw new Error('Playground catalog assets unavailable')
+    },
     dispose: () => {
+      fabrication.dispose()
+      playground?.dispose()
+      models.dispose()
       for (const item of disposables) item.dispose?.()
       disposables.length = 0
       geoCache.clear()
       matCache.clear()
+      sportsCache.clear()
     },
   }
 }
@@ -1267,9 +1325,263 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
       return group
     },
   },
+  {
+    id: 'parkBench', category: 'seating', placement: 'floor', radius: 1.55, height: 0.9,
+    walkSurfaces: [{ width: 2.97, depth: 0.74, height: 0.24 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const timber = kit.mat('wood', 0x8a6845)
+      const steel = kit.mat('metal', 0x27343a)
+      for (const z of [-0.24, 0, 0.24]) group.add(at(kit.rbox(2.97, 0.08, 0.19, 0.025, timber), 0, 0.24, z))
+      for (const x of [-1.17, 1.17]) group.add(at(kit.box(0.1, 0.24, 0.54, steel), x, 0.12, 0))
+      for (const x of [-1.28, -0.85, -0.43, 0, 0.43, 0.85, 1.28]) {
+        const slat = at(kit.rbox(0.33, 0.08, 0.6, 0.025, timber), x, 0.54, -0.3)
+        slat.rotation.x = -0.12
+        group.add(slat)
+      }
+      return group
+    },
+  },
+  {
+    id: 'parkSandbox', category: 'play', placement: 'floor', radius: 2.2, height: 0.45,
+    walkSurfaces: [{ width: 4.11, depth: 3.54, height: 0.057 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const timber = kit.mat('wood', 0x8a6845)
+      group.add(at(kit.box(4.11, 0.114, 3.54, kit.mat('matte', 0xd8b765)), 0, 0.057, 0))
+      for (const [width, depth, x, z] of [
+        [4.34, 0.19, 0, -1.8], [4.34, 0.19, 0, 1.8],
+        [0.19, 3.77, -2.09, 0], [0.19, 3.77, 2.09, 0],
+      ] as const) group.add(at(kit.rbox(width, 0.19, depth, 0.035, timber), x, 0.095, z))
+      group.add(at(kit.cyl(0.24, 0.24, 0.31, kit.mat('gloss', 0xe66f54), 12), -1.03, 0.27, -0.46))
+      const handle = at(kit.tor(0.27, 0.026, kit.mat('metal', 0x27343a)), -1.03, 0.45, -0.46)
+      handle.rotation.x = Math.PI / 2
+      group.add(handle)
+      const shovel = at(kit.box(0.07, 0.07, 0.74, kit.mat('gloss', 0x4a8ec2)), -0.46, 0.17, 0.17)
+      shovel.rotation.y = 0.65
+      group.add(shovel)
+      for (const [index, [x, z]] of [[-0.57, -0.86], [0.74, 0.74], [-0.34, 0.97]].entries()) {
+        group.add(at(kit.cone(0.22, 0.27, kit.mat('gloss', [0x66f28f, 0xffcf4a, 0xff6f91][index])), x, 0.2, z))
+      }
+      return group
+    },
+  },
+  ...Object.entries(PLAYGROUND_EQUIPMENT).map(([id, bounds]): RoomItemSpec => ({
+    id, category: 'play', placement: 'floor', radius: bounds.radius, height: bounds.height,
+    build: (kit) => kit.playgroundEquipment(id as PlaygroundEquipmentKind),
+  })),
+  ...Object.entries(PLAYGROUND_RIDE_BOUNDS).map(([id, bounds]): RoomItemSpec => ({
+    id, category: 'play', placement: 'floor', ...bounds,
+    tintable: true, tint: '#258b82',
+    build: (kit, tint) => kit.playground(id as PlaygroundRideKind, tint),
+  })),
+  {
+    id: 'sportsBench', category: 'seating', placement: 'floor', radius: 1.65, height: 0.82,
+    walkSurfaces: [{ width: 3.15, depth: 0.78, height: 0.28 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const steel = kit.mat('metal', 0x253846)
+      const seat = kit.mat('matte', 0x2e95ad)
+      group.add(at(kit.rbox(3.15, 0.16, 0.78, 0.06, seat), 0, 0.28, 0))
+      for (const x of [-1.18, 1.18]) {
+        group.add(at(kit.box(0.12, 0.28, 0.58, steel), x, 0.14, 0))
+        const brace = at(kit.box(0.09, 0.58, 0.09, steel), x, 0.54, -0.3)
+        brace.rotation.x = -0.16
+        group.add(brace)
+      }
+      group.add(at(kit.rbox(2.7, 0.12, 0.52, 0.04, kit.mat('matte', 0x253f50)), 0, 0.7, -0.34))
+      return group
+    },
+  },
+  {
+    id: 'sportsBallRack', category: 'play', placement: 'floor', radius: 1.35, height: 1.65,
+    walkBlockerRadius: 0.68,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const steel = kit.mat('metal', 0x263846)
+      for (const x of [-0.92, 0.92]) {
+        group.add(at(kit.box(0.1, 1.55, 0.1, steel), x, 0.78, 0))
+        group.add(at(kit.box(0.1, 0.1, 1.05, steel), x, 0.08, 0))
+      }
+      for (const y of [0.42, 0.92, 1.42]) {
+        group.add(at(kit.box(1.94, 0.08, 0.08, steel), 0, y, -0.43))
+        group.add(at(kit.box(1.94, 0.08, 0.08, steel), 0, y, 0.43))
+      }
+      const colors = [0xf06b46, 0x55cbe8, 0xf0c94c, 0xe95662, 0x72d39b, 0xf06b46]
+      for (let index = 0; index < colors.length; index += 1) {
+        const row = Math.floor(index / 2)
+        const ball = at(kit.sph(0.28, kit.mat('matte', colors[index])), index % 2 ? 0.48 : -0.48, 0.43 + row * 0.5, 0)
+        ball.rotation.set(index * 0.4, index * 0.7, 0)
+        group.add(ball)
+      }
+      return group
+    },
+  },
+  {
+    id: 'sportsTrainingBox', category: 'play', placement: 'floor', radius: 1.25, height: 0.62,
+    walkSurfaces: [{ width: 2.15, depth: 1.55, height: 0.62 }],
+    walkBlockerRadius: 0,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(2.15, 0.62, 1.55, 0.09, kit.mat('dark', 0x22343e)), 0, 0.31, 0))
+      group.add(at(kit.rbox(1.78, 0.035, 1.18, 0.025, kit.mat('matte', 0x62d7e8)), 0, 0.638, 0))
+      for (const x of [-0.82, 0.82]) group.add(at(kit.box(0.2, 0.045, 1.22, kit.mat('emissive', 0xff6268)), x, 0.64, 0))
+      return group
+    },
+  },
+  {
+    id: 'sportsMiniGoal', category: 'play', placement: 'floor', radius: 1.8, height: 1.25,
+    walkBlockerRadius: 0.52,
+    build: (kit, tint) => kit.sports('sportsMiniGoal', tint),
+  },
+  { id: 'sportsDumbbellRack', category: 'play', placement: 'floor', radius: 1.7, height: 1.45, tintable: true, tint: '#20a8a0', walkBlockerRadius: 1.35, build: (kit, tint) => kit.sports('sportsDumbbellRack', tint) },
+  { id: 'sportsSquatRack', category: 'play', placement: 'floor', radius: 2.1, height: 3.1, tintable: true, tint: '#e4564f', walkBlockerRadius: 1.5, build: (kit, tint) => kit.sports('sportsSquatRack', tint) },
+  { id: 'sportsCableMachine', category: 'play', placement: 'floor', radius: 1.8, height: 3.1, tintable: true, tint: '#20a8a0', walkBlockerRadius: 1.25, build: (kit, tint) => kit.sports('sportsCableMachine', tint) },
+  { id: 'sportsLegPress', category: 'play', placement: 'floor', radius: 1.7, height: 1.65, tintable: true, tint: '#e4564f', walkBlockerRadius: 1.25, build: (kit, tint) => kit.sports('sportsLegPress', tint) },
+  { id: 'sportsAdjustableBench', category: 'seating', placement: 'floor', radius: 1.2, height: 1.5, tintable: true, tint: '#20a8a0', walkBlockerRadius: 0.7, build: (kit, tint) => kit.sports('sportsAdjustableBench', tint) },
+  { id: 'sportsRacketCorner', category: 'play', placement: 'floor', radius: 1.05, height: 1.8, tintable: true, tint: '#e4564f', walkBlockerRadius: 0.55, build: (kit, tint) => kit.sports('sportsRacketCorner', tint) },
+  { id: 'sportsSeatingBench', category: 'seating', placement: 'floor', radius: 1.65, height: 0.68, walkSurfaces: [{ width: 3.05, depth: 0.76, height: 0.65 }], walkBlockerRadius: 0, build: (kit, tint) => kit.sports('sportsSeatingBench', tint) },
+  { id: 'sportsPortableScoreboard', category: 'tech', placement: 'floor', radius: 0.9, height: 2, tintable: true, tint: '#20a8a0', walkBlockerRadius: 0.55, build: (kit, tint) => kit.sports('sportsPortableScoreboard', tint) },
+  { id: 'sportsJerseyDisplay', category: 'wall', placement: 'wall', radius: 0.95, height: 1.9, tintable: true, tint: '#e4564f', build: (kit, tint) => kit.sports('sportsJerseyDisplay', tint) },
+  { id: 'sportsJerseyDisplayAlt', category: 'wall', placement: 'wall', radius: 0.95, height: 1.9, tintable: true, tint: '#20a8a0', build: (kit, tint) => kit.sports('sportsJerseyDisplayAlt', tint) },
+  {
+    id: 'loftArcadeCabinet', category: 'play', placement: 'floor', radius: 0.72, height: 2.05,
+    tintable: true, tint: '#5de7ff',
+    build: (kit, tint) => kit.loft("loftArcadeCabinet", tint),
+  },
+  {
+    id: 'loftClawMachine', category: 'play', placement: 'floor', radius: 0.9, height: 2.2,
+    tintable: true, tint: '#ff70b7',
+    build: (kit, tint) => kit.loft("loftClawMachine", tint),
+  },
+  {
+    id: 'loftTokenPusher', category: 'play', placement: 'floor', radius: 0.92, height: 1.72,
+    tint: '#507d79',
+    build: (kit, tint) => kit.loft("loftTokenPusher", tint),
+  },
+  {
+    id: 'loftPinball', category: 'play', placement: 'floor', radius: 1.05, height: 1.72,
+    tint: '#b15c49',
+    build: (kit, tint) => kit.loft("loftPinball", tint),
+  },
+  {
+    id: 'loftBasketballArcade', category: 'play', placement: 'floor', radius: 1.65, height: 2.45,
+    tint: '#b87738',
+    build: (kit, tint) => kit.loft("loftBasketballArcade", tint),
+  },
+  {
+    id: 'loftPrizeCounter', category: 'desk', placement: 'floor', radius: 2.1, height: 1.65,
+    build: (kit, tint) => kit.loft("loftPrizeCounter", tint),
+  },
 ]
 
+for (const id of ['loftRacingSimulator', 'loftAirHockey', 'loftVrStation']) {
+  ROOM_ITEMS.push({
+    id, category: 'play', placement: 'floor', ...LOFT_CABINET_BOUNDS[id],
+    tintable: true, tint: id === 'loftRacingSimulator' ? '#b85848' : '#448b89',
+    build: (kit, tint) => kit.loft(id, tint),
+  })
+}
+
+for (const [id, bounds] of Object.entries(SPORTS_NEW_ITEM_BOUNDS)) {
+  ROOM_ITEMS.push({
+    id, category: id === 'sportsWallScoreboard' ? 'wall' : id === 'sportsParkBench' ? 'seating' : 'play',
+    placement: id === 'sportsWallScoreboard' ? 'wall' : 'floor', ...bounds,
+    tintable: id === 'sportsBasketballHoop', tint: '#d8654d',
+    build: (kit, tint) => kit.sports(id, tint),
+  })
+}
+
+for (const [id, artwork] of Object.entries({ ...SPORTS_ARTWORK_KINDS, ...SPORTS_LEGACY_ARTWORK_KINDS })) {
+  ROOM_ITEMS.push({
+    id, category: 'wall', placement: 'wall', radius: 1.8, height: 2.7,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(3.45, 2.7, 0.1, 0.02, kit.mat('metal', 0x454e49)), 0, 1.35, 0.04))
+      group.add(at(kit.plane(3.3, 2.574, kit.sportsPrint(artwork)), 0, 1.35, 0.1))
+      return group
+    },
+  })
+}
+
 export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', 'nature', 'light', 'tech', 'wall']
+
+/** Curated portal furniture can be placed by system journeys but is not sold
+ *  through the learner catalogue until its destination interactions are ready. */
+export const PORTAL_FURNITURE_ITEMS: RoomItemSpec[] = [
+  {
+    id: 'worldCapsuleGate', category: 'tech', placement: 'floor', radius: 0.9, height: 1.6,
+    tintable: true, tint: '#61d9ff',
+    build: (kit) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('metal', 0xa8b8d8)
+      // The generator is deliberately reduced to its hovering metallic ring.
+      group.add(at(kit.tor(0.84, 0.065, shell), 0, 1.5, 0))
+      return group
+    },
+  },
+  {
+    id: 'portalCabinet', category: 'tech', placement: 'floor', radius: 0.85, height: 2.15,
+    tintable: true, tint: '#ff718a',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('dark', 0x191d40)
+      const trim = kit.mat('metal', 0x8897c8)
+      group.add(at(kit.rbox(1.22, 2.02, 0.48, 0.08, shell), 0, 1.01, 0))
+      for (const sx of [-0.42, 0.42]) group.add(at(kit.cyl(0.025, 0.025, 1.58, trim, 8), sx, 1.1, 0.26))
+      for (let index = 0; index < 3; index++) {
+        const y = 0.56 + index * 0.5
+        group.add(at(kit.rbox(0.88, 0.36, 0.05, 0.03, kit.mat('emissive', index === 1 ? tint : 0x4eeef0)), 0, y, 0.265))
+        group.add(at(kit.halo(0.7, index === 1 ? tint : 0x4eeef0, 0.25), 0, y, 0.29))
+      }
+      group.add(at(kit.rbox(1.3, 0.1, 0.55, 0.04, trim), 0, 0.06, 0))
+      return group
+    },
+  },
+  {
+    id: 'personalSignalTower', category: 'tech', placement: 'floor', radius: 0.7, height: 3.35,
+    tintable: true, tint: '#ffd166',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const tower = kit.mat('metal', 0x7d89b8)
+      group.add(at(kit.cyl(0.54, 0.68, 0.14, kit.mat('dark', 0x161a37), 20), 0, 0.07, 0))
+      group.add(at(kit.cyl(0.12, 0.16, 2.65, tower, 12), 0, 1.4, 0))
+      for (const y of [0.9, 1.55, 2.2]) {
+        const ring = at(kit.tor(0.32, 0.022, kit.mat('emissive', tint)), 0, y, 0)
+        ring.rotation.x = Math.PI / 2
+        group.add(ring)
+      }
+      group.add(at(kit.cone(0.22, 0.42, kit.mat('emissive', tint)), 0, 2.93, 0))
+      group.add(at(kit.halo(2.2, tint, 0.38), 0, 2.72, 0.04))
+      return group
+    },
+  },
+  {
+    id: 'holoNavigationConsole', category: 'tech', placement: 'floor', radius: 0.95, height: 1.55,
+    tintable: true, tint: '#a896ff',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const dark = kit.mat('dark', 0x171a38)
+      group.add(at(kit.rbox(1.36, 0.12, 0.78, 0.07, dark), 0, 0.72, 0))
+      for (const [sx, sz] of [[-0.53, -0.26], [0.53, -0.26], [-0.53, 0.26], [0.53, 0.26]]) {
+        group.add(at(kit.cyl(0.045, 0.065, 0.68, kit.mat('metal', 0x8794bd), 8), sx, 0.34, sz))
+      }
+      const map = at(kit.cyl(0.44, 0.44, 0.025, kit.sheer(tint, 0.62, true), 24), 0, 1.18, 0)
+      map.rotation.x = Math.PI / 2
+      group.add(map)
+      for (let index = 0; index < 3; index++) {
+        const orbit = at(kit.tor(0.34 + index * 0.09, 0.012, kit.mat('emissive', tint)), 0, 1.18, 0)
+        orbit.rotation.x = Math.PI / 2 + index * 0.32
+        group.add(orbit)
+      }
+      group.add(at(kit.halo(1.65, tint, 0.42), 0, 1.18, 0.04))
+      return group
+    },
+  },
+]
 
 /** Surprise props are resolvable by the renderer but never sold in the room menu. */
 export const WEEKLY_SURPRISE_COVERED = 'weekly_surprise_covered'
@@ -1414,7 +1726,7 @@ export const WEEKLY_SURPRISE_ITEMS: RoomItemSpec[] = [
   },
 ]
 
-const ALL_ROOM_ITEMS = [...ROOM_ITEMS, ...WEEKLY_SURPRISE_ITEMS]
+const ALL_ROOM_ITEMS = [...ROOM_ITEMS, ...WEEKLY_SURPRISE_ITEMS, ...PORTAL_FURNITURE_ITEMS]
 const BY_ID = new Map(ALL_ROOM_ITEMS.map((spec) => [spec.id, spec]))
 if (import.meta.env?.DEV && BY_ID.size !== ALL_ROOM_ITEMS.length) {
   // A reused id silently shadows the original prop and, once ids are gated,

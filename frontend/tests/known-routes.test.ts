@@ -89,6 +89,11 @@ describe('the route table and the renderer describe the same app', () => {
     assert.ok(isKnown('/tasks/abc'))
   })
 
+  it('redirects retired Friends room URLs into Yuvi Studio', () => {
+    assert.match(APP, /if \(routePath\.startsWith\('\/yuvi-studio\/community'\)\) navigate\('\/yuvi-studio', \{ replace: true \}\)/)
+    assert.doesNotMatch(pageForRouteBody(), /yuvi-studio\/community/)
+  })
+
   it('lists the teacher lane screen by screen', () => {
     // The bare `/teacher` prefix is what made the catch-all swallow typos; if
     // it comes back into the table, every assertion above stops meaning
