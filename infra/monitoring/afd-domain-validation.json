@@ -1,0 +1,108 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workflowName": { "type": "string", "defaultValue": "la-afd-domain-validation" },
+    "location": { "type": "string", "defaultValue": "westeurope" },
+    "frontDoorProfileId": { "type": "string" },
+    "instrumentationKey": { "type": "string" },
+    "ingestionEndpoint": { "type": "string" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('workflowName')]",
+      "location": "[parameters('location')]",
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "triggers": {
+            "Daily": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Day",
+                "interval": 1,
+                "timeZone": "Israel Standard Time",
+                "schedule": { "hours": ["7"], "minutes": [0] }
+              }
+            }
+          },
+          "actions": {
+            "List_custom_domains": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "[concat('https://management.azure.com', parameters('frontDoorProfileId'), '/customDomains?api-version=2024-02-01')]",
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://management.azure.com/"
+                }
+              }
+            },
+            "Find_drifted_domains": {
+              "type": "Query",
+              "runAfter": { "List_custom_domains": ["Succeeded"] },
+              "inputs": {
+                "from": "@body('List_custom_domains')?['value']",
+                "where": "@not(equals(item()?['properties']?['domainValidationState'], 'Approved'))"
+              }
+            },
+            "If_any_domain_drifted": {
+              "type": "If",
+              "runAfter": { "Find_drifted_domains": ["Succeeded"] },
+              "expression": {
+                "greater": ["@length(body('Find_drifted_domains'))", 0]
+              },
+              "actions": {
+                "Summarise": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Find_drifted_domains')",
+                    "select": "@concat(item()?['properties']?['hostName'], ' is ', item()?['properties']?['domainValidationState'])"
+                  }
+                },
+                "Report_to_App_Insights": {
+                  "type": "Http",
+                  "runAfter": { "Summarise": ["Succeeded"] },
+                  "inputs": {
+                    "method": "POST",
+                    "uri": "[concat(parameters('ingestionEndpoint'), 'v2/track')]",
+                    "headers": { "Content-Type": "application/json" },
+                    "body": {
+                      "name": "Microsoft.ApplicationInsights.Availability",
+                      "time": "@{utcNow()}",
+                      "iKey": "[parameters('instrumentationKey')]",
+                      "tags": { "ai.operation.id": "@{guid()}" },
+                      "data": {
+                        "baseType": "AvailabilityData",
+                        "baseData": {
+                          "ver": 2,
+                          "id": "@{guid()}",
+                          "name": "afd-domain-validation",
+                          "duration": "00:00:01",
+                          "success": false,
+                          "runLocation": "logic-app",
+                          "message": "@{join(body('Summarise'), '; ')}"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', parameters('workflowName')), '2019-05-01', 'full').identity.principalId]"
+    }
+  }
+}
