@@ -84,6 +84,8 @@ class FakeSession:
         if "A reviewer played your game" in prompt:
             return _turn(FakeSession.revision_reply)
         name, params = FakeSession.script[min(len(FakeSession.prompts) - 1, len(FakeSession.script) - 1)]
+        if "raw" in params:  # a verbatim reply (patches, or anything not shaped as a delivery)
+            return _turn(params["raw"], params.get("out", 300))
         body = params.get("html", "")
         text = (f"TITLE: {params.get('title', '')}\nBRIEF: {params.get('design_brief', 'עולם')}\n"
                 f"SUMMARY: {params.get('learning_summary', '')}\n```html\n{body}\n```\n")
@@ -372,3 +374,41 @@ def test_edit_asks_once_for_the_full_game_when_patches_do_not_apply():
     assert "COMPLETE updated game" in TextSession.prompts_seen[1]
     assert TextSession.instances[-1].kw["tools"] == []
     assert result.attempts[0].reason == "patch" and result.attempts[0].error_classes == ["no_delivery"]
+
+
+STUB_BROKEN = TINY_GAME.replace("YuviLearn.mount(", "undefinedThing(")  # what stub_validator rejects
+
+
+def test_a_failed_delivery_is_repaired_with_patches(stub_validator):
+    """The second turn gets the numbered file and answers with line patches,
+    not the whole game: the repair costs a few hundred tokens."""
+    broken_line = next(i for i, l in enumerate(STUB_BROKEN.splitlines(), 1) if "undefinedThing(" in l)
+    fixed_line = TINY_GAME.splitlines()[broken_line - 1]
+    patch = f"SUMMARY: תיקנתי את הקריאה\nREPLACE_LINES {broken_line}-{broken_line}\n{fixed_line}\nEND_REPLACE\n"
+    FakeSession.script = [("submit_game", {"html": STUB_BROKEN, "title": "משחק"}), ("submit_game", {"raw": patch})]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok, result.error
+    assert [a.ok for a in result.attempts] == [False, True]
+    assert "CURRENT GAME (line-numbered)" in FakeSession.prompts[1] and "PATCHES" in FakeSession.prompts[1]
+    assert "undefinedThing" not in result.html and "YuviLearn.mount(" in result.html
+    assert len(FakeSession.instances) == 1, "the repair happened in the same session"
+
+
+def test_after_three_failures_one_escalation_runs_at_medium(stub_validator):
+    """MAX_SUBMISSIONS failed deliveries → one fresh session at medium effort,
+    edit-shaped, with the last candidate; its full game is accepted."""
+    FakeSession.script = [("submit_game", {"html": STUB_BROKEN, "title": "משחק"})] * 3 + [("submit_game", {"html": TINY_GAME})]
+    result = asyncio.run(pipeline.run_job(_spec()))
+    assert result.ok, result.error
+    assert [a.ok for a in result.attempts] == [False, False, False, True]
+    escalated = [i for i in FakeSession.instances if i.kw.get("session_id") == "j1-escalate"]
+    assert len(escalated) == 1 and escalated[0].kw["reasoning_effort"] == "medium" and escalated[0].kw["model"] == result.model
+    assert "HOW TO DELIVER AN EDIT" in escalated[0].kw["system_message"]
+    assert "undefinedThing is not defined" in FakeSession.prompts[-1]
+
+
+def test_no_escalation_when_the_session_already_ran_at_medium(stub_validator):
+    FakeSession.script = [("submit_game", {"html": STUB_BROKEN, "title": "משחק"})]
+    result = asyncio.run(pipeline.run_job(_spec(reasoning_effort="medium")))
+    assert not result.ok and len(result.attempts) == 3
+    assert not [i for i in FakeSession.instances if i.kw.get("session_id") == "j1-escalate"]

@@ -115,6 +115,22 @@ def summarise(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 for c in a.get("error_classes") or []:
                     classes[str(c)] += 1
         row["top_errors"] = ", ".join(f"{k}×{v}" for k, v in classes.most_common(3)) or "-"
+        # v3 columns: how much the model wrote, how warm the cache was, how
+        # often the first frame after Start was flat, which modules were used.
+        lines = [int(a.get("html_lines") or 0) for j in items for a in (j.get("attempts_detail") or []) if a.get("ok")]
+        row["lines_p50"] = round(percentile([float(x) for x in lines], 0.5)) if lines else None
+        ratios = []
+        for j in items:
+            u = j.get("usage_summary") or {}
+            seen = float(u.get("input_tokens") or 0) + float(u.get("cache_read_tokens") or 0)
+            if seen:
+                ratios.append(float(u.get("cache_read_tokens") or 0) / seen)
+        row["cache_ratio"] = round(statistics.fmean(ratios), 2) if ratios else None
+        flats = [bool((a.get("phases") or {}).get("first_frame_blank")) for j in items
+                 for a in (j.get("attempts_detail") or []) if (a.get("phases") or {}).get("first_frame_blank") is not None]
+        row["first_frame_blank_rate"] = round(sum(flats) / len(flats), 2) if flats else None
+        needs: Counter[str] = Counter(n for j in items for n in (j.get("needs") or []))
+        row["needs"] = ", ".join(f"{k}×{v}" for k, v in needs.most_common(3)) or "-"
         rows.append(row)
     return rows
 
@@ -128,7 +144,8 @@ def to_markdown(rows: list[dict[str, Any]]) -> str:
         return "_no jobs_"
     cols = ["model", "effort", "n", "pass_rate", "total_s_p50", "total_s_p95", "queued_s_p95", "wake_s_p95",
             "plan_s_p50", "model_s_p50", "validate_s_p50", "judge_s_p50", "revise_s_p50", "persist_s_p50",
-            "cost_mean", "cost_p95", *[f"judge_{k}" for k in SCORES], "revision_rate", "shrink_rate", "top_errors"]
+            "cost_mean", "cost_p95", *[f"judge_{k}" for k in SCORES], "revision_rate", "shrink_rate", "top_errors",
+            "lines_p50", "cache_ratio", "first_frame_blank_rate", "needs"]
     head = "| " + " | ".join(cols) + " |\n|" + "---|" * len(cols) + "\n"
     body = "".join("| " + " | ".join(_fmt(r.get(c)) for c in cols) + " |\n" for r in rows)
     return head + body
