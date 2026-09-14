@@ -59,6 +59,16 @@ ensure_env_loaded()
 
 _DEV_SIGNING_SECRET = "yuvi720-dev-secret"
 _PRODUCTION_NAMES = {"production", "prod"}
+_LOCAL_NAMES = {"local", "localhost", "test", "testing", ""}
+
+
+def environment_name() -> str:
+    """The deployed environment: local · dev · english · production."""
+    for name in ("SPARK_ENVIRONMENT", "ENVIRONMENT"):
+        value = (os.environ.get(name) or "").strip().lower()
+        if value:
+            return value
+    return ""
 
 
 def is_production() -> bool:
@@ -67,6 +77,25 @@ def is_production() -> bool:
         (os.environ.get(name) or "").strip().lower() in _PRODUCTION_NAMES
         for name in ("ENVIRONMENT", "SPARK_ENVIRONMENT")
     )
+
+
+def is_local() -> bool:
+    """True only on a developer machine or in the test suite.
+
+    An unset environment counts as local: every cloud slot sets
+    SPARK_ENVIRONMENT explicitly, so "unset" can only be a laptop or CI.
+    """
+    return environment_name() in _LOCAL_NAMES
+
+
+def password_login_allowed() -> bool:
+    """Username/password login is a local-development affordance only.
+
+    In the cloud the Ministry of Education OIDC provider is the single way in,
+    so a stolen or seeded password cannot become an entry point to real learner
+    data. `POST /api/auth/login` 404s everywhere else.
+    """
+    return is_local() and not is_production()
 
 
 def signing_secret() -> str:
