@@ -771,7 +771,8 @@ export function YuviRobot3D({
     renderer.domElement.addEventListener('click', onBadgeClick)
 
     // ── Animation loop ──
-    const clock = new THREE.Clock()
+    // THREE.Clock is deprecated (r185+); elapsed seconds from performance.now() instead.
+    const startedAt = performance.now()
     let lookX = 0
     let lookY = 0
     let speakAmt = 0   // smoothed 0→1 "is talking" amount
@@ -786,7 +787,7 @@ export function YuviRobot3D({
     const loop = () => {
       frame = requestAnimationFrame(loop)
       if (container.offsetParent === null) return
-      const t = clock.getElapsedTime()
+      const t = (performance.now() - startedAt) / 1000
 
       // Ease the speaking amount so gestures start and stop smoothly.
       const speakTarget = speakingRef.current ? 1 : 0
