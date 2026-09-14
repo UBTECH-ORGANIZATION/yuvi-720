@@ -282,3 +282,26 @@ every game on the same component converged on "shoot the labelled crate".
   attack → search AI that shoot back; player hp/armor; pickups), and a richer `props.character`
   (joint hierarchy, faces, hair, clothing layers, gear, sockets for held items, aim/crouch/lookAt).
   Skill fragments: `skills/world3d_{materials,props,atmo}.md`, `skills/fps.md`.
+
+### Bake-off 2026-09-14 — six genres on kit v3.1 (Opus 5, dev worker)
+
+Briefs: a third-person delivery drone (coordinates), a potion café (ratio), a tiny robot in a giant house (scale), a tractor-beam space arcade (compounds), a noir detective (AI prompts), a mountain truck convoy (gross/tare/net). Four of six landed on world3d + ui; two were DOM/canvas games.
+
+| game | effort | cost | out tokens | time | attempts | judge L/F/P/A |
+|---|---|---|---|---|---|---|
+| drone | low | $0.47 | 18.9k | 302 s | 1 | 5/5/5/5 |
+| potions | low | $0.46 | 15.3k | 203 s | 1 | 5/4/4/5 |
+| tinybot | low | $0.53 | 11.9k | 149 s | 1 | 5/4/5/5 |
+| atoms | medium | $0.95 | 26.7k | 402 s | 1 | 5/5/5/5 |
+| noir | low | $0.96 | 24.9k | 346 s | 4 | 5/4/4/5 |
+| trucks | medium | $0.83 | 22.8k | 341 s | 1 | 5/4/4/5 |
+
+What the probes found (all fixed in the kit the same day):
+- **Two loops froze a game.** `YuviKit.loop` ticked the clock per registered callback, so a game with its own `YuviKit.loop` next to `W.run()` got dt ≈ 0 in one of them — the drone never moved although the judge passed it. One clock now drives every loop.
+- **Dock regions overlapped each other.** The centre strips (`top`/`bottom`, up to 80 vw) sat on the same row as the corner regions; the corners now clear the strips by their measured height (`--yk-dock-top/bottom`, ResizeObserver). The world3d minimap docks itself into the corner region instead of floating over it.
+- **The hero spawned facing away from the level.** `player.avatar` faced +z (the character's face) while the fps rig and the model's mental model face -z; gates and signs at `z < spawn` were behind the kid. Avatars now spawn facing -z; `face:[x,y,z]` / `yaw` override.
+- **No interior props.** "A tiny robot in a giant house" got the `village` layout on planks — the library only had outdoor sets. An `interior` set and `house` / `classroom` layouts were added.
+- **Canvas games draw under the HUD.** The noir game painted word cards at y ≈ 0. `YuviKit.safe()` reports the HUD/dock insets; the core skill tells canvas games to keep content inside.
+- **Small API leniency.** `materials.ground({blend: [{texture, mask}]})` (a one-item list of the object form) is accepted.
+
+Cost notes: the cache reads only when jobs run back to back (drone 27.9k, noir 56k read; the rest cold). Low effort holds judge ≥ 4 on 3D briefs; the one costly build was the DOM game that needed three repairs (syntax, TDZ) — still under $1.

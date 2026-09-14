@@ -344,7 +344,8 @@
       const rep = o.repeat != null ? repOf(o) : [size / 4, size / 4], T = name ? maps(name, { repeat: rep, seed: o.seed, colors: o.colors, size: o.size }) : null;
       if (!T) { if (name) warn('materials.ground: unknown texture "' + name + '"'); else warn('materials.ground(name | {texture, repeat, tint, blend, triplanar})'); return null; }
       const mat = new THREE.MeshLambertMaterial({ color: o.tint || '#ffffff', map: T.map, bumpMap: T.bumpMap || null, bumpScale: T.bumpScale || 0, vertexColors: !!o.vertexColors });
-      const b = o.blend ? (Array.isArray(o.blend) ? { texture: o.blend[0], mask: o.blend[1] } : o.blend) : null, T2 = b && b.texture ? maps(b.texture, { repeat: rep, seed: o.seed }) : null;
+      // blend accepts ['gravel', 'slope'], {texture, mask}, or a one-item list of that object — all three have been written by the model
+      const b0 = Array.isArray(o.blend) && o.blend.length && typeof o.blend[0] === 'object' ? o.blend[0] : o.blend, b = b0 ? (Array.isArray(b0) ? { texture: b0[0], mask: b0[1] } : b0) : null, T2 = b && b.texture ? maps(b.texture, { repeat: rep, seed: o.seed }) : null;
       if (b && !T2) warn('materials.ground: blend texture "' + b.texture + '" unknown — single texture used');
       const tri = !!o.triplanar, U = {}, A = ctx.W.terrain || {}, amp = Math.max(.5, (A.amp || 3) * (A.hills || .3) * 2);
       let key = 'ground', vpre = 'vYwMask = 0.0;', sample = (t, s) => tri ? 'ywTri(' + t + ', uTri * ' + s + ')' : 'texture2D(' + t + ', vMapUv * ' + s + ')';

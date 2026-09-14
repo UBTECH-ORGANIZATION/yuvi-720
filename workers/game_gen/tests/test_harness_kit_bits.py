@@ -54,3 +54,50 @@ def test_labels_givens_and_reset_work_together():
     assert bits.get("given") == 2, bits            # the givens rows are in the panel
     assert bits.get("downFired") == 0, bits        # reset() never fires onDown
     assert bits.get("soldiersAfterReset") == 0, bits
+
+
+# ── bake-off 2026-09-14: one clock for every loop, stacked docks, spawn facing ──────────────────────
+LOOPS_GAME = """<!DOCTYPE html>
+<html lang="he"><head><meta charset="UTF-8"><title>loops</title></head><body>
+<script type="module">
+import * as THREE from '%(three)s';
+const probe = (window.__yuvi.loops = { dtA: [], dtB: [], overlap: null, mapDocked: false, facing: null, safeTop: 0 });
+const W = YuviWorld3D.world(THREE, { preset: 'lab', seed: 1, size: 60 });
+const hero = W.props.character({ kind: 'robot', pos: [0, 0, 8] });
+const ctrl = W.player.avatar(hero, { camera: 'follow' });
+probe.facing = +ctrl.forward().z.toFixed(2);
+W.minimap();
+const strip = document.createElement('div'); strip.textContent = 'מטרה: רוצו לשער הנכון — x אופקי, y אנכי'; strip.style.cssText = 'padding:12px 40px;background:#000;color:#fff;font-size:20px';
+YuviKit.dock(strip, 'bottom');
+const panel = document.createElement('div'); panel.textContent = 'מיקום הרחפן: (0 , 0) | גובה: 24 | רוח: דוחפת למטה'; panel.style.cssText = 'padding:12px;background:#222;color:#fff;font-size:18px';
+YuviKit.dock(panel, 'bottom-left');
+YuviKit.init({ title: 'loops', hud: [{ id: 'score', label: 'ניקוד', value: 0 }], onStart: () => {
+  YuviKit.loop(dt => { if (probe.dtA.length < 30) probe.dtA.push(dt); });
+  setTimeout(() => {
+    const a = strip.getBoundingClientRect(), b = panel.getBoundingClientRect(), m = document.querySelector('#yk-root canvas').getBoundingClientRect();
+    const hit = (p, q) => Math.min(p.right, q.right) > Math.max(p.left, q.left) && Math.min(p.bottom, q.bottom) > Math.max(p.top, q.top);
+    probe.overlap = hit(a, b) || hit(a, m) || hit(b, m);
+    probe.mapDocked = !!document.querySelector('#yk-root .yk-dock canvas');
+    probe.safeTop = YuviKit.safe().top;
+  }, 600);
+} });
+W.run();                                   // a second loop, like the games do next to their own YuviKit.loop
+YuviKit.loop(dt => { if (probe.dtB.length < 30) probe.dtB.push(dt); });
+</script></body></html>""" % {"three": THREE_URL}
+
+
+@pytest.mark.slow
+def test_loops_share_one_clock_and_docks_stack():
+    if not chromium_available():
+        pytest.skip("Playwright Chromium not installed")
+    res = validate_html_sync(LOOPS_GAME, preinject_html=build_harness(LEARN, nonce="loops1", modules=["world3d", "ui"]), settle_ms=1500, interaction_settle_ms=2500, screenshot=False)
+    assert res.validator_error is None
+    assert res.errors == [], res.errors
+    p = (res.yuvi_state or {}).get("loops") or {}
+    a, b = p.get("dtA") or [], p.get("dtB") or []
+    assert len(a) >= 10 and len(b) >= 10, p
+    assert sum(a[2:]) / len(a[2:]) > 0.005 and sum(b[2:]) / len(b[2:]) > 0.005, (a[:5], b[:5])   # both loops see real frame time, not ~0
+    assert p.get("overlap") is False, p        # bottom strip, bottom-left panel and the minimap never overlap
+    assert p.get("mapDocked") is True, p
+    assert p.get("facing") == -1, p            # avatar spawns facing -z, so a level at z < spawn is in view
+    assert p.get("safeTop", 0) > 0, p

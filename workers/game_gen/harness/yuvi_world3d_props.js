@@ -1,14 +1,15 @@
 /*
- * yuvi_world3d_props.js — the PROP LIBRARY plugin for YuviWorld3D: ~80 themed
- * prop kinds (industrial, urban, nature, sci-fi, medieval) with named variants,
+ * yuvi_world3d_props.js — the PROP LIBRARY plugin for YuviWorld3D: ~100 themed
+ * prop kinds (industrial, urban, nature, sci-fi, medieval, interior) with named variants,
  * built from the core's primitive-part format so every kind instances for free
  * through W.props.scatter / place / make, plus themed compound layouts.
  *
  *   W.props.set('industrial')                    → the kinds of a set
  *   W.props.library                              → {set: [kinds]}
- *   W.props.layouts                              → ['industrialNight', 'harbour', 'village', 'scifiBase', 'ruins', 'city']
+ *   W.props.layouts                              → ['industrialNight', 'harbour', 'village', 'scifiBase', 'ruins', 'city', 'house', 'classroom']
  *   W.props.layout('industrialNight', {seed, radius, density, edge, landmark})
  *       → {sets, positions, landmark, path, remove()} — same shape as W.decorate(); use it INSTEAD of decorate for a themed compound
+ *   W.props.layout('house', {rooms, giant})           → an interior: walls, doorway, windows, furniture; giant ×6–×10 for a tiny hero (a 'classroom' too)
  *
  * Classic script injected after yuvi_world3d_materials.js. Deterministic (the
  * world's seeded rand or `o.seed`), no assets, no imports. Part textures name
@@ -415,6 +416,109 @@
     MED.wagon = { r: 1.8, jit: [.95, 1.1], parts: wag.concat([cy(1, 1, 2.6, 10, 0, 1.8, 0, PLASTER, { t: 'canvas', rx: R90, s: [1, .8, 1] })]), variants: { covered: wag.concat([cy(1, 1, 2.6, 10, 0, 1.8, 0, PLASTER, { t: 'canvas', rx: R90, s: [1, .8, 1] })]), open: wag, hay: wag.concat([sp(.9, 0, 1.7, 0, TAN, { s: [1, .7, 1.5], t: 'canvas' })]), cargo: wag.concat([bx(.7, .7, .7, -.35, 1.75, .5, 5, { t: 'wood' }), cy(.35, .35, .9, 8, .4, 1.85, -.6, 4, { t: 'wood' }), bx(.6, .5, .6, .4, 1.65, .6, 5, { t: 'wood' })]) } };
   }
 
+  // ═══ INTERIOR ═══ (metres, furniture faces +z with its back at −z; wall-hung kinds — window, pictureFrame — are soft and take a `y` in place(); rug/pillow soft too)
+  const INT = {};
+  const CREAM = '#f3ead8', SKY = '#d6ecff', TEAL = '#4fb3a0', BROWN = '#6b4a2e', PAGE = '#efe6cf', SCREEN = '#9fdcff', BULB = '#fff3c0', WINE = '#8b3a5a', OAK = '#a4713f';
+  const legs = (w, d, h, c) => [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(q => bx(.06, h, .06, q[0] * (w / 2 - .06), h / 2, q[1] * (d / 2 - .06), c));
+  {
+    const top = (w, d, y) => bx(w, .05, d, 0, y, 0, 4, { t: 'wood' });
+    INT.table = { r: .9, jit: [1, 1], parts: cat([top(1.8, .9, .73)], legs(1.8, .9, .7, WOODD)), variants: { dining: cat([top(1.8, .9, .73)], legs(1.8, .9, .7, WOODD)), coffee: cat([top(1.1, .6, .38)], legs(1.1, .6, .36, WOODD)),
+      desk: [top(1.4, .7, .73), bx(.05, .7, .68, -.67, .35, 0, 4, { t: 'wood' }), bx(.05, .7, .68, .67, .35, 0, 4, { t: 'wood' }), bx(1.3, .5, .04, 0, .5, -.32, 4, { t: 'wood' }), bx(.5, .12, .03, .4, .64, .34, WOODD), sp(.02, .4, .64, .36, METB)],
+      round: [cy(.6, .6, .04, 14, 0, .73, 0, 4, { t: 'wood' }), cy(.06, .06, .7, 6, 0, .36, 0, WOODD), cy(.3, .35, .04, 10, 0, .02, 0, WOODD)] } };
+  }
+  {
+    const wood = cat([bx(.45, .04, .45, 0, .45, 0, 4, { t: 'wood' }), bx(.45, .5, .04, 0, .72, -.21, 4, { t: 'wood' })], legs(.45, .45, .43, WOODD));
+    INT.chair = { r: .35, jit: [1, 1], parts: wood, variants: { wood: wood, office: [bx(.5, .08, .5, 0, .47, 0, INK, { t: 'leather' }), bx(.48, .55, .08, 0, .8, -.23, INK, { t: 'leather' }), cy(.03, .03, .4, 6, 0, .23, 0, MET), cy(.3, .3, .04, 10, 0, .03, 0, METD)],
+      stool: [cy(.18, .18, .04, 10, 0, .62, 0, 4, { t: 'wood' }), cy(.02, .02, .6, 5, .14, .3, 0, WOODD), cy(.02, .02, .6, 5, -.07, .3, .12, WOODD), cy(.02, .02, .6, 5, -.07, .3, -.12, WOODD)],
+      armchair: [bx(.9, .4, .85, 0, .2, 0, '#8b3a3a', { t: 'fabric' }), bx(.6, .12, .6, 0, .46, .05, '#a04848', { t: 'fabric' }), bx(.15, .6, .85, -.375, .3, 0, '#8b3a3a', { t: 'fabric' }), bx(.15, .6, .85, .375, .3, 0, '#8b3a3a', { t: 'fabric' }), bx(.9, .5, .15, 0, .65, -.35, '#8b3a3a', { t: 'fabric' })] } };
+  }
+  {
+    const sofa = (c, c2, t) => [bx(2, .35, .9, 0, .3, 0, c, { t: t }), bx(.9, .12, .6, -.48, .42, .1, c2, { t: t }), bx(.9, .12, .6, .48, .42, .1, c2, { t: t }), bx(2, .5, .18, 0, .65, -.36, c, { t: t }), bx(.18, .55, .9, -.91, .4, 0, c, { t: t }), bx(.18, .55, .9, .91, .4, 0, c, { t: t })];
+    INT.sofa = { r: 1.1, jit: [1, 1], parts: sofa('#a8353a', '#b84a4f', 'fabric'), variants: { red: sofa('#a8353a', '#b84a4f', 'fabric'), blue: sofa('#2f4f8a', '#3d5f9c', 'fabric'), leather: sofa(BROWN, '#7a5a3a', 'leather'),
+      corner: sofa('#a8353a', '#b84a4f', 'fabric').concat([bx(.9, .35, 1.4, .55, .3, 1.15, '#a8353a', { t: 'fabric' }), bx(.6, .12, 1.2, .5, .42, 1.15, '#b84a4f', { t: 'fabric' }), bx(.18, .5, 1.4, .96, .65, 1.15, '#a8353a', { t: 'fabric' })]) } };
+  }
+  {
+    const frame = h => [bx(.04, h, .35, -.48, h / 2, 0, 4, { t: 'wood' }), bx(.04, h, .35, .48, h / 2, 0, 4, { t: 'wood' }), bx(1, h, .03, 0, h / 2, -.16, WOODD), bx(1, .04, .35, 0, h - .02, 0, 4, { t: 'wood' }), bx(1, .04, .35, 0, .02, 0, 4, { t: 'wood' })];
+    const BK = [RED, BLUE, GREEN, YEL, TEAL];
+    const shelves = (h, n, books) => { const o = []; for (let i = 0; i < n; i++) { const y = .04 + (h - .08) * i / n; if (i) o.push(bx(.92, .03, .33, 0, y, 0, 4, { t: 'wood' })); if (books) o.push(bx(.84, .26, .2, 0, y + .15, 0, BK[i % 5])); } return o; };
+    INT.bookshelf = { r: .55, jit: [1, 1], parts: cat(frame(2), shelves(2, 4, true)), variants: { full: cat(frame(2), shelves(2, 4, true)), half: cat(frame(1), shelves(1, 2, true)), empty: cat(frame(2), shelves(2, 4, false)), tall: cat(frame(2.6), shelves(2.6, 4, true)) } };
+  }
+  {
+    const book = (c, x, y, z) => [bx(.2, .03, .28, x, y + .015, z, c), bx(.19, .024, .27, x + .012, y + .015, z, PAGE)];
+    INT.book = { r: .15, jit: [.9, 1.15], parts: book(RED, 0, 0, 0), variants: { red: book(RED, 0, 0, 0), blue: book(BLUE, 0, 0, 0), green: book(GREEN, 0, 0, 0), stack: cat(book(RED, 0, 0, 0), book(BLUE, .02, .03, -.02), book(GREEN, -.015, .06, .015), book(YEL, .01, .09, .03)) } };
+  }
+  {
+    const floor = [cy(.15, .18, .03, 10, 0, .015, 0, METD), cy(.02, .02, 1.45, 6, 0, .75, 0, MET), cy(.15, .22, .3, 10, 0, 1.55, 0, CREAM), sp(.06, 0, 1.45, 0, BULB, { e: true })];
+    INT.lampInterior = { r: .25, jit: [1, 1], light: { c: '#ffe4b0', i: .9, d: 6, y: 1.2 }, parts: floor, variants: { floor: floor, desk: [cy(.08, .1, .02, 8, 0, .01, 0, METD), cy(.012, .012, .4, 5, .08, .2, 0, MET, { rz: -.4 }), cy(.05, .1, .12, 8, .2, .42, 0, '#2f6b3a'), sp(.03, .2, .38, 0, BULB, { e: true })],
+      ceiling: [cy(.01, .01, .5, 4, 0, 2.55, 0, INK), cy(.12, .28, .2, 10, 0, 2.2, 0, CREAM), sp(.06, 0, 2.12, 0, BULB, { e: true })], neon: [bx(.6, .25, .03, 0, 1.6, 0, INK), bx(.5, .05, .04, 0, 1.6, .03, MAG, { e: true }), bx(.05, .15, .04, -.2, 1.6, .03, MAG, { e: true })] } };
+  }
+  {
+    const bed = (w, c) => [bx(w, .25, 2, 0, .25, 0, 4, { t: 'wood' }), bx(w - .1, .2, 1.9, 0, .47, 0, WHITE, { t: 'fabric' }), bx(w - .1, .06, 1.2, 0, .6, .3, c, { t: 'fabric' }), bx(w * .6, .1, .4, 0, .62, -.7, CREAM), bx(w, .8, .06, 0, .6, -1, 4, { t: 'wood' })];
+    INT.bed = { r: 1, jit: [1, 1], parts: bed(1, BLUE), variants: { single: bed(1, BLUE), double: bed(1.8, WINE),
+      bunk: bed(1, BLUE).concat([bx(.08, 1.8, .08, -.46, .9, .96, 4), bx(.08, 1.8, .08, .46, .9, .96, 4), bx(.08, 1.8, .08, -.46, .9, -.96, 4), bx(.08, 1.8, .08, .46, .9, -.96, 4), bx(1, .15, 2, 0, 1.5, 0, 4, { t: 'wood' }), bx(.9, .18, 1.9, 0, 1.66, 0, WHITE, { t: 'fabric' }), bx(.9, .06, 1.2, 0, 1.78, .3, RED, { t: 'fabric' }), bx(.6, .1, .4, 0, 1.8, -.7, CREAM)]),
+      crib: [bx(.8, .15, 1.3, 0, .4, 0, 4, { t: 'wood' }), bx(.72, .12, 1.22, 0, .53, 0, WHITE, { t: 'fabric' }), bx(.05, .9, .05, -.4, .45, .65, 4), bx(.05, .9, .05, .4, .45, .65, 4), bx(.05, .9, .05, -.4, .45, -.65, 4), bx(.05, .9, .05, .4, .45, -.65, 4), bx(.8, .04, .03, 0, .85, .65, 4), bx(.8, .04, .03, 0, .85, -.65, 4), bx(.03, .04, 1.3, -.4, .85, 0, 4), bx(.03, .04, 1.3, .4, .85, 0, 4)] } };
+  }
+  {
+    const pot = [cy(.16, .12, .3, 8, 0, .15, 0, '#b9613a'), cy(.14, .14, .02, 8, 0, .31, 0, BROWN)];
+    INT.plant = { r: .35, jit: [.8, 1.2], parts: pot.concat([sp(.32, 0, .62, 0, 2, { t: 'leaves' })]), variants: { pot: pot.concat([sp(.32, 0, .62, 0, 2, { t: 'leaves' })]), fern: pot.concat([cn(.12, .5, 4, 0, .55, 0, LEAF), cn(.12, .5, 4, .12, .5, .05, LEAF, { rz: -.5 }), cn(.12, .5, 4, -.12, .5, -.05, LEAF, { rz: .5 })]),
+      cactus: pot.concat([cy(.09, .1, .7, 7, 0, .65, 0, '#4f8a3a'), cy(.05, .05, .25, 6, .18, .75, 0, '#4f8a3a', { rz: R90 }), cy(.05, .05, .2, 6, .28, .9, 0, '#4f8a3a')]),
+      tall: [cy(.25, .2, .5, 8, 0, .25, 0, '#8a6a4a'), cy(.04, .05, 1.1, 5, 0, 1, 0, 4, { t: 'bark' }), sp(.4, 0, 1.55, 0, 2, { t: 'leaves' }), sp(.3, .2, 1.8, .1, 2, { t: 'leaves' })] } };
+  }
+  INT.cup = { r: .06, jit: [.9, 1.1], parts: [cy(.04, .035, .09, 8, 0, .045, 0, 5), bx(.03, .05, .012, .05, .045, 0, 5)], variants: { mug: [cy(.04, .035, .09, 8, 0, .045, 0, 5), bx(.03, .05, .012, .05, .045, 0, 5)], glass: [cy(.035, .03, .1, 8, 0, .05, 0, GLASS)],
+    teapot: [sp(.09, 0, .09, 0, 5), cn(.02, .1, 5, .1, .12, 0, 5, { rz: -1 }), sp(.03, 0, .17, 0, 5), bx(.03, .08, .015, -.1, .1, 0, 5)], bottle: [cy(.035, .035, .2, 8, 0, .1, 0, '#2f7a4a'), cy(.015, .03, .06, 6, 0, .23, 0, '#2f7a4a'), cy(.017, .017, .02, 6, 0, .27, 0, METB)] } };
+  INT.rug = { r: .5, jit: [1, 1], soft: true, parts: [cy(1.5, 1.5, .04, 16, 0, .02, 0, WINE, { t: 'fabric' }), cy(1, 1, .045, 16, 0, .02, 0, '#c9a06a', { t: 'fabric' })], variants: { round: [cy(1.5, 1.5, .04, 16, 0, .02, 0, WINE, { t: 'fabric' }), cy(1, 1, .045, 16, 0, .02, 0, '#c9a06a', { t: 'fabric' })],
+    rect: [bx(4, .04, 3, 0, .02, 0, '#3b4a6b', { t: 'fabric' }), bx(3.4, .045, 2.4, 0, .02, 0, '#5a6b8f', { t: 'fabric' })], runner: [bx(1, .04, 4, 0, .02, 0, WINE, { t: 'fabric' }), bx(.6, .045, 3.6, 0, .02, 0, '#c9a06a', { t: 'fabric' })],
+    patterned: [bx(4, .04, 4, 0, .02, 0, '#b89a78', { t: 'fabric' }), bx(3.2, .045, 3.2, 0, .02, 0, '#c9b48a', { t: 'fabric' }), bx(1.6, .05, 1.6, 0, .02, 0, WINE, { t: 'fabric' })] } };
+  {
+    const flat = [cy(.25, .3, .03, 10, 0, .015, 0, INK), bx(.06, .3, .04, 0, .17, 0, INK), bx(1.3, .75, .05, 0, .7, 0, BLK), bx(1.22, .67, .02, 0, .7, .03, SCREEN, { e: true })];
+    INT.tv = { r: .7, jit: [1, 1], parts: flat, variants: { flat: flat, old: [bx(.7, .55, .55, 0, .5, 0, '#6b5a4a', { t: 'wood' }), bx(.5, .38, .03, -.05, .52, .28, '#b8d8e8', { e: true }), cy(.03, .03, .02, 6, .28, .45, .28, INK, { rx: R90 }), cy(.006, .006, .5, 4, -.1, 1, 0, MET, { rz: .4 }), cy(.006, .006, .5, 4, .1, 1, 0, MET, { rz: -.4 }), bx(.7, .22, .55, 0, .11, 0, INK)],
+      monitor: [cy(.12, .14, .02, 8, 0, .01, 0, INK), bx(.04, .15, .03, 0, .1, 0, INK), bx(.55, .35, .03, 0, .34, 0, BLK), bx(.5, .3, .015, 0, .34, .02, SCREEN, { e: true })],
+      arcade: [bx(.7, 1.6, .7, 0, .8, 0, '#2a3a8a', { t: 'panel' }), bx(.7, .3, .5, 0, 1.75, -.05, '#2a3a8a'), bx(.6, .2, .03, 0, 1.75, .21, YEL, { e: true }), bx(.55, .4, .03, 0, 1.25, .36, MAG, { e: true }), bx(.7, .15, .3, 0, .95, .45, INK), sp(.03, .15, 1.06, .45, RED), cy(.025, .025, .02, 8, -.1, 1.03, .45, RED), cy(.025, .025, .02, 8, -.2, 1.03, .45, BLUE)] } };
+  }
+  {
+    const fr = (c, t) => [bx(.8, 1.8, .7, 0, .9, 0, c, { t: t }), bx(.82, .02, .72, 0, 1.3, 0, INK), bx(.03, .4, .03, .3, 1.55, .37, METB), bx(.03, .6, .03, .3, .85, .37, METB), bx(.78, .05, .68, 0, .025, 0, INK)];
+    INT.fridge = { r: .55, jit: [1, 1], parts: fr(WHITE), variants: { white: fr(WHITE), steel: fr(METB, 'metalBrushed'), retro: fr(TEAL).concat([bx(.82, .06, .72, 0, 1.3, 0, METB, { t: 'metalBrushed' }), bx(.82, .06, .72, 0, .3, 0, METB, { t: 'metalBrushed' })]),
+      open: fr(WHITE).slice(0, 2).concat([bx(.03, 1.76, .7, .41, .9, .36, WHITE), bx(.72, 1.72, .05, 0, .9, .33, '#bcd2dd'), bx(.68, .02, .3, 0, .6, .2, WHITE), bx(.68, .02, .3, 0, 1.05, .2, WHITE), bx(.6, .05, .02, 0, 1.7, .34, '#fff8e0', { e: true }), fr(WHITE)[4]]) } };
+  }
+  {
+    const kitchen = [bx(1.5, .85, .6, 0, .43, 0, CREAM), bx(1.56, .05, .66, 0, .88, 0, '#3a3f45', { t: 'concrete' }), bx(.02, .7, .01, 0, .4, .31, INK), bx(.15, .02, .02, -.3, .6, .31, METB), bx(.15, .02, .02, .3, .6, .31, METB), cy(.2, .2, .06, 10, .4, .9, 0, METB, { t: 'metalBrushed' }), cy(.015, .015, .2, 5, .4, 1, -.1, METB)];
+    INT.cabinet = { r: .85, jit: [1, 1], parts: kitchen, variants: { kitchen: kitchen, wardrobe: [bx(1.2, 2, .6, 0, 1, 0, 4, { t: 'wood' }), bx(.02, 1.9, .01, 0, 1, .31, WOODD), bx(.03, .25, .03, -.06, 1, .32, METB), bx(.03, .25, .03, .06, 1, .32, METB), bx(1.24, .05, .64, 0, 2.02, 0, WOODD)],
+      drawer: [bx(.9, 1, .5, 0, .5, 0, 4, { t: 'wood' }), bx(.8, .24, .02, 0, .2, .26, WOODD), bx(.8, .24, .02, 0, .5, .26, WOODD), bx(.8, .24, .02, 0, .8, .26, WOODD), sp(.02, 0, .2, .28, METB), sp(.02, 0, .5, .28, METB), sp(.02, 0, .8, .28, METB)],
+      safe: [bx(.7, .9, .7, 0, .45, 0, METD, { t: 'metalDark' }), bx(.6, .8, .02, 0, .45, .36, MET, { t: 'metal' }), cy(.06, .06, .03, 10, .15, .5, .38, METB, { rx: R90 }), bx(.12, .03, .03, -.12, .45, .38, METB)] } };
+  }
+  INT.toy = { r: .2, jit: [.9, 1.2], parts: [sp(.15, 0, .15, 0, RED), cy(.152, .152, .05, 10, 0, .15, 0, WHITE)], variants: { ball: [sp(.15, 0, .15, 0, RED), cy(.152, .152, .05, 10, 0, .15, 0, WHITE)], blocks: [bx(.14, .14, .14, 0, .07, 0, RED), bx(.14, .14, .14, .1, .07, .12, BLUE), bx(.14, .14, .14, .04, .21, .05, YEL)],
+    car: [bx(.3, .08, .16, 0, .1, 0, RED), bx(.16, .07, .14, -.02, .17, 0, SKY), cy(.04, .04, .18, 8, -.1, .04, 0, TYRE, { rx: R90 }), cy(.04, .04, .18, 8, .1, .04, 0, TYRE, { rx: R90 })],
+    teddy: [sp(.12, 0, .14, 0, OAK, { s: [1, 1.15, .9] }), sp(.09, 0, .32, 0, OAK), sp(.035, -.07, .39, 0, OAK), sp(.035, .07, .39, 0, OAK), sp(.05, -.13, .17, .02, OAK), sp(.05, .13, .17, .02, OAK), sp(.04, 0, .3, .07, '#d9b585')] } };
+  INT.pillow = { r: .3, jit: [.9, 1.15], soft: true, parts: [bx(.5, .14, .5, 0, .07, 0, 5, { t: 'fabric' }), sp(.02, 0, .14, 0, INK)], variants: { square: [bx(.5, .14, .5, 0, .07, 0, 5, { t: 'fabric' }), sp(.02, 0, .14, 0, INK)], round: [sp(.28, 0, .1, 0, 5, { s: [1, .36, 1], t: 'fabric' })], long: [bx(1, .14, .4, 0, .07, 0, 5, { t: 'fabric' })],
+    heart: [sp(.13, -.1, .07, .1, '#e2506e', { s: [1, .5, 1] }), sp(.13, .1, .07, .1, '#e2506e', { s: [1, .5, 1] }), cn(.2, .3, 4, 0, .07, 0, '#e2506e', { rx: -R90, s: [1, .45, 1] })] } };
+  {
+    const frame = (w, h) => [bx(w, h, .05, 0, .5, 0, 4, { t: 'wood' }), bx(w - .1, h - .1, .02, 0, .5, .03, 5)];
+    INT.pictureFrame = { r: .5, jit: [1, 1], soft: true, parts: frame(1, .7), variants: { landscape: frame(1, .7), portrait: frame(.7, 1).concat([sp(.14, 0, .6, .045, TAN)]), mirror: [bx(.8, 1.1, .05, 0, .55, 0, METB, { t: 'metalBrushed' }), bx(.7, 1, .02, 0, .55, .03, GLASS)],
+      clock: [cy(.25, .25, .05, 16, 0, .45, 0, 4, { rx: R90, t: 'wood' }), cy(.22, .22, .02, 16, 0, .45, .03, WHITE, { rx: R90 }), bx(.02, .16, .01, 0, .52, .045, INK), bx(.12, .02, .01, .05, .45, .045, INK)] } };
+  }
+  {
+    const steps = (n, rise, c, t) => { const o = []; for (let i = 0; i < n; i++) o.push(bx(1.2, rise * (i + 1), .3, 0, rise * (i + 1) / 2, (n / 2 - i - .5) * .3, c, { t: t })); const L = Math.hypot(n * .3, n * rise), a = Math.atan2(rise, .3); return o.concat([bx(.05, .05, L, -.62, n * rise / 2 + .9, 0, WOODD, { rx: a }), bx(.05, .05, L, .62, n * rise / 2 + .9, 0, WOODD, { rx: a })]); };
+    const spiral = [cy(.12, .12, 2.6, 8, 0, 1.3, 0, METD)]; for (let i = 0; i < 8; i++) spiral.push(bx(.8, .05, .5, Math.cos(i * R45) * .55, .3 * (i + 1), Math.sin(i * R45) * .55, 4, { t: 'wood' }));
+    INT.staircase = { r: 1.3, jit: [1, 1], parts: steps(8, .3, 4, 'plank'), variants: { wood: steps(8, .3, 4, 'plank'), stone: steps(8, .3, CONC, 'concrete'), spiral: spiral, short: steps(4, .3, 4, 'plank') } };
+  }
+  {
+    const skirt = [bx(4, .12, .24, 0, .06, 0, WOODD)];
+    INT.wallInterior = { r: 2, jit: [1, 1], len: 4, parts: [bx(4, 2.8, .2, 0, 1.4, 0, PLASTER, { t: 'plaster' }), bx(4, .06, .24, 0, 2.77, 0, WHITE)].concat(skirt), variants: {
+      plain: [bx(4, 2.8, .2, 0, 1.4, 0, PLASTER, { t: 'plaster' }), bx(4, .06, .24, 0, 2.77, 0, WHITE)].concat(skirt),
+      wallpaper: [bx(4, 2.8, .2, 0, 1.4, 0, '#d8c8b0', { t: 'fabric' }), bx(.3, 2.5, .22, -1.5, 1.45, 0, '#b89a78'), bx(.3, 2.5, .22, -.5, 1.45, 0, '#b89a78'), bx(.3, 2.5, .22, .5, 1.45, 0, '#b89a78'), bx(.3, 2.5, .22, 1.5, 1.45, 0, '#b89a78')].concat(skirt),
+      brick: [bx(4, 2.8, .2, 0, 1.4, 0, BRICK, { t: 'brick' })].concat(skirt), tiles: [bx(4, 2.8, .2, 0, 1.4, 0, WHITE, { t: 'tile' }), bx(4.02, .15, .22, 0, 1.2, 0, TEAL)].concat(skirt) } };
+  }
+  {
+    const open = [bx(1.4, 2.8, .2, -1.3, 1.4, 0, PLASTER, { t: 'plaster' }), bx(1.4, 2.8, .2, 1.3, 1.4, 0, PLASTER, { t: 'plaster' }), bx(1.2, .6, .2, 0, 2.5, 0, PLASTER, { t: 'plaster' }), bx(.08, 2.2, .26, -.62, 1.1, 0, 4, { t: 'wood' }), bx(.08, 2.2, .26, .62, 1.1, 0, 4, { t: 'wood' }), bx(1.32, .08, .26, 0, 2.24, 0, 4, { t: 'wood' }), bx(1.4, .12, .24, -1.3, .06, 0, WOODD), bx(1.4, .12, .24, 1.3, .06, 0, WOODD)];
+    INT.doorway = { r: 2, jit: [1, 1], len: 4, parts: open, variants: { open: open, closed: open.concat([bx(1.16, 2.16, .05, 0, 1.08, 0, WOOD, { t: 'wood' }), sp(.03, .45, 1.05, .05, METB)]),
+      arch: open.slice(0, 3).concat([cy(.35, .35, .22, 10, -.6, 2.2, 0, PLASTER, { rx: R90, t: 'plaster' }), cy(.35, .35, .22, 10, .6, 2.2, 0, PLASTER, { rx: R90, t: 'plaster' })], open.slice(6)), glass: open.concat([bx(1.16, 2.16, .03, 0, 1.08, 0, GLASS), bx(.03, .25, .03, .45, 1.05, .04, METB)]) } };
+  }
+  {
+    const win = w => [bx(w, .06, .1, 0, 1.32, 0, WHITE), bx(w, .06, .1, 0, .18, 0, WHITE), bx(.06, 1.2, .1, -w / 2 + .03, .75, 0, WHITE), bx(.06, 1.2, .1, w / 2 - .03, .75, 0, WHITE), bx(w - .1, 1.1, .04, 0, .75, 0, SKY, { e: true }), bx(.04, 1.1, .06, 0, .75, .03, WHITE), bx(w - .1, .04, .06, 0, .75, .03, WHITE)];
+    INT.window = { r: .6, jit: [1, 1], soft: true, parts: win(1.2), variants: { square: win(1.2), wide: win(2.4), round: [cy(.6, .6, .1, 16, 0, .75, 0, WHITE, { rx: R90 }), cy(.54, .54, .04, 16, 0, .75, .04, SKY, { e: true, rx: R90 })],
+      curtain: win(1.2).concat([bx(.4, 1.4, .12, -.7, .75, .06, WINE, { t: 'fabric' }), bx(.4, 1.4, .12, .7, .75, .06, WINE, { t: 'fabric' }), cy(.02, .02, 2, 6, 0, 1.5, .06, METB, { rz: R90 })]) } };
+  }
+
   // ═══ upgrades of the core kinds: variants only, the default parts stay ═══
   const UPGRADES = {
     crate: { wood: [bx(1, 1, 1, 0, .5, 0, WOOD, { t: 'wood' }), bx(1.06, .1, 1.06, 0, .5, 0, WOODD), bx(.1, 1.02, 1.06, 0, .5, 0, WOODD), bx(1.06, 1.02, .1, 0, .5, 0, WOODD)],
@@ -430,12 +534,13 @@
       shop: [bx(5, 4, 5, 0, 2, 0, 5, { t: 'plaster' }), bx(5.2, .3, 5.2, 0, 4.1, 0, 4), bx(3.6, 2, .1, 0, 1.3, 2.55, GLASSD), bx(5.2, .08, 1.4, 0, 2.85, 3.2, RED, { t: 'fabric', rx: .35 }), bx(4, .7, .12, 0, 3.5, 2.55, 3, { e: 'dark' }), bx(.9, 2, .1, 1.9, 1, 2.56, 4, { t: 'wood' })],
       house: [bx(5, 3.2, 5, 0, 1.6, 0, PLASTER, { t: 'plaster' }), bx(3.8, 3.8, 5.4, 0, 3.2, 0, 4, { t: 'plank', rz: R45, s: [1, .6, 1] }), bx(1, 2, .2, 0, 1, 2.55, 4, { t: 'wood' }), bx(.9, .9, .2, -1.6, 1.8, 2.55, 3, { e: 'dark' }), bx(.9, .9, .2, 1.6, 1.8, 2.55, 3, { e: 'dark' }), cy(.3, .3, 1.4, 6, 1.5, 4.6, -1, BRICK, { t: 'brick' })] } };
 
-  const SETS = { industrial: Object.keys(IND), urban: Object.keys(URB), nature: Object.keys(NAT), scifi: Object.keys(SCI), medieval: Object.keys(MED) };
-  const ALL = Object.assign({}, IND, URB, NAT, SCI, MED);
+  const SETS = { industrial: Object.keys(IND), urban: Object.keys(URB), nature: Object.keys(NAT), scifi: Object.keys(SCI), medieval: Object.keys(MED), interior: Object.keys(INT) };
+  const ALL = Object.assign({}, IND, URB, NAT, SCI, MED, INT);
 
   // ═══ themed compound layouts — a perimeter + gate, a straight avenue + cross street, a landmark, axis-aligned buildings, lamps, cover clusters, dressing ═══
   //    wall [kind, opts] (kind.len = segment length) · gate [kind, opts] · road [variant, lanes] · land [kind, scale, opts] · lamp [kind, step, opts]
   //    buildings [[kind, n, opts]] on a jittered grid, rotated by 90° steps · cluster [[kind, clusters, each, opts]] · scatter [[kind, n, opts]] (n per 120-unit world)
+  //    room: an interior plan built by ROOM[name] instead (house · classroom)
   const LAYOUTS = {
     industrialNight: { wall: ['wallSegment', { variant: 'concrete' }], gate: ['door', { variant: 'open', scale: 1.5 }], road: ['line', 3], land: ['chimney', 1.2], lamp: ['floodlightTower', 16, { lights: 4 }],
       buildings: [['warehouse', 3, { variant: 'steel' }], ['tank', 2, { variant: 'fuel' }], ['generator', 3, { lights: 0 }]], cluster: [['crate', 2, 4, { variant: 'metal' }], ['barrel', 2, 5, { variant: 'rusty' }]],
@@ -451,7 +556,8 @@
       buildings: [['column', 8], ['statue', 3, { variant: 'broken' }], ['wallRuin', 6, { variant: 'tall' }]], cluster: [['boulderMossy', 3, 3], ['barrelStack', 1, 2]],
       scatter: [['treeDead', 6], ['bush', 14], ['grass', 60], ['mushroom', 10], ['tent', 2], ['banner', 3, { variant: 'tattered' }], ['rock', 12], ['anvil', 1], ['wallRuin', 4, { variant: 'mossy' }]] },
     city: { road: ['line', 3], land: ['billboard', 1.3, { variant: 'lit' }], lamp: ['streetlight', 10], buildings: [['building', 5, { variant: 'office' }], ['building', 5, { variant: 'apartment' }], ['building', 4, { variant: 'shop' }]],
-      cluster: [['car', 2, 3, { variant: 'sedan' }], ['trashcan', 2, 2]], scatter: [['car', 4, { variant: 'van' }], ['car', 4, { variant: 'red' }], ['car', 3, { variant: 'white' }], ['bench', 5], ['hydrant', 4], ['mailbox', 3], ['busStop', 2, { lights: 0 }], ['kiosk', 2], ['vending', 3, { variant: 'lit', lights: 1 }], ['trafficCone', 8], ['tree', 10, { variant: 'round' }], ['phoneBooth', 2]] }
+      cluster: [['car', 2, 3, { variant: 'sedan' }], ['trashcan', 2, 2]], scatter: [['car', 4, { variant: 'van' }], ['car', 4, { variant: 'red' }], ['car', 3, { variant: 'white' }], ['bench', 5], ['hydrant', 4], ['mailbox', 3], ['busStop', 2, { lights: 0 }], ['kiosk', 2], ['vending', 3, { variant: 'lit', lights: 1 }], ['trafficCone', 8], ['tree', 10, { variant: 'round' }], ['phoneBooth', 2]] },
+    house: { room: 'house' }, classroom: { room: 'classroom' }
   };
 
   window.YuviWorld3D.use(function props(W, THREE, ctx) {
@@ -472,6 +578,7 @@
       const R = clamp(+o.radius || half - 6, 16, half - 3), area = (R / 54) * (R / 54), avoid = [{ x: 0, z: 0, r: 8 }];
       const add = h => { if (h && h.positions) { sets.push(h); if (!h.soft && !KINDS[h.kind].float) h.positions.forEach(p => { dec.positions.push(p); avoid.push({ x: p.x, z: p.z, r: p.r }); }); } return h; };
       const free = (x, z, r) => !avoid.some(a => Math.hypot(a.x - x, a.z - z) < a.r + r);
+      if (L.room) { ROOM[L.room]({ dec: dec, add: add, R: R, s: 1 }, o); return dec; }
       // roads first so everything else keeps off them: an avenue along z (spawn → gate at -R) and a cross street
       const lanes = L.road ? L.road[1] || 1 : 0, rv = L.road && L.road[0];
       if (lanes) {
@@ -528,6 +635,59 @@
       (L.scatter || []).forEach(sc => add(scatter(sc[0], Math.max(1, Math.round(sc[1] * dens * area)), Object.assign({ area: R - 3, avoid: avoid, seed: rnd() * 1e9 }, sc[2] || {}))));
       return dec;
     }
+
+    // ═══ room plans (house · classroom): a ring of `wallInterior` with a `doorway` in one slot, a tiled rug floor, furniture per zone; `giant` (true → ×8, a number → ×6–×10) for a tiny hero, capped so the plan fits the radius ═══
+    //    items [kind, variant, x, z, rot, y (sits it on furniture), opts, scale]; a zone is a canonical 8×8 room whose outer walls are at local +x/+z, mirrored into its quadrant
+    const giantScale = (o, R, H) => Math.min(o.giant ? clamp(o.giant === true ? 8 : +o.giant || 8, 6, 10) : 1, (R - 2) / H);
+    function roomPlan(E, P) {
+      const s = E.s, HX = P.HX * s, HZ = P.HZ * s, len = 4 * s, dec = E.dec, add = E.add, pts = [], door = [];
+      const slot = (side, i, x, z, rot) => (P.door[0] === side && P.door[1] === i ? door : pts).push({ x: x, z: z, rot: rot, s: s });
+      for (let i = 0, n = Math.round(2 * HX / len); i < n; i++) { const x = -HX + len / 2 + i * len; slot('+z', i, x, HZ, 0); slot('-z', i, x, -HZ, 0); }
+      for (let i = 0, n = Math.round(2 * HZ / len); i < n; i++) { const z = -HZ + len / 2 + i * len; slot('-x', i, -HX, z, R90); slot('+x', i, HX, z, R90); }
+      const walls = place('wallInterior', pts, { variant: P.wall }); dec.sets.push(walls);
+      walls.positions.forEach(p => dec.positions.push(p.rot ? { x: p.x, z: p.z, hw: .2 * s, hd: len / 2 } : { x: p.x, z: p.z, hw: len / 2, hd: .2 * s }));
+      const dw = place('doorway', door, { variant: P.doorVariant }); dec.sets.push(dw);   // open/arch: collide with the two jambs, walk through; closed/glass: the whole slot
+      const solid = P.doorVariant === 'closed' || P.doorVariant === 'glass';
+      dw.positions.forEach(p => (solid ? [0] : [-1.3, 1.3]).forEach(k => dec.positions.push(p.rot ? { x: p.x, z: p.z + k * s, hw: .2 * s, hd: (solid ? 2 : .7) * s } : { x: p.x + k * s, z: p.z, hw: (solid ? 2 : .7) * s, hd: .2 * s })));
+      if (P.floor) { const f = []; for (let x = -HX + len / 2; x < HX; x += len) for (let z = -HZ + len / 2; z < HZ; z += len) f.push({ x: x, z: z, y: groundY(x, z) + .03 - .04 * s, s: s }); add(place('rug', f, { variant: P.floor })); }   // sunk: top 3 cm above the ground
+      const groups = {}, order = [];
+      P.items.forEach(it => { const k = it[0] + '|' + it[1] + '|' + JSON.stringify(it[6] || 0); if (!groups[k]) order.push(groups[k] = { kind: it[0], o: Object.assign({ variant: it[1] }, it[6] || {}), pts: [] }); groups[k].pts.push({ x: it[2] * s, z: it[3] * s, rot: it[4] || 0, y: it[5] ? groundY(it[2] * s, it[3] * s) + it[5] * s : 0, s: s * (it[7] || 1) }); });
+      order.forEach(g => add(place(g.kind, g.pts, g.o)));
+      const l = P.land, ls = s * (l[5] || 1), lm = make(l[0], { variant: l[1], scale: ls, pos: [l[2] * s, 0, l[3] * s] }); lm.rotation.y = l[4] || 0; lm.name = 'landmark';
+      dec.landmark = lm; dec.positions.push({ x: l[2] * s, z: l[3] * s, r: KINDS[l[0]].r * ls });
+    }
+    const ZONES = {
+      living: [['rug', 'round', 1, 0, 0], ['sofa', 'red', -1.2, 0, R90], ['pillow', 'square', -1.2, .5, R90, .45], ['table', 'coffee', 1, 0, R90], ['book', 'stack', 1.1, .35, .4, .4], ['cup', 'mug', .8, -.3, 0, .4], ['tv', 'flat', 3.3, 0, -R90],
+        ['lampInterior', 'floor', 3, 3.1, 0], ['plant', 'tall', 3.2, -3, 0], ['toy', 'ball', -1.6, 2.3, 0], ['toy', 'teddy', 2.3, -2.5, .6], ['pictureFrame', 'landscape', .8, 3.85, Math.PI, 1.1], ['window', 'wide', 2.6, 3.85, Math.PI, .8]],
+      kitchen: [['cabinet', 'kitchen', .8, 3.5, Math.PI], ['cabinet', 'kitchen', 2.3, 3.5, Math.PI], ['fridge', 'white', 3.5, 3.5, Math.PI], ['plant', 'cactus', 2.6, 3.5, 0, .9], ['window', 'wide', 1.6, 3.85, Math.PI, .8], ['table', 'round', -.4, -.4, 0],
+        ['chair', 'wood', -.4, -1.5, 0], ['chair', 'wood', -.4, .7, Math.PI], ['chair', 'wood', .7, -.4, -R90], ['chair', 'wood', -1.5, -.4, R90], ['cup', 'teapot', -.4, -.4, 0, .75], ['cup', 'mug', 0, -.7, 0, .75], ['cup', 'glass', -.8, -.1, 0, .75],
+        ['lampInterior', 'ceiling', -.4, -.4, 0, 0, { lights: 1 }], ['rug', 'runner', 2, 1.5, R90]],
+      bedroom: [['bed', 'double', 1.4, 2.6, Math.PI], ['pillow', 'heart', 1.6, 2.1, .3, .55], ['cabinet', 'drawer', 3.2, 3.5, Math.PI], ['lampInterior', 'desk', 3.2, 3.5, 0, 1], ['cabinet', 'wardrobe', 3.5, -1.5, -R90], ['window', 'square', 3.85, 1.2, -R90, .8],
+        ['pictureFrame', 'clock', 1.4, 3.85, Math.PI, 1.9], ['rug', 'round', -.6, .2, 0], ['toy', 'teddy', -1.6, -2.4, 2.5], ['toy', 'car', -2.4, 1.4, 1.2], ['book', 'blue', -1.2, 1.9, .5]],
+      library: [['bookshelf', 'full', .5, 3.6, Math.PI], ['bookshelf', 'tall', 1.6, 3.6, Math.PI], ['bookshelf', 'full', 2.7, 3.6, Math.PI], ['table', 'desk', 3.4, .5, -R90], ['chair', 'office', 2.5, .5, R90], ['tv', 'monitor', 3.5, .5, -R90, .75],
+        ['lampInterior', 'desk', 3.4, 1.1, 0, .75], ['cup', 'mug', 3.3, -.1, 0, .75], ['window', 'square', 3.85, 2.4, -R90, .8], ['chair', 'armchair', -1.8, 1.5, R45], ['lampInterior', 'floor', -2.9, 3.2, 0], ['book', 'stack', -.8, -.5, .3], ['book', 'red', .4, -2, 1],
+        ['book', 'green', -2.4, -1.2, 2], ['rug', 'rect', .5, .2, 0], ['plant', 'fern', -3.2, -3.2, 0]] };
+    const ROOM = {
+      // o.rooms ⊆ living kitchen bedroom library (default all four: quadrants SE NE NW SW; 1 → one 8×8 room, 2 → side by side); the doorway is on the −z wall, the staircase (landmark) beside it
+      house(E, o) {
+        const names = Object.keys(ZONES), rooms = (Array.isArray(o.rooms) ? o.rooms : names).filter(n => ZONES[n]);
+        if (!rooms.length) { warn('layout house: rooms must be some of ' + names.join(', ')); rooms.push.apply(rooms, names); }
+        const n = rooms.length, HX = n > 1 ? 8 : 4, HZ = n > 2 ? 8 : 4, slots = n === 1 ? [[0, 0]] : n === 2 ? [[-4, 0], [4, 0]] : [[4, 4], [4, -4], [-4, -4], [-4, 4]], items = [];
+        E.s = giantScale(o, E.R, Math.max(HX, HZ));
+        rooms.forEach((nm, i) => { const c = slots[i], sx = c[0] < 0 ? -1 : 1, sz = c[1] < 0 ? -1 : 1; ZONES[nm].forEach(it => items.push([it[0], it[1], c[0] + sx * it[2], c[1] + sz * it[3], Math.atan2(sx * Math.sin(it[4] || 0), sz * Math.cos(it[4] || 0)), it[5], it[6]])); });
+        roomPlan(E, { HX: HX, HZ: HZ, wall: o.wall || 'wallpaper', door: ['-z', Math.round(HX / 4) - 1], doorVariant: 'open', floor: 'patterned', items: items, land: ['staircase', 'wood', 2, -HZ + .8, R90] });
+      },
+      // o.cols (≤ 5) × o.rows (≤ 3) desks facing a green board (pictureFrame) and a smart board (tv, the landmark) on the −z wall; windows on −x, the door on +x
+      classroom(E, o) {
+        const HX = 8, HZ = 6, cols = clamp(o.cols | 0 || 4, 1, 5), rows = clamp(o.rows | 0 || 3, 1, 3), BOOK = ['red', 'blue', 'green'], items = [];
+        E.s = giantScale(o, E.R, HX);
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const x = (c - (cols - 1) / 2) * 3, z = -1 + r * 2.5; items.push(['table', 'desk', x, z, 0], ['chair', 'wood', x, z + .75, Math.PI], ['book', BOOK[(r + c) % 3], x + .3, z, 0, .75]); }
+        items.push(['table', 'desk', 0, -3.8, Math.PI], ['chair', 'office', 0, -4.6, 0], ['cup', 'mug', .5, -3.7, 0, .75], ['book', 'stack', -.4, -3.9, 0, .75], ['pictureFrame', 'landscape', -2, -5.85, 0, 1.1, { colors: { 4: '#4a4a4a', 5: '#2d5a3c' } }, 3],
+          ['pictureFrame', 'clock', 0, -5.85, 0, 2.4], ['window', 'wide', -7.85, -3, R90, .8], ['window', 'wide', -7.85, 0, R90, .8], ['window', 'wide', -7.85, 3, R90, .8], ['bookshelf', 'half', -5, 5.6, Math.PI], ['bookshelf', 'half', -3.8, 5.6, Math.PI],
+          ['cabinet', 'wardrobe', -6.5, 5.6, Math.PI], ['plant', 'fern', 7.3, -5.3, 0], ['plant', 'pot', -7.3, -5.3, 0], ['toy', 'blocks', 6.6, 5.3, 0],
+          ['lampInterior', 'ceiling', -3.5, -2.5, 0, 0, { lights: 2 }], ['lampInterior', 'ceiling', 3.5, -2.5, 0, 0, { lights: 2 }], ['lampInterior', 'ceiling', -3.5, 2.5, 0, 0, { lights: 2 }], ['lampInterior', 'ceiling', 3.5, 2.5, 0, 0, { lights: 2 }]);
+        roomPlan(E, { HX: HX, HZ: HZ, wall: o.wall || 'plain', door: ['+x', 2], doorVariant: 'closed', floor: null, items: items, land: ['tv', 'flat', 3.2, -5.5, 0, 2] });
+      } };
 
     W.props.set = name => (SETS[name] || (warn('props.set: unknown set "' + name + '" — sets: ' + Object.keys(SETS).join(', ')), [])).slice();
     W.props.library = SETS;

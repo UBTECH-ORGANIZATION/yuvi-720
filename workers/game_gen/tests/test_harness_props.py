@@ -1,11 +1,12 @@
 """YuviWorld3D prop library plugin (``yuvi_world3d_props.js``).
 
 A node-level data check (every kind is well-formed, ≥ 40 new kinds with ≥ 2
-variants, textures within the materials contract) plus two Chromium runs
-through the real validator: one world that scatters a few of every new kind
-and builds every kind + variant with ``make`` (no console warnings), and one
-that lays an industrial compound out with ``W.props.layout`` and collides an
-FPS rig with it. Skips without node / Chromium / the CDN.
+variants, textures within the materials contract, the interior set's kinds and
+variants) plus three Chromium runs through the real validator: one world that
+scatters a few of every new kind and builds every kind + variant with ``make``
+(no console warnings), one that lays an industrial compound out with
+``W.props.layout`` and collides an FPS rig with it, and one that builds the two
+room plans (a giant house, a classroom). Skips without node / Chromium / the CDN.
 """
 import json
 import shutil
@@ -21,8 +22,15 @@ W3D_PATH = HARNESS_DIR / "yuvi_world3d.js"
 PROPS_PATH = HARNESS_DIR / "yuvi_world3d_props.js"
 THREE_URL = AVAILABLE_LIBRARIES["three"]["cdn"]
 LEARN_DATA = {"component": {"id": "c1", "title": "מסה"}, "objective": {"id": "o1", "title": "נטו וברוטו"}, "language": "he"}
-SETS = ("industrial", "urban", "nature", "scifi", "medieval")
-LAYOUTS = ("industrialNight", "harbour", "village", "scifiBase", "ruins", "city")
+SETS = ("industrial", "urban", "nature", "scifi", "medieval", "interior")
+LAYOUTS = ("industrialNight", "harbour", "village", "scifiBase", "ruins", "city", "house", "classroom")
+INTERIOR = {
+    "table": {"dining", "coffee", "desk", "round"}, "chair": {"wood", "office", "stool", "armchair"}, "sofa": {"red", "blue", "leather", "corner"}, "bookshelf": {"full", "half", "empty", "tall"},
+    "book": {"red", "blue", "green", "stack"}, "lampInterior": {"floor", "desk", "ceiling", "neon"}, "bed": {"single", "double", "bunk", "crib"}, "plant": {"pot", "fern", "cactus", "tall"},
+    "cup": {"mug", "glass", "teapot", "bottle"}, "rug": {"round", "rect", "runner", "patterned"}, "tv": {"flat", "old", "monitor", "arcade"}, "fridge": {"white", "steel", "retro", "open"},
+    "cabinet": {"kitchen", "wardrobe", "drawer", "safe"}, "toy": {"ball", "blocks", "car", "teddy"}, "pillow": {"square", "round", "long", "heart"}, "pictureFrame": {"landscape", "portrait", "mirror", "clock"},
+    "staircase": {"wood", "stone", "spiral", "short"}, "wallInterior": {"plain", "wallpaper", "brick", "tiles"}, "doorway": {"open", "closed", "arch", "glass"}, "window": {"square", "wide", "round", "curtain"},
+}
 TEXTURES = {"metal", "metalDark", "metalBrushed", "rust", "concrete", "concreteDark", "brick", "brickRed", "wood", "woodDark", "plank", "sand", "grass", "dirt", "gravel",
             "asphalt", "tile", "plaster", "camo", "camoDesert", "panel", "panelLit", "hazard", "grid", "fabric", "leather", "bark", "leaves", "snow", "lava", "water", "scales", "canvas"}
 GEOS = {"box": 3, "cyl": 4, "cone": 3, "sphere": 3, "dodeca": 2, "octa": 2}
@@ -41,8 +49,8 @@ const ctx = { KINDS, warn: m => { throw new Error(m); }, clamp: (v, a, b) => Mat
 const W = { props: { scatter: () => ({ positions: [] }), place: () => ({ positions: [] }), make: () => ({ rotation: {} }) } };
 plugins.forEach(p => p(W, null, ctx));
 const out = { kinds: {}, sets: {}, layouts: W.props.layouts, textures: Object.keys(ctx.textures) };
-for (const s of ['industrial', 'urban', 'nature', 'scifi', 'medieval']) out.sets[s] = W.props.set(s);
-for (const k in KINDS) out.kinds[k] = { r: KINDS[k].r, jit: KINDS[k].jit, parts: KINDS[k].parts, variants: KINDS[k].variants || {}, light: KINDS[k].light || null, soft: !!KINDS[k].soft, float: !!KINDS[k].float, fresh: !!KINDS[k].__props };
+for (const s of ['industrial', 'urban', 'nature', 'scifi', 'medieval', 'interior']) out.sets[s] = W.props.set(s);
+for (const k in KINDS) out.kinds[k] = { r: KINDS[k].r, jit: KINDS[k].jit, parts: KINDS[k].parts, variants: KINDS[k].variants || {}, light: KINDS[k].light || null, soft: !!KINDS[k].soft, float: !!KINDS[k].float, len: KINDS[k].len || null, fresh: !!KINDS[k].__props };
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -108,6 +116,19 @@ def test_props_library_data_is_well_formed():
     assert TEXTURES <= set(d["textures"]), "contract textures must resolve (flat colour) when the materials plugin is absent"
 
 
+def test_interior_set_has_every_kind_and_variant():
+    d = _dump()
+    assert set(d["sets"]["interior"]) == set(INTERIOR), set(d["sets"]["interior"]) ^ set(INTERIOR)
+    for k, want in INTERIOR.items():
+        assert set(d["kinds"][k]["variants"]) == want, (k, list(d["kinds"][k]["variants"]))
+    # wall-hung and flat kinds never block the player; wall pieces are 4 m segments like wallSegment; the lamp lights up
+    assert all(d["kinds"][k]["soft"] for k in ("rug", "pillow", "pictureFrame", "window"))
+    assert not any(d["kinds"][k]["soft"] for k in ("table", "sofa", "bookshelf", "book", "bed", "fridge", "wallInterior", "doorway", "staircase"))
+    assert d["kinds"]["wallInterior"]["len"] == 4 and d["kinds"]["doorway"]["len"] == 4
+    assert d["kinds"]["lampInterior"]["light"] and d["kinds"]["tv"]["light"] is None
+    assert any(p.get("e") is True for p in d["kinds"]["tv"]["parts"]) and any(p.get("e") is True for p in d["kinds"]["window"]["parts"]), "screens and windows glow"
+
+
 LIBRARY_GAME = """<!DOCTYPE html>
 <html lang="he"><head><meta charset="UTF-8"><title>props library</title>
 <style>body{background:#1e1e2e}</style></head>
@@ -118,14 +139,14 @@ const probe = (window.__yuvi.w3dp = { warns: [], built: false, frames: 0, setSiz
 const origWarn = console.warn; console.warn = function () { probe.warns.push(Array.prototype.join.call(arguments, ' ')); return origWarn.apply(console, arguments); };
 const W = YuviWorld3D.world(THREE, { preset: 'night', seed: 5, size: 120 });
 probe.built = !!(W.scene && W.renderer && typeof W.props.layout === 'function' && typeof W.props.set === 'function');
-const sets = ['industrial', 'urban', 'nature', 'scifi', 'medieval'];
+const sets = ['industrial', 'urban', 'nature', 'scifi', 'medieval', 'interior'];
 probe.setSizes = sets.map(s => W.props.set(s).length);
 const kinds = [].concat.apply([], sets.map(s => W.props.set(s)));
 probe.kinds = kinds.length;
 const handles = [];
 kinds.forEach((k, i) => {
-  const cx = (i %% 9 - 4) * 12, cz = Math.floor(i / 9) * 12 - 48;
-  const h = W.props.scatter(k, 2, { area: [cx, cz, 5.5, 5.5], seed: 100 + i, lights: 1 });
+  const cx = (i %% 11 - 5) * 10, cz = Math.floor(i / 11) * 11 - 50;
+  const h = W.props.scatter(k, 2, { area: [cx, cz, 4.5, 4.5], seed: 100 + i, lights: 1 });
   handles.push(h); probe.scattered += h.positions.length; if (!h.positions.length) probe.emptyScatter.push(k);
 });
 probe.placed += W.props.place('container', [[14, -30], { x: 22, z: -30, rot: Math.PI / 2, s: 1 }], { variant: 'open' }).positions.length;
@@ -175,6 +196,38 @@ probe.collided = ctrl.obstacles.length >= dec.positions.length;
 let start = null;
 YuviKit.init({
   title: 'מתחם תעשייתי', subtitle: 'לילה', palette: ['#1e1e2e', '#fab387'],
+  hud: [{ id: 'score', label: 'ניקוד', value: 0 }],
+  onStart: () => { ctrl.requestLook(); start = [ctrl.pos.x, ctrl.pos.z]; }
+});
+W.run();
+YuviKit.loop(() => { probe.frames++; if (start) probe.moved = probe.moved || Math.abs(ctrl.pos.x - start[0]) > 0.5; probe.stats = W.stats; probe.lights = W.lights.length; });
+</script>
+</body></html>""" % {"three": THREE_URL}
+
+
+ROOM_GAME = """<!DOCTYPE html>
+<html lang="he"><head><meta charset="UTF-8"><title>giant house</title>
+<style>body{background:#1e1e2e}</style></head>
+<body>
+<script type="module">
+import * as THREE from '%(three)s';
+const probe = (window.__yuvi.w3dr = { warns: [], built: false, frames: 0, house: null, tiny: null, cls: null, stats: null, moved: false, collided: false, lights: 0 });
+const origWarn = console.warn; console.warn = function () { probe.warns.push(Array.prototype.join.call(arguments, ' ')); return origWarn.apply(console, arguments); };
+const W = YuviWorld3D.world(THREE, { preset: 'night', seed: 8, size: 120 });
+probe.built = !!(W.scene && W.renderer);
+const sum = (d, k) => d.sets.filter(h => h.kind === k).reduce((n, h) => n + h.positions.length, 0);
+const info = d => ({ sets: d.sets.length, positions: d.positions.length, boxes: d.positions.filter(p => p.hw != null).length, landmark: d.landmark ? d.landmark.name : null, scale: d.sets[0].positions[0].s,
+  walls: sum(d, 'wallInterior'), doors: sum(d, 'doorway'), windows: sum(d, 'window'), rugs: sum(d, 'rug'), books: sum(d, 'book'), desks: sum(d, 'table'), chairs: sum(d, 'chair'), sofas: sum(d, 'sofa'), beds: sum(d, 'bed'), shelves: sum(d, 'bookshelf'),
+  kinds: d.sets.map(h => h.kind).filter((k, i, a) => a.indexOf(k) === i).length, maxX: Math.max.apply(null, d.positions.map(p => Math.abs(p.x))), path: d.path.length });
+const house = W.props.layout('house', { giant: true, seed: 3 });
+probe.house = info(house);
+const tiny = W.props.layout('house', { rooms: ['living'], giant: 10 }); probe.tiny = info(tiny); tiny.remove();
+const cls = W.props.layout('classroom', { seed: 5, radius: 30 }); probe.cls = info(cls); cls.remove();
+const ctrl = W.player.fps({ speed: 6, pos: [0, 0, 5] }).collide(house);
+probe.collided = ctrl.obstacles.length >= house.positions.length;
+let start = null;
+YuviKit.init({
+  title: 'בית ענק', subtitle: 'רובוט קטן', palette: ['#1e1e2e', '#f9e2af'],
   hud: [{ id: 'score', label: 'ניקוד', value: 0 }],
   onStart: () => { ctrl.requestLook(); start = [ctrl.pos.x, ctrl.pos.z]; }
 });
@@ -254,5 +307,30 @@ def test_industrial_layout_builds_a_compound_the_player_collides_with():
         assert n_sets >= 8 and n_pos > 10 and has_land, (name, n_sets, n_pos, has_land)
     assert probe["frames"] > 0
     assert probe["moved"] is True, "ArrowRight / KeyD held by the validator must move the FPS rig"
+    assert probe["lights"] <= 10
+    assert probe["stats"]["drawCalls"] > 0
+
+
+@pytest.mark.slow
+def test_room_layouts_build_a_giant_house_and_a_classroom():
+    res = _run(ROOM_GAME, "w3dr")
+    probe = res.yuvi_state["w3dr"]
+    assert probe["built"] is True
+    assert [w for w in probe["warns"] if "YuviWorld3D" in w] == [], probe["warns"]
+    h = probe["house"]
+    assert h["scale"] == pytest.approx(6.5), h["scale"]                      # giant: true → ×8, capped so the 16 m plan fits a 120 world
+    assert h["walls"] == 15 and h["doors"] == 1 and h["boxes"] == 17, h       # 4 × 4 slots, one is the doorway (two jambs collide)
+    assert h["windows"] >= 4 and h["rugs"] >= 16 + 3 and h["books"] >= 4 and h["sofas"] == 1 and h["beds"] == 1 and h["shelves"] == 3, h
+    assert h["sets"] >= 8 and h["kinds"] >= 15 and h["positions"] > 40, h
+    assert h["landmark"] == "landmark" and h["path"] == 0
+    assert 6.5 * 8 <= h["maxX"] <= 6.5 * 8 + 1, h["maxX"]                     # the ring sits on the plan's edge
+    t = probe["tiny"]
+    assert t["scale"] == 10 and t["walls"] == 7 and t["beds"] == 0 and t["sofas"] == 1, t   # one 8 m room at ×10
+    c = probe["cls"]
+    assert c["scale"] == 1 and c["walls"] == 13 and c["doors"] == 1 and c["boxes"] == 14, c   # 16 × 12 m ring, a closed door (solid slot)
+    assert c["desks"] == 13 and c["chairs"] == 13 and c["books"] == 13 and c["windows"] == 3 and c["rugs"] == 0, c   # 4 × 3 pupils + the teacher
+    assert c["sets"] >= 8 and c["positions"] > 10 and c["landmark"] == "landmark"
+    assert probe["collided"] is True
+    assert probe["frames"] > 0 and probe["moved"] is True
     assert probe["lights"] <= 10
     assert probe["stats"]["drawCalls"] > 0

@@ -57,8 +57,8 @@
 #yk-root .yk-dock>*{pointer-events:auto}
 #yk-root .yk-dock-bottom{left:50%;bottom:3vh;transform:translateX(-50%);align-items:center;max-width:80vw}
 #yk-root .yk-dock-top{left:50%;top:9vh;transform:translateX(-50%);align-items:center;max-width:80vw}
-#yk-root .yk-dock-bottom-left{left:1.2vw;bottom:3vh;align-items:flex-start}#yk-root .yk-dock-bottom-right{right:1.2vw;bottom:3vh;align-items:flex-end}
-#yk-root .yk-dock-top-left{left:1.2vw;top:9vh;align-items:flex-start}#yk-root .yk-dock-top-right{right:1.2vw;top:9vh;align-items:flex-end}
+#yk-root .yk-dock-bottom-left{left:1.2vw;bottom:calc(3vh + var(--yk-dock-bottom,0px));align-items:flex-start}#yk-root .yk-dock-bottom-right{right:1.2vw;bottom:calc(3vh + var(--yk-dock-bottom,0px));align-items:flex-end}
+#yk-root .yk-dock-top-left{left:1.2vw;top:calc(9vh + var(--yk-dock-top,0px));align-items:flex-start}#yk-root .yk-dock-top-right{right:1.2vw;top:calc(9vh + var(--yk-dock-top,0px));align-items:flex-end}
 #yk-root .yk-dock-left{left:1.2vw;top:50%;transform:translateY(-50%);align-items:flex-start}#yk-root .yk-dock-right{right:1.2vw;top:50%;transform:translateY(-50%);align-items:flex-end}
 #yk-root .yk-toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:rgba(0,0,0,.7);border:2px solid var(--yk-accent);border-radius:1rem;padding:1.2vh 3vw;font-size:clamp(1rem,3vw,1.6rem);font-weight:800;z-index:4;white-space:nowrap}
 #yk-joy{position:absolute;left:4vw;bottom:4vh;width:24vmin;height:24vmin;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);pointer-events:auto;touch-action:none;z-index:5}
@@ -396,7 +396,16 @@
     region = DOCK_REGIONS.indexOf(region) >= 0 ? region : 'bottom';
     if (!docks[region]) { docks[region] = el('div', 'yk-dock yk-dock-' + region, null, root); docks[region].setAttribute('dir', DIR); }
     if (node && node.nodeType) { ['position', 'left', 'right', 'top', 'bottom', 'transform'].forEach(k => { node.style[k] = ''; }); docks[region].appendChild(node); }
+    if (!dockObserver && window.ResizeObserver) { dockObserver = new ResizeObserver(layoutDocks); addEventListener('resize', layoutDocks); }
+    if (dockObserver && (region === 'top' || region === 'bottom')) dockObserver.observe(docks[region]);
+    layoutDocks();
     return docks[region];
+  }
+  let dockObserver = null;
+  // The centre strips (top / bottom) can be as wide as 80vw, so the corner regions clear them by their measured height: stacked, never overlapping, at any viewport.
+  function layoutDocks() {
+    if (!root) return;
+    ['top', 'bottom'].forEach(r => { const d = docks[r], h = d && d.children.length ? d.getBoundingClientRect().height : 0; root.style.setProperty('--yk-dock-' + r, h ? Math.ceil(h) + 8 + 'px' : '0px'); });
   }
   function message(text, ms) {
     if (!root) mount();
@@ -428,9 +437,19 @@
     if (playing()) TM.elapsed += TM.dt;
     return TM.dt;
   }
+  // One clock for every loop: `tick()` once per animation frame, then every registered callback gets the same dt.
+  // (Each loop ticking on its own gave the second loop — `W.run()` next to the game's own `YuviKit.loop` — a dt of ~0, and the game froze.)
+  const LOOPS = []; let loopDriver = false;
   function loop(fn) {
-    (function frame() { requestAnimationFrame(frame); const dt = tick(); if (playing()) { try { fn(dt); } catch (e) { console.error(e); } } })();
+    if (typeof fn !== 'function') return noopFn;
+    LOOPS.push(fn);
+    if (!loopDriver) {
+      loopDriver = true;
+      (function frame() { requestAnimationFrame(frame); const dt = tick(); if (playing()) { for (let i = 0; i < LOOPS.length; i++) { try { LOOPS[i](dt); } catch (e) { console.error(e); } } } })();
+    }
+    return () => { const i = LOOPS.indexOf(fn); if (i >= 0) LOOPS.splice(i, 1); };
   }
+  function noopFn() {}
   function bestSet(n) {
     n = +n || 0;
     if (n > B.v) { B.v = n; try { window.YuviStorage.set(B.key, n); } catch (e) {} }
@@ -463,6 +482,8 @@
     get palette() { return S.palette; },
     start: doStart, pause: setPause, retry: doRetry,
     hud: { set: hudSet, get: hudGet, add: (id, n) => hudSet(id, (+hudGet(id) || 0) + (+n || 0)) },
+    // Screen insets (px) taken by the HUD bar and the docked panels — draw canvas text, cards and targets inside the rest.
+    safe: () => { const r = { top: 0, bottom: 0, left: 0, right: 0 }; if (!root) return r; const h = root.querySelector('#yk-hud'); if (h && h.offsetHeight) r.top = Math.ceil(h.getBoundingClientRect().bottom); ['top', 'bottom'].forEach(k => { const d = docks[k]; if (d && d.children.length) { const b = d.getBoundingClientRect(); if (k === 'top') r.top = Math.max(r.top, Math.ceil(b.bottom)); else r.bottom = Math.max(r.bottom, Math.ceil(innerHeight - b.top)); } }); return r; },
     audio: { play: play, mute: setMute, toggle: () => setMute(!A.muted), get muted() { return A.muted; } },
     fx: { particles: particles, shake: shake, float: float, flash: flash },
     input: { keys: I.keys, axis: axis, pressed: c => I.keys.has(c), on: (name, fn) => { (I.handlers[name] = I.handlers[name] || []).push(fn); },

@@ -652,6 +652,8 @@
       const dist = +o.distance || { follow: 8, shoulder: 4, iso: 16, top: 18 }[mode], height = +o.height || { follow: dist * .5, shoulder: dist * .55, iso: dist * .85, top: dist * 1.3 }[mode], lag = +o.lag || .12;
       const bounds = boundsOf(o.bounds), look = new THREE.Vector3(), hh = (char.userData.height || 1.7);
       if (o.pos) toV3(o.pos, char.position); char.position.y = groundY(char.position.x, char.position.z);
+      // Spawn facing: -z (into the screen, the Three.js forward) unless `yaw` or `face` says otherwise — a level laid out at z < spawn is ahead, like every FPS rig.
+      if (o.yaw != null) char.rotation.y = +o.yaw; else if (o.face) { const f = toV3(o.face, V); char.rotation.y = Math.atan2(f.x - char.position.x, f.z - char.position.z); } else if (!char.rotation.y) char.rotation.y = Math.PI;
       const c = { kind: 'avatar', object: char, target: char, camera: camera, pos: char.position, vel: new THREE.Vector3(), yaw: char.rotation.y, camYaw: mode === 'iso' ? -.785 : mode === 'top' ? 0 : char.rotation.y + 3.1416, onGround: true, enabled: true, radius: char.userData.radius || .5, obstacles: addObstacles([], o.obstacles), moving: false, running: false, mode: mode };
       let first = true;
       c.update = dt => {
@@ -839,7 +841,10 @@
         cv.width = cv.height = +o.px || 120;
         Object.assign(cv.style, { position: 'absolute', bottom: '2vh', width: '20vmin', height: '20vmin', borderRadius: '1rem', border: '2px solid rgba(255,255,255,.4)', zIndex: 2 });
         cv.style[o.side === 'left' || (!o.side && kit() && kit().rtl) ? 'left' : 'right'] = '2vw';
-        (el && el.appendChild ? el : uiRoot()).appendChild(cv);
+        // No container given: the map joins the kit's corner dock so a game panel docked there stacks beside it instead of underneath it.
+        const k0 = kit();
+        if (!(el && el.appendChild) && k0 && k0.dock) { ['position', 'bottom', 'left', 'right'].forEach(k => { cv.style[k] = ''; }); k0.dock(cv, cv.style.left ? 'bottom-left' : (o.side === 'left' || (!o.side && k0.rtl)) ? 'bottom-left' : 'bottom-right'); }
+        else (el && el.appendChild ? el : uiRoot()).appendChild(cv);
       }
       const ctx = cv.getContext('2d'), scale = +o.scale || cv.width / size, cx = cv.width / 2, cy = cv.height / 2;
       let frame = 0;
@@ -964,11 +969,12 @@
       KINDS: KINDS, ROLES: ROLES, SKIN: SKIN, HAIRC: HAIRC, ANIMALS: ANIMALS, PRESETS: PRESETS, GEO: GEO, partGeo: partGeo, matFor: matFor, textures: textures, roleHex: roleHex, partColor: partColor, unlitFor: unlitFor,
       hemi: hemi, sun: sun, fill: fill, lights: lights, LIGHT_CAP: LIGHT_CAP, animated: animated, propSets: propSets, enemies: enemies, player: player, groundY: groundY, collide: collide, toV3: toV3, clamp: clamp, kit: kit, warn: warn, shadows: shadows, water: water, fogColor: fogColor, V: V, V2: V2, M: M, Q: Q, C: C, UP: UP });
     for (let i = 0; i < PLUGINS.length; i++) { try { PLUGINS[i](W, THREE, ctx); } catch (e) { warn('plugin ' + (PLUGINS[i].name || i) + ' failed: ' + (e && e.message)); console.error(e); } }
+    WORLDS.push(W);
     return W;
   }
 
-  const PLUGINS = [];
+  const PLUGINS = [], WORLDS = [];  // WORLDS: every world built on this page, for the validator and probes
   window.YuviWorld3D = { world: world, presets: Object.keys(PRESETS), biomes: Object.keys(PRESETS), get kinds() { return Object.keys(KINDS); }, roles: Object.keys(ROLES), animals: Object.keys(ANIMALS), seed: s => mulberry32(seedNum(s)),
     // `YuviWorld3D.use((W, THREE, ctx) => { … })` — called for every world created after registration; ctx exposes the internals (KINDS, matFor, textures, lights, …).
-    use: fn => { if (typeof fn === 'function') PLUGINS.push(fn); }, plugins: PLUGINS };
+    use: fn => { if (typeof fn === 'function') PLUGINS.push(fn); }, plugins: PLUGINS, worlds: WORLDS };
 })();
