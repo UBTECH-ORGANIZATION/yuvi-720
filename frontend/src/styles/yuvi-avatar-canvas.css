@@ -15,8 +15,10 @@
   pointer-events: none;
 }
 .Yuvi-avatar-canvas[data-webgl-state='lost'] .Yuvi-avatar-canvas__fallback,
+.Yuvi-avatar-canvas[data-webgl-state='building'] .Yuvi-avatar-canvas__fallback,
 .Yuvi-avatar-canvas[data-webgl-state='unavailable'] .Yuvi-avatar-canvas__fallback { display: block; }
 .Yuvi-avatar-canvas[data-webgl-state='lost'] canvas,
+.Yuvi-avatar-canvas[data-webgl-state='building'] canvas,
 .Yuvi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
 
 /* ── Animated studio overlay + shared-element Yuvi flight ── */

@@ -285,7 +285,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       return
     }
     if (avatarRoot) {
-      avatarRoot.dataset.webglState = 'ready'
+      // 'building' until the first frame lands: the 2D fallback stays up while
+      // the room is built and the shaders compile, so nothing is ever blank.
+      avatarRoot.dataset.webglState = 'building'
       avatarRoot.dataset.renderTier = tier
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap))
@@ -1830,7 +1832,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.render(scene, camera)
       if (!firstFrameSent) {
         firstFrameSent = true
-        if (avatarRoot) avatarRoot.dataset.firstFrame = '1'
+        if (avatarRoot) {
+          avatarRoot.dataset.firstFrame = '1'
+          if (avatarRoot.dataset.webglState === 'building') avatarRoot.dataset.webglState = 'ready'
+        }
         if (mainContent) trackTiming('studio.firstFrame', performance.now() - mountedAt, { tier, gpu: resolved.gpu })
       }
       requestFrame()

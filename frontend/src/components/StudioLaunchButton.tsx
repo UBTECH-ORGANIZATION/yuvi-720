@@ -20,6 +20,16 @@ export function StudioLaunchButton() {
     else navigate('/yuvi-studio')
   }
 
+  // Intent is the cheapest preload signal there is: by the time the click
+  // lands, the studio, its catalog and three.js are usually already parsed.
+  // The import is idempotent, so hover/focus/touch may all fire it.
+  const warmStudio = () => {
+    if (warmed.current) return
+    warmed.current = true
+    void import('../features/Yuvi-studio/StudioContent')
+  }
+  const warmed = useRef(false)
+
   return (
     <button
       ref={buttonRef}
@@ -29,6 +39,9 @@ export function StudioLaunchButton() {
       title={t('YuviStudio.subtitle')}
       aria-label={`${t('YuviStudio.title')} — ${t('YuviStudio.launcher')}`}
       onClick={openStudio}
+      onPointerEnter={warmStudio}
+      onFocus={warmStudio}
+      onTouchStart={warmStudio}
     >
       <span className="studio-launch__head" aria-hidden="true">
         <YuviHeadIcon />
