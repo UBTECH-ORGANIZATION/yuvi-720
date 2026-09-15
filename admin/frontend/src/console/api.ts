@@ -1,26 +1,59 @@
-/* Admin control plane client (F8, plan A9b).
- *
- * Separate from `teacher.ts` on purpose: this is the *control plane* (who
- * exists, who is connected to whom), not a dashboard. The admin dashboard is
- * the ordinary teacher app with the group switcher unlocked — one
- * implementation, no drift.
+/* Organisation console client — Spark's control plane, reached through this
+ * service's `/api/admin/*` proxy (`backend/console_proxy.py`). Every path is
+ * kept exactly as Spark's own client had it: the proxy forwards the suffix
+ * unchanged.
  *
  * Guardrail refusals come back as 409 with a machine-readable `{error: code}`,
- * and the UI has to be able to tell "you may not do that" from "that failed".
- * `apiPost` throws before reading the body, so this module does its own POST and
- * surfaces the code as `AdminRefusal.code`.
+ * and the UI has to be able to tell "you may not do that" from "that failed" —
+ * so mutations do their own POST and surface the code as `AdminRefusal.code`.
+ * Reads throw the app-wide `ApiError`, so a 401 can send the shell back to the
+ * auth check the same way every other section does.
  */
 
-import { apiGet } from './api'
-import { AdminRefusal, isOverridable } from './adminGuardrails'
+import { ApiError } from '../api'
 
-export { AdminRefusal, isOverridable }
+/** A guardrail said no. `code` is one of the backend's `AdminError` codes. */
+export class AdminRefusal extends Error {
+  readonly code: string
+  readonly status: number
+  constructor(code: string, status: number) {
+    super(code)
+    this.name = 'AdminRefusal'
+    this.code = code
+    this.status = status
+  }
+}
+
+/**
+ * Guardrail codes an admin is allowed to override by confirming.
+ *
+ * Exactly one, and it must stay that way: `would_leave_group_unstaffed` is a
+ * refusal to act *silently*, so confirming is the whole point. The others
+ * (`cannot_revoke_self`, `cannot_remove_last_admin`) are refusals on principle
+ * — the backend rejects the retry too, so offering an override button would be
+ * a lie the UI tells about what will happen.
+ */
+const OVERRIDABLE = new Set(['would_leave_group_unstaffed'])
+
+export function isOverridable(code: string): boolean {
+  return OVERRIDABLE.has(code)
+}
+
+async function adminGet<T>(path: string): Promise<T> {
+  const response = await fetch(path, {
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) throw new ApiError(response.status)
+  return response.json() as Promise<T>
+}
 
 async function adminPost<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(body),
   })
   if (!response.ok) {
@@ -163,7 +196,7 @@ export interface CreatedUser {
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export function getOverview(): Promise<AdminOverview> {
-  return apiGet('/api/admin/overview')
+  return adminGet('/api/admin/overview')
 }
 
 export function listPeople(role?: string, query?: string): Promise<{ people: Person[] }> {
@@ -171,23 +204,23 @@ export function listPeople(role?: string, query?: string): Promise<{ people: Per
   if (role) params.set('role', role)
   if (query) params.set('q', query)
   const suffix = params.toString()
-  return apiGet(`/api/admin/people${suffix ? `?${suffix}` : ''}`)
+  return adminGet(`/api/admin/people${suffix ? `?${suffix}` : ''}`)
 }
 
 export function getTeacherConnections(teacherId: string): Promise<TeacherConnections> {
-  return apiGet(`/api/admin/teachers/${encodeURIComponent(teacherId)}/connections`)
+  return adminGet(`/api/admin/teachers/${encodeURIComponent(teacherId)}/connections`)
 }
 
 export function getLearnerConnections(learnerId: string): Promise<LearnerConnections> {
-  return apiGet(`/api/admin/learners/${encodeURIComponent(learnerId)}/connections`)
+  return adminGet(`/api/admin/learners/${encodeURIComponent(learnerId)}/connections`)
 }
 
 export function getOrg(): Promise<OrgSnapshot> {
-  return apiGet('/api/admin/org')
+  return adminGet('/api/admin/org')
 }
 
 export function listAdmins(): Promise<{ admins: AdminGrant[] }> {
-  return apiGet('/api/admin/admins')
+  return adminGet('/api/admin/admins')
 }
 
 export function listAudit(filters: { actor_id?: string; target_id?: string; limit?: number } = {}):
@@ -197,7 +230,7 @@ Promise<{ entries: AuditEntry[] }> {
   if (filters.target_id) params.set('target_id', filters.target_id)
   if (filters.limit) params.set('limit', String(filters.limit))
   const suffix = params.toString()
-  return apiGet(`/api/admin/audit${suffix ? `?${suffix}` : ''}`)
+  return adminGet(`/api/admin/audit${suffix ? `?${suffix}` : ''}`)
 }
 
 /* ── mutations ────────────────────────────────────────────────────────────── */
@@ -316,7 +349,7 @@ export interface GameCapsBody {
 }
 
 export function getGamesUsage(): Promise<GameUsageReport> {
-  return apiGet('/api/admin/games/usage')
+  return adminGet('/api/admin/games/usage')
 }
 
 export function setGameCapDefaults(body: GameCapsBody): Promise<GameCaps> {
@@ -362,5 +395,5 @@ export interface GameJobRow {
 }
 
 export function getGamesJobs(limit = 200, sinceHours = 168): Promise<{ items: GameJobRow[] }> {
-  return apiGet(`/api/admin/games/jobs?limit=${limit}&since_hours=${sinceHours}`)
+  return adminGet(`/api/admin/games/jobs?limit=${limit}&since_hours=${sinceHours}`)
 }

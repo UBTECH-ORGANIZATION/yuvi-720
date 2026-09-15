@@ -8,20 +8,19 @@
  */
 
 import { useEffect, useState } from 'react'
-import { navigate } from '../../app/router'
-import { Card, EmptyState, Panel } from '../../components/primitives'
-import { useI18n } from '../../i18n/I18nProvider'
-import {
-  enrollLearners, getOverview, linkTeacher, type AdminOverview,
-} from '../../services/admin'
-import { AuditRow } from './AdminAuditTab'
-import type { AdminData } from './AdminConsolePage'
-import { AdminSection, RefusalNotice, useAdminMutation } from './AdminShared'
+import { useI18n } from '../i18n/I18nProvider'
+import { enrollLearners, getOverview, linkTeacher, type AdminOverview } from './api'
+import { AuditRow } from './AuditTab'
+import type { AdminData } from './ConsoleDashboard'
+import { Card, EmptyState, Panel } from './primitives'
+import { AdminSection, RefusalNotice, useAdminMutation, useConsoleShell, useUnauthorizedGuard } from './shared'
 
 const COUNT_KEYS = ['schools', 'groups', 'teachers', 'students', 'active_links', 'enrollments'] as const
 
-export function AdminOverviewTab({ data }: { data: AdminData }) {
+export function OverviewTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
+  const { goToTab } = useConsoleShell()
+  const unauthorized = useUnauthorizedGuard()
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [nonce, setNonce] = useState(0)
 
@@ -29,9 +28,11 @@ export function AdminOverviewTab({ data }: { data: AdminData }) {
   // be recomputed after a fix applied on this very screen.
   useEffect(() => {
     let active = true
-    getOverview().then((result) => { if (active) setOverview(result) }).catch(() => {})
+    getOverview()
+      .then((result) => { if (active) setOverview(result) })
+      .catch((error: unknown) => { if (active) unauthorized(error) })
     return () => { active = false }
-  }, [nonce])
+  }, [nonce, unauthorized])
 
   const refresh = () => { setNonce((value) => value + 1); data.reload() }
   const mutation = useAdminMutation(refresh)
@@ -116,8 +117,7 @@ export function AdminOverviewTab({ data }: { data: AdminData }) {
       <AdminSection
         title={t('adm.overview.recent')}
         action={
-          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
-                  onClick={() => navigate('/admin?tab=audit')}>
+          <button type="button" className="adm-btn adm-btn--ghost" onClick={() => goToTab('audit')}>
             {t('adm.overview.recent.all')}
           </button>
         }
@@ -150,7 +150,7 @@ function GroupPicker({ groups, actionLabel, busy, onPick }: {
   return (
     <span className="adm-picker">
       <select
-        className="sp-input"
+        className="adm-input"
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
         aria-label={actionLabel}
@@ -162,7 +162,7 @@ function GroupPicker({ groups, actionLabel, busy, onPick }: {
       </select>
       <button
         type="button"
-        className="sp-btn sp-btn--sm"
+        className="adm-btn adm-btn--primary"
         disabled={!selected || busy}
         onClick={() => onPick(selected)}
       >

@@ -17,8 +17,8 @@ export function TourButton() {
   const { startTour, isActive } = useTour()
   const { user } = useAuth()
 
-  // The admin console shares this chrome, so an admin who does not teach would
-  // otherwise be offered a tour that immediately navigates them into an error.
+  // The tour walks teacher screens, so an account that cannot open them (an
+  // admin who does not teach) must not be offered a walk into an error page.
   if (!canTakeTeacherTour(user?.roles)) return null
 
   return (

@@ -58,7 +58,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
      half of his account, and a bell that mixes them makes both unreadable. The
      server re-checks the role against the session, so this is a view choice,
      never an access one. */
-  const isTeacherPortal = pathname.startsWith('/teacher') || pathname.startsWith('/admin')
+  const isTeacherPortal = pathname.startsWith('/teacher')
   const canTeach = Boolean(user?.roles?.some((role) => role === 'teacher' || role === 'admin'))
   const isLearner = Boolean(user?.roles?.includes('learner'))
   const role: NotificationRole =

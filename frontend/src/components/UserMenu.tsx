@@ -12,6 +12,9 @@ import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
    user document, so putting them behind the avatar is where people look for
    them — and it keeps the bar itself uncluttered. */
 
+/** The standalone admin service; opened in a new tab, it is its own app. */
+const ADMIN_CONSOLE_URL = 'https://admin.spark.yuvilab.ai'
+
 const LANGUAGES: Array<{ value: Language; label: string }> = [
   { value: 'he', label: 'עברית' },
   { value: 'en', label: 'English' },
@@ -35,11 +38,15 @@ export function UserMenu() {
   const { startTour } = useTour()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  /* Badge avatars are a learner thing. In the teacher/admin app the same menu
-     drops both badge affordances — a teacher grading a class has no badge
-     gallery to edit, and offering one was learner chrome leaking through. */
+  /* Badge avatars are a learner thing. In the teacher app the same menu drops
+     both badge affordances — a teacher grading a class has no badge gallery to
+     edit, and offering one was learner chrome leaking through. */
   const route = useRoute()
-  const inTeacherApp = route.startsWith('/teacher') || route.startsWith('/admin')
+  const inTeacherApp = route.startsWith('/teacher')
+  /* The admin console is not a Spark page any more: it is the standalone admin
+     service. The role here only decides whether to show the door — the service
+     re-checks the live grant on its own. */
+  const isAdmin = Boolean(user?.roles.includes('admin'))
 
   useEffect(() => {
     if (!open) return
@@ -190,6 +197,22 @@ export function UserMenu() {
                 <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+          ) : null}
+
+          {isAdmin ? (
+            <a
+              className="user-menu__row user-menu__row--link"
+              role="menuitem"
+              href={ADMIN_CONSOLE_URL}
+              target="_blank"
+              rel="noopener"
+              onClick={() => setOpen(false)}
+            >
+              <span>{t('tch.nav.admin')}</span>
+              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
           ) : null}
 
           <button
