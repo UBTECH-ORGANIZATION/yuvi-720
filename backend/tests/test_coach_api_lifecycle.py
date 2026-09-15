@@ -352,6 +352,79 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
             {"name": "visual_plan", "status": "ok", "source": "system"},
         ]])
 
+    async def test_a_teacher_suggestion_rides_the_reply_and_is_persisted(self):
+        """The `suggest_teacher_help` tool fills the route's list during the
+        stream; the route emits it after the text, tied to the reply, and the
+        turn keeps the reason (evidence included) in its own metadata."""
+        async def _suggesting_stream(learner_id: str, **kwargs):
+            kwargs["teacher_suggestions"].append({
+                "reason": "asked_for_teacher", "question_key": "hexagons|hexagons-001|q1",
+                "evidence": "asked for the teacher in words", "unlocked": True,
+            })
+            await sessions.append_turn(
+                learner_id, "lesson_coach",
+                user=kwargs["user_message"], assistant="תשובה בטוחה",
+                session_id=kwargs["session_id"], exchange_id=kwargs.get("exchange_id"),
+                assistant_meta={"teacher_suggestion": kwargs["teacher_suggestions"][0]},
+            )
+            yield "תשובה בטוחה"
+
+        lesson = await self.client.post("/api/agent/coach/conversations", json={
+            "unit_id": "math-unit", "component_id": "hexagons",
+            "launch_session_id": "lesson-launch-suggest",
+        })
+        lesson_id = lesson.json()["id"]
+        with patch.object(agent, "run_coach_stream", _suggesting_stream):
+            events = await _collect_sse_events(self.client, {
+                "conversation_id": lesson_id,
+                "message": "אני רוצה מורה",
+                "language": "he",
+                "surface": {"screen": "learning_lesson", "unit_id": "math-unit", "component_id": "hexagons"},
+            })
+        kinds = [next(iter(event)) for event in events]
+        self.assertIn("teacher_suggestion", kinds)
+        self.assertLess(kinds.index("text"), kinds.index("teacher_suggestion"))
+        self.assertLess(kinds.index("teacher_suggestion"), kinds.index("tool_trace"))
+        # Reason only on the wire — the evidence sentence never leaves the server.
+        [frame] = [event["teacher_suggestion"] for event in events if "teacher_suggestion" in event]
+        self.assertEqual(frame, {"reason": "asked_for_teacher", "question_key": "hexagons|hexagons-001|q1"})
+
+        stored = await self.client.get(
+            f"/api/agent/coach/conversations/{lesson_id}/messages", params={"mode": "lesson_coach"})
+        [reply] = [row for row in stored.json()["messages"] if row["role"] == "assistant"]
+        self.assertEqual(reply["meta"]["teacher_suggestion"]["reason"], "asked_for_teacher")
+
+    async def test_a_locked_hand_is_a_409_until_something_opens_it(self):
+        from app.services import coach_handoff, presence, teacher_alerts
+        presence.reset_for_tests()
+        teacher_alerts.reset_for_tests()
+        with patch("app.brain.org.teachers_for_learner", new=AsyncMock(return_value=["teacher-a"])), \
+             patch("app.services.notifications.notify", new=AsyncMock()), \
+             patch("app.agents.tutor_decision.recent_tutor_decisions", new=AsyncMock(return_value=[])), \
+             patch.dict(os.environ, {"HAND_UNLOCK_GATE_ENABLED": "1"}):
+            state = await self.client.get("/api/agent/coach/handoff/state")
+            self.assertEqual(state.json(), {
+                "raised": False, "since": None, "unlocked": False,
+                "unlock_reason": None, "unlock_source": None, "unlock_question_key": None,
+            })
+
+            locked = await self.client.post("/api/agent/coach/handoff", json={"reason": "hand_raised"})
+            self.assertEqual(locked.status_code, 409)
+            self.assertEqual(locked.json(), {"error": "hand_locked"})
+
+            coach_handoff.unlock_hand(
+                LEARNER_ID, question_key="hexagons|hexagons-001|q1", reason="idle", source="detector")
+            state = (await self.client.get("/api/agent/coach/handoff/state")).json()
+            self.assertTrue(state["unlocked"])
+            self.assertEqual(state["unlock_reason"], "idle")
+
+            raised = await self.client.post("/api/agent/coach/handoff", json={"reason": "hand_raised"})
+            self.assertEqual(raised.status_code, 200)
+            self.assertEqual(raised.json(), {"notified": 1})
+            # Delivered: the unlock is spent, the hand is up.
+            state = (await self.client.get("/api/agent/coach/handoff/state")).json()
+            self.assertEqual((state["raised"], state["unlocked"]), (True, False))
+
     def test_safe_tool_trace_keeps_system_and_agent_provenance(self):
         trace = agent._safe_tool_trace([
             {"name": "tutor_decision", "status": "ok", "source": "system"},

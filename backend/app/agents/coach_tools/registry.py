@@ -35,6 +35,8 @@ class CoachToolContext:
     action_offers: list[dict[str, Any]] = field(default_factory=list)
     visual_requests: list[dict[str, str]] = field(default_factory=list)
     pointer_requests: list[dict[str, Any]] = field(default_factory=list)
+    # Filled by `suggest_teacher_help` (lesson mode): at most one per turn.
+    teacher_suggestions: list[dict[str, Any]] = field(default_factory=list)
     calls_made: int = 0
     started_at: float = field(default_factory=time.monotonic)
 
