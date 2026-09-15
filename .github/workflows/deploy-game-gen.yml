@@ -76,7 +76,7 @@ jobs:
           az deployment group create -g "$RESOURCE_GROUP" -n "game-gen-dev-${{ needs.build.outputs.tag }}" \
             -f infra/game-gen/main.bicep -p infra/game-gen/dev.bicepparam \
             -p image="$IMAGE:${{ needs.build.outputs.tag }}" \
-               appServicePrincipalId="$principal" \
+               appServicePrincipalId="$principal" manageRoleAssignments=false \
                copilotGithubToken="${{ secrets.COPILOT_GITHUB_TOKEN }}" \
                mongoConnectionString="$mongo" redisConnectionString="$redis" \
             --query "properties.outputs" -o json
@@ -104,7 +104,7 @@ jobs:
           az deployment group create -g "$RESOURCE_GROUP" -n "game-gen-prod-${{ needs.build.outputs.tag }}" \
             -f infra/game-gen/main.bicep -p infra/game-gen/prod.bicepparam \
             -p image="$IMAGE:${{ needs.build.outputs.tag }}" \
-               appServicePrincipalId="$principal" \
+               appServicePrincipalId="$principal" manageRoleAssignments=false \
                copilotGithubToken="${{ secrets.COPILOT_GITHUB_TOKEN }}" \
                mongoConnectionString="$mongo" redisConnectionString="$redis" \
             --query "properties.outputs" -o json

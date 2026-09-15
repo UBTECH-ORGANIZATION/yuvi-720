@@ -20,6 +20,10 @@ param containerAppsEnvName string = 'cae-yuvi-720'
 param acrName string = 'yuvi720acr'
 @description('Principal id of the App Service (or slot) that enqueues jobs — gets Service Bus Data Sender + Blob Data Contributor.')
 param appServicePrincipalId string = ''
+// Role assignments (ACR pull, Service Bus, Blob) are written once by an Owner from the CLI.
+// CI's service principal cannot write role assignments, so the workflows pass false and only
+// update the app: the assignments stay as they are (they are keyed by stable guids).
+param manageRoleAssignments bool = true
 param maxReplicas int = env == 'prod' ? 10 : 2
 @description('Replicas kept warm. 1 removes the 30-60 s cold start (image pull + Chromium + Copilot runtime) at ~1 vCPU/2 GiB of idle spend; KEDA still scales above it per queued job.')
 param minReplicas int = env == 'prod' ? 1 : 0
@@ -195,27 +199,27 @@ var roleSbReceiver = subscriptionResourceId('Microsoft.Authorization/roleDefinit
 var roleSbSender = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
 var roleBlobContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 
-resource uamiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource uamiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (manageRoleAssignments) {
   name: guid(acr.id, uami.id, 'acrpull')
   scope: acr
   properties: { roleDefinitionId: roleAcrPull, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
-resource uamiSbReceive 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource uamiSbReceive 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (manageRoleAssignments) {
   name: guid(queue.id, uami.id, 'sb-receiver')
   scope: queue
   properties: { roleDefinitionId: roleSbReceiver, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
-resource uamiBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource uamiBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (manageRoleAssignments) {
   name: guid(storage.id, uami.id, 'blob-contrib')
   scope: storage
   properties: { roleDefinitionId: roleBlobContributor, principalId: uami.properties.principalId, principalType: 'ServicePrincipal' }
 }
-resource webSbSend 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(appServicePrincipalId)) {
+resource webSbSend 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (manageRoleAssignments && !empty(appServicePrincipalId)) {
   name: guid(queue.id, appServicePrincipalId, 'sb-sender')
   scope: queue
   properties: { roleDefinitionId: roleSbSender, principalId: appServicePrincipalId, principalType: 'ServicePrincipal' }
 }
-resource webBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(appServicePrincipalId)) {
+resource webBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (manageRoleAssignments && !empty(appServicePrincipalId)) {
   name: guid(storage.id, appServicePrincipalId, 'blob-contrib')
   scope: storage
   properties: { roleDefinitionId: roleBlobContributor, principalId: appServicePrincipalId, principalType: 'ServicePrincipal' }
