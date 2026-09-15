@@ -27,6 +27,8 @@ from .config import Settings
 from .database import UsageEventRepository
 from .leads import LEAD_STATUSES, LeadRepository
 from . import attachments, realtime
+from .console import ConsoleDatabase
+from .console.routes import build_router as build_console_router
 from .support import CONVERSATION_STATUSES, MAX_MESSAGE_LENGTH, TICKET_STATUSES, SupportRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
@@ -277,6 +279,10 @@ def _support_repository(request: Request) -> SupportRepository:
     return request.app.state.support_repository
 
 
+def _console_database(request: Request) -> ConsoleDatabase:
+    return request.app.state.console_database
+
+
 async def admin_required(request: Request) -> dict[str, Any]:
     settings = _settings(request)
     token = request.cookies.get(_ADMIN_COOKIE)
@@ -329,6 +335,7 @@ def create_app(
     repository = UsageEventRepository(resolved_settings)
     lead_repository = LeadRepository(resolved_settings)
     support_repository = SupportRepository(resolved_settings)
+    console_database = ConsoleDatabase(resolved_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -353,6 +360,7 @@ def create_app(
         repository.close()
         lead_repository.close()
         support_repository.close()
+        console_database.close()
 
     app = FastAPI(
         title="Yuvilab Spark Admin",
@@ -368,6 +376,7 @@ def create_app(
     app.state.usage_repository = repository
     app.state.lead_repository = lead_repository
     app.state.support_repository = support_repository
+    app.state.console_database = console_database
     app.add_middleware(
         SessionMiddleware,
         secret_key=resolved_settings.admin_secret_key,
@@ -1014,6 +1023,11 @@ def create_app(
             }
         )
         return Response(status_code=204)
+
+    # Organisation console: /api/admin/* reads and writes the shared database
+    # directly. It depends on the strict admin_required (never usage_access),
+    # so the public-preview mode can never reach a console route.
+    app.include_router(build_console_router(admin_required, _console_database))
 
     if _FRONTEND_DIST.exists():
         app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="admin-frontend")

@@ -7,6 +7,7 @@ import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3DLazy'
 import type { YuviAvatarHandle } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
+import { useRenderTier } from '../features/Yuvi-studio/renderTier'
 import { YuviHeadIcon } from './YuviHeadIcon'
 import './Yuvi-companion-dock.css'
 
@@ -36,6 +37,10 @@ export function YuviCompanionDock() {
      with no size, and the provider skipped it in silence. Going to the studio is
      the one case where Yuvi is genuinely gone from the page. */
   const { isGuideFlying } = useTour()
+  /* The dock is on every learner route, so on a low-tier device it is the one
+     WebGL context the page can most afford to not have: a flat Yuvi stands in.
+     Medium keeps the 3D robot but at the cheap settings; high is unchanged. */
+  const renderTier = useRenderTier()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const dockRef = useRef<HTMLElement | null>(null)
   const studioOpen = transition?.isOpen ?? false
@@ -158,7 +163,30 @@ export function YuviCompanionDock() {
           {t('companion.tooltip')}
         </span>
         <div className="Yuvi-companion-dock__robot">
-          {loaded && !avatarAway && (
+          {loaded && !avatarAway && renderTier === 'low' && (
+            /* The same 2D fallback the renderer keeps behind its canvas, shown
+               via the `unavailable` state its CSS already styles. The wrapper
+               still carries the pull/push animations, so the flat Yuvi drags
+               and shoves the panel exactly like the 3D one. */
+            <div
+              className="Yuvi-avatar-canvas"
+              data-webgl-state="unavailable"
+              role="button"
+              tabIndex={0}
+              aria-label={t('companion.launcher')}
+              style={{ position: 'relative', width: '100%', height: '100%' }}
+              onClick={openImmediately}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  openImmediately()
+                }
+              }}
+            >
+              <img className="Yuvi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" aria-hidden="true" />
+            </div>
+          )}
+          {loaded && !avatarAway && renderTier !== 'low' && (
             <YuviAvatar3D
               ref={avatarRef}
               initialDesign={design}
@@ -170,6 +198,10 @@ export function YuviCompanionDock() {
               pushing={isClosing}
               pushingSide="right"
               onAvatarClick={openImmediately}
+              performanceMode={renderTier === 'medium' ? 'low' : 'standard'}
+              /* A page nobody is touching does not need a robot breathing at
+                 60 fps on it. Twenty seconds, then he waits for the next move. */
+              idlePauseMs={20000}
             />
           )}
           {!loaded && !avatarAway && (

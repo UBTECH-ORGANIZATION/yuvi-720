@@ -96,6 +96,7 @@ class MoeOidcTestCase(unittest.TestCase):
                 "SPARK_ENVIRONMENT",
                 "ENVIRONMENT",
                 "SECRET_KEY",
+                "PASSWORD_LOGIN_ENABLED",
             )
         }
         os.environ.update(
@@ -550,6 +551,26 @@ class PasswordLoginGateTest(MoeOidcTestCase):
         self._os.environ["SPARK_ENVIRONMENT"] = "local"
         self._os.environ["ENVIRONMENT"] = "production"
         self.assertFalse(core_env.password_login_allowed())
+
+    def test_dev_slot_opts_in_with_the_setting(self) -> None:
+        """The Dev slot offers both doors, like a developer machine, when its
+        slot setting says so. Nothing else changes for it."""
+        for environment in ("dev", "english"):
+            self._os.environ["SPARK_ENVIRONMENT"] = environment
+            self._os.environ["ENVIRONMENT"] = environment
+            self._os.environ["PASSWORD_LOGIN_ENABLED"] = "true"
+            self.assertTrue(core_env.password_login_allowed(), msg=environment)
+            self._os.environ["PASSWORD_LOGIN_ENABLED"] = "false"
+            self.assertFalse(core_env.password_login_allowed(), msg=environment)
+
+    def test_the_setting_never_opens_production(self) -> None:
+        """Ministry SSO is the only door into production; a hand-set flag on
+        the production slot must not become an entry point."""
+        for environment in ("production", "prod"):
+            self._os.environ["SPARK_ENVIRONMENT"] = environment
+            self._os.environ["ENVIRONMENT"] = environment
+            self._os.environ["PASSWORD_LOGIN_ENABLED"] = "true"
+            self.assertFalse(core_env.password_login_allowed(), msg=environment)
 
 
 class ConfigurationTest(MoeOidcTestCase):

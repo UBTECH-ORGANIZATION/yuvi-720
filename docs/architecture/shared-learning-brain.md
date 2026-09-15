@@ -1315,7 +1315,7 @@ the UI refactor the project needs (and the place the `720-UIUX` design lands in 
 | Teacher directive composer | drawer | portal write lane → `teacher_directives` | `teacher_directives` | portal (not an agent) | compose · scope · priority · visibility · preview |
 | Mentoring form (teacher) | `/mentoring` (teacher) | `/api/mentoring/*` | `mentoring_conversations`, `goals` mirror | — | draft · final · private-note · preview |
 | Feedback / issue | modal / route | `POST /api/feedback` | `feedback_reports` (+ auto context) | — | form · context-attach · confirm |
-| Admin overview | `/admin` | `/api/orgs/*`, `/api/groups/*` | schools · teachers · groups · enrollments | — | list · permission-preview |
+| Admin overview | standalone admin service (<https://admin.spark.yuvilab.ai>), no Spark route | `/api/orgs/*`, `/api/groups/*` | schools · teachers · groups · enrollments | — | list · permission-preview |
 | Reviewer / compliance | `/reviewer` | read-only brain + `learning_events` + audit | evidence trace, feature coverage, arch mini-map | read-only | trace · replay |
 
 ### 17.5 Data-flow patterns + `services/api.ts` additions

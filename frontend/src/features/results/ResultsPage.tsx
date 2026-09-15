@@ -8,6 +8,8 @@ import { useBrain } from '../../providers/BrainProvider'
 import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
 import { ProfileGlyph } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
+// Travels with this lazy page instead of the main bundle.
+import '../../styles/results.css'
 
 type Status = 'loading' | 'analyzing' | 'ready' | 'error'
 type ToastState = { variant: 'info'; title: string; body?: string } | null

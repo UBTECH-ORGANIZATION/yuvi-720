@@ -1,0 +1,144 @@
+/* The part of the studio's CSS that every page needs: the avatar canvas (the
+   companion dock, the tour guide, the landing pilot and the learning track all
+   render the same `YuviAvatar3D`), the studio overlay shell and the portal
+   burst the transition provider fires from the launcher. Everything else in
+   Yuvi-studio.css is the studio's own chrome and loads with StudioContent. */
+.Yuvi-avatar-canvas { width: 100%; height: 100%; }
+.Yuvi-avatar-canvas__fallback {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: none;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.Yuvi-avatar-canvas[data-webgl-state='lost'] .Yuvi-avatar-canvas__fallback,
+.Yuvi-avatar-canvas[data-webgl-state='building'] .Yuvi-avatar-canvas__fallback,
+.Yuvi-avatar-canvas[data-webgl-state='unavailable'] .Yuvi-avatar-canvas__fallback { display: block; }
+.Yuvi-avatar-canvas[data-webgl-state='lost'] canvas,
+.Yuvi-avatar-canvas[data-webgl-state='building'] canvas,
+.Yuvi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
+/* The studio stage is the exception: the placeholder robot blown up to the
+   stage's size read as a giant blurry Yuvi for a second on every load. There
+   the dark backdrop is the loading state, and the first frame just appears. */
+.ys-stage__canvas .Yuvi-avatar-canvas[data-webgl-state='building'] .Yuvi-avatar-canvas__fallback { display: none; }
+.ys-stage__canvas .Yuvi-avatar-canvas[data-webgl-state='building'] canvas { visibility: visible; }
+
+/* ── Animated studio overlay + shared-element Yuvi flight ── */
+.studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 380ms ease;
+}
+.studio-overlay.is-visible { opacity: 1; }
+/* Safety net: a transparent full-screen overlay must never swallow the clicks
+   and scrolling of the page behind it, however the close sequence ends. */
+.studio-overlay:not(.is-visible) { pointer-events: none; }
+.studio-overlay .Yuvi-studio { height: 100%; }
+
+/* ── Portal burst ──
+   Fired at the launcher button when the studio opens and again when it closes.
+   Everything is anchored to --ys-bx / --ys-by (the button's centre) so the
+   energy visibly comes out of the thing the learner just pressed. The "out"
+   variant simply runs the same keyframes in reverse, which reads as the studio
+   being sucked back into the button. */
+.ys-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.ys-burst > * {
+  position: absolute;
+  inset-block-start: var(--ys-by, 50%);
+  inset-inline-start: auto;
+  left: var(--ys-bx, 50%);
+  translate: -50% -50%;
+}
+
+.ys-burst__flash {
+  inline-size: 120px;
+  block-size: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .95), rgba(124, 108, 255, .55) 42%, rgba(76, 201, 240, 0) 72%);
+  animation: ys-burst-flash 620ms cubic-bezier(.15, .8, .3, 1) both;
+}
+
+@keyframes ys-burst-flash {
+  from { scale: .18; opacity: 1; }
+  60% { opacity: .5; }
+  to { scale: 4.6; opacity: 0; }
+}
+
+.ys-burst__ring {
+  inline-size: 90px;
+  block-size: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(124, 108, 255, .85);
+  box-shadow: 0 0 26px rgba(124, 108, 255, .55), inset 0 0 18px rgba(76, 201, 240, .5);
+  animation: ys-burst-ring 820ms cubic-bezier(.12, .75, .25, 1) both;
+}
+
+.ys-burst__ring:nth-of-type(3) {
+  border-color: rgba(76, 201, 240, .8);
+  animation-delay: 110ms;
+}
+
+.ys-burst__ring:nth-of-type(4) {
+  border-color: rgba(255, 180, 87, .7);
+  border-width: 2px;
+  animation-delay: 220ms;
+}
+
+@keyframes ys-burst-ring {
+  from { scale: .12; opacity: 1; }
+  to { scale: 3.4; opacity: 0; }
+}
+
+.ys-burst__spark {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(124, 108, 255, .95);
+  /* translate handles the centring, so the angle+distance can own `transform`. */
+  animation: ys-burst-spark 900ms cubic-bezier(.1, .7, .2, 1) both;
+  animation-delay: calc(var(--i) * 14ms);
+}
+
+.ys-burst__spark:nth-child(even) { background: #b3f4ff; box-shadow: 0 0 12px rgba(76, 201, 240, .95); }
+.ys-burst__spark:nth-child(3n) { inline-size: 6px; block-size: 6px; background: #ffd9a3; }
+
+@keyframes ys-burst-spark {
+  from {
+    transform: rotate(calc(var(--i) * 22.5deg)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(calc(var(--i) * 22.5deg)) translateX(clamp(180px, 26vw, 420px)) scale(.2);
+    opacity: 0;
+  }
+}
+
+/* Closing: the same burst played backwards — sparks rush inward and the rings
+   collapse onto the button Yuvi is flying home to. */
+.ys-burst--out .ys-burst__flash,
+.ys-burst--out .ys-burst__ring,
+.ys-burst--out .ys-burst__spark {
+  animation-direction: reverse;
+}
+
+.ys-burst--out .ys-burst__flash { animation-duration: 520ms; }
+.ys-burst--out .ys-burst__ring { animation-duration: 620ms; }
+.ys-burst--out .ys-burst__spark { animation-duration: 700ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-burst { display: none; }
+}

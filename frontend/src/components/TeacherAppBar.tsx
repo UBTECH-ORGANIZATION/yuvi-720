@@ -260,10 +260,11 @@ export function TeacherAppBar() {
           ))}
         </div>
       </div>
-      {/* The admin console is deliberately NOT in this nav anymore: it is a
-          control plane an admin visits occasionally at /admin, not a teaching
-          surface — and for the teachers who are not admins it was dead chrome.
-          The backend still gates every /api/admin route on the live grant. */}
+      {/* The admin console is deliberately NOT in this nav: it is a control
+          plane an admin visits occasionally — now the standalone admin service
+          (https://admin.spark.yuvilab.ai), reached from the avatar menu — not a
+          teaching surface, and for the teachers who are not admins it was dead
+          chrome. */}
     </nav>
   )
 

@@ -41,10 +41,12 @@ on:
         type: boolean
         default: false
 
+# `actions: write` (needed only to ask ci.yml for the branch-rule checks) can
+# dispatch ANY workflow, including the production deploys. It lives on its own
+# job below, apart from the token that pushes and opens the PR.
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 concurrency:
   group: content-nightly
@@ -54,6 +56,9 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    outputs:
+      branch: ${{ steps.propose.outputs.branch }}
+      pushed: ${{ steps.propose.outputs.pushed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,6 +118,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Open (or update) the content pull request
+        id: propose
         if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -121,10 +127,13 @@ jobs:
           git config user.name "content-pipeline[bot]"
           git config user.email "content-pipeline@users.noreply.github.com"
           git add content/context
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
           if git diff --cached --quiet; then
             echo "catalog unchanged — nothing to propose"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
           stamp="$(date -u +%F)"
           git commit -m "content: nightly context refresh ${stamp}"
           # Force, on purpose: the branch is rebuilt from tonight's main every
@@ -144,6 +153,17 @@ jobs:
           )"
           fi
 
-          # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not
-          # fire them, so ask for them on this exact commit.
-          gh workflow run ci.yml --ref "${BRANCH}"
+  # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not fire
+  # them, so ask for them on this exact commit — with a token that can do
+  # nothing else.
+  request-checks:
+    needs: refresh
+    if: needs.refresh.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch ci.yml on the content branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref "${{ needs.refresh.outputs.branch }}"

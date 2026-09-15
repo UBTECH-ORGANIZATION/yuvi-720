@@ -488,3 +488,102 @@ class StudentCancelInvariant(unittest.IsolatedAsyncioTestCase):
         from app.services import coach_handoff
 
         self.assertEqual(await coach_handoff.cancel("kid-1"), 0)
+
+
+class HandGateTest(unittest.IsolatedAsyncioTestCase):
+    """The raise-hand gate: a hand nobody opened is refused at the service, so a
+    stale tab or a hand-rolled request cannot get past the greyed button; an
+    unlock is spent by the raise it enabled and by the teacher closing it."""
+
+    async def asyncSetUp(self):
+        teacher_alerts.reset_for_tests()
+        realtime.reset_for_tests()
+        from app.services import presence
+        presence.reset_for_tests()
+        for item in (
+            patch("app.brain.repository._get_collection_named", return_value=None),
+            patch("app.services.notifications.notify", new=AsyncMock()),
+            patch("app.agents.tutor_decision.recent_tutor_decisions",
+                  new=AsyncMock(return_value=[])),
+            patch.dict("os.environ", {"HAND_UNLOCK_GATE_ENABLED": "1"}),
+        ):
+            item.start()
+            self.addCleanup(item.stop)
+
+    def _staffed(self, teachers=("teacher-a",)):
+        return patch("app.brain.org.teachers_for_learner",
+                     new=AsyncMock(return_value=list(teachers)))
+
+    async def test_a_locked_hand_is_refused_and_nothing_is_raised(self):
+        from app.services import coach_handoff, presence
+        with self._staffed():
+            with self.assertRaises(coach_handoff.HandLocked):
+                await coach_handoff.hand_off("kid-1", reason="hand_raised")
+        self.assertEqual(await teacher_alerts.list_alerts("teacher-a"), [])
+        self.assertIsNone(presence.snapshot("kid-1")["help_requested_at"])
+
+    async def test_the_unlock_reason_reaches_the_alert_and_is_spent_by_delivery(self):
+        from app.services import coach_handoff, presence
+        coach_handoff.unlock_hand(
+            "kid-1", question_key="c|i|q1", reason="stuck_after_help", source="coach")
+        with self._staffed():
+            [alert] = await coach_handoff.hand_off("kid-1", reason="hand_raised")
+        raw = alert["evidence"]["raw"]
+        self.assertEqual(raw["unlock_reason"], "stuck_after_help")
+        self.assertEqual(raw["unlock_source"], "coach")
+        # Consumed: the next raise needs a fresh reason to open the button.
+        self.assertIsNone(presence.snapshot("kid-1")["hand_unlock"])
+        self.assertFalse(coach_handoff.hand_state("kid-1")["unlocked"])
+        self.assertTrue(coach_handoff.hand_state("kid-1")["raised"])
+
+    async def test_an_unreached_raise_keeps_the_unlock(self):
+        """No teacher to notify: blocking the retry would strand the child."""
+        from app.services import coach_handoff, presence
+        coach_handoff.unlock_hand("kid-1", question_key="c|i|q1", reason="idle", source="detector")
+        with self._staffed(teachers=()):
+            self.assertEqual(await coach_handoff.hand_off("kid-1"), [])
+        self.assertIsNotNone(presence.snapshot("kid-1")["hand_unlock"])
+
+    async def test_cancel_re_locks(self):
+        from app.services import coach_handoff, presence
+        coach_handoff.unlock_hand("kid-1", question_key="c|i|q1", reason="other", source="coach")
+        await coach_handoff.cancel("kid-1")
+        self.assertIsNone(presence.snapshot("kid-1")["hand_unlock"])
+
+    async def test_the_teacher_resolving_re_locks(self):
+        from app.services import coach_handoff, presence
+        coach_handoff.unlock_hand("kid-1", question_key="c|i|q1", reason="other", source="coach")
+        with self._staffed():
+            [alert] = await teacher_alerts.raise_alert(
+                "kid-1", "coach_handoff", title_key="k", evidence=_evidence())
+            await teacher_alerts.resolve("teacher-a", alert["_id"])
+        self.assertIsNone(presence.snapshot("kid-1")["hand_unlock"])
+
+    async def test_the_state_carries_the_whole_gate(self):
+        from app.services import coach_handoff
+        self.assertEqual(coach_handoff.hand_state("kid-1"), {
+            "raised": False, "since": None, "unlocked": False,
+            "unlock_reason": None, "unlock_source": None, "unlock_question_key": None,
+        })
+        coach_handoff.unlock_hand(
+            "kid-1", question_key="c|i|q1", reason="misconception", source="detector")
+        state = coach_handoff.hand_state("kid-1")
+        self.assertTrue(state["unlocked"])
+        self.assertEqual(state["unlock_reason"], "misconception")
+        self.assertEqual(state["unlock_source"], "detector")
+        self.assertEqual(state["unlock_question_key"], "c|i|q1")
+
+    async def test_the_same_question_unlocks_once_and_the_first_reason_wins(self):
+        from app.services import coach_handoff
+        with patch.object(realtime, "publish", wraps=realtime.publish) as publish:
+            coach_handoff.unlock_hand("kid-1", question_key="c|i|q1", reason="idle", source="detector")
+            coach_handoff.unlock_hand("kid-1", question_key="c|i|q1", reason="other", source="coach")
+        frames = [c.args[1] for c in publish.call_args_list if c.args[0] == "learner:kid-1"]
+        self.assertEqual([f["type"] for f in frames], ["hand_unlock"])
+        self.assertEqual(coach_handoff.hand_state("kid-1")["unlock_reason"], "idle")
+
+    async def test_the_kill_switch_lets_a_raise_through(self):
+        from app.services import coach_handoff
+        with patch.dict("os.environ", {"HAND_UNLOCK_GATE_ENABLED": "0"}), self._staffed():
+            [alert] = await coach_handoff.hand_off("kid-1")
+        self.assertIsNone(alert["evidence"]["raw"]["unlock_reason"])

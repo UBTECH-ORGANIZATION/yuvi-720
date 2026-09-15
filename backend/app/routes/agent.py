@@ -703,12 +703,17 @@ async def coach_handoff(data: dict, learner_id: str = Depends(require_learner)):
     """
     from app.services import coach_handoff as handoff
 
-    alerts = await handoff.hand_off(
-        learner_id,
-        reason=str(data.get("reason") or "stuck")[:40],
-        objective_id=data.get("objective_id"),
-        component_id=data.get("component_id"),
-    )
+    try:
+        alerts = await handoff.hand_off(
+            learner_id,
+            reason=str(data.get("reason") or "stuck")[:40],
+            objective_id=data.get("objective_id"),
+            component_id=data.get("component_id"),
+        )
+    except handoff.HandLocked:
+        # The gate has not opened the hand for this question. Same shape as the
+        # support 409 so the client can re-lock without parsing a message.
+        return JSONResponse(content={"error": "hand_locked"}, status_code=409)
     # `notified: 0` is the orphan case — a learner in no staffed group. Reported
     # honestly so the UI can say "we could not reach a teacher" rather than
     # promising help that is not coming.
@@ -751,7 +756,12 @@ async def triggers_subscribe(learner_id: str = Depends(require_learner)):
         async for trig in triggers.subscribe(lid):
             yield f"data: {json.dumps(trig, ensure_ascii=False)}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    # Live game-build frames ride this stream; a buffering proxy would turn
+    # them into one burst per flush, so tell every hop not to.
+    return StreamingResponse(
+        event_generator(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/coach/stream")
@@ -829,6 +839,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         action_offers: list[dict[str, object]] = []
         visual_requests: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
+        teacher_suggestions: list[dict[str, object]] = []
         pointer_sent = False
         debug_trace: list[dict[str, str]] = []
         query_intent: list[str] = []
@@ -845,6 +856,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             action_offers=action_offers,
             visual_requests=visual_requests,
             pointer_requests=pointer_requests,
+            teacher_suggestions=teacher_suggestions,
             debug_trace=debug_trace,
             intent_out=query_intent,
         ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
@@ -864,6 +876,17 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
 
         if action_offers:
             yield f"data: {json.dumps({'actions': action_offers}, ensure_ascii=False)}\n\n"
+
+        if teacher_suggestions:
+            # The hand also opens over the trigger stream (`hand_unlock`); this
+            # frame ties the unlock to the reply that caused it, so the chat
+            # can attach it to the message. Reason only — never the evidence.
+            suggestion = teacher_suggestions[0]
+            frame = {"teacher_suggestion": {
+                "reason": suggestion.get("reason"),
+                "question_key": suggestion.get("question_key"),
+            }}
+            yield f"data: {json.dumps(frame, ensure_ascii=False)}\n\n"
 
         response_text = "".join(response_parts)
         async for event in _stream_visual_tail(

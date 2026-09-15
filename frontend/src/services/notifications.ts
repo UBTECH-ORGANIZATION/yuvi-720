@@ -21,6 +21,10 @@ export type NotificationKind =
   // Evidence overrode a teacher-asserted insight in the student model (#454) —
   // the symmetric half of the drastic-change warning.
   | 'model_override'
+  // Learning Game Lab: a build, an edit or a fix landed (or gave up). All four
+  // deep-link to the lesson page with the player open, and they are the kinds
+  // that ring the chime when they arrive live.
+  | 'game_ready' | 'game_failed' | 'game_edit_ready' | 'game_fix_ready'
 
 export interface NotificationAction {
   label_key: string

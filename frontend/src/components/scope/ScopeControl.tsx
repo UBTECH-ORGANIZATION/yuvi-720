@@ -85,7 +85,7 @@ export function ScopeControl() {
   const subgroupPending = !isLoading && showClass && !subgroupsReady
   const subjectPending = !isLoading && showClass && !subjectsReady
 
-  /* The admin console: no class, nothing to scope. Only once we know that —
+  /* A route with no class and nothing to scope. Only once we know that —
      during the first load it is also what an ordinary teacher looks like. */
   if (!classPending && !showClass && !showSubgroup && !showSubject) return null
 

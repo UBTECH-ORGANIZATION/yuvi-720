@@ -1334,6 +1334,12 @@ textarea[dir="auto"]:placeholder-shown {
   border-color: var(--sp-border-strong);
 }
 
+/* A row that is a link (the door to the standalone admin service) reads like
+   the button rows around it. */
+a.user-menu__row {
+  text-decoration: none;
+}
+
 .user-menu__row--danger {
   justify-content: center;
   color: var(--sp-danger-600);
