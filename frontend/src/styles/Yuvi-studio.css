@@ -1305,6 +1305,23 @@
 
 .ys-gamelab-card__usd { margin-inline-start: 4px; font-style: normal; font-weight: 700; color: var(--ys-ink); opacity: .75; }
 
+/* The wizard in a narrow column (the lesson chat): the same steps, tighter.
+   A variant, not a fork — the studio's rules above still apply. */
+.ys-gamelab--compact { gap: 10px; }
+.ys-gamelab--compact .ys-gamelab-steps { gap: 4px; }
+.ys-gamelab--compact .ys-gamelab-steps li { padding: 6px 7px; font-size: 11px; gap: 5px; }
+.ys-gamelab--compact .ys-gamelab-steps__n { inline-size: 18px; block-size: 18px; font-size: 10px; }
+.ys-gamelab--compact .ys-section__title { font-size: 13.5px; }
+.ys-gamelab--compact .ys-gamelab-lead { margin-block-end: 4px; font-size: 12.5px; }
+.ys-gamelab--compact .ys-gamelab-chosen { flex-wrap: wrap; padding: 7px 10px; }
+.ys-gamelab--compact .ys-gamelab-chosen__lines span { white-space: normal; }
+.ys-gamelab--compact .ys-gamelab-textarea--brief { min-block-size: 96px; }
+.ys-gamelab--compact .ys-chips { gap: 5px; }
+.ys-gamelab--compact .ys-gamelab-genre { min-block-size: 34px; padding-inline: 10px; font-size: 12px; }
+.ys-gamelab--compact .ys-gamelab-switch { padding: 8px 10px; gap: 10px; }
+.ys-gamelab--compact .ys-gamelab-create { inline-size: 100%; box-shadow: none; }
+.ys-gamelab--compact .ys-gamelab-pick { padding: 9px 11px; }
+
 
 /* Poster loading: a shimmer under the image until it has decoded. */
 .ys-gamelab-card__thumbwrap {

@@ -12,17 +12,15 @@
  * in as it is written, the same way vibe-coding-kids shows it, and the chat
  * waits until the game is ready.
  *
- * The iframe is `srcdoc`, never `src`: without `allow-same-origin` the page
- * has an opaque origin and could not fetch itself with the session cookie, so
- * the parent fetches the served HTML (harness already injected) and hands it
- * over. The nonce inside that HTML is the only identity the bridge trusts.
+ * The iframe, its fetch and the host bridge live in GamePlayerFrame (shared
+ * with the lesson chat's dialog); this page reads what the frame reports.
  *
  * Runtime errors from the frame are kept (last 20). One that fires in the
  * first seconds after load is treated as "the game does not start" and sent
  * for a fix automatically, once per version.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { Icon } from '../../components/primitives'
 import { YuviHeadIcon } from '../../components/YuviHeadIcon'
@@ -31,9 +29,10 @@ import { CodeView } from './CodeView'
 import { subscribe } from '../../services/realtime'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import {
-  askGame, editGame, fetchGameHtml, getGame, getGameLive, isGameFrame, reportBug,
+  askGame, editGame, getGame, getGameLive, isGameFrame, reportBug,
   type GameFrame, type GameStatus, type LearnerGame, type RuntimeErrorReport, getGameNarration, listGameJobs } from '../../services/games'
-import { createHostBridge, parseNonce, type GameProgress, type GameRuntimeError } from './hostBridge'
+import type { GameProgress, GameRuntimeError } from './hostBridge'
+import { GamePlayerFrame } from './GamePlayerFrame'
 import './games.css'
 
 /** Errors kept for a bug report — the backend reads at most this many too. */
@@ -117,16 +116,11 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
   const backLabel = backTo === 'lesson' ? 'games.player.backLesson' : 'games.player.back'
   const { t, direction } = useI18n()
   const stageRef = useRef<HTMLDivElement>(null)
-  const frameRef = useRef<HTMLIFrameElement>(null)
 
   const [game, setGame] = useState<LearnerGame>(initial)
   const [status, setStatus] = useState<GameStatus>(initial.status)
   const [version, setVersion] = useState(initial.current_version)
   const [sparks, setSparks] = useState(initial.sparks_spent)
-  const [html, setHtml] = useState<string | null>(null)
-  const [loadError, setLoadError] = useState(false)
-  const [loadNonce, setLoadNonce] = useState(0)
-  const nonce = useMemo(() => (html ? parseNonce(html) : null), [html])
 
   const [mode, setMode] = useState<ChatMode>('change')
   const [draft, setDraft] = useState('')
@@ -251,25 +245,15 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     toastTimer.current = window.setTimeout(() => setToast(null), TOAST_MS)
   }, [])
 
-  // ── The page: fetched, never linked ────────────────────────────────────
-  useEffect(() => {
-    if (status !== 'ready') return
-    let active = true
-    setLoadError(false)
-    setHtml(null)
-    fetchGameHtml(game.game_id, version)
-      .then((text) => { if (active) setHtml(text) })
-      .catch(() => { if (active) setLoadError(true) })
-    return () => { active = false }
-  }, [game.game_id, version, status, loadNonce])
-
   // A new version is a new page: what broke before is not evidence now.
-  useEffect(() => {
+  // (The frame calls `resetEvidence` again once the new page is in.)
+  const resetEvidence = useCallback(() => {
     errorsRef.current = []
     setErrorCount(0)
     questionOpenRef.current = false
     setFinished(null)
-  }, [version, html])
+  }, [])
+  useEffect(() => { resetEvidence() }, [version, resetEvidence])
 
   // A page opened mid-build catches up from the job's snapshot: the phase,
   // how long it has been thinking, and the code written so far.
@@ -365,32 +349,27 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
     }
   }, [game.game_id, t])
 
-  useEffect(() => {
-    if (!nonce) return
-    const bridge = createHostBridge({
-      nonce,
-      onAsked: () => { questionOpenRef.current = true },
-      onAnswered: () => { questionOpenRef.current = false },
-      onDone: (progress) => {
-        questionOpenRef.current = false
-        setFinished(progress)
-        cheerStop.current?.()
-        cheerStop.current = playCelebrationCheer(CHEER_MS)
-      },
-      onError: (error) => {
-        const kept = [...errorsRef.current, error].slice(-MAX_ERRORS)
-        errorsRef.current = kept
-        setErrorCount(kept.length)
-        // The game did not even start: fix it before the child has to ask.
-        // Once per version — the second attempt is the child's call.
-        if (error.at <= AUTO_FIX_WINDOW_MS && autoFixedVersionRef.current !== version && status === 'ready') {
-          autoFixedVersionRef.current = version
-          void submitBug('', true)
-        }
-      },
-    })
-    return bridge.attach(window, () => frameRef.current)
-  }, [nonce, game.game_id, version, status, submitBug])
+  // What the frame reports (see GamePlayerFrame): the frame keeps the latest
+  // of these, so they may close over today's version and status.
+  const onFrameAsked = () => { questionOpenRef.current = true }
+  const onFrameAnswered = () => { questionOpenRef.current = false }
+  const onFrameDone = (progress: GameProgress) => {
+    questionOpenRef.current = false
+    setFinished(progress)
+    cheerStop.current?.()
+    cheerStop.current = playCelebrationCheer(CHEER_MS)
+  }
+  const onFrameError = (error: GameRuntimeError) => {
+    const kept = [...errorsRef.current, error].slice(-MAX_ERRORS)
+    errorsRef.current = kept
+    setErrorCount(kept.length)
+    // The game did not even start: fix it before the child has to ask.
+    // Once per version — the second attempt is the child's call.
+    if (error.at <= AUTO_FIX_WINDOW_MS && autoFixedVersionRef.current !== version && status === 'ready') {
+      autoFixedVersionRef.current = version
+      void submitBug('', true)
+    }
+  }
 
   // ── What Yuvi is doing, in the kid's words ─────────────────────────────
   useEffect(() => {
@@ -654,34 +633,22 @@ export function GamePlayer({ game: initial, onBack, backTo = 'studio' }: GamePla
             )}
             {liveCode && <CodeView code={liveCode} label={t('games.build.title')} changed={changed} focusLine={focusLine} live={phase === 'writing'} />}
           </section>
-        ) : status === 'ready' && html ? (
-          <iframe
-            key={`${version}:${loadNonce}`}
-            ref={frameRef}
-            className="game-player__frame"
-            title={game.title}
-            sandbox="allow-scripts allow-pointer-lock"
-            srcDoc={html}
-            onLoad={(event) => event.currentTarget.focus()}
-          />
         ) : status === 'failed' ? (
           <div className="game-player__state" role="alert">
             <Icon name="alert" size={30} />
             <p>{t('games.player.failed')}</p>
           </div>
-        ) : loadError ? (
-          <div className="game-player__state" role="alert">
-            <Icon name="alert" size={30} />
-            <p>{t('games.player.loadError')}</p>
-            <button type="button" className="sp-btn" onClick={() => setLoadNonce((value) => value + 1)}>
-              {t('games.player.retry')}
-            </button>
-          </div>
         ) : (
-          <div className="game-player__state" role="status" aria-live="polite">
-            <span className="game-player__spinner" aria-hidden="true" />
-            <p>{t('games.player.loading')}</p>
-          </div>
+          <GamePlayerFrame
+            gameId={game.game_id}
+            version={version}
+            title={game.title}
+            onAsked={onFrameAsked}
+            onAnswered={onFrameAnswered}
+            onDone={onFrameDone}
+            onError={onFrameError}
+            onPageLoaded={resetEvidence}
+          />
         )}
 
         {/* In fullscreen the chat is off-screen, so the stage keeps one way out. */}

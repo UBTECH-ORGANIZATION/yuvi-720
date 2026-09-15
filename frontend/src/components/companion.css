@@ -634,6 +634,152 @@
   to { transform: translateX(120%); }
 }
 
+/* "Create" turned into "back": same button, the arrow says where it goes. */
+.sp-companion__games-create.is-back {
+  background: var(--sp-surface, #fff);
+}
+
+[dir='rtl'] .sp-companion__games-create.is-back .sp-icon {
+  transform: scaleX(-1);
+}
+
+/* The studio's wizard in the chat column: its `.ys-*` skin reads the chat's
+   palette through the `--ys-*` tokens, which the studio root normally sets. */
+.sp-companion__wizard {
+  --ys-panel-bg: var(--sp-surface, #fff);
+  --ys-surface: var(--sp-surface, #fff);
+  --ys-surface-hover: var(--sp-primary-050, #f4f1ff);
+  --ys-sunken: var(--sp-primary-050, #f4f1ff);
+  --ys-ink: var(--sp-ink-900, #241f3d);
+  --ys-ink-soft: var(--sp-ink-chat-meta, var(--sp-ink-400, #6b6880));
+  --ys-line: var(--sp-border, #e8e2f7);
+  --ys-accent: var(--sp-primary-600, #6f5bff);
+  --ys-accent-ink: var(--sp-primary-700, #4c39d6);
+  --ys-accent-soft: rgba(111, 91, 255, .12);
+  --ys-danger: var(--sp-danger-600, #ff5d73);
+  --ys-radius-card: 14px;
+  --ys-radius-ctl: 10px;
+  color: var(--ys-ink);
+}
+
+[data-theme='dark'] .sp-companion__wizard {
+  --ys-panel-bg: #1c1d38;
+  --ys-surface: #1c1d38;
+  --ys-surface-hover: #24264a;
+  --ys-sunken: #15162a;
+  --ys-ink: #eef0ff;
+  --ys-ink-soft: #9fa8c5;
+  --ys-line: rgba(166, 150, 255, .18);
+  --ys-accent: #8b78ff;
+  --ys-accent-ink: #d8d0ff;
+  --ys-accent-soft: rgba(118, 101, 245, .22);
+}
+
+/* The build strip on a busy card: four dots, the done ones ticked, the
+   current one lit and breathing (a transform-only pulse), the rest waiting. */
+.sp-companion__game-pipe {
+  display: flex;
+  align-items: flex-start;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-companion__game-pipe li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--sp-ink-chat-meta);
+  font: 700 10px/1.15 var(--sp-font);
+  text-align: center;
+}
+
+.sp-companion__game-pipe li::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 50%;
+  inline-size: 100%;
+  block-size: 2px;
+  background: var(--sp-border);
+}
+
+.sp-companion__game-pipe li:first-child::before {
+  display: none;
+}
+
+.sp-companion__game-pipe li.is-done::before,
+.sp-companion__game-pipe li.is-now::before {
+  background: var(--sp-primary-300, #b9c3ff);
+}
+
+.sp-companion__game-pipe i {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border: 2px solid var(--sp-border);
+  border-radius: 50%;
+  background: var(--sp-surface, #fff);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.sp-companion__game-pipe li.is-done i {
+  border-color: transparent;
+  background: var(--sp-gradient-soft);
+  color: #fff;
+  font-size: 12px;
+}
+
+.sp-companion__game-pipe li.is-now {
+  color: var(--sp-primary-700);
+}
+
+.sp-companion__game-pipe li.is-now i {
+  border-color: var(--sp-primary-500);
+  background: var(--sp-primary-050);
+  animation: sp-companion-pipe-pulse 1.6s var(--sp-ease) infinite;
+}
+
+.sp-companion__game-pipe li.is-next {
+  opacity: .5;
+}
+
+@keyframes sp-companion-pipe-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-companion__game-pipe li.is-now i {
+    animation-duration: 3.2s;
+  }
+}
+
+[data-theme='dark'] .sp-companion__games-create.is-back {
+  background: #1c1d38;
+}
+
+[data-theme='dark'] .sp-companion__game-pipe i {
+  background: #1c1d38;
+  border-color: rgba(166, 150, 255, .25);
+}
+
+[data-theme='dark'] .sp-companion__game-pipe li.is-now {
+  color: #d8d0ff;
+}
+
+[data-theme='dark'] .sp-companion__game-pipe li.is-now i {
+  background: #302957;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sp-companion__game-status.is-busy .sp-pill::after {
     animation: none;
