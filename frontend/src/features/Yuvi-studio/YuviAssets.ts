@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import { renderThumbnail } from './thumbnailRenderer'
+import { preRenderedThumbs } from './studioThumbs'
 import { DEFAULT_DESIGN } from './YuviDesign'
 
 export interface YuviMaterials {
@@ -1094,18 +1095,27 @@ export function assetsForSlot(slot: YuviSlot): YuviAsset[] {
 // pulling this module's Three.js builders in with them.
 export { PHASE_REWARDS } from './yuviRewards'
 
-// ── 3D thumbnails, rendered one at a time and cached at module scope ──
+// ── 3D thumbnails: pre-rendered files first, the live renderer for the rest ──
 // The whole catalog used to render in one synchronous burst on the studio's
-// first frame; now `useThumbnails` asks for the misses on idle, and a card
-// that already has its picture never renders again in this session.
-export const assetThumbnailCache: Record<string, string> = {}
+// first frame; then `useThumbnails` asked for the misses on idle. Now the cache
+// starts out holding every item that has a pre-rendered WebP in
+// `assets/studio-thumbs/avatar/` (see `scripts/render-studio-thumbs.mjs`), so
+// a complete catalogue never opens a WebGL context for its cards at all. An id
+// without a file — a new item before the script is re-run — still renders live,
+// once per session.
+export const assetThumbnailCache: Record<string, string> = preRenderedThumbs('avatar')
+
+/** What a card shows: the item on its own, upright. One definition for the
+ *  live renderer and the pre-render page, so the two never drift apart. */
+export function assetThumbnailObject(asset: YuviAsset): THREE.Object3D {
+  const obj = asset.build()
+  obj.rotation.set(0, 0, 0)
+  return obj
+}
+
 export async function renderAssetThumbnail(asset: YuviAsset): Promise<string | null> {
   if (assetThumbnailCache[asset.id]) return assetThumbnailCache[asset.id]
-  const url = await renderThumbnail('avatar', () => {
-    const obj = asset.build()
-    obj.rotation.set(0, 0, 0)
-    return obj
-  })
+  const url = await renderThumbnail('avatar', () => assetThumbnailObject(asset))
   if (url) assetThumbnailCache[asset.id] = url
   return url
 }

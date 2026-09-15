@@ -37,6 +37,10 @@ const page = await context.newPage()
 // (a Standard material has no `sheenColor`). Surface crashes, do not time out on them.
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error).slice(0, 300)))
+// The catalogue cards ship pre-rendered; under `?perf=1` the shared thumbnail
+// renderer announces itself if anything still asks it for a WebGL context.
+const thumbContexts = []
+page.on('console', (message) => { if (/thumbnail WebGL context/.test(message.text())) thumbContexts.push(message.text()) })
 
 const fail = []
 const ok = (label) => console.log(`  ✔ ${label}`)
@@ -113,6 +117,24 @@ if (await toggle.count()) {
   // Back to auto so the next run starts clean.
   await page.evaluate(() => { try { localStorage.removeItem('spark.renderTier.forced') } catch {} })
 } else bad('quality toggle is in the toolbar')
+
+// ── the cards come from files, not from a WebGL context ────────────────────
+// The active tab's gear is requested the moment the studio mounts, so by now
+// a missing file would already have opened the fallback renderer. Walking to
+// the avatar station shows the cards themselves.
+const station = page.locator('.ys-stations .ys-station').first()
+if (await station.count()) {
+  await station.click()
+  const cards = page.locator('.ys-card img[src*="studio-thumbs"], .ys-card img[src$=".webp"]')
+  try {
+    await cards.first().waitFor({ timeout: 10_000 })
+    ok(`avatar cards show pre-rendered files (${await cards.count()})`)
+  } catch {
+    bad('avatar cards show pre-rendered files')
+  }
+} else console.log('  · stations not on screen (intro running?); cards not inspected')
+if (thumbContexts.length) bad(`no thumbnail WebGL context created (${thumbContexts.length}) — re-run scripts/render-studio-thumbs.mjs`)
+else ok('no thumbnail WebGL context created')
 
 if (pageErrors.length) bad(`no uncaught errors (${pageErrors.length}): ${pageErrors[0]}`)
 else ok('no uncaught errors')

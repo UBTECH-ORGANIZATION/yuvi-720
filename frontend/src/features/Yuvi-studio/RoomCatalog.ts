@@ -18,6 +18,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { renderThumbnail } from './thumbnailRenderer'
+import { preRenderedThumbs } from './studioThumbs'
 
 export type RoomItemCategory = 'seating' | 'desk' | 'play' | 'nature' | 'light' | 'tech' | 'wall'
 export type RoomItemPlacement = 'floor' | 'wall'
@@ -1439,21 +1440,34 @@ export function claimedSurpriseItems(rewardKinds: string[]): RoomItemSpec[] {
   return WEEKLY_SURPRISE_ITEMS.filter((spec) => spec.id !== WEEKLY_SURPRISE_COVERED && owned.has(spec.id))
 }
 
-// Incremental 3D thumbnail cache. Rendering the whole catalog on opening the
-// studio exhausts GPU resources on lower-powered school devices, and opening
-// a context per category switch was stranding contexts; every card now goes
-// through the one shared thumbnail renderer, on idle, and is cached by id.
-export const roomThumbnailCache: Record<string, string> = {}
+// ── 3D thumbnails: pre-rendered files first, the live renderer for the rest ──
+// Rendering the whole catalog on opening the studio exhausted GPU resources on
+// lower-powered school devices, and opening a context per category switch was
+// stranding contexts. Every prop now ships as a pre-rendered WebP in
+// `assets/studio-thumbs/room/` (see `scripts/render-studio-thumbs.mjs`), which
+// seeds this cache, so a complete catalogue opens no WebGL context for its
+// cards. A prop without a file still renders live through the one shared
+// thumbnail renderer, on idle, once per session.
+//
+// The cards always show a prop in its default tint — the learner's own colour
+// is applied to the placed item in the room, never to the catalogue — so every
+// prop can be pre-rendered.
+export const roomThumbnailCache: Record<string, string> = preRenderedThumbs('room')
 
 // The kit's shared geometries are built once for thumbnails; each render
 // disposes only the object it built, never the kit.
 let thumbnailKit: RoomKit | null = null
 
+/** What a card shows: the prop in its default tint, built with the rich kit.
+ *  One definition for the live renderer and the pre-render page. */
+export function roomThumbnailObject(spec: RoomItemSpec): THREE.Object3D {
+  thumbnailKit ??= createRoomKit(true).kit
+  return spec.build(thumbnailKit, new THREE.Color(spec.tint ?? '#7c6bff'))
+}
+
 export async function renderRoomThumbnail(spec: RoomItemSpec): Promise<string | null> {
   if (roomThumbnailCache[spec.id]) return roomThumbnailCache[spec.id]
-  thumbnailKit ??= createRoomKit(true).kit
-  const kit = thumbnailKit
-  const url = await renderThumbnail('room', () => spec.build(kit, new THREE.Color(spec.tint ?? '#7c6bff')))
+  const url = await renderThumbnail('room', () => roomThumbnailObject(spec))
   if (url) roomThumbnailCache[spec.id] = url
   return url
 }

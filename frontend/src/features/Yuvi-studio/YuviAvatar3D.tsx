@@ -335,6 +335,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     if (stage) {
       renderer.shadowMap.enabled = settings.shadows && roomBuiltHigh
       renderer.shadowMap.type = THREE.PCFShadowMap
+      // The map is re-rendered when a caster moved (the gate before
+      // `renderer.render`), not on every frame.
+      renderer.shadowMap.autoUpdate = false
+      renderer.shadowMap.needsUpdate = true
       room = createYuviLabRoom(scene, {
         quality: roomQuality,
         reduceMotion,
@@ -1354,10 +1358,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
     const hudFrames: number[] = []
     let hudAt = 0
+    let hudShadowRenders = 0
     const updateHud = (frameMs: number, now: number) => {
       hudFrames.push(frameMs)
       if (hudFrames.length > 120) hudFrames.shift()
       if (now - hudAt < 1000) return
+      const shadowRate = Math.round(((shadowRenders - hudShadowRenders) * 1000) / Math.max(1, now - hudAt))
+      hudShadowRenders = shadowRenders
       hudAt = now
       const sorted = [...hudFrames].sort((a, b) => a - b)
       const median = sorted[sorted.length >> 1] ?? 0
@@ -1369,10 +1376,66 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         `tier ${tier} (${resolved.reason})  dpr ${renderer.getPixelRatio().toFixed(2)}`,
         `frame ${median.toFixed(1)} ms  p95 ${p95.toFixed(1)} ms`,
         `calls ${info.render.calls}  tris ${info.render.triangles}`,
-        `programs ${info.programs?.length ?? 0}  lights ${lights}  shadow ${renderer.shadowMap.enabled ? 'on' : 'off'}`,
+        `programs ${info.programs?.length ?? 0}  lights ${lights}  shadow ${renderer.shadowMap.enabled ? `on (${shadowRate}/s)` : 'off'}`,
         `gpu ${resolved.gpu ?? '?'}`,
       ].join('\n')
     }
+
+    // ── Shadow map gate ──
+    // Only Yuvi's shell casts into the room's one map, so it is re-rendered
+    // when his pose changed, an upgrade is popping in, a prop or station
+    // moved, or the key light followed him — plus every third idle frame so
+    // anything the list misses heals itself: the antenna's slow precession
+    // and an accessory's own idle `animate` (a breathing trim, a bob) are
+    // left to that heal on purpose, or the gate would never close for a
+    // learner wearing one. Motes and the screen holograms never cast and
+    // never trigger it.
+    const SHADOW_EPS = 1e-3
+    const SHADOW_EPS2 = SHADOW_EPS * SHADOW_EPS
+    let shadowRenders = 0
+    let shadowWarm = 3            // the first frames always render the map
+    let shadowIdleFrames = 0
+    let shadowLayout = -1
+    const shadowPos = new THREE.Vector3(Infinity, Infinity, Infinity)
+    const shadowKeyPos = new THREE.Vector3()
+    const shadowKeyAim = new THREE.Vector3()
+    const shadowPose = new Float32Array(14)
+    const framePose = new Float32Array(14)
+    const readPose = (out: Float32Array) => {
+      out[0] = robot.rotation.x; out[1] = robot.rotation.y; out[2] = robot.rotation.z; out[3] = robot.scale.y
+      out[4] = head.rotation.x; out[5] = head.rotation.y; out[6] = head.rotation.z
+      out[7] = armR.rotation.x; out[8] = armR.rotation.z; out[9] = armL.rotation.x; out[10] = armL.rotation.z
+      out[11] = legR.rotation.x; out[12] = legL.rotation.x; out[13] = antenna.visible ? 1 : 0
+    }
+    const gateShadowMap = (activeRoom: LabRoom, animating: boolean) => {
+      const light = activeRoom.keyLight
+      let dirty = shadowWarm > 0 || animating
+        || activeRoom.layoutVersion() !== shadowLayout
+        || robot.position.distanceToSquared(shadowPos) > SHADOW_EPS2
+        || light.position.distanceToSquared(shadowKeyPos) > SHADOW_EPS2
+        || light.target.position.distanceToSquared(shadowKeyAim) > SHADOW_EPS2
+      if (!dirty) {
+        readPose(framePose)
+        for (let i = 0; i < framePose.length; i++) {
+          if (Math.abs(framePose[i] - shadowPose[i]) > SHADOW_EPS) { dirty = true; break }
+        }
+      }
+      if (!dirty && ++shadowIdleFrames >= 3) dirty = true
+      if (dirty) renderer.shadowMap.needsUpdate = true
+      if (!renderer.shadowMap.needsUpdate) return   // a tier change may have asked on its own
+      shadowRenders++
+      shadowWarm = Math.max(0, shadowWarm - 1)
+      shadowIdleFrames = 0
+      shadowLayout = activeRoom.layoutVersion()
+      shadowPos.copy(robot.position)
+      shadowKeyPos.copy(light.position)
+      shadowKeyAim.copy(light.target.position)
+      readPose(shadowPose)
+    }
+    // The camera's view this frame, handed to the room so readouts outside it
+    // skip their repaint.
+    const viewFrustum = new THREE.Frustum()
+    const viewProjection = new THREE.Matrix4()
 
     loop = () => {
       frame = 0
@@ -1790,7 +1853,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           if (anim) anim(t, dt)
         }
       }
-      room?.update(t, dt)
+      if (room) {
+        camera.updateMatrixWorld()
+        viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+        viewFrustum.setFromProjectionMatrix(viewProjection)
+        room.update(t, dt, viewFrustum)
+      }
       // interactive Y pop
       if (interactiveY) {
         badgeScale += ((hoveredY ? 1.32 : 1) - badgeScale) * 0.2
@@ -1828,6 +1896,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         if (p >= 1) { pt.obj.scale.setScalar(1); popTargets.splice(i, 1) }
       }
 
+      if (room && renderer.shadowMap.enabled) {
+        gateShadowMap(room, transforming || popTargets.length > 0)
+      }
       renderer.render(scene, camera)
       if (!firstFrameSent) {
         firstFrameSent = true

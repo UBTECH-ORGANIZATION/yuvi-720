@@ -7,6 +7,11 @@
  * a time on request, reads the pixels back with `toBlob` (asynchronous), and
  * hands the context back after ten idle seconds so it never counts against
  * the browser's ~16 live contexts while the studio room is up.
+ *
+ * In production it is a fallback. Every catalogue item ships as a pre-rendered
+ * WebP (`studioThumbs.ts`, produced by `scripts/render-studio-thumbs.mjs`
+ * through this same code), so on a school PC no context is opened for the
+ * cards at all; only an id without a file reaches `renderThumbnail`.
  */
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -48,6 +53,9 @@ function acquire(): Shared | null {
   if (shared) return shared
   try {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power', preserveDrawingBuffer: true })
+    // `?perf=1`: the studio-perf check asserts this line never prints, i.e. the
+    // pre-rendered files covered everything the panel asked for.
+    if (/[?&]perf=1(?:&|$)/.test(window.location.search)) console.info('[studio] thumbnail WebGL context created')
     // Crisp cards on a good screen; a low device does not pay 4× the fragments
     // for a 140 px picture.
     renderer.setPixelRatio(resolveRenderTier().final === 'low' ? 1 : 2)
@@ -84,9 +92,21 @@ function scheduleRelease() {
   releaseTimer = window.setTimeout(release, IDLE_RELEASE_MS)
 }
 
+export interface ThumbnailEncoding {
+  type: 'image/png' | 'image/webp'
+  /** 0–1, lossy formats only. */
+  quality?: number
+}
+/** Lossless: the live fallback is never the one that decides how a card looks. */
+const LIVE_ENCODING: ThumbnailEncoding = { type: 'image/png' }
+
 /** Render one built object to an image URL. The object is disposed afterwards.
  *  Resolves `null` when there is no WebGL to render with. */
-export function renderThumbnail(preset: ThumbnailPreset, build: () => THREE.Object3D): Promise<string | null> {
+export function renderThumbnail(
+  preset: ThumbnailPreset,
+  build: () => THREE.Object3D,
+  encoding: ThumbnailEncoding = LIVE_ENCODING,
+): Promise<string | null> {
   const ctx = acquire()
   if (!ctx) return Promise.resolve(null)
   const { renderer, scene, camera } = ctx
@@ -120,6 +140,6 @@ export function renderThumbnail(preset: ThumbnailPreset, build: () => THREE.Obje
   // `toBlob` copies the bitmap synchronously and encodes off the main thread,
   // so the next render may reuse the canvas straight away.
   return new Promise((resolve) => {
-    renderer.domElement.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png')
+    renderer.domElement.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : null), encoding.type, encoding.quality)
   })
 }

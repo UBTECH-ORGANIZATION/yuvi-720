@@ -28,6 +28,7 @@ frontend/scripts/.teacher-shots/
 frontend/scripts/.support-stack-shots/
 frontend/scripts/.profile-shots/
 frontend/scripts/.chrome-shots/
+frontend/scripts/.studio-perf-shots/
 # Screenshot debris the browser checks drop beside themselves.
 frontend/scripts/.*.png
 

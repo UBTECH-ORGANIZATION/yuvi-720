@@ -12,6 +12,7 @@
     "test:companion-orchestration": "node scripts/test-companion-orchestration.mjs",
     "test:companion-orchestration:headed": "node scripts/test-companion-orchestration.mjs --headed",
     "test:studio-perf": "node scripts/studio-perf-check.mjs",
+    "studio:thumbs": "node scripts/render-studio-thumbs.mjs",
     "test": "node --test \"tests/**/*.test.ts\"",
     "test:path": "node --test \"tests/**/*.test.ts\""
   },
