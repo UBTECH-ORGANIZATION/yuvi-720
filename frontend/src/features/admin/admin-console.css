@@ -376,3 +376,43 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── Games: cost per learner and daily caps ────────────────────────────── */
+
+.adm-table__wrap { overflow-x: auto; }
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+.adm-table th,
+.adm-table td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  vertical-align: top;
+  border-bottom: 1px solid var(--sp-border);
+  font-variant-numeric: tabular-nums;
+}
+.adm-table th { font-weight: 600; color: var(--sp-ink-500); white-space: nowrap; }
+.adm-table td strong { color: var(--sp-ink-900); }
+.adm-table tr.is-capped td:nth-child(5) { color: var(--sp-warn-600); }
+
+.adm-caps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-2) var(--sp-3);
+}
+.adm-caps label { display: grid; gap: 2px; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.adm-caps--compact label { font-size: var(--sp-fs-xs); }
+.adm-caps--add { align-items: center; }
+.adm-capInput {
+  width: 5.5rem;
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  color: var(--sp-ink-900);
+  font: inherit;
+}

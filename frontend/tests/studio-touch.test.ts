@@ -82,7 +82,7 @@ test('only the visible Yuvi podium, not its light pool, opens the station menu',
 })
 
 test('globe and mission furniture open hover menus with move and rotate only', () => {
-  assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission'/)
+  assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission' \| 'gamelab'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
   assert.match(studio, /onRemove=\{menuStation \? undefined/)

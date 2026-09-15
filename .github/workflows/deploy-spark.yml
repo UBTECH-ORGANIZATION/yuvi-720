@@ -171,6 +171,12 @@ jobs:
             MOE_OIDC_CLIENT_ID
             MOE_OIDC_CLIENT_SECRET
             MOE_LEARNER_ID_SALT
+            GAME_JOBS_MODE
+            GAME_JOBS_QUEUE
+            GAME_JOBS_SERVICEBUS_NAMESPACE
+            GAMES_STORAGE
+            GAMES_STORAGE_ACCOUNT_URL
+            GAMES_BLOB_CONTAINER
           )
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do

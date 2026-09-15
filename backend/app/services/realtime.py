@@ -99,9 +99,14 @@ def publish(topic: str, event: dict[str, Any]) -> int:
 # ── the bridge ─────────────────────────────────────────────────────────────
 
 import json
+import os
 from uuid import uuid4
 
 _ORIGIN = uuid4().hex
+# A publish that takes longer than this is dropped (the local delivery already
+# happened). Half a second was fine app→Redis in one region; a worker on a
+# laptop relaying to Azure needs more, and 2 s still bounds the task.
+_RELAY_TIMEOUT_S = float(os.environ.get("REALTIME_RELAY_TIMEOUT_S", "2.0"))
 
 
 class _Bridge:
@@ -127,12 +132,19 @@ class _Bridge:
     async def _publish(self, topic: str, event: dict[str, Any]) -> None:
         if self._client is None:
             return
-        try:
-            payload = json.dumps({"o": _ORIGIN, "t": topic, "e": event}, ensure_ascii=False, default=str)
-            await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=0.5)
-            self.relayed += 1
-        except Exception as exc:  # the local delivery already happened; the relay is best effort
-            print(f"⚠️ realtime relay failed: {type(exc).__name__}")
+        payload = json.dumps({"o": _ORIGIN, "t": topic, "e": event}, ensure_ascii=False, default=str)
+        # One retry: a cold pool connection or a Redis hiccup costs a frame
+        # otherwise, and a lost `plan`/`ready` frame is a blank page for the
+        # kid until the next poll. Still best effort: the local delivery
+        # already happened.
+        for attempt in (1, 2):
+            try:
+                await asyncio.wait_for(self._client.publish(self._channel, payload), timeout=_RELAY_TIMEOUT_S)
+                self.relayed += 1
+                return
+            except Exception as exc:
+                if attempt == 2:
+                    print(f"⚠️ realtime relay failed: {type(exc).__name__}")
 
     def on_message(self, raw: Any) -> int:
         """Deliver a frame another instance published. Returns local deliveries."""
@@ -183,7 +195,7 @@ class _Bridge:
             cache_config.connection_string(), socket_timeout=None,
             socket_connect_timeout=5, health_check_interval=30, decode_responses=False,
         )
-        self._channel = cache_config.key_prefix() + "bus"
+        self._channel = bus_channel()
         self._task = asyncio.create_task(self._listen())
         self.active = True
         return True
@@ -204,6 +216,21 @@ class _Bridge:
                 pass
             self._listener = None
         self._client = None
+
+
+def bus_channel() -> str:
+    """The Redis channel this process relays on. One per environment, keyed
+    like the cache, so dev and production never hear each other. A laptop
+    backend is `local` but its game jobs are built by the DEV worker (the
+    queue is `game-jobs-dev`), so its live frames arrive on the dev bus:
+    `REALTIME_BUS_ENVIRONMENT=dev` in the local .env joins that bus while the
+    cache keys stay `local`."""
+    from app.core import cache as cache_config
+
+    override = (os.environ.get("REALTIME_BUS_ENVIRONMENT") or "").strip().lower()
+    if override:
+        return f"spark:{override}:v1:bus"
+    return cache_config.key_prefix() + "bus"
 
 
 _bridge = _Bridge()

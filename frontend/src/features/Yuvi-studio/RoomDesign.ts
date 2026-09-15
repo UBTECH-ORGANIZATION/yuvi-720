@@ -22,7 +22,9 @@ export interface RoomItem {
   tint?: string
 }
 
-export type StationId = 'avatar' | 'room' | 'explore' | 'mission'
+export type StationId = 'avatar' | 'room' | 'explore' | 'mission' | 'gamelab'
+/** Every station, in the order the room lists them. One place to extend. */
+export const STATION_IDS: StationId[] = ['avatar', 'room', 'explore', 'mission', 'gamelab']
 export interface RoomStation {
   x: number
   z: number
@@ -71,6 +73,9 @@ export const DEFAULT_STATIONS: RoomStations = {
   room: { x: -9, z: 3.9, rot: DEFAULT_BENCH_ROT, placed: false },
   explore: { x: 8.8, z: -7.5, rot: -0.7, placed: true },
   mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
+  // The Game Lab desk: a fixed prop on the right, beside the globe and the
+  // kiosk, angled so its screen faces the middle of the room.
+  gamelab: { x: 9.6, z: -2.0, rot: -1.05, placed: true },
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
@@ -96,6 +101,7 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
       room: { ...room.stations.room },
       explore: { ...room.stations.explore },
       mission: { ...room.stations.mission },
+      gamelab: { ...room.stations.gamelab },
     },
     introDone: room.introDone,
     tutorialDone: room.tutorialDone,
@@ -161,7 +167,7 @@ export function normalizeRoom(raw: unknown): RoomDesign {
   const introDone = record.introDone === true
   const rawStations = record.stations as Record<string, unknown> | undefined
   if (rawStations && typeof rawStations === 'object') {
-    for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {
+    for (const id of STATION_IDS) {
       const spot = rawStations[id] as Record<string, unknown> | undefined
       if (!spot || typeof spot !== 'object') continue
       if (!isFinitePoint(spot.x) || !isFinitePoint(spot.z)) continue
@@ -188,7 +194,7 @@ export function normalizeRoom(raw: unknown): RoomDesign {
 export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
   if (a.floor !== b.floor || a.wall !== b.wall || a.mood !== b.mood) return false
   if (a.introDone !== b.introDone || a.tutorialDone !== b.tutorialDone) return false
-  for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {
+  for (const id of STATION_IDS) {
     if (Math.abs(a.stations[id].x - b.stations[id].x) > 0.001) return false
     if (Math.abs(a.stations[id].z - b.stations[id].z) > 0.001) return false
     if (Math.abs(a.stations[id].rot - b.stations[id].rot) > 0.001) return false

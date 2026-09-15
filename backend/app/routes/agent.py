@@ -751,7 +751,12 @@ async def triggers_subscribe(learner_id: str = Depends(require_learner)):
         async for trig in triggers.subscribe(lid):
             yield f"data: {json.dumps(trig, ensure_ascii=False)}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    # Live game-build frames ride this stream; a buffering proxy would turn
+    # them into one burst per flush, so tell every hop not to.
+    return StreamingResponse(
+        event_generator(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/coach/stream")
