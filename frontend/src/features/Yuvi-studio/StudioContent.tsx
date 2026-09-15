@@ -889,7 +889,13 @@ export function StudioContent({
           onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
-          onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
+          /* The walk-in stations are doors, not furniture; the explore plinth
+             and the mission totem are decoration and can be put away. */
+          onRemove={menuStation
+            ? (menuStation === 'explore' || menuStation === 'mission'
+              ? () => { setPropMenu(null); roomState.removeStation(menuStation) }
+              : undefined)
+            : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
           colors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable ? ITEM_TINTS.slice(0, 5) : undefined}
           onTint={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
             ? (hex) => roomState.tint(menuItem!.uid, hex)

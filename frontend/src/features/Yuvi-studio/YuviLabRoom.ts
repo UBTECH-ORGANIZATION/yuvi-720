@@ -1724,7 +1724,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const projectorSpecs = rich
     ? [
         { pos: [0, 0.98, 0] as [number, number, number], radius: 0.26, height: 0.72, color: 0xffb374, detail: 0, spin: 0.3, phase: 0, parent: bench },
-        { pos: [EXPLORE_AT[0], FLOOR_Y + 1.08, EXPLORE_AT[1]] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9 },
+        // Parented to the plinth so it moves, hides and is picked with it —
+        // unparented it stayed behind in mid-air when the plinth was moved.
+        explore
+          ? { pos: [0, 1.08, 0] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9, parent: explore }
+          : { pos: [EXPLORE_AT[0], FLOOR_Y + 1.08, EXPLORE_AT[1]] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9 },
       ]
     : [
         { pos: [-6.1, FLOOR_Y, -6.68] as [number, number, number], radius: 0.5, height: 1.6, color: 0x7fe4ff, detail: 1, spin: 0.2, phase: 0 },
@@ -1888,8 +1892,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   )
 
   const decorBlockers = (): LabRoomCircle[] => [
-    { x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore },
-    { x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission },
+    ...(stations.explore.placed ? [{ x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore }] : []),
+    ...(stations.mission.placed ? [{ x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission }] : []),
     ...(stations.gamelab.placed ? [{ x: stations.gamelab.x, z: stations.gamelab.z, radius: STATION_RADIUS.gamelab }] : []),
   ]
 
@@ -1930,8 +1934,15 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
     }))
     if (zone.id === 'avatar') {
-      // No sign over the platform: Yuvi standing on it IS the sign, and the
-      // floating head-and-halo read as a thing to pick up that could not be.
+      // A head and a halo: "this is where you change Yuvi" — the platform's
+      // own sign, like the house over the bench and the monitor over the desk.
+      const head = new THREE.Mesh(track(new THREE.SphereGeometry(0.16, 18, 12)), markerMat)
+      head.position.y = 0.06
+      marker.add(head)
+      const halo = new THREE.Mesh(track(new THREE.TorusGeometry(0.3, 0.018, 8, 32)), markerMat)
+      halo.rotation.x = Math.PI / 2
+      halo.position.y = 0.3
+      marker.add(halo)
     } else if (zone.id === 'gamelab') {
       // A little monitor: "this is where you make games". The desk's own
       // floating mark is the status light; this sign only says the place exists.
@@ -1978,11 +1989,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     bench.rotation.y = stations.room.rot
     bench.visible = stations.room.placed
     explore?.position.set(stations.explore.x, FLOOR_Y, stations.explore.z)
-    if (explore) explore.rotation.y = stations.explore.rot
+    if (explore) { explore.rotation.y = stations.explore.rot; explore.visible = stations.explore.placed }
     mission?.position.set(stations.mission.x, FLOOR_Y, stations.mission.z)
-    if (mission) mission.rotation.y = stations.mission.rot
+    if (mission) { mission.rotation.y = stations.mission.rot; mission.visible = stations.mission.placed }
     exploreShadow?.position.set(stations.explore.x, FLOOR_Y + 0.006, stations.explore.z)
+    if (exploreShadow) exploreShadow.visible = stations.explore.placed
     missionShadow?.position.set(stations.mission.x, FLOOR_Y + 0.006, stations.mission.z)
+    if (missionShadow) missionShadow.visible = stations.mission.placed
     gamelab.position.set(stations.gamelab.x, FLOOR_Y, stations.gamelab.z)
     gamelab.rotation.y = stations.gamelab.rot
     gamelab.visible = stations.gamelab.placed
@@ -2096,8 +2109,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const pickStation = (raycaster: THREE.Raycaster): StationId | null => {
     if (stations.avatar.placed && raycaster.intersectObject(podium, true).length) return 'avatar'
     if (stations.room.placed && raycaster.intersectObject(bench, true).length) return 'room'
-    if (explore && raycaster.intersectObject(explore, true).length) return 'explore'
-    if (mission && raycaster.intersectObject(mission, true).length) return 'mission'
+    if (explore && stations.explore.placed && raycaster.intersectObject(explore, true).length) return 'explore'
+    if (mission && stations.mission.placed && raycaster.intersectObject(mission, true).length) return 'mission'
     if (stations.gamelab.placed && raycaster.intersectObject(gamelab, true).length) return 'gamelab'
     return null
   }

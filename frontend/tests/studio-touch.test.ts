@@ -88,7 +88,8 @@ test('globe and mission furniture open hover menus with move and rotate only', (
   assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission' \| 'gamelab'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
-  assert.match(studio, /onRemove=\{menuStation \? undefined/)
+  // Walk-in stations cannot be removed; the decorative plinth and totem can.
+  assert.match(studio, /onRemove=\{menuStation\s*\n?\s*\? \(menuStation === 'explore' \|\| menuStation === 'mission'/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
   assert.equal(he['YuviStudio.zone.mission'], 'עמדת המשימות')
 })

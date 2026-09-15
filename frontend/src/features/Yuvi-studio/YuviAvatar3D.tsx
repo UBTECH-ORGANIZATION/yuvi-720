@@ -473,7 +473,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // the way there must not replace the panel the learner asked to open.
     let requestedZone: LabRoomZoneId | null = null
     // Set when he has just stepped onto a station and still has to turn around.
-    let faceLearnerPending = false
     let deckBlend = roam ? 0 : 1    // 1 = on the platform, 0 = on the floor
     const heldKeys = new Set<string>()
 
@@ -1592,7 +1591,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
               requestedZone = null
               onStationIntentChangeRef.current?.(null)
             }
-            faceLearnerPending = Boolean(nextZone)
           }
           const nearby = (roomItemsRef.current ?? []).find((item) => (
             Math.hypot(roamPos.x - item.x, roamPos.y - item.z) <= 1.45
@@ -1601,12 +1599,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             nearbyRoomItem = nearby
             if (nearby) onNearRoomItemRef.current?.(nearby)
           }
-          // Once he is parked, he turns to the learner — the walk itself keeps
-          // overwriting the yaw with whatever direction he was heading in.
-          if (faceLearnerPending && !moving) {
-            yawTarget = frameShot.yaw ?? 0
-            faceLearnerPending = false
-          }
+          // Parked, he stays facing the way he walked. He used to swing round
+          // to the learner on arriving at a station, which read as "Yuvi
+          // turned away from where I sent him". The station panel's own
+          // framing (`focus`) still turns him when a panel opens.
           // Off the platform he stands 13cm lower, and the shadow light follows.
           const deckAt = appliedStations?.avatar
           const onDeck = Math.hypot(roamPos.x - (deckAt?.x ?? 0), roamPos.y - (deckAt?.z ?? 0)) < DECK_RADIUS ? 1 : 0
