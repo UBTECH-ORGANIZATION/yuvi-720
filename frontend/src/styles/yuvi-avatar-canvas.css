@@ -20,6 +20,11 @@
 .Yuvi-avatar-canvas[data-webgl-state='lost'] canvas,
 .Yuvi-avatar-canvas[data-webgl-state='building'] canvas,
 .Yuvi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
+/* The studio stage is the exception: the placeholder robot blown up to the
+   stage's size read as a giant blurry Yuvi for a second on every load. There
+   the dark backdrop is the loading state, and the first frame just appears. */
+.ys-stage__canvas .Yuvi-avatar-canvas[data-webgl-state='building'] .Yuvi-avatar-canvas__fallback { display: none; }
+.ys-stage__canvas .Yuvi-avatar-canvas[data-webgl-state='building'] canvas { visibility: visible; }
 
 /* ── Animated studio overlay + shared-element Yuvi flight ── */
 .studio-overlay {
