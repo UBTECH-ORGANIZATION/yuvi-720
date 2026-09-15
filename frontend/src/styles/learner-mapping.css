@@ -47,6 +47,22 @@
 
 .app-bar-brand b { color: var(--m-primary); }
 
+.app-bar-brand--debug {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.app-bar-brand--debug:focus-visible {
+  outline: 2px solid var(--sp-primary-500);
+  outline-offset: 2px;
+}
+
+.app-bar-brand--debug:disabled {
+  cursor: wait;
+}
+
 .app-bar-user {
   grid-column: 3;
   justify-self: end;

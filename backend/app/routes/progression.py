@@ -1,10 +1,11 @@
 """Learner XP progression routes. Award mutations remain service-internal."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import require_learner
+from app.core.env import is_production
 from app.services import progression
 
 router = APIRouter(prefix="/api/progression", tags=["progression"])
@@ -44,6 +45,14 @@ async def read_ledger(
         "entries": receipts,
         "progression": await progression.get_status(learner_id),
     })
+
+
+@router.post("/debug/grant-xp")
+async def grant_debug_xp(learner_id: str = Depends(require_learner)):
+    """Local-only XP increment for exercising level rewards and catalog locks."""
+    if is_production():
+        raise HTTPException(status_code=404, detail="Not found")
+    return JSONResponse(content=await progression.award_debug_xp(learner_id))
 
 
 @router.post("/hint-token/use")

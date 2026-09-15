@@ -406,34 +406,11 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   background: var(--sp-surface);
   box-shadow: 0 34px 100px rgba(4, 8, 28, .48), inset 0 1px rgba(255, 255, 255, .3);
   overflow: hidden;
-  /* The celebration column mounts a beat later, when the badge diff lands. The
-     shell grows into it rather than snapping. */
-  transition: inline-size 320ms cubic-bezier(.2, .8, .2, 1),
-              grid-template-columns 320ms cubic-bezier(.2, .8, .2, 1);
   animation: learning-completion-dialog-in 360ms cubic-bezier(.2, .8, .2, 1) both;
 }
 .learning-completion-dialog.is-single {
   grid-template-columns: minmax(0, 1fr);
   inline-size: min(600px, 100%);
-}
-
-/* The celebration column paints itself; LessonRewards draws on top of it. It
-   mounts a beat after the dialog (when the badge diff lands), so it fades up
-   rather than popping. Fade + lift, not a wipe: the column sits on the right in
-   RTL and the left in LTR, and a wipe would run the wrong way in one of them. */
-.learning-completion-celebrate {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  min-inline-size: 0;
-  min-block-size: 0;
-  background:
-    radial-gradient(circle at 22% 8%, rgba(255, 255, 255, .22), transparent 46%),
-    linear-gradient(155deg, #6d4bd8 0%, #7b52e6 42%, #9a5fd6 100%);
-  animation: learning-celebrate-in 420ms cubic-bezier(.2, .8, .2, 1) both;
-}
-@keyframes learning-celebrate-in {
-  from { opacity: 0; transform: scale(.96); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .learning-completion-work {
@@ -694,7 +671,6 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
     max-block-size: 94dvh;
     overflow-y: auto;
   }
-  .learning-completion-celebrate { grid-template-rows: auto; max-block-size: 46dvh; }
   .learning-completion-work__body { overflow: visible; }
 }
 
@@ -726,9 +702,7 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
 
 @media (prefers-reduced-motion: reduce) {
   .learning-completion-backdrop,
-  .learning-completion-celebrate,
   .learning-completion-dialog { animation: none; }
-  .learning-completion-dialog { transition: none; }
 }
 
 /* ── Post-lesson reflection (F4) ─────────────────────────────────────────────

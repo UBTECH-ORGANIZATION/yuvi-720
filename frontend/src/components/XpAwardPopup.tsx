@@ -45,6 +45,14 @@ const REWARD_LABEL_KEYS: Record<string, string> = {
   personal_journey_monument_29: 'progression.reward.journeyMonument'
 }
 
+function LevelUpConfetti() {
+  return (
+    <div className="xp-level-up__confetti" aria-hidden="true">
+      {Array.from({ length: 16 }, (_, index) => <i key={index} />)}
+    </div>
+  )
+}
+
 export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
   const { t } = useI18n()
   const { pendingAwards, dismissAward } = useProgression()
@@ -102,6 +110,7 @@ export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
 
       {levelUp ? (
         <section className="xp-award xp-level-up" role="status" aria-live="polite">
+          <LevelUpConfetti />
           <div className="level-up-dialog__medal" aria-hidden="true">
           {crossedLevels[crossedLevels.length - 1]}
           </div>

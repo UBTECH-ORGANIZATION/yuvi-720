@@ -52,8 +52,7 @@
 }
 
 .tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
-/* The name column owns the middle so the badge cluster sits at the far end
-   and nothing floats in between. */
+/* The name column owns the remaining row width. */
 .tch-student__who { flex: 1; min-inline-size: 0; display: grid; gap: 2px; justify-items: start; }
 .tch-student__identity h1 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 
@@ -426,8 +425,6 @@
 
 .tch-student__topRow { display: flex; justify-content: space-between; gap: var(--sp-2); }
 
-.tch-student__badgeAvatar { flex-shrink: 0; display: grid; place-items: center; }
-
 .tch-student__who { display: grid; gap: 2px; min-inline-size: 0; }
 
 .tch-student__seen {
@@ -541,8 +538,7 @@
   }
 }
 
-/* The badge is the signal; the pulse is only emphasis, so the pulse goes and
-   the badge — ring included — stays exactly as it was. */
+/* The count is the signal; motion is only emphasis. */
 @media (prefers-reduced-motion: reduce) {
   .tch-flagCount { animation: none; }
 }
@@ -1305,76 +1301,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--sp-ink-700);
-}
-
-/* ── the badge hover: what these are, and what is being worked toward ────── */
-
-/* The whole cluster is the tooltip's trigger, and the shared trigger style is
-   a fixed 18px "?" circle — three badges inside that circle is the overflow
-   this override removes. The trigger becomes a pill sized by its content. */
-.tch-student__badgeTip .sp-tip__trigger {
-  inline-size: auto;
-  block-size: auto;
-  padding: 3px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.tch-student__badgeCluster {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-weight: var(--sp-fw-bold);
-  font-variant-numeric: tabular-nums;
-  color: var(--sp-ink-700);
-}
-
-/* The badge SVG scales to its box's width; without a hard height the box
-   follows the SVG's intrinsic ratio and pushes the row taller than the pill. */
-.tch-student__badgeCluster .yv-badge {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-}
-.tch-student__badgeCluster .yv-badge svg { display: block; }
-
-.tch-student__badgeLabel {
-  font-weight: var(--sp-fw-regular);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  margin-inline-end: var(--sp-1);
-}
-
-.tch-badgeTip {
-  display: grid;
-  gap: var(--sp-2);
-  min-inline-size: 200px;
-}
-
-.tch-badgeTip__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-}
-
-.tch-badgeTip__row.is-toward { opacity: 0.85; }
-
-.tch-badgeTip__text {
-  display: grid;
-  gap: 1px;
-  font-size: var(--sp-fs-xs);
-}
-
-.tch-badgeTip__text strong { color: var(--sp-ink-900); }
-.tch-badgeTip__text span { color: var(--sp-ink-400); }
-
-.tch-badgeTip__lead {
-  margin: var(--sp-1) 0 0;
-  padding-block-start: var(--sp-2);
-  border-block-start: 1px solid var(--sp-border);
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-500);
 }
 
 /* ── Yuvi's one-paragraph read ────────────────────────────────────────────── */

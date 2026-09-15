@@ -68,7 +68,7 @@ export interface LedgerEntry {
 export interface UnlockRow {
   id: string
   kind: 'avatar' | 'prop'
-  /** Locale key describing the badge or streak that grants it. */
+  /** Locale key describing the XP, section, or streak requirement. */
   requirementKey: string
   owned: boolean
 }

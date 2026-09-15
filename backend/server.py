@@ -19,7 +19,6 @@ ensure_env_loaded()
 
 from app.core import database
 from app.routes.auth import router as auth_router
-from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.admin_org import router as admin_org_router
@@ -273,7 +272,6 @@ def create_app() -> FastAPI:
     app.include_router(studio_surprises_router)
     app.include_router(studio_time_router)
     app.include_router(brain_router)
-    app.include_router(badges_router)
     app.include_router(xapi_router)
     app.include_router(learning_catalog_router)
     app.include_router(illustrations_router)

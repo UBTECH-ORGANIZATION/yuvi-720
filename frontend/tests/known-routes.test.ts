@@ -85,7 +85,7 @@ describe('the route table and the renderer describe the same app', () => {
 
   it('matches on segment boundaries, not on string prefixes', () => {
     assert.equal(isKnown('/tasksomething'), false)
-    assert.equal(isKnown('/badgesx'), false)
+    assert.equal(isKnown('/student-dashboardx'), false)
     assert.ok(isKnown('/tasks/abc'))
   })
 

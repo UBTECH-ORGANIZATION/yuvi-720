@@ -8,10 +8,11 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const SRC = new URL('../src/', import.meta.url).pathname
+const SRC = fileURLToPath(new URL('../src/', import.meta.url))
 
 function sources(): { path: string; text: string }[] {
   const found: { path: string; text: string }[] = []
@@ -44,19 +45,17 @@ test('no teacher screen renders its own learner avatar', () => {
   }
 })
 
-test('the avatar falls back to an initial, never to an empty coin', () => {
+test('the avatar always renders the learner initial', () => {
   const component = readFileSync(join(SRC, 'features/teacher-app/shared/StudentAvatar.tsx'), 'utf8')
-  // A learner who has earned nothing yet must render a letter. If this branch
-  // ever collapses into "always render a Badge", every such child becomes a
-  // blank disc and the roster stops being readable.
   assert.match(component, /label\.slice\(0, 1\)/)
-  assert.match(component, /active\.kind === 'badge'/)
+  assert.doesNotMatch(component, /Badge|AvatarChoice|choice=/)
 })
 
-test('the roster ships the avatar, or the coin can never appear', () => {
+test('the roster carries names without a profile-avatar contract', () => {
   const service = readFileSync(join(SRC, 'services/teacher.ts'), 'utf8')
-  assert.match(service, /avatar\?: AvatarChoice \| null/)
+  assert.doesNotMatch(service, /AvatarChoice|avatar\?:/)
 
   const provider = readFileSync(join(SRC, 'providers/TeacherRosterProvider.tsx'), 'utf8')
-  assert.match(provider, /avatarOf/)
+  assert.match(provider, /nameOf/)
+  assert.doesNotMatch(provider, /avatarOf/)
 })

@@ -755,17 +755,12 @@
   overflow: hidden;
 }
 
-/* A chosen badge is already a finished coin — the gradient behind it would
-   only show as a rim. */
-.tch-avatar--badge { background: none; }
-.tch-avatar--badge .yv-badge { display: block; inline-size: 100%; block-size: 100%; }
-
-/* A learner who has not been seen recently keeps their coin but loses the
-   gradient, matching how the card already dims. Not while the face is still
-   being fetched, though: this selector carries four classes and beat the
+/* A learner who has not been seen recently loses the gradient, matching how
+  the card already dims. Not while the face is still being fetched, though:
+  this selector carries three classes and beat the
    placeholder below on specificity, which flattened it to a near-white disc
    with no sweep — on an idle card the avatar simply looked missing. */
-.tch-studentCard.is-idle .tch-avatar:not(.tch-avatar--badge):not(.tch-avatar--pending) {
+.tch-studentCard.is-idle .tch-avatar:not(.tch-avatar--pending) {
   background: var(--sp-ink-100);
   color: var(--sp-ink-400);
 }

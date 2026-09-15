@@ -1,9 +1,7 @@
-"""Turn earned badges and a live day streak into granted cosmetics.
+"""Turn mapping completion and a live day streak into granted cosmetics.
 
 `unlocks.py` says what the rules are; this says when they are applied. It is
-called from the two reads that always happen before a learner can use a reward —
-opening the studio (`GET /api/rewards/catalog`) and looking at the shelf
-(`GET /api/badges`) — so a grant never depends on a background job.
+called when the learner opens the Studio catalog, before a reward can be used.
 
 Every grant goes through the rewards ledger's claim, so re-running this is free
 and a reward is only ever announced once.
@@ -13,9 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.brain.repository import get_brain
-from app.services import kata_catalog, unlocks
-from app.services.badges import project_badges
+from app.services import unlocks
 from app.services.events import get_learner_events
 from app.services.rewards.wallet import grant_unlock
 from app.services.streaks import active_days, current_day_streak
@@ -58,10 +54,7 @@ async def sync_unlocks(learner_id: str) -> dict[str, Any]:
     Never revokes: a streak reward stays earned after the streak breaks, because
     taking a reward back would punish a learner for missing a day.
     """
-    await kata_catalog.ensure_loaded()
-    brain = await get_brain(learner_id)
     events = await _learner_events(learner_id)
-    badges = project_badges(brain, events=events)
     streak = current_day_streak(active_days(events))
 
     state = await get_learner_state(learner_id)
@@ -70,7 +63,7 @@ async def sync_unlocks(learner_id: str) -> dict[str, Any]:
     completed_sections = _sections_done(state)
 
     newly: list[str] = []
-    for item_id in sorted(unlocks.satisfied_ids(badges, streak, completed_sections)):
+    for item_id in sorted(unlocks.satisfied_ids(streak, completed_sections)):
         entry = unlocks.UNLOCKS[item_id]
         if entry["kind"] == "avatar":
             if item_id in held_avatar:

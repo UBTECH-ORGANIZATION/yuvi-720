@@ -141,11 +141,11 @@ class Streaks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(view["active_days"], 4)
         self.assertEqual(view["streak"], 3)
 
-    async def test_uses_the_badge_engine_rule_rather_than_its_own(self):
-        from app.services.badges import _longest_day_streak
+    async def test_uses_the_shared_streak_rule_rather_than_its_own(self):
+        from app.services.streaks import longest_day_streak
 
         days = {"2026-08-01", "2026-08-02", "2026-08-05"}
-        self.assertEqual(learner_trends._streak(sorted(days)), _longest_day_streak(days))
+        self.assertEqual(learner_trends._streak(sorted(days)), longest_day_streak(days))
 
     async def test_a_day_with_only_reading_time_still_counts_as_active(self):
         view = await self._run([_event(0, verb="experienced", seconds=120)])

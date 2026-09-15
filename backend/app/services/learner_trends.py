@@ -17,7 +17,7 @@ with the same number one screen over is worse than no number:
             `PROLONGED_INTERACTION_SECONDS` and drops gaps the timing layer
             marked `unreliable`. A learner who left a tab open overnight
             otherwise registers as a marathon study session.
-  streak  — `badges._longest_day_streak`, imported rather than copied.
+    streak  — `streaks.longest_day_streak`, imported rather than copied.
   days    — distinct calendar days, the same definition both of those use.
 
 **One learner, and only ever one.** The chart kit these series feed is
@@ -187,10 +187,10 @@ def _per_subject(
 
 
 def _streak(active_days: list[str]) -> int:
-    """Longest run of consecutive active days, by the badge engine's own rule."""
-    from app.services.badges import _longest_day_streak
+    """Longest run of consecutive active days."""
+    from app.services.streaks import longest_day_streak
 
-    return _longest_day_streak(set(active_days))
+    return longest_day_streak(set(active_days))
 
 
 async def _mastered_steps(get_brain, learner_id: str, first_day: date) -> list[dict[str, Any]]:

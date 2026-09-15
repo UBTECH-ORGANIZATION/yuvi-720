@@ -6,9 +6,6 @@ this module is the only thing that decides what belongs in them.
 
 Two rule kinds, both read from signals that already exist:
 
-- ``badge``   — the named badge is earned (``app.services.badges.project_badges``).
-                Subject coins are addressed by subject (``science``), milestones
-                and the capstone by their own key (``on_fire``, ``world``).
 - ``streak``  — the learner's *current* day streak has reached N days.
 
 Rules only ever add. Once an item is granted it is kept, even if the streak that
@@ -20,8 +17,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-# Requirement copy is keyed, never phrased here: the studio and the badge shelf
-# localize it, and Hebrew is the source language.
+# Requirement copy is keyed, never phrased here: the Studio localizes it, and
+# Hebrew is the source language.
 Rule = dict[str, Any]
 
 # id -> {kind, rule, requirement_key}
@@ -35,10 +32,10 @@ UNLOCKS: dict[str, dict[str, Any]] = {
                 "requirementKey": "YuviStudio.unlock.section5"},
     "ironman": {"kind": "avatar", "rule": {"type": "section", "number": 6},
                 "requirementKey": "YuviStudio.unlock.section6"},
-    "laurel": {"kind": "avatar", "rule": {"type": "badge", "key": "on_fire"},
-               "requirementKey": "YuviStudio.unlock.badge.on_fire"},
-    "explorerGoggles": {"kind": "avatar", "rule": {"type": "badge", "key": "comeback"},
-                        "requirementKey": "YuviStudio.unlock.badge.comeback"},
+    "laurel": {"kind": "avatar", "rule": {"type": "xp_level", "level": 7},
+               "requirementKey": "YuviStudio.unlock.level.7"},
+    "explorerGoggles": {"kind": "avatar", "rule": {"type": "xp_level", "level": 16},
+                        "requirementKey": "YuviStudio.unlock.level.16"},
     "streakScarf": {"kind": "avatar", "rule": {"type": "streak", "days": 3},
                     "requirementKey": "YuviStudio.unlock.streak.3"},
     "cometTrail": {"kind": "avatar", "rule": {"type": "streak", "days": 7},
@@ -47,12 +44,12 @@ UNLOCKS: dict[str, dict[str, Any]] = {
                     "requirementKey": "YuviStudio.unlock.level.25"},
 
     # ── Room furniture ──
-    "trophyShelf": {"kind": "prop", "rule": {"type": "badge", "key": "first_steps"},
-                    "requirementKey": "YuviStudio.unlock.badge.first_steps"},
-    "podium": {"kind": "prop", "rule": {"type": "badge", "key": "sharpshooter"},
-               "requirementKey": "YuviStudio.unlock.badge.sharpshooter"},
-    "observatory": {"kind": "prop", "rule": {"type": "badge", "key": "explorer"},
-                    "requirementKey": "YuviStudio.unlock.badge.explorer"},
+    "trophyShelf": {"kind": "prop", "rule": {"type": "xp_level", "level": 4},
+                    "requirementKey": "YuviStudio.unlock.level.4"},
+    "podium": {"kind": "prop", "rule": {"type": "xp_level", "level": 12},
+               "requirementKey": "YuviStudio.unlock.level.12"},
+    "observatory": {"kind": "prop", "rule": {"type": "xp_level", "level": 19},
+                    "requirementKey": "YuviStudio.unlock.level.19"},
     "rocketModel": {"kind": "prop", "rule": {"type": "xp_level", "level": 10},
                     "requirementKey": "YuviStudio.unlock.level.10"},
     "parkCarousel": {"kind": "prop", "rule": {"type": "xp_level", "level": 9},
@@ -61,10 +58,10 @@ UNLOCKS: dict[str, dict[str, Any]] = {
                  "requirementKey": "YuviStudio.unlock.level.13"},
     "parkBasketSwing": {"kind": "prop", "rule": {"type": "xp_level", "level": 15},
                         "requirementKey": "YuviStudio.unlock.level.15"},
-    "mathBoard": {"kind": "prop", "rule": {"type": "badge", "key": "math"},
-                  "requirementKey": "YuviStudio.unlock.badge.math"},
-    "championBanner": {"kind": "prop", "rule": {"type": "badge", "key": "world"},
-                       "requirementKey": "YuviStudio.unlock.badge.world"},
+    "mathBoard": {"kind": "prop", "rule": {"type": "xp_level", "level": 21},
+                  "requirementKey": "YuviStudio.unlock.level.21"},
+    "championBanner": {"kind": "prop", "rule": {"type": "xp_level", "level": 28},
+                       "requirementKey": "YuviStudio.unlock.level.28"},
     "streakCalendar": {"kind": "prop", "rule": {"type": "streak", "days": 3},
                        "requirementKey": "YuviStudio.unlock.streak.3"},
     "auroraLamp": {"kind": "prop", "rule": {"type": "streak", "days": 7},
@@ -143,54 +140,27 @@ UNGRANTED_IDS = frozenset({"propeller"})
 def is_gated_cosmetic(asset_id: str) -> bool:
     """True when this Yuvi cosmetic may only be worn once it has been earned.
 
-    Three sources, because a cosmetic can be bought with sparks, won with a
-    badge or a streak, or promised for a mapping section. Read from the shop
-    rather than copied, so a price added there cannot quietly become free.
+    Cosmetics can be bought with sparks or earned through XP, streaks, or
+    mapping sections. Read from the shop rather than copied, so a price added
+    there cannot quietly become free.
     """
     from app.services.rewards.catalog import CATALOG
 
     return asset_id in AVATAR_IDS or asset_id in CATALOG or asset_id in UNGRANTED_IDS
 
-# `project_badges` identifies a milestone by its coin colour, which is unique per
-# milestone. This maps that back to the readable key the rules above use.
-_MILESTONE_KEY = {
-    "spark": "first_steps",
-    "streak": "consistency",
-    "devote": "dedicated",
-    "flame": "on_fire",
-    "aim": "sharpshooter",
-    "revive": "comeback",
-    "cosmos": "explorer",
-}
-
-
-def _earned_badge_keys(badges: Iterable[dict[str, Any]] | None) -> set[str]:
-    """Badge identities a rule may name: a subject, or a milestone/capstone key."""
-    keys: set[str] = set()
-    for badge in badges or []:
-        if not badge.get("earned"):
-            continue
-        subject = str(badge.get("subject") or "")
-        if subject:
-            keys.add(subject)
-            keys.add(_MILESTONE_KEY.get(subject, subject))
-    return keys
-
-
 def satisfied_ids(
-    badges: Iterable[dict[str, Any]] | None,
     current_streak: int = 0,
     completed_sections: Iterable[int] | None = None,
 ) -> set[str]:
-    """Every cosmetic id the learner currently qualifies for."""
-    earned = _earned_badge_keys(badges)
+    """Section and streak rewards the learner currently qualifies for.
+
+    XP rewards settle through ``progression.rewards`` when a level is reached.
+    """
     sections = set(completed_sections or [])
     out: set[str] = set()
     for item_id, entry in UNLOCKS.items():
         rule = entry["rule"]
-        if rule["type"] == "badge" and rule["key"] in earned:
-            out.add(item_id)
-        elif rule["type"] == "streak" and current_streak >= int(rule["days"]):
+        if rule["type"] == "streak" and current_streak >= int(rule["days"]):
             out.add(item_id)
         elif rule["type"] == "section" and rule["number"] in sections:
             out.add(item_id)
@@ -204,16 +174,6 @@ def is_gated_prop(kind: str) -> bool:
     return kind in PROP_IDS or kind in SPORTS_ARENA_STARTER_PROP_IDS or (
         kind in CATALOG and CATALOG[kind].get("slot") == "room"
     )
-
-
-def ids_for_badge(subject: str) -> list[dict[str, str]]:
-    """Cosmetics a badge grants, so the shelf can show what winning it is worth."""
-    names = {subject, _MILESTONE_KEY.get(subject, subject)}
-    return [
-        {"id": item_id, "kind": entry["kind"]}
-        for item_id, entry in sorted(UNLOCKS.items())
-        if entry["rule"]["type"] == "badge" and entry["rule"]["key"] in names
-    ]
 
 
 def catalog_for_client(

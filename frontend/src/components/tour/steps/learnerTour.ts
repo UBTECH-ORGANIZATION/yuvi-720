@@ -1,9 +1,9 @@
 /* The learner's first-run tour, as data.
  *
  * The order is the page, read the way a child reads it: straight down the
- * dashboard, panel after panel, then up to the studio button, then across to
- * the badges. Yuvi flies the route himself (`guide: 'flying'`), so the sequence
- * is also a path — steps that jump around the screen look like a bug.
+ * dashboard, panel after panel, then up to the studio button and companion.
+ * Yuvi flies the route himself (`guide: 'flying'`), so the sequence is also a
+ * path — steps that jump around the screen look like a bug.
  *
  * The studio is spotlit but never entered. It is a lazy Three.js route behind a
  * transition overlay that takes ownership of the URL, so walking a tour into it
@@ -88,34 +88,11 @@ export const learnerTourSteps: TourStep[] = [
     padding: 6,
   },
   {
-    /* The badges live behind the avatar menu — there is no direct nav button —
-       so the child opens it themselves rather than being teleported. `Next` on
-       the card still works, so this is never a dead end for someone who does
-       not want to click. */
-    id: 'badgesDoor',
-    target: 'learner.profileMenu',
-    route: '/student-dashboard',
-    awaitRoute: '/badges',
-    titleKey: 'tour.learner.badgesDoor.title',
-    bodyKey: 'tour.learner.badgesDoor.body',
-    placement: 'bottom',
-    padding: 6,
-    interactive: true,
-  },
-  {
-    id: 'badges',
-    target: 'learner.badges',
-    route: '/badges',
-    titleKey: 'tour.learner.badges.title',
-    bodyKey: 'tour.learner.badges.body',
-    placement: 'top',
-  },
-  {
     /* Ends on the dock, and Yuvi's own flight lands him on it: the last thing a
        child should remember is where to find help, shown rather than told. */
     id: 'companion',
     target: 'learner.companion',
-    route: '/badges',
+    route: '/student-dashboard',
     titleKey: 'tour.learner.companion.title',
     bodyKey: 'tour.learner.companion.body',
     placement: 'top',

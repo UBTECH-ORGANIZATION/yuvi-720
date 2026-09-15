@@ -65,6 +65,20 @@ class ProgressionRewardTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("parkTree", progression_rewards.reward_for_level(13)["room"])
         self.assertIn("parkBasketSwing", progression_rewards.reward_for_level(15)["room"])
 
+    async def test_former_badge_rewards_have_explicit_xp_levels(self) -> None:
+        expected = {
+            4: ("room", "trophyShelf"),
+            7: ("avatar", "laurel"),
+            12: ("room", "podium"),
+            16: ("avatar", "explorerGoggles"),
+            19: ("room", "observatory"),
+            21: ("room", "mathBoard"),
+            28: ("room", "championBanner"),
+        }
+        for level, (kind, asset_id) in expected.items():
+            with self.subTest(level=level, asset_id=asset_id):
+                self.assertIn(asset_id, progression_rewards.reward_for_level(level)[kind])
+
     async def test_prestige_rewards_are_generated_through_level_fifty(self) -> None:
         level_35 = progression_rewards.reward_for_level(35)
         self.assertEqual(level_35["sparks"], 100)

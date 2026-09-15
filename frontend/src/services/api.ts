@@ -125,8 +125,6 @@ export interface LearnerState {
   profile_cache?: unknown
   dashboard_cache?: unknown
   game_progress?: Record<string, unknown>
-  /** The profile-picture choice (a badge coin, or the learner's letter). */
-  avatar?: unknown
   /** The Yuvi Studio character: variant, colours and equipped cosmetics. */
   yuvi_design?: unknown
   avatar_unlocks?: string[]
@@ -205,13 +203,6 @@ export function setRoomLike(ownerId: string) {
 export function removeRoomLike(ownerId: string) {
   return apiDelete<Pick<CommunityRoom, 'liked_by_me'>>(
     `/api/community/rooms/${encodeURIComponent(ownerId)}/like`)
-}
-
-export function getBadges(lang = 'he', signal?: AbortSignal) {
-  return apiGet<import('../features/badges/types').BadgeDTO[]>(
-    `/api/badges?lang=${encodeURIComponent(lang)}`,
-    signal ? { signal } : undefined,
-  )
 }
 
 export async function streamPost(

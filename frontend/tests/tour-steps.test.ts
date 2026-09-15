@@ -10,6 +10,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -38,7 +39,7 @@ const TOURS = [
   { name: 'lesson', steps: lessonTourSteps },
 ]
 
-const ROOT = new URL('../../', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const LANGUAGES = ['he', 'en', 'ar'] as const
 
 const messages = Object.fromEntries(
@@ -121,7 +122,6 @@ const ROUTE_OWNERS: Record<string, string> = {
   '/teacher/messages': 'features/teacher-app/messages/',
   [`/teacher/student/${STUDENT_TOKEN}`]: 'features/teacher-app/student/',
   '/student-dashboard': 'features/student-dashboard/',
-  '/badges': 'features/badges/',
   [LESSON_ROUTE]: 'features/learning-lesson/',
 }
 
@@ -295,7 +295,7 @@ test('every route the learner tour navigates to is a real learner route', () => 
   for (const step of learnerTourSteps) {
     if (!step.route) continue
     assert.match(
-      step.route.split('?')[0], /^\/(student-dashboard|badges)$/,
+      step.route.split('?')[0], /^\/student-dashboard$/,
       `step "${step.id}" navigates to ${step.route}, which App.tsx does not route`
     )
   }
@@ -345,7 +345,7 @@ test('a step that hands over the click waits for a route the app really has', ()
      button to escape it. */
   for (const step of learnerTourSteps) {
     if (!step.awaitRoute) continue
-    assert.match(step.awaitRoute, /^\/(student-dashboard|badges)$/,
+    assert.match(step.awaitRoute, /^\/student-dashboard$/,
       `step "${step.id}" waits for ${step.awaitRoute}, which App.tsx does not route`)
     assert.ok(step.interactive,
       `step "${step.id}" waits for a click it does not let through`)

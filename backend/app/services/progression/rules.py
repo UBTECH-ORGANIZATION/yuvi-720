@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
 from typing import Any, Optional
 
 from app.services.progression import ledger as progression_ledger
@@ -17,6 +18,7 @@ LATER_OBJECTIVE_COMPLETED_XP = 50
 HELP_MILESTONE_XP = 15
 HELP_MILESTONES = frozenset({30, 60, 90})
 PERSONAL_PATH_STARTED_XP = 20
+DEBUG_XP_GRANT = 15
 
 
 async def _award_with_settlement(
@@ -57,6 +59,19 @@ async def award_personal_path_started(learner_id: Optional[str]) -> dict[str, An
         amount=PERSONAL_PATH_STARTED_XP,
         reason="onboarding.personal_path_started",
         source={"type": "onboarding", "event": "personal_path_started"},
+    )
+
+
+async def award_debug_xp(learner_id: Optional[str]) -> dict[str, Any]:
+    """Award local-development XP through the normal durable ledger."""
+    lid = normalize_learner_id(learner_id)
+    claim_id = uuid4().hex
+    return await _award_with_settlement(
+        lid,
+        key=f"xp:{lid}:debug:{claim_id}",
+        amount=DEBUG_XP_GRANT,
+        reason="debug.xp_grant",
+        source={"type": "debug", "claim_id": claim_id},
     )
 
 

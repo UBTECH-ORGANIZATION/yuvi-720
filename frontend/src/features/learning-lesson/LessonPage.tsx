@@ -18,8 +18,6 @@ import {
 } from '../../services/learning'
 import { optionalExtra as findOptionalExtra, previousStation, whatNowKey } from '../learning/pathView'
 import { noteLoad, playbackMode } from '../learning/embedGuard'
-import { useBadgeMoments } from '../badges/useBadgeMoments'
-import { LessonRewards } from './LessonRewards'
 import { LessonPointLayer } from './LessonPointLayer'
 import { ReflectionPanel } from './ReflectionPanel'
 import type { CoachPointerFrame } from '../../services/agents'
@@ -94,12 +92,6 @@ export function LessonPage() {
   // Consumed by the session effect: the next (re)launch is an explicit redo, so
   // the backend resets our coach thread + one-shot hint state for a fresh run.
   const restartPendingRef = useRef(false)
-  // Bumped once a completion is confirmed so the badge diff re-checks for a
-  // newly earned coin or a progress bump. The result opens the dialog rather
-  // than floating over it.
-  const [badgeCheck, setBadgeCheck] = useState(0)
-  // The completion dialog is a two-beat moment: what you earned, then what you
-  // noticed. Reward news used to arrive as its own modal ON TOP of this one.
   const completionActionRef = useRef<HTMLButtonElement>(null)
   const completionDialogRef = useRef<HTMLElement>(null)
   const completionPendingRef = useRef(false)
@@ -238,7 +230,6 @@ export function LessonPage() {
             setCompleted(true)
             refreshBrain()
             window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
-            setBadgeCheck((count) => count + 1)
             getLearningTiming(session, controller.signal)
               .then(setTiming)
               .catch(() => undefined)
@@ -413,16 +404,6 @@ export function LessonPage() {
     () => (roadmap && session ? previousStation(roadmap, session.component.id) : null),
     [roadmap, session],
   )
-
-  // What the coins did across this lesson, read once the brain has settled.
-  const badgeMoments = useBadgeMoments(badgeCheck, language)
-  // The column appears only when there is real news to put in it. Showing it
-  // while the diff was still loading meant the dialog opened two-column with a
-  // spinner and then collapsed to one the moment nothing had moved — a visible
-  // flinch on the most common outcome. Now the reflection is there instantly and
-  // the celebration slides in beside it if a coin actually moved.
-  const badgeCheckSettled = badgeCheck > 0 && badgeMoments.settledFor === badgeCheck
-  const showRewardsStep = badgeCheckSettled && !badgeMoments.empty
 
   // What the path decided, in one sentence keyed off the NEXT node's reason —
   // never a mastery level and never a score (720 §2, §3.4).
@@ -668,7 +649,7 @@ export function LessonPage() {
           <div className="learning-completion-backdrop" role="presentation">
             <section
               ref={completionDialogRef}
-              className={`learning-completion-dialog${showRewardsStep ? '' : ' is-single'}`}
+              className="learning-completion-dialog is-single"
               role="dialog"
               aria-modal="true"
               aria-labelledby="learning-completion-title"
@@ -683,15 +664,6 @@ export function LessonPage() {
               >
                 ×
               </button>
-
-              {/* The reward news stands BESIDE the reflection rather than in
-                  front of it: one view, one primary action, nothing to click
-                  past. It is absent entirely when no coin moved. */}
-              {showRewardsStep && (
-                <aside className="learning-completion-celebrate" aria-label={t('learning.rewards.stepTitle')}>
-                  <LessonRewards moments={badgeMoments} />
-                </aside>
-              )}
 
               <div className="learning-completion-work">
                 <header className="learning-completion-work__head">

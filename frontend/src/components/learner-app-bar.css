@@ -106,6 +106,48 @@
 }
 
 .xp-level-up { border-color: rgba(244, 201, 93, .65); }
+.xp-level-up__confetti {
+  position: absolute;
+  z-index: 3;
+  inset: 50% auto auto 50%;
+  inline-size: 1px;
+  block-size: 1px;
+  pointer-events: none;
+}
+.xp-level-up__confetti i {
+  position: absolute;
+  inline-size: 7px;
+  block-size: 12px;
+  border-radius: 2px;
+  background: #f4c95d;
+  opacity: 0;
+  animation: xpLevelConfetti 1.15s cubic-bezier(.16, .8, .32, 1) both;
+}
+.xp-level-up__confetti i:nth-child(4n + 2) { background: #43c5b8; }
+.xp-level-up__confetti i:nth-child(4n + 3) { background: #ff7b6b; }
+.xp-level-up__confetti i:nth-child(4n) { background: #7c8cff; }
+.xp-level-up__confetti i:nth-child(1) { --x: -145px; --y: -128px; --r: -245deg; }
+.xp-level-up__confetti i:nth-child(2) { --x: -92px; --y: -160px; --r: 310deg; }
+.xp-level-up__confetti i:nth-child(3) { --x: -36px; --y: -142px; --r: -180deg; }
+.xp-level-up__confetti i:nth-child(4) { --x: 28px; --y: -168px; --r: 260deg; }
+.xp-level-up__confetti i:nth-child(5) { --x: 94px; --y: -150px; --r: -320deg; }
+.xp-level-up__confetti i:nth-child(6) { --x: 148px; --y: -105px; --r: 220deg; }
+.xp-level-up__confetti i:nth-child(7) { --x: 170px; --y: -43px; --r: -280deg; }
+.xp-level-up__confetti i:nth-child(8) { --x: 127px; --y: 18px; --r: 180deg; }
+.xp-level-up__confetti i:nth-child(9) { --x: 88px; --y: 52px; --r: -210deg; }
+.xp-level-up__confetti i:nth-child(10) { --x: 36px; --y: 70px; --r: 250deg; }
+.xp-level-up__confetti i:nth-child(11) { --x: -32px; --y: 62px; --r: -190deg; }
+.xp-level-up__confetti i:nth-child(12) { --x: -91px; --y: 40px; --r: 270deg; }
+.xp-level-up__confetti i:nth-child(13) { --x: -150px; --y: 15px; --r: -300deg; }
+.xp-level-up__confetti i:nth-child(14) { --x: -174px; --y: -46px; --r: 230deg; }
+.xp-level-up__confetti i:nth-child(15) { --x: -126px; --y: -75px; --r: -220deg; }
+.xp-level-up__confetti i:nth-child(16) { --x: 72px; --y: -88px; --r: 290deg; }
+@keyframes xpLevelConfetti {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(0); }
+  12% { opacity: .96; }
+  82% { opacity: .9; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1) rotate(var(--r)); }
+}
 .level-up-dialog__medal {
   inline-size: 42px;
   block-size: 42px;
@@ -126,4 +168,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .xp-award { animation: none; }
+  .xp-level-up__confetti i { animation: none; opacity: .8; }
 }

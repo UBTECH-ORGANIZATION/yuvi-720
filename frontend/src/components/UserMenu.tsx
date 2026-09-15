@@ -4,7 +4,6 @@ import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
 import { useProgression } from '../providers/ProgressionProvider'
-import { ProfileAvatar } from '../features/badges/ProfileAvatar'
 import { openReportIssue } from '../features/support/ReportIssueDialog'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
@@ -35,13 +34,10 @@ export function UserMenu() {
   const { t, language, setLanguage } = useI18n()
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const { status: progression } = useProgression()
+  const { status: progression, applyAward } = useProgression()
   const { startTour } = useTour()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  /* Badge avatars are a learner thing. In the teacher/admin app the same menu
-     drops both badge affordances — a teacher grading a class has no badge
-     gallery to edit, and offering one was learner chrome leaking through. */
   const route = useRoute()
   const inTeacherApp = route.startsWith('/teacher') || route.startsWith('/admin')
   const showProgression = !inTeacherApp && progression !== null
@@ -56,11 +52,6 @@ export function UserMenu() {
         required: String(progression.xpToNext ?? 0)
       })
     : t('progression.maxLevel')
-  const frameTier = progression && progression.level >= 30
-    ? 'prestige'
-    : progression && progression.level >= 22
-      ? 'animated'
-      : progression && progression.level >= 11 ? 'level' : null
 
   useEffect(() => {
     if (!open) return
@@ -84,11 +75,6 @@ export function UserMenu() {
     setOpen(false)
     await logout()
     navigate('/')
-  }
-
-  const goBadges = () => {
-    setOpen(false)
-    navigate('/badges')
   }
 
   const replayTour = () => {
@@ -130,7 +116,7 @@ export function UserMenu() {
           </>
         ) : (
           <>
-            <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
+            <span className="user-avatar">{initialsOf(user.display_name)}</span>
             <span className="user-menu__name" dir="auto">{user.display_name}</span>
           </>
         )}
@@ -158,38 +144,6 @@ export function UserMenu() {
 
       {open && (
         <div className="user-menu__pop" role="menu">
-          <div className="user-menu__head">
-            {inTeacherApp ? (
-              <ProfileAvatar className={`user-menu__head-avatar${frameTier ? ` is-${frameTier}-frame` : ''}`} fallback={initialsOf(user.display_name)} />
-            ) : (
-              <button
-                className="user-menu__avatar-edit"
-                type="button"
-                onClick={goBadges}
-                aria-label={t('badges.menuEdit')}
-                title={t('badges.menuEdit')}
-              >
-                <ProfileAvatar className={`user-menu__head-avatar${frameTier ? ` is-${frameTier}-frame` : ''}`} fallback={initialsOf(user.display_name)} />
-                <span className="user-menu__pencil" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path
-                      d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              </button>
-            )}
-            <div className="user-menu__head-meta">
-              <span className="user-menu__head-name" dir="auto">{user.display_name}</span>
-              <span className="user-menu__head-handle" dir="ltr">@{user.username}</span>
-            </div>
-          </div>
-
           <div className="user-menu__group">
             <span className="user-menu__label">{t('language.switcherLabel')}</span>
             <div className="user-menu__choices">
@@ -221,20 +175,6 @@ export function UserMenu() {
               <span className={`user-menu__switch${theme === 'dark' ? ' is-on' : ''}`} aria-hidden="true" />
             </button>
           </div>
-
-          {!inTeacherApp ? (
-            <button
-              className="user-menu__row user-menu__row--link"
-              type="button"
-              role="menuitem"
-              onClick={goBadges}
-            >
-              <span>{t('badges.menuTitle')}</span>
-              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          ) : null}
 
           {/* The way back into the tour. Behind the avatar rather than on the
               dashboard because a child who feels lost is rarely on the screen

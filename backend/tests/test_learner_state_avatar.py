@@ -1,16 +1,4 @@
-"""Two features, two fields — and neither one erases the other.
-
-`learner_state.avatar` used to hold both the profile-picture choice and the Yuvi
-Studio character. The read below fills an unset `avatar` with the learner's best
-earned coin, and a saved design has no `kind`, so it failed that test and was
-replaced on every read: children designed a robot, saved it, reloaded, and got
-the default back. Saving in the studio also wiped whichever coin they had picked
-as their picture, and picking a coin wiped the robot.
-
-So the properties worth pinning are the ones that were broken: a design survives
-a read, a coin survives a design, and a design saved under the old field is
-still found.
-"""
+"""The Studio design survives removal of the former profile-avatar field."""
 
 from __future__ import annotations
 
@@ -33,15 +21,13 @@ DESIGN = {
     "colors": {"body": "#9cc1e8", "eyes": "#4eeef0", "smile": "#74f7ff", "glow": "#7C6BFF"},
     "equipped": {"headTop": "beanie", "face": None, "back": None, "handR": None, "body": None},
 }
-COIN = {"kind": "badge", "badge": {"subject": "science", "glyph": "flask", "tier": "gold"}}
-BEST = {"kind": "badge", "badge": {"subject": "math", "glyph": "abc", "tier": "silver"}}
+OLD_CHOICE = {"kind": "badge", "badge": {"subject": "science", "glyph": "flask", "tier": "gold"}}
 
 
 async def _read(stored: dict) -> dict:
     """GET /api/learner-state against a fixed stored document."""
     state = {"learner_id": LEARNER, "avatar": None, "yuvi_design": None, **stored}
-    with patch.object(route, "get_learner_state", AsyncMock(return_value=state)), \
-         patch.object(route, "_earned_avatar", AsyncMock(return_value=BEST)):
+    with patch.object(route, "get_learner_state", AsyncMock(return_value=state)):
         response = await route.read_learner_state(learner_id=LEARNER)
     return json.loads(bytes(response.body))
 
@@ -51,20 +37,19 @@ class TheStudioDesignSurvives(unittest.IsolatedAsyncioTestCase):
         state = await _read({"yuvi_design": DESIGN})
         self.assertEqual(state["yuvi_design"], DESIGN)
 
-    async def test_the_earned_coin_never_lands_on_the_design(self) -> None:
-        """The bug itself: the coin is derived onto `avatar`, and only `avatar`."""
+    async def test_profile_avatar_is_not_returned(self) -> None:
         state = await _read({"yuvi_design": DESIGN})
-        self.assertEqual(state["avatar"], BEST)
+        self.assertNotIn("avatar", state)
         self.assertEqual(state["yuvi_design"]["variant"], "girl")
 
-    async def test_a_chosen_coin_and_a_design_coexist(self) -> None:
-        state = await _read({"avatar": COIN, "yuvi_design": DESIGN})
-        self.assertEqual(state["avatar"], COIN)
+    async def test_an_old_profile_choice_is_omitted(self) -> None:
+        state = await _read({"avatar": OLD_CHOICE, "yuvi_design": DESIGN})
+        self.assertNotIn("avatar", state)
         self.assertEqual(state["yuvi_design"], DESIGN)
 
     async def test_no_design_stays_no_design(self) -> None:
         """An empty studio must not be handed a badge dict to render as a robot."""
-        state = await _read({"avatar": COIN})
+        state = await _read({"avatar": OLD_CHOICE})
         self.assertIsNone(state["yuvi_design"])
 
 
@@ -73,10 +58,9 @@ class DesignsSavedBeforeTheSplit(unittest.IsolatedAsyncioTestCase):
         state = await _read({"avatar": DESIGN})
         self.assertEqual(state["yuvi_design"], DESIGN)
 
-    async def test_the_legacy_document_still_gets_its_derived_coin(self) -> None:
-        """It is not a choice, so the picture falls back to the earned coin."""
+    async def test_the_legacy_avatar_field_is_not_returned(self) -> None:
         state = await _read({"avatar": DESIGN})
-        self.assertEqual(state["avatar"], BEST)
+        self.assertNotIn("avatar", state)
 
     async def test_a_new_design_wins_over_the_legacy_copy(self) -> None:
         stale = {**DESIGN, "variant": "classic"}
@@ -84,7 +68,7 @@ class DesignsSavedBeforeTheSplit(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state["yuvi_design"]["variant"], "girl")
 
     async def test_a_choice_is_never_mistaken_for_a_design(self) -> None:
-        for choice in (COIN, {"kind": "initial"}):
+        for choice in (OLD_CHOICE, {"kind": "initial"}):
             with self.subTest(choice=choice):
                 self.assertIsNone(route._legacy_design(choice))
 
@@ -100,7 +84,7 @@ class WhatAClientMayWrite(unittest.TestCase):
         source = Path(learner_state_store.__file__).read_text(encoding="utf-8")
         allowed = source.split("allowed = {", 1)[1].split("}", 1)[0]
         self.assertIn('"yuvi_design"', allowed)
-        self.assertIn('"avatar"', allowed)
+        self.assertNotIn('"avatar"', allowed)
         self.assertNotIn('"avatar_unlocks"', allowed)
         self.assertNotIn('"room_unlocks"', allowed)
 
@@ -141,7 +125,7 @@ class YuviWearsOnlyWhatWasEarned(unittest.IsolatedAsyncioTestCase):
         body = await _screen({"yuvi_design": _design(headTop="ironhelmet")}, held=set())
         self.assertIsNone(body["yuvi_design"]["equipped"]["headTop"])
 
-    async def test_an_unearned_badge_cosmetic_comes_off_too(self) -> None:
+    async def test_an_unearned_xp_cosmetic_comes_off_too(self) -> None:
         body = await _screen({"yuvi_design": _design(headTop="laurel")}, held=set())
         self.assertIsNone(body["yuvi_design"]["equipped"]["headTop"])
 
@@ -235,16 +219,6 @@ class RoomLayoutsRequireTheirUnlock(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(screened["storedItems"], expected)
             self.assertEqual(screened["worlds"]["lab"]["items"], expected)
             self.assertEqual(screened["worlds"]["lab"]["storedItems"], expected)
-
-    async def test_the_old_field_is_not_a_way_around_the_screen(self) -> None:
-        """A design written to `avatar` is still served back as the design (see
-        `_legacy_design`), so it has to be screened as one."""
-        body = await _screen({"avatar": _design(handR="lightsaber")}, held=set())
-        self.assertIsNone(body["avatar"]["equipped"]["handR"])
-
-    async def test_a_profile_picture_choice_is_left_alone(self) -> None:
-        body = await _screen({"avatar": COIN}, held=set())
-        self.assertEqual(body["avatar"], COIN)
 
     async def test_a_write_with_nothing_gated_asks_the_database_nothing(self) -> None:
         """The screen runs on every PATCH — language, progress, mentoring — so

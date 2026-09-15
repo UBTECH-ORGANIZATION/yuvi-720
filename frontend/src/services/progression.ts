@@ -59,6 +59,10 @@ export function useExtraHintToken(componentId: string, questionId: string) {
   )
 }
 
+export function grantDebugXp() {
+  return apiPost<XpAwardReceipt>('/api/progression/debug/grant-xp', {})
+}
+
 export interface XpAwardBatch {
   receipts: XpAwardReceipt[]
   sparks: number

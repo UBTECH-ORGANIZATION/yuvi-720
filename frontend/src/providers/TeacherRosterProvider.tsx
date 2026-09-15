@@ -20,16 +20,12 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react'
 import { getTeacherRoster, type RosterEntry } from '../services/teacher'
-import type { AvatarChoice } from '../features/badges/types'
 import { useAuth } from './AuthProvider'
 
 interface TeacherRosterValue {
   students: RosterEntry[]
   /** The name, or null when this learner has none — never a guess. */
   nameOf: (learnerId: string) => string | null
-  /** The learner's chosen avatar, or null when they have not picked one.
-   *  Fetched with the roster so a badge coin costs no extra request per row. */
-  avatarOf: (learnerId: string) => AvatarChoice | null
   /** For components that still take a Map (the band card, the album). */
   names: Map<string, string | null>
   isLoading: boolean
@@ -67,17 +63,9 @@ export function TeacherRosterProvider({ children }: { children: ReactNode }) {
     (learnerId: string) => names.get(learnerId) ?? null, [names]
   )
 
-  const avatars = useMemo(
-    () => new Map(students.map((row) => [row.learner_id, row.avatar ?? null])),
-    [students]
-  )
-  const avatarOf = useCallback(
-    (learnerId: string) => avatars.get(learnerId) ?? null, [avatars]
-  )
-
   const value = useMemo<TeacherRosterValue>(
-    () => ({ students, names, nameOf, avatarOf, isLoading }),
-    [students, names, nameOf, avatarOf, isLoading]
+    () => ({ students, names, nameOf, isLoading }),
+    [students, names, nameOf, isLoading]
   )
 
   return (

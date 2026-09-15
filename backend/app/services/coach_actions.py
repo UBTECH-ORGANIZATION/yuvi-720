@@ -49,9 +49,6 @@ _ACTIONS: dict[str, CoachAction] = {
     "open_profile": CoachAction(
         "open_profile", "/results", "companion.action.profile", "navigation", _BOTH_MODES,
     ),
-    "open_badges": CoachAction(
-        "open_badges", "/badges", "companion.action.badges", "navigation", _BOTH_MODES,
-    ),
 }
 
 

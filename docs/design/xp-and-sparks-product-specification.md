@@ -9,7 +9,7 @@ Yuvilab Spark will have two complementary reward systems:
 - **Sparks** are spendable currency. Learners earn and receive Sparks, then choose how to spend them in Yubi Studio.
 - **XP** is permanent progression. XP is never spent, transferred, lost, or reduced. It determines the learner's level from 1 to 50.
 
-XP does not replace Sparks, badges, streaks, mastery, or curriculum progress. A level is a game-progression signal, not a grade and not evidence of subject mastery. The product must never compare one learner's XP or level with another learner's.
+XP does not replace Sparks, streaks, mastery, or curriculum progress. A level is a game-progression signal, not a grade and not evidence of subject mastery. The product must never compare one learner's XP or level with another learner's.
 
 ## 2. Current Product Surfaces
 
@@ -22,7 +22,7 @@ The existing system already provides most of the integration points needed for X
 | Teacher Quests | The teacher specifies the Sparks granted when the quest is completed | Award 20 XP only when the entire Teacher Quest is finished |
 | Learning hierarchy | Mathematics and Science contain learning goals; goals contain learning modules; modules contain components | Award 15 XP for a completed module and 50 XP for a completed learning goal; components award no XP |
 | Asking for learning support | Hint/explanation/help usage is tracked | Award XP only at the lifetime milestones of 30, 60, and 90 qualifying requests |
-| Badges and streaks | Permanently unlock cosmetics and room props | Keep independent; levels may unlock different assets, but must not re-award badge items |
+| Streaks | Permanently unlock cosmetics and room props | Keep independent; level rewards use separate acquisition rules |
 | Yubi Studio | Sparks purchase cosmetics; some items are earned; server enforces 20 minutes per hour | Levels can unlock room features and new level-exclusive furniture that is unavailable in the catalog |
 
 Relevant owning code:
@@ -190,7 +190,7 @@ The following seven items currently exist in the server-owned Sparks catalog. Wh
 | 23 | Trophies | `trophies` | 50 | `room_unlocks` |
 | 25 | Dragon Wings | `dragonwings` | 120 | `avatar_unlocks` |
 
-The progression reward configuration is the sole new acquisition rule for these IDs. Remove them from `backend/app/services/rewards/catalog.py` as part of the XP implementation, then grant them through the level-reward settlement service. Do not also add them to badge/streak/mapping rules in `backend/app/services/unlocks.py`.
+The progression reward configuration is the sole new acquisition rule for these IDs. Remove them from `backend/app/services/rewards/catalog.py` as part of the XP implementation, then grant them through the level-reward settlement service. Do not also add them to streak or mapping rules in `backend/app/services/unlocks.py`.
 
 ### Default-locked room layouts converted to level rewards
 
@@ -217,7 +217,7 @@ Levels 5, 9, 14, 17, 18, 24, and 26 each grant one distinct, precision-crafted f
 | 24 | `level_furniture_24` | Level reward only | `room_unlocks` |
 | 26 | `level_furniture_26` | Level reward only | `room_unlocks` |
 
-Product design must define a unique name and visual design for every piece before implementation while preserving these stable entitlement IDs. None of the seven IDs may be added to the Sparks catalog, purchased through another route, or reused by badge, streak, mapping, or promotional unlock rules. Each piece is granted automatically, permanently, and idempotently when its level is reached.
+Product design must define a unique name and visual design for every piece before implementation while preserving these stable entitlement IDs. None of the seven IDs may be added to the Sparks catalog, purchased through another route, or reused by streak, mapping, or promotional unlock rules. Each piece is granted automatically, permanently, and idempotently when its level is reached.
 
 ### Levels 30-50
 
@@ -227,7 +227,7 @@ Levels 30 and above are prestige levels. Each grants a permanent visual variant 
 
 - **Extra-hint token:** permits one additional scaffold step after the normal hint ladder is exhausted. It must not reveal the answer. Maximum stored balance: 3. Consumption is server-authoritative and attached to a component/question ID.
 - **Sparks bonus:** uses the existing Sparks wallet and reward ledger with an idempotency key such as `earn:{learner_id}:level:{level}`. Level bonuses should not consume the ordinary daily earned-Sparks cap.
-- **Cosmetics and furniture:** use dedicated stable IDs and the existing server unlock paths. The seven catalog conversions above are explicit exceptions: prior purchases remain owned, while future ownership comes only from reaching the specified level. The seven new furniture pieces are level-exclusive and must never appear as purchasable catalog rows. Do not reuse any item already granted by mapping, badge, streak, or purchase.
+- **Cosmetics and furniture:** use dedicated stable IDs and the existing server unlock paths. The seven catalog conversions above are explicit exceptions: prior purchases remain owned, while future ownership comes only from reaching the specified level. The seven new furniture pieces are level-exclusive and must never appear as purchasable catalog rows. Do not reuse any item already granted by mapping, streak, or purchase.
 
 ## 7. Learner Experience
 
@@ -388,7 +388,7 @@ Do **not** silently reconstruct XP from every historical interaction. Historical
 Recommended launch policy:
 
 1. Every existing learner starts at Level 1 with 0 XP on the feature launch date.
-2. Preserve all existing Sparks balances, purchases, badges, streak unlocks, and cosmetics unchanged.
+2. Preserve all existing Sparks balances, purchases, streak unlocks, and cosmetics unchanged. Remove legacy achievement-badge state while retaining every permanent Studio entitlement.
 3. Learners who bought one of the seven converted catalog items keep it permanently and receive no Sparks refund; they paid for immediate access before level progression existed. Reaching its assigned level later must be an idempotent no-op for ownership while the rest of that level's rewards still settle.
 4. Optionally grant one transparent, fixed `early learner` cosmetic to existing learners; do not invent historical XP.
 5. Gate UI behind `XP_SYSTEM_ENABLED` while still running service tests.

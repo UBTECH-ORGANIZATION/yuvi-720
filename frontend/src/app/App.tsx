@@ -28,7 +28,6 @@ import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
    learner's and teacher's first paint, for a route most sessions never open. */
 const YuviStudioPage = lazy(() =>
   import('../features/Yuvi-studio/YuviStudioPage').then((m) => ({ default: m.YuviStudioPage })))
-import { BadgesPage } from '../features/badges/BadgesPage'
 import { MyTasksPage } from '../features/student-tasks/MyTasksPage'
 import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
 import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage'
@@ -64,7 +63,6 @@ const PROTECTED_ROUTES = [
   '/student-dashboard',
   '/mentoring',
   '/learning',
-  '/badges',
   '/tasks'
 ]
 const TEACHER_ROUTES = ['/teacher']   // covers /teacher and the legacy /teacher-view
@@ -131,7 +129,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/tasks', '/admin', '/mentoring', '/learning',
+  '/tasks', '/admin', '/mentoring', '/learning',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -207,7 +205,6 @@ function pageForRoute(pathname: string) {
     return <Suspense fallback={null}><YuviStudioPage /></Suspense>
   }
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
-  if (pathname.startsWith('/badges')) return <BadgesPage />
   // Solve before list, or `/tasks/:id` resolves to the list — the same
   // ordering trap the teacher lane below documents.
   if (pathname.startsWith('/tasks/')) {
@@ -291,7 +288,6 @@ function isLearnerRoute(pathname: string) {
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning') ||
-    pathname.startsWith('/badges') ||
     /* Both task screens sit in the learner shell. The solve screen is a focus
        surface, and `isActiveTaskRoute` collapses the chrome around it — the
        same arrangement a lesson already uses, rather than a second one. */

@@ -1052,13 +1052,13 @@ export const Yuvi_CATALOG: YuviAsset[] = [
   { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildBattleHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
   { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildLightCrown, requirementKey: 'YuviStudio.unlock.section4' },
   { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildCompanionDrone, requirementKey: 'YuviStudio.unlock.challenges3' },
-  { id: 'laurel', slot: 'headTop', labelKey: 'YuviStudio.item.laurel', build: buildLaurelWreath, requirementKey: 'YuviStudio.unlock.badge.on_fire', isNew: true },
+  { id: 'laurel', slot: 'headTop', labelKey: 'YuviStudio.item.laurel', build: buildLaurelWreath, requirementKey: 'YuviStudio.unlock.level.7', isNew: true },
   // ── face ──
   { id: 'shades', slot: 'face', labelKey: 'YuviStudio.item.shades', build: buildShades },
   { id: 'hud', slot: 'face', labelKey: 'YuviStudio.item.hud', build: buildHudVisor, isNew: true },
   { id: 'warpaint', slot: 'face', labelKey: 'YuviStudio.item.warpaint', build: buildWarPaint },
   { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildCyberMask, requirementKey: 'YuviStudio.unlock.achievement' },
-  { id: 'explorerGoggles', slot: 'face', labelKey: 'YuviStudio.item.explorerGoggles', build: buildExplorerGoggles, requirementKey: 'YuviStudio.unlock.badge.comeback', isNew: true },
+  { id: 'explorerGoggles', slot: 'face', labelKey: 'YuviStudio.item.explorerGoggles', build: buildExplorerGoggles, requirementKey: 'YuviStudio.unlock.level.16', isNew: true },
   // ── body ──
   { id: 'jacket', slot: 'body', labelKey: 'YuviStudio.item.jacket', build: buildJacket, isNew: true },
   { id: 'jersey', slot: 'body', labelKey: 'YuviStudio.item.jersey', build: buildJersey },

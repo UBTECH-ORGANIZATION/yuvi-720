@@ -2,7 +2,6 @@
    access is group-scoped server-side. */
 
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './api'
-import type { AvatarChoice } from '../features/badges/types'
 
 export interface AttentionFlag {
   reason: string
@@ -355,9 +354,6 @@ export interface RosterEntry {
   learner_id: string
   /** Null for a learner who never finished mapping — render the id, not a guess. */
   display_name: string | null
-  /** The learner's own avatar choice, or null when they have not made one.
-   *  Same shape as `learner_state.avatar`; `StudentAvatar` resolves it. */
-  avatar?: AvatarChoice | null
   group_id: string
 }
 
@@ -488,12 +484,6 @@ export function getStudentActivity(learnerId: string, subject?: string) {
   if (subject) params.set('subject', subject)
   return apiGet<{ questions: QuestionRow[] }>(
     `/api/teacher/students/${learnerId}/activity?${params}`
-  )
-}
-
-export function getStudentBadges(learnerId: string, lang: string) {
-  return apiGet<{ badges: TeacherBadge[] }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/badges?lang=${lang}`
   )
 }
 
@@ -1028,7 +1018,7 @@ export function assignGroupGoal(
   )
 }
 
-/* ── Phase 7: moments, kudos, digest, badges, meeting prep ─────────────────── */
+/* ── Phase 7: moments, kudos, digest, meeting prep ────────────────────────── */
 
 /** One narrated change. Displayed chronologically, never as a ranking of
  *  students (MoE C5) — `weight` only decides which moments make the cut. */
@@ -1123,21 +1113,6 @@ export function getGroupDigest(groupId: string, language: string, refresh = fals
     `/api/teacher/groups/${encodeURIComponent(groupId)}/digest?language=${language}&refresh=${refresh}`
   )
 }
-
-export interface TeacherBadge {
-  subject: string
-  glyph: string
-  tier: string
-  state: 'earned' | 'inprogress' | 'locked'
-  progress: number
-  title: string
-  meta: string
-  certifies: string[]
-  earned: boolean
-  category: string
-  howToEarn?: string
-}
-
 
 /* ── learnings analytics ──────────────────────────────────────────────────── */
 

@@ -80,7 +80,7 @@ describe('what it does with a route it does not know', () => {
   })
 
   it('offers nothing outside the teacher portal', () => {
-    for (const path of ['/', '/tasks', '/student-dashboard', '/badges', '']) {
+    for (const path of ['/', '/tasks', '/student-dashboard', '/unknown', '']) {
       assert.deepEqual(narrowsBy(path), { class: false, subgroup: false, subject: false },
                        path)
     }

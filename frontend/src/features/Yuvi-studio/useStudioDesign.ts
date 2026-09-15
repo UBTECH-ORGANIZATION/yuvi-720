@@ -32,7 +32,7 @@ export function useStudioDesign(autoLoad = true) {
   const [baseline, setBaseline] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
   const [propUnlocks, setPropUnlocks] = useState<Set<string>>(() => new Set())
-  // id -> locale key naming the badge or streak that grants it.
+  // id -> locale key naming the XP, section, or streak requirement.
   const [requirements, setRequirements] = useState<Record<string, string>>({})
   const [streak, setStreak] = useState(0)
   const [shop, setShop] = useState<Record<string, ShopItem>>({})
@@ -54,7 +54,7 @@ export function useStudioDesign(autoLoad = true) {
     } catch { /* keep default */ }
     try {
       // The shop is the only source of prices — the client never sets one.
-      // The same read settles any badge/streak grant the learner has earned,
+      // The same read settles any section/streak grant the learner has earned,
       // so opening the studio is when a new reward becomes real.
       const catalog = await getShop()
       setShop(Object.fromEntries(catalog.items.map((item) => [item.id, item])))

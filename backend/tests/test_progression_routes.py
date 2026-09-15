@@ -51,6 +51,24 @@ class ProgressionRouteTests(unittest.TestCase):
         response = TestClient(_app()).post("/api/progression/grant", json={"amount": 9999})
         self.assertEqual(response.status_code, 404)
 
+    def test_debug_grant_awards_only_for_the_authenticated_learner(self) -> None:
+        receipt = {"awarded": 15, "duplicate": False, "progression": {"level": 1}}
+        with patch("app.routes.progression.is_production", return_value=False), patch.object(
+            routes.progression, "award_debug_xp", AsyncMock(return_value=receipt)
+        ) as award_debug_xp:
+            response = TestClient(_app()).post("/api/progression/debug/grant-xp")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), receipt)
+        award_debug_xp.assert_awaited_once_with(LEARNER)
+
+    def test_debug_grant_is_not_available_in_production(self) -> None:
+        with patch("app.routes.progression.is_production", return_value=True), patch.object(
+            routes.progression, "award_debug_xp", AsyncMock()
+        ) as award_debug_xp:
+            response = TestClient(_app()).post("/api/progression/debug/grant-xp")
+        self.assertEqual(response.status_code, 404)
+        award_debug_xp.assert_not_awaited()
+
     def test_hint_token_requires_the_active_exhausted_question(self) -> None:
         brain = {
             "current_state": {

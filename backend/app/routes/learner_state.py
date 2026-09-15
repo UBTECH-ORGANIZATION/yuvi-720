@@ -37,40 +37,16 @@ def _legacy_design(avatar) -> dict | None:
 
 @router.get("/learner-state")
 async def read_learner_state(learner_id: str = Depends(require_learner)):
-    """Return persisted learner UI state from MongoDB, with local fallback.
-
-    `avatar` is filled in when the learner has never chosen one: their best
-    earned badge, exactly as the teacher's roster derives it, so a child sees
-    the same coin their teacher sees. Derived, never stored — the moment they
-    earn a better one it changes, and picking one still overwrites it for good.
-    """
+    """Return persisted learner UI state from MongoDB, with local fallback."""
     state = await get_learner_state(learner_id)
-    # ANY saved choice wins, including `{"kind": "initial"}` — that one is a
-    # learner who pressed "back to my letter", and re-deriving over it would
-    # make the reset button do nothing.
     avatar = state.get("avatar")
     if not state.get("yuvi_design"):
         legacy = _legacy_design(avatar)
         if legacy:
             state = {**state, "yuvi_design": legacy}
-    if not (isinstance(avatar, dict) and avatar.get("kind")):
-        state = {**state, "avatar": await _earned_avatar(learner_id)}
+    state.pop("avatar", None)
+    state.pop("badges", None)
     return JSONResponse(content=state)
-
-
-async def _earned_avatar(learner_id: str):
-    """The learner's best earned coin, or `None`. Never raises: an avatar is
-    decoration, and a failure here must not take the whole state read down."""
-    try:
-        from app.brain.repository import get_brain
-        from app.services import kata_catalog
-        from app.services.badges import best_badge
-
-        await kata_catalog.ensure_loaded()
-        return best_badge(await get_brain(learner_id))
-    except Exception as exc:      # pragma: no cover — an initial is a fine avatar
-        print(f"⚠️ derived avatar skipped: {type(exc).__name__}")
-        return None
 
 
 def _completed(progress) -> bool:
@@ -216,32 +192,10 @@ async def patch_learner_state(data: dict, session=Depends(require_learner_sessio
     # Studio time is derived from the server clock; accepting it here would let
     # a browser reset its own hourly allowance.
     data.pop("studio_time", None)
+    data.pop("avatar", None)
     await _screen_room_items(learner_id, data)
     await _screen_room_layout(learner_id, data)
     await _screen_equipped(learner_id, data)
-    # A badge chosen as the profile picture must actually be earned — the picker
-    # only offers earned coins, so this rejects tampering, not normal use.
-    avatar = data.get("avatar")
-    if isinstance(avatar, dict) and avatar.get("kind") == "badge":
-        badge = avatar.get("badge") or {}
-        try:
-            from app.brain.repository import get_brain
-            from app.services import kata_catalog
-            from app.services.badges import project_badges
-            from app.services.events import get_learner_events
-            await kata_catalog.ensure_loaded()
-            brain = await get_brain(learner_id)
-            # MUST pass events — return-over-days milestones (streak/dedicated) are
-            # only "earned" with the event history, exactly like GET /api/badges.
-            try:
-                events = await get_learner_events(learner_id)
-            except Exception:
-                events = []
-            earned = {(b["subject"], b["tier"]) for b in project_badges(brain, events=events) if b["earned"]}
-        except Exception:
-            earned = set()
-        if (badge.get("subject"), badge.get("tier")) not in earned:
-            return JSONResponse(status_code=400, content={"error": "badge not earned"})
     # Detect the onboarding-completed transition BEFORE writing the new state.
     finishing_onboarding = False
     if session.get("sid") and _completed(data.get("profile_summary_progress")):

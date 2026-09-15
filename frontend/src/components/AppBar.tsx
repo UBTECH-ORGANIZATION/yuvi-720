@@ -3,6 +3,9 @@ import { Stepper } from './Stepper'
 import { useI18n } from '../i18n/I18nProvider'
 import { BrandLogo } from './BrandLogo'
 import { UserMenu } from './UserMenu'
+import { useAuth } from '../providers/AuthProvider'
+import { useProgression } from '../providers/ProgressionProvider'
+import { grantDebugXp } from '../services/progression'
 
 /* The bar shows the signed-in account and nothing else about "the student" —
    name, school and avatar all come from the session now, so there is no
@@ -32,10 +35,23 @@ export function AppBar({
   activeStep, center, leading, trailing, compactBelow = 1200, className,
 }: AppBarProps) {
   const { t } = useI18n()
+  const { user } = useAuth()
+  const { applyAward } = useProgression()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
+  const [isGrantingDebugXp, setIsGrantingDebugXp] = useState(false)
   const appBarRef = useRef<HTMLElement>(null)
   const hasNavigation = typeof activeStep !== 'number' && Boolean(center)
+  const canGrantDebugXp = import.meta.env.DEV && Boolean(user?.roles.includes('learner'))
+
+  const onGrantDebugXp = async () => {
+    setIsGrantingDebugXp(true)
+    try {
+      applyAward(await grantDebugXp())
+    } finally {
+      setIsGrantingDebugXp(false)
+    }
+  }
 
   useEffect(() => {
     const appBar = appBarRef.current
@@ -71,9 +87,22 @@ export function AppBar({
     <header ref={appBarRef}
             className={`app-bar${isCompact ? ' is-compact' : ''}${className ? ` ${className}` : ''}`}>
       <div className="app-bar-left">
-        <div className="app-bar-brand" aria-label={t('app.brand')}>
-          <BrandLogo />
-        </div>
+        {canGrantDebugXp ? (
+          <button
+            className="app-bar-brand app-bar-brand--debug"
+            type="button"
+            aria-label={t('debug.xpGrant')}
+            title={t('debug.xpGrant')}
+            disabled={isGrantingDebugXp}
+            onClick={() => void onGrantDebugXp()}
+          >
+            <BrandLogo />
+          </button>
+        ) : (
+          <div className="app-bar-brand" aria-label={t('app.brand')}>
+            <BrandLogo />
+          </div>
+        )}
         {leading}
       </div>
       {typeof activeStep === 'number' && (

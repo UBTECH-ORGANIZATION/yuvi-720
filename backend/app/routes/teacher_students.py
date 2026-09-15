@@ -422,28 +422,6 @@ async def student_scores(
     return _ok(await learner_scores.student_scores(safe_id))
 
 
-@router.get("/students/{learner_id}/badges")
-async def student_badges(
-    learner_id: str,
-    lang: str = Query("he"),
-    session=Depends(require_teacher_session),
-):
-    """Badges as learning evidence (design doc §22.7)."""
-    safe_id = await _guard_learner(session, learner_id)
-    if safe_id is None:
-        return _denied()
-    from app.brain.repository import get_brain
-    from app.services.badges import project_badges
-    from app.services.events import get_learner_events
-
-    brain = await get_brain(safe_id)
-    try:
-        events = await get_learner_events(safe_id)
-    except Exception:
-        events = []
-    return _ok({"badges": project_badges(brain, locale=lang, events=events)})
-
-
 @router.get("/students/{learner_id}/focus/roadmap")
 async def student_focus_roadmap(
     learner_id: str,
