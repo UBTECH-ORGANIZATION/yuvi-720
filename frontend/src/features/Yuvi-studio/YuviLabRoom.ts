@@ -14,14 +14,18 @@
  * Performance rules of the house:
  *  - one shadow-casting light, everything else is baked into emissive/additive
  *  - geometries and materials are shared between repeated props
- *  - `quality: 'low'` drops the props, the motes and the shadow map
+ *  - `quality: 'medium'` drops the props and the shadow map, `'low'` also the
+ *    motes, the clearcoat materials and most of the lights (see setQuality)
  */
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
-import yuviMarkUrl from '../../assets/yuvi-favicon.png'
+import yuviMarkUrl from '../../assets/yuvi-badge.webp'
+import { detectRenderTier, type RenderTier } from './renderTier'
+import { shellMaterial } from './tierMaterials'
 import { DEFAULT_STATIONS, STATION_IDS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
-export type LabRoomQuality = 'high' | 'low'
+/** Same three steps as the avatar's render tier; `high` is the reference look. */
+export type LabRoomQuality = RenderTier
 
 export interface LabRoomOptions {
   quality?: LabRoomQuality
@@ -107,7 +111,17 @@ export interface LabRoom {
   stationAnchor: (id: StationId) => THREE.Vector3
   /** Drive the Game Lab desk: idle code rain, a building pulse, a ready flash. */
   setGameLabState: (state: GameLabState) => void
+  /** Runtime-safe tier change: the light budget and the motes. Returns what the
+   *  caller's own rig should do to make up for the lights that went out. */
+  setQuality: (quality: LabRoomQuality) => LabRoomHemiHint
   dispose: () => void
+}
+
+/** How much the caller's hemisphere light should rise, and toward which colour,
+ *  when the room turns its zone lights off. Zero on high. */
+export interface LabRoomHemiHint {
+  boost: number
+  tint: THREE.ColorRepresentation | null
 }
 
 /**
@@ -160,21 +174,22 @@ export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.
 export const PROP_SCALE = 1.75
 
 /**
- * Cheap capability probe. Weak machines get the reduced-effects room instead of
- * a slideshow; `prefers-reduced-motion` also implies "keep it calm".
+ * Capability probe. Delegates to the avatar's tier detection so the room and
+ * the robot standing in it never disagree about what the GPU can do.
  */
 export function detectLabQuality(): LabRoomQuality {
-  if (typeof window === 'undefined') return 'low'
-  const nav = window.navigator as any
-  if (nav?.deviceMemory && nav.deviceMemory <= 4) return 'low'
-  if (nav?.hardwareConcurrency && nav.hardwareConcurrency <= 4) return 'low'
-  if (window.matchMedia?.('(max-width: 720px)').matches) return 'low'
-  return 'high'
+  return detectRenderTier().tier
 }
 
 export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = {}): LabRoom {
   const quality: LabRoomQuality = options.quality ?? 'high'
-  const rich = quality === 'high'
+  // `rich` is the full room: every prop, texture size and geometry segment
+  // count that makes high the reference look. Medium keeps ALL of it — it is
+  // the same room at a lower pixel ratio with no shadow map, fewer lights and
+  // fewer motes (those are tier settings, decided elsewhere). Only low, the
+  // integrated-GPU floor, gets the reduced room. Every `rich ?` branch keeps
+  // its high-side value untouched.
+  const rich = quality !== 'low'
   const reduceMotion = options.reduceMotion ?? false
   const deckY = options.deckY ?? -0.92
   const accent = new THREE.Color(options.accent ?? VIOLET)
@@ -310,7 +325,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   addWall(DEPTH, CEIL_Y - FLOOR_Y, [HALF_X, (CEIL_Y + FLOOR_Y) / 2, MID_Z], -Math.PI / 2)
 
   // Polished floor. Deliberately unlit: any PBR deck under this rig picks up
-  // the environment probe and the fills and settles into the flat mid-grey that
+  // the environment probe and the fills and settles into the flat rich-grey that
   // made the room read like a 3D viewport. Painting the deck instead gives
   // exact control — a near-black slab with a soft warm-to-cool falloff and a
   // wet sheen towards the window — and the additive pools, zone rings and
@@ -447,7 +462,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   platform.add(podium)
 
   const baseGeo = track(new THREE.CylinderGeometry(1.24, 1.34, 0.13, 56))
-  const baseMat = track(new THREE.MeshPhysicalMaterial({
+  const baseMat = track(shellMaterial(rich, {
     color: 0x211f4e, roughness: 0.34, metalness: 0.62,
     clearcoat: 1, clearcoatRoughness: 0.22, envMapIntensity: 1,
   }))
@@ -457,7 +472,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   podium.add(base)
 
   const deckGeo = track(new THREE.CylinderGeometry(1.16, 1.16, 0.05, 56))
-  const deckMat = track(new THREE.MeshPhysicalMaterial({
+  const deckMat = track(shellMaterial(rich, {
     color: 0x171441, roughness: 0.05, metalness: 0.8,
     clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.4,
   }))
@@ -542,14 +557,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const darkMat = track(new THREE.MeshStandardMaterial({ color: 0x11142f, roughness: 0.68, metalness: 0.4, envMapIntensity: 0.35 }))
   // Four distinct surfaces instead of one plastic. Brushed steel, dark wood and
   // glass are what stop the props reading as untextured blockout geometry.
-  const brushedMat = track(new THREE.MeshPhysicalMaterial({
+  const brushedMat = track(shellMaterial(rich, {
     color: 0x39406e, roughness: 0.34, metalness: 0.95,
     clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.9,
   }))
   const woodMat = track(new THREE.MeshStandardMaterial({
     color: WOOD, roughness: 0.74, metalness: 0.04, envMapIntensity: 0.25,
   }))
-  const glassMat = track(new THREE.MeshPhysicalMaterial({
+  const glassMat = track(shellMaterial(rich, {
     color: 0x9fd8ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.15,
     clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.6, side: THREE.DoubleSide,
   }))
@@ -754,7 +769,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     updaters.push((t) => { artefact.rotation.y = t * 0.35 })
 
     // ── MISSION ────────────────────────────────────────────────────────────
-    // A kiosk angled at the platform, mid-ground on the right. It reads as the
+    // A kiosk angled at the platform, rich-ground on the right. It reads as the
     // secondary focus: something is waiting to be done.
     mission = new THREE.Group()
     mission.position.set(MISSION_AT[0], FLOOR_Y, MISSION_AT[1])
@@ -1088,7 +1103,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     ctx.fillStyle = sun
     ctx.fillRect(0, 0, W, H)
 
-    // Three silhouette layers: distant ridge, mid skyline, near towers.
+    // Three silhouette layers: distant ridge, rich skyline, near towers.
     const layer = (baseY: number, height: number, step: number, fill: string, lights: string | null) => {
       ctx.fillStyle = fill
       ctx.beginPath()
@@ -1722,7 +1737,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // ── Ambient motes ────────────────────────────────────────────────────────
   let motes: THREE.Points | null = null
   let moteSpeeds: Float32Array | null = null
-  const MOTES = reduceMotion ? 0 : rich ? 170 : 60
+  // High keeps its 170; medium the 60 the reduced room always had; low none —
+  // a Points draw with a per-frame attribute upload is not free on a UHD 620.
+  const MOTES = reduceMotion ? 0 : quality === 'high' ? 170 : quality === 'medium' ? 60 : 0
   if (MOTES > 0) {
     const positions = new Float32Array(MOTES * 3)
     moteSpeeds = new Float32Array(MOTES)
@@ -1747,7 +1764,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // ── Assembly burst ───────────────────────────────────────────────────────
   // Equipping a part fires a ring of light and a puff of energy motes at the
   // slot, so an upgrade lands as an event instead of a silent swap.
-  const BURST_N = rich ? 64 : 24
+  const BURST_N = quality === 'high' ? 64 : quality === 'medium' ? 40 : 24
   const burstPositions = new Float32Array(BURST_N * 3)
   const burstVelocities = new Float32Array(BURST_N * 3)
   const burstGeo = track(new THREE.BufferGeometry())
@@ -2461,6 +2478,35 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     for (const fn of updaters) fn(t, dt)
   }
 
+  // ── Light budget ─────────────────────────────────────────────────────────
+  // Every light is built once, above, whatever the tier; the budget only flips
+  // `visible`. Three recompiles every program when the number of lights
+  // changes, so this is decided per tier change and never per frame.
+  //   high   — all of them (this is the reference look; nothing is touched)
+  //   medium — no window bounce, no screen bounce, no burst flash
+  //   low    — key + the platform and bench points; the rim, the explore cool
+  //            fill and the rest go dark and the caller lifts its hemisphere
+  const applyLightBudget = (q: LabRoomQuality) => {
+    const high = q === 'high'
+    const notLow = q !== 'low'
+    keyLight.visible = true
+    accentLight.visible = true
+    warmLight.visible = true
+    rimLight.visible = notLow
+    coolLight.visible = notLow
+    windowLight.visible = high
+    if (screenLight) screenLight.visible = high
+    burstLight.visible = high
+    if (motes) motes.visible = notLow
+  }
+  const setQuality = (q: LabRoomQuality): LabRoomHemiHint => {
+    applyLightBudget(q)
+    if (q === 'high') return { boost: 0, tint: null }
+    if (q === 'medium') return { boost: 0.12, tint: null }
+    return { boost: 0.3, tint: 0x93a9ff }
+  }
+  applyLightBudget(quality)
+
   const dispose = () => {
     scene.remove(group)
     group.traverse((obj: any) => {
@@ -2475,6 +2521,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   return {
     group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
     zones: ZONES, setZoneHighlight, setUserItems, setGhost, setTarget, setRoomStyle, blockers, noBuildZones,
-    setStations, pickItem, pickStation, itemAnchor, stationAnchor, setGameLabState,
+    setStations, pickItem, pickStation, itemAnchor, stationAnchor, setGameLabState, setQuality,
   }
 }

@@ -17,6 +17,7 @@
  */
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { renderThumbnail } from './thumbnailRenderer'
 
 export type RoomItemCategory = 'seating' | 'desk' | 'play' | 'nature' | 'light' | 'tech' | 'wall'
 export type RoomItemPlacement = 'floor' | 'wall'
@@ -1439,52 +1440,21 @@ export function claimedSurpriseItems(rewardKinds: string[]): RoomItemSpec[] {
 }
 
 // Incremental 3D thumbnail cache. Rendering the whole catalog on opening the
-// studio exhausts GPU resources on lower-powered school devices.
-const thumbnailCache: Record<string, string> = {}
+// studio exhausts GPU resources on lower-powered school devices, and opening
+// a context per category switch was stranding contexts; every card now goes
+// through the one shared thumbnail renderer, on idle, and is cached by id.
+export const roomThumbnailCache: Record<string, string> = {}
 
-export function getRoomThumbnails(items: RoomItemSpec[]): Record<string, string> {
-  const missing = items.filter((spec) => !thumbnailCache[spec.id])
-  if (!missing.length) return thumbnailCache
-  try {
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
-    renderer.setPixelRatio(2)
-    renderer.setSize(140, 140)
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+// The kit's shared geometries are built once for thumbnails; each render
+// disposes only the object it built, never the kit.
+let thumbnailKit: RoomKit | null = null
 
-    const scene = new THREE.Scene()
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd9ddff, 1.5))
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.1)
-    keyLight.position.set(4, 6, 5)
-    scene.add(keyLight)
-    const fillLight = new THREE.DirectionalLight(0xaebfff, 0.8)
-    fillLight.position.set(-4, 3, 2)
-    scene.add(fillLight)
-    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
-    const { kit, dispose } = createRoomKit(true)
-
-    for (const spec of missing) {
-      const object = spec.build(kit, new THREE.Color(spec.tint ?? '#7c6bff'))
-      const bounds = new THREE.Box3().setFromObject(object)
-      const center = bounds.getCenter(new THREE.Vector3())
-      const size = bounds.getSize(new THREE.Vector3())
-      object.position.sub(center)
-      const dimension = Math.max(size.x, size.y, size.z) || 1
-      const distance = dimension * 2.4
-      camera.position.set(distance * 0.55, distance * 0.4, distance)
-      camera.lookAt(0, 0, 0)
-      scene.add(object)
-      renderer.render(scene, camera)
-      thumbnailCache[spec.id] = renderer.domElement.toDataURL('image/png')
-      scene.remove(object)
-    }
-
-    dispose()
-    renderer.dispose()
-  } catch {
-    // WebGL unavailable — ItemCard falls back to the item's colour swatch.
-  }
-  return thumbnailCache
+export async function renderRoomThumbnail(spec: RoomItemSpec): Promise<string | null> {
+  if (roomThumbnailCache[spec.id]) return roomThumbnailCache[spec.id]
+  thumbnailKit ??= createRoomKit(true).kit
+  const kit = thumbnailKit
+  const url = await renderThumbnail('room', () => spec.build(kit, new THREE.Color(spec.tint ?? '#7c6bff')))
+  if (url) roomThumbnailCache[spec.id] = url
+  return url
 }
 

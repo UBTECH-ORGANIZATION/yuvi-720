@@ -7,11 +7,13 @@ import { useAuth } from '../../providers/AuthProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
-import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
+import { assetsForSlot, assetThumbnailCache, renderAssetThumbnail, type YuviAsset } from './YuviAssets'
+import { useThumbnails } from './useThumbnails'
+import { readForcedTier, storeForcedTier, type RenderTierChoice } from './renderTier'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { claimedSurpriseItems, renderRoomThumbnail, roomThumbnailCache, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { gameLabStandingSpot, roomStandingSpot, type LabRoomZoneId } from './YuviLabRoom'
@@ -86,7 +88,15 @@ export function StudioContent({
   const { t } = useI18n()
   const { user } = useAuth()
   const { isTouch } = useResponsive()
-  const thumbnails = useMemo(() => getThumbnails(), [])
+  /* Render quality, cycled from the stage toolbar: auto → light → full. Stored
+     per device, not per learner (see renderTier.ts); remounting the avatar on
+     a change is fine, the `loaded &&` gate below already handles a remount. */
+  const [qualityChoice, setQualityChoice] = useState<RenderTierChoice>(() => readForcedTier() ?? 'auto')
+  const cycleQuality = () => {
+    const next: RenderTierChoice = qualityChoice === 'auto' ? 'low' : qualityChoice === 'low' ? 'high' : 'auto'
+    storeForcedTier(next === 'auto' ? null : next)
+    setQualityChoice(next)
+  }
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
@@ -468,7 +478,10 @@ export function StudioContent({
     return () => window.clearTimeout(id)
   }, [loaded, roomState.loaded, roomState.room.tutorialDone, avatarRef])
 
-  const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
+  // Stable per tab: the thumbnail hook keys its idle schedule on this identity.
+  const slotAssets = useMemo(() => activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot), [activeTab])
+  // Cards show their dot first; pictures arrive in idle-time chunks.
+  const thumbnails = useThumbnails(slotAssets, renderAssetThumbnail, assetThumbnailCache)
   const visibleAssets = slotAssets.filter((asset) => {
     const locked = isLocked(asset)
     if (filter === 'owned') return !locked
@@ -657,9 +670,11 @@ export function StudioContent({
         <div className="ys-stage__canvas">
           {loaded && (
             <YuviAvatar3D
+              key={qualityChoice}
               ref={avatarRef}
               initialDesign={design}
               muted={muted}
+              renderTier={qualityChoice}
               orbit
               stage
               roam
@@ -780,6 +795,19 @@ export function StudioContent({
               <Icon name={firstPerson ? 'orbit' : 'eye'} size={18} />
             </button>
           )}
+          {/* Render quality. A school PC that the probe called "high" gets a
+             way down that does not involve a teacher; a good laptop that the
+             governor demoted gets a way back up. */}
+          <button
+            type="button"
+            className={`ys-iconbtn${qualityChoice !== 'auto' ? ' is-on' : ''}`}
+            onClick={cycleQuality}
+            data-quality={qualityChoice}
+            aria-label={t(`YuviStudio.quality.${qualityChoice}`)}
+            title={t(`YuviStudio.quality.${qualityChoice}`)}
+          >
+            <Icon name="chip" size={18} />
+          </button>
           <button
             type="button"
             className={`ys-iconbtn${muted ? ' is-off' : ''}`}
@@ -1129,7 +1157,7 @@ function RoomPanel({
       : ROOM_CATEGORIES.includes(category as RoomItemCategory) ? itemsInCategory(category as RoomItemCategory) : [],
     [category, surpriseRewards],
   )
-  const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
+  const roomThumbnails = useThumbnails(categoryItems, renderRoomThumbnail, roomThumbnailCache)
 
   const pick = (kind: string) => {
     if (full || isPropLocked(kind)) return

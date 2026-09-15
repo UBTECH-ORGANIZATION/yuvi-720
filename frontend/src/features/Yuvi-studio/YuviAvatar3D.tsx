@@ -4,11 +4,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
+import yuviFaviconUrl from '../../assets/yuvi-badge.webp'
+import '../../styles/yuvi-avatar-canvas.css'
 import type { YuviColors, YuviDesign, YuviSlot } from './YuviDesign'
 import { getAsset } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
-import { createYuviLabRoom, detectLabQuality, gameLabStandingSpot, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type GameLabState, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
+import { createYuviLabRoom, gameLabStandingSpot, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type GameLabState, type LabRoom, type LabRoomHemiHint, type LabRoomZoneId } from './YuviLabRoom'
+import { createFpsGovernor, resolveRenderTier, storeTier, tierSettings, type RenderTier, type RenderTierChoice } from './renderTier'
+import { shellMaterial } from './tierMaterials'
+import { trackEvent, trackTiming } from '../../services/telemetry'
 import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
 
 /** Camera framings the studio can request when the learner switches category. */
@@ -85,8 +89,15 @@ interface Props {
   /** Continuous facing yaw (radians) derived from real movement — overrides `heading` when set.
    *  Convention matches `heading`: 0 = toward camera (down), +π/2 = right, π = away (up), −π/2 = left. */
   headingAngle?: number
-  /** Reduce pixel density and antialiasing for small, repeated roadmap avatars. */
+  /** Reduce pixel density and antialiasing for small, repeated roadmap avatars.
+   *  `'low'` clamps the render tier to low whatever the device says. */
   performanceMode?: 'standard' | 'low'
+  /** Which render tier to mount with. `'auto'` (default) = the toolbar choice,
+   *  else the tier the FPS governor confirmed for this device, else detection. */
+  renderTier?: RenderTierChoice
+  /** Stop the render loop after this long without pointer or keyboard input and
+   *  resume on the next event. The dock uses it; the studio never does. */
+  idlePauseMs?: number
   /** Studio roaming: the learner walks Yuvi around the room (click or WASD). */
   roam?: boolean
   /** Drop the camera behind Yuvi's eyes. Arrow keys alone drive the walk. */
@@ -143,7 +154,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', renderTier = 'auto', idlePauseMs = 0, roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem, onRoomItemTap },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -187,24 +198,29 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const onNearRoomItemRef = useRef(onNearRoomItem)
   const onRoomItemTapRef = useRef(onRoomItemTap)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
+  /* Set by the render effect: an idle-paused loop (see `idlePauseMs`) has to
+     wake for a pose change that arrives as a prop, not as an input event. */
+  const wakeRef = useRef<() => void>(() => {})
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
   useEffect(() => { onAvatarClickRef.current = onAvatarClick }, [onAvatarClick])
-  useEffect(() => { thinkingRef.current = thinking }, [thinking])
-  useEffect(() => { speakingRef.current = speaking }, [speaking])
+  useEffect(() => { thinkingRef.current = thinking; wakeRef.current() }, [thinking])
+  useEffect(() => { speakingRef.current = speaking; wakeRef.current() }, [speaking])
   useEffect(() => {
     if (pulling && !pullingRef.current) pullingStartedAtRef.current = Date.now()
     pullingRef.current = pulling
+    wakeRef.current()
   }, [pulling])
   useEffect(() => { pullingSideRef.current = pullingSide }, [pullingSide])
   useEffect(() => {
     if (pushing && !pushingRef.current) pushingStartedAtRef.current = Date.now()
     pushingRef.current = pushing
+    wakeRef.current()
   }, [pushing])
   useEffect(() => { pushingSideRef.current = pushingSide }, [pushingSide])
-  useEffect(() => { presentingRef.current = presenting }, [presenting])
+  useEffect(() => { presentingRef.current = presenting; wakeRef.current() }, [presenting])
   useEffect(() => { presentingSideRef.current = presentingSide }, [presentingSide])
-  useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
+  useEffect(() => { frontFacingRef.current = frontFacing; wakeRef.current() }, [frontFacing])
   useEffect(() => { followPointerRef.current = followPointer }, [followPointer])
   useEffect(() => { groundedRef.current = grounded }, [grounded])
   useEffect(() => { flyingRef.current = flying }, [flying])
@@ -247,19 +263,32 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
+    // ── Render tier ──
+    // The studio is the page (`orbit && stage`): it may ask for the discrete
+    // GPU and it runs the FPS governor. Every other avatar is decoration on a
+    // page whose frame time it does not own, so it takes the tier as given.
+    const mainContent = orbit && stage
+    const resolved = resolveRenderTier(renderTier, performanceMode === 'low')
+    let tier: RenderTier = resolved.final
+    let settings = tierSettings(tier, mainContent)
+    const mountedAt = performance.now()
+
     let renderer: THREE.WebGLRenderer
     try {
       renderer = new THREE.WebGLRenderer({
-        antialias: performanceMode !== 'low',
+        antialias: settings.antialias,
         alpha: true,
-        powerPreference: performanceMode === 'low' ? 'low-power' : 'default',
+        powerPreference: settings.powerPreference,
       })
     } catch {
       if (avatarRoot) avatarRoot.dataset.webglState = 'unavailable'
       return
     }
-    if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, performanceMode === 'low' ? 1.25 : 2))
+    if (avatarRoot) {
+      avatarRoot.dataset.webglState = 'ready'
+      avatarRoot.dataset.renderTier = tier
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.06
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -292,11 +321,17 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // upgrade platform, a workbench, shelves of parts and hologram readouts.
     // The room lives in its own module so the shop and the reward reveal can
     // later step into exactly the same space.
-    const roomQuality: LabRoomQuality =
-      performanceMode === 'low' || reduceMotion ? 'low' : detectLabQuality()
+    // Reduced motion is already a tier input (it caps detection at medium).
+    const roomQuality = tier
+    // Shadows exist only in a room built at high: that build is what sets the
+    // casters, the receivers and the shadow camera. A governor raise to high
+    // later in the session gets everything else; the shadow map waits for the
+    // next mount, which is what the stored tier is for.
+    const roomBuiltHigh = stage && roomQuality === 'high'
     let room: LabRoom | null = null
+    let roomFog: THREE.FogExp2 | null = null
     if (stage) {
-      renderer.shadowMap.enabled = roomQuality === 'high'
+      renderer.shadowMap.enabled = settings.shadows && roomBuiltHigh
       renderer.shadowMap.type = THREE.PCFShadowMap
       room = createYuviLabRoom(scene, {
         quality: roomQuality,
@@ -318,15 +353,31 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // Aerial haze: the far wall sits back, the platform stays forward, and
       // the view through the window reads as genuinely distant. Density is tied
       // to the room's depth — the same value in the enlarged hall would bury
-      // the window in grey.
-      scene.fog = new THREE.FogExp2(0x05071a, 0.023)
+      // the window in grey. Built once; the low tier leaves it off the scene.
+      roomFog = new THREE.FogExp2(0x05071a, 0.023)
+      scene.fog = settings.fog ? roomFog : null
     }
     const roomBounds = room?.bounds ?? null
+
+    // The rig's share of the light budget (the room does its own in
+    // `setQuality`). High touches nothing; medium drops the under-light bounce;
+    // low keeps hemisphere + key + violet rim and lifts the hemisphere toward
+    // the window colour so the bay does not go black.
+    const RIG_HEMI = 0xf4f6ff
+    const applyRigBudget = (q: RenderTier, hint: LabRoomHemiHint) => {
+      fill.visible = q !== 'low'
+      rimCool.visible = q !== 'low'
+      bounce.visible = q === 'high'
+      hemi.intensity = (stage ? 0.2 : 0.62) + hint.boost
+      hemi.color.setHex(RIG_HEMI)
+      if (hint.tint !== null) hemi.color.lerp(new THREE.Color(hint.tint), 0.35)
+    }
+    applyRigBudget(tier, room ? room.setQuality(tier) : { boost: 0, tint: null })
 
     // Only solid shell parts cast into the room's single shadow map — glowing
     // visor sheens and additive light planes would smear it.
     const castShadows = (obj: THREE.Object3D) => {
-      if (!room || roomQuality !== 'high') return
+      if (!roomBuiltHigh) return
       obj.traverse((child: any) => {
         if (!child.isMesh) return
         const material = child.material
@@ -532,17 +583,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // Yuvi 2.0: soft-ceramic shell with a real clearcoat and a whisper of
     // iridescence over a deep indigo inner core — no flat grey plastic.
     const CORE_COLOR = new THREE.Color(0x2b2560)
-    const blueMat = new THREE.MeshPhysicalMaterial({
+    // Physical on medium/high (today's shells, untouched); Standard on low,
+    // where the clearcoat + sheen lobes are the fragment cost that matters.
+    const shell = (params: THREE.MeshPhysicalMaterialParameters) => shellMaterial(settings.physicalMaterials, params)
+    const blueMat = shell({
       color: 0xf1f2fb, roughness: 0.24, metalness: 0,
       clearcoat: 1, clearcoatRoughness: 0.13,
       sheen: 0.55, sheenColor: new THREE.Color(0xb9a8ff), sheenRoughness: 0.55,
       iridescence: 0.22, iridescenceIOR: 1.35,
       envMapIntensity: 1.2,
     })
-    const jointMat = new THREE.MeshPhysicalMaterial({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
+    const jointMat = shell({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
     // Formerly plain white — now the dark inner suit the shell plates sit on.
-    const whiteMat = new THREE.MeshPhysicalMaterial({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
-    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
+    const whiteMat = shell({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
+    const faceMat = shell({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
     const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.085, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
     const earCapMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 0.6, roughness: 0.3, toneMapped: false })
@@ -733,6 +787,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const faceLights = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.62), faceLightMat); faceLights.position.set(0, -0.03, 0.468); faceLights.renderOrder = 7; head.add(faceLights)
     const visorSheen = makeFlatRoundedRect(0.78, 0.11, 0.055, visorSheenMat); visorSheen.position.set(-0.05, 0.14, 0.472); visorSheen.rotation.z = -0.2; visorSheen.renderOrder = 9; head.add(visorSheen)
     const faceGlow = new THREE.PointLight(0x4eeef0, 0.28, 1.1); faceGlow.position.set(0, -0.02, 0.62); head.add(faceGlow)
+    // Two more point lights every fragment has to evaluate, for a glow a
+    // 1-metre radius wide. High keeps them; the emissive parts carry the look
+    // on the cheaper tiers.
+    const applyGlowBudget = (q: RenderTier) => { antennaLight.visible = faceGlow.visible = q === 'high' }
+    applyGlowBudget(tier)
     const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 30)
     const earL = new THREE.Mesh(earGeo, blueMat); earL.rotation.z = Math.PI / 2; earL.position.set(-0.56, -0.02, 0.02); head.add(earL)
     const earR = earL.clone(); earR.position.x = 0.56; head.add(earR)
@@ -797,7 +856,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       jointMat.color.copy(b.clone().lerp(CORE_COLOR, 0.84))
       whiteMat.color.copy(CORE_COLOR.clone().lerp(b, 0.14))
       const g = new THREE.Color(colors.glow)
-      blueMat.sheenColor.copy(g.clone().lerp(new THREE.Color(0xffffff), 0.45))
+      // No sheen on the low tier's Standard shell — the glow tint has nowhere to go.
+      blueMat.sheenColor?.copy(g.clone().lerp(new THREE.Color(0xffffff), 0.45))
       ringMat.color.copy(g); ringMat.emissive.copy(g)
       earCapMat.color.copy(g); earCapMat.emissive.copy(g)
       antennaTipMat.color.copy(g); antennaTipMat.emissive.copy(g)
@@ -1201,6 +1261,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     let previousFrameAt = animationStartedAt
     const resize = () => {
       const w = container.clientWidth || 1, h = container.clientHeight || 1
+      // Re-applied here: a window dragged to a 2× monitor must not outgrow the
+      // tier's cap, and a governor move changes the cap under a live canvas.
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap))
       renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix()
     }
     resize()
@@ -1212,12 +1275,103 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       let nearbyRoomItem: string | null = null
     let viewportVisible = true
     let contextAvailable = true
+    // Until `compileAsync` resolves nothing is drawn: the first visible frame
+    // must not be a synchronous compile of forty programs on an Intel iGPU.
+    let compiled = false
+    // `idlePauseMs`: the dock's Yuvi stops animating on a page nobody is
+    // touching. Any input (or a pose prop change, via wakeRef) resumes him.
+    let idlePaused = false
+    let lastInputAt = performance.now()
     let loop: () => void
     const requestFrame = () => {
-      if (frame === 0 && viewportVisible && contextAvailable && !document.hidden) {
+      if (frame === 0 && compiled && !idlePaused && viewportVisible && contextAvailable && !document.hidden) {
         frame = requestAnimationFrame(loop)
       }
     }
+    const wake = () => {
+      lastInputAt = performance.now()
+      if (idlePaused) {
+        idlePaused = false
+        previousFrameAt = lastInputAt
+        requestFrame()
+      }
+    }
+    wakeRef.current = wake
+    const onAnyInput = () => wake()
+    if (idlePauseMs > 0) {
+      window.addEventListener('pointermove', onAnyInput, { passive: true })
+      window.addEventListener('pointerdown', onAnyInput, { passive: true })
+      window.addEventListener('keydown', onAnyInput, { passive: true })
+    }
+
+    // ── Governor + perf HUD ──
+    // Only the studio samples: a dock avatar's frame time belongs to the page
+    // around it. Sampling uses the raw delta, not the clamped `dt` below, so a
+    // 300 ms hitch is recognised as "not a frame" rather than counted as 100.
+    let firstFrameSent = false
+    const tierProps = () => ({
+      tier, gpu: resolved.gpu, detected: resolved.detected, stored: resolved.stored,
+      forced: resolved.forced, reason: resolved.reason, deviceMemory: resolved.deviceMemory ?? null,
+      cores: resolved.cores ?? null, dpr: window.devicePixelRatio,
+    })
+    if (mainContent) trackEvent('studio.tier', { ...tierProps(), final: tier })
+    const applyTier = (next: RenderTier, previous: RenderTier, medianMs: number) => {
+      tier = next
+      settings = tierSettings(next, mainContent)
+      if (avatarRoot) avatarRoot.dataset.renderTier = next
+      resize()
+      applyRigBudget(next, room ? room.setQuality(next) : { boost: 0, tint: null })
+      applyGlowBudget(next)
+      if (room && roomFog) {
+        scene.fog = settings.fog ? roomFog : null
+        // The fog colour follows the room mood only while the fog is on the
+        // scene, so re-apply the style when it comes back.
+        if (settings.fog && appliedRoomStyle) room.setRoomStyle(appliedRoomStyle)
+        renderer.shadowMap.enabled = settings.shadows && roomBuiltHigh
+        renderer.shadowMap.needsUpdate = true
+      }
+      // Antialias and the material class are mount-time choices; the stored
+      // tier makes the NEXT mount pick them up.
+      storeTier(next)
+      trackEvent('studio.tier.changed', { from: previous, to: next, medianMs: Math.round(medianMs), gpu: resolved.gpu })
+    }
+    const governor = mainContent
+      ? createFpsGovernor({ initial: tier, ceiling: resolved.ceiling, onChange: applyTier })
+      : null
+    // `?perf=1`: a readout in the corner of the canvas. Null everywhere else,
+    // and the loop checks the null once per frame — no cost when it is off.
+    const hud = mainContent && avatarRoot && /[?&]perf=1(?:&|$)/.test(window.location.search)
+      ? avatarRoot.appendChild(Object.assign(document.createElement('pre'), { className: 'Yuvi-avatar-hud' }))
+      : null
+    if (hud) {
+      Object.assign(hud.style, {
+        position: 'absolute', insetInlineStart: '8px', insetBlockStart: '8px', zIndex: '20', margin: '0',
+        padding: '6px 8px', font: '11px/1.35 ui-monospace, monospace', color: '#dff', background: 'rgba(2,5,24,.72)',
+        borderRadius: '6px', pointerEvents: 'none', direction: 'ltr', textAlign: 'left',
+      } as Partial<CSSStyleDeclaration>)
+    }
+    const hudFrames: number[] = []
+    let hudAt = 0
+    const updateHud = (frameMs: number, now: number) => {
+      hudFrames.push(frameMs)
+      if (hudFrames.length > 120) hudFrames.shift()
+      if (now - hudAt < 1000) return
+      hudAt = now
+      const sorted = [...hudFrames].sort((a, b) => a - b)
+      const median = sorted[sorted.length >> 1] ?? 0
+      const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 0
+      let lights = 0
+      scene.traverse((o: any) => { if (o.isLight && o.visible) lights++ })
+      const info = renderer.info
+      hud!.textContent = [
+        `tier ${tier} (${resolved.reason})  dpr ${renderer.getPixelRatio().toFixed(2)}`,
+        `frame ${median.toFixed(1)} ms  p95 ${p95.toFixed(1)} ms`,
+        `calls ${info.render.calls}  tris ${info.render.triangles}`,
+        `programs ${info.programs?.length ?? 0}  lights ${lights}  shadow ${renderer.shadowMap.enabled ? 'on' : 'off'}`,
+        `gpu ${resolved.gpu ?? '?'}`,
+      ].join('\n')
+    }
+
     loop = () => {
       frame = 0
       if (!viewportVisible || !contextAvailable || document.hidden) return
@@ -1226,9 +1380,16 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         return
       }
       const frameAt = performance.now()
-      const dt = Math.min((frameAt - previousFrameAt) / 1000, 0.1)
+      if (idlePauseMs > 0 && frameAt - lastInputAt > idlePauseMs) {
+        idlePaused = true
+        return
+      }
+      const rawMs = frameAt - previousFrameAt
+      const dt = Math.min(rawMs / 1000, 0.1)
       const t = (frameAt - animationStartedAt) / 1000
       previousFrameAt = frameAt
+      governor?.sample(rawMs, frameAt)
+      if (hud) updateHud(rawMs, frameAt)
       if (orbit) {
         // The learner's room is data: re-sync only when the layout identity
         // changes, so dragging a sofa costs a transform and nothing else.
@@ -1667,6 +1828,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       }
 
       renderer.render(scene, camera)
+      if (!firstFrameSent) {
+        firstFrameSent = true
+        if (avatarRoot) avatarRoot.dataset.firstFrame = '1'
+        if (mainContent) trackTiming('studio.firstFrame', performance.now() - mountedAt, { tier, gpu: resolved.gpu })
+      }
       requestFrame()
     }
     const renderObserver = typeof IntersectionObserver !== 'undefined'
@@ -1706,9 +1872,44 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     document.addEventListener('visibilitychange', onVisibilityChange)
     renderer.domElement.addEventListener('webglcontextlost', onContextLost, false)
     renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false)
-    requestFrame()
+    // Compile every program off the first frame, then wait for the driver to
+    // report them linked (parallel where it offers KHR_parallel_shader_compile)
+    // before drawing anything. This is three's `compileAsync`, inlined: the
+    // built-in keeps polling after `renderer.dispose()` and throws on a
+    // material whose properties are gone — a studio closed (or a tier toggled)
+    // during that first second crashed the page. Ours stops with the mount.
+    let cancelled = false
+    let pending: Set<THREE.Material>
+    try {
+      pending = renderer.compile(scene, camera)
+    } catch {
+      pending = new Set()   // the render call compiles on demand, as it always did
+    }
+    const awaitPrograms = () => {
+      if (cancelled) return
+      pending.forEach((material) => {
+        const program = renderer.properties.get(material)?.currentProgram
+        if (!program || program.isReady()) pending.delete(material)
+      })
+      if (pending.size > 0) {
+        window.setTimeout(awaitPrograms, 10)
+        return
+      }
+      compiled = true
+      previousFrameAt = performance.now()
+      requestFrame()
+    }
+    awaitPrograms()
 
     return () => {
+      cancelled = true
+      wakeRef.current = () => {}
+      if (idlePauseMs > 0) {
+        window.removeEventListener('pointermove', onAnyInput)
+        window.removeEventListener('pointerdown', onAnyInput)
+        window.removeEventListener('keydown', onAnyInput)
+      }
+      hud?.remove()
       void audioCtx?.close()
       cancelAnimationFrame(frame)
       cancelHold()
