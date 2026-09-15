@@ -1,7 +1,7 @@
 # Learning Game Lab worker (docs/design/learning-game-lab.md, ADO #548).
 # Build the image once, roll it to the DEV Container App on every push that
 # touches the worker or the backend services it imports, and to PROD only on
-# manual dispatch with confirm=prod. Infra (Service Bus, Container Apps env,
+# manual dispatch with confirm=prod from main. Infra (Service Bus, Container Apps env,
 # role assignments) lives in infra/game-gen/main.bicep and is applied here too,
 # so a parameter change is a commit, not a portal click.
 name: Deploy game-gen worker
@@ -21,9 +21,18 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Type 'prod' to also roll the image to ca-game-gen-prod"
+        description: "Type 'prod' to also roll the image to ca-game-gen-prod (main only)"
         required: false
         default: ""
+
+permissions:
+  contents: read
+
+# Two `az deployment group create` on the same resource group race; one at a
+# time per target.
+concurrency:
+  group: game-gen-${{ github.event.inputs.confirm == 'prod' && 'prod' || 'dev' }}
+  cancel-in-progress: false
 
 env:
   RESOURCE_GROUP: rg-yuvi-720
@@ -33,7 +42,13 @@ env:
   WEBAPP_NAME: ubi-yuvi-720
 
 jobs:
+  # Same gate as the Spark pipeline: the worker imports backend/app, so the
+  # backend suite is the test suite. A dispatch used to skip this entirely.
+  tests:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: tests
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
@@ -53,9 +68,15 @@ jobs:
           rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'runs' --exclude 'fixtures' --exclude 'tests' workers/game_gen "$ctx/workers/"
           rsync -a --exclude '__pycache__' backend/app "$ctx/backend/"
           cp backend/learner_state.py backend/mock_data.py backend/questionnaire_locales.py "$ctx/backend/"
+          # `dev` is a moving tag for "what main last built"; a branch
+          # dispatch keeps to its sha tag.
+          extra_tag=()
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            extra_tag=(--image "game-gen:dev")
+          fi
           az acr build --registry "$ACR_NAME" \
             --image "game-gen:${{ steps.meta.outputs.tag }}" \
-            --image "game-gen:dev" \
+            "${extra_tag[@]}" \
             --file workers/game_gen/Dockerfile "$ctx"
 
   deploy-dev:
@@ -84,11 +105,16 @@ jobs:
         run: az containerapp show -g "$RESOURCE_GROUP" -n ca-game-gen-dev --query "properties.{state:provisioningState, image:template.containers[0].image, scale:template.scale}" -o json
 
   deploy-prod:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'prod'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'prod' && github.ref == 'refs/heads/main'
     needs: [build, deploy-dev]
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Refuse to deploy anything but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Refusing: confirm=prod was requested from ${{ github.ref_name }}, not main."
+          exit 1
       - uses: actions/checkout@v4
       - uses: azure/login@v2
         with:

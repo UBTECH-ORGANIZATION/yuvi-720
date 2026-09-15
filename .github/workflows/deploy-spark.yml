@@ -6,13 +6,31 @@ on:
     paths-ignore:
       - "admin/**"
       - ".github/workflows/deploy-admin.yml"
+      # The game-gen worker has its own pipeline; a worker-only commit must
+      # not rebuild and redeploy the whole Spark image.
+      - "workers/**"
+      - "infra/game-gen/**"
+      - ".github/workflows/deploy-game-gen.yml"
   workflow_dispatch:
     inputs:
       promote:
-        description: "Promote Dev → Production after deploy?"
+        description: "Promote Dev → Production after deploy? (main only)"
         required: true
         type: boolean
         default: false
+
+# A branch dispatch is a Dev-slot preview; say so in the run list. An empty
+# run-name falls back to the workflow name.
+run-name: "${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' && format('Dev preview of {0}', github.ref_name) || '' }}"
+
+permissions:
+  contents: read
+
+# One deploy at a time: two runs interleaving a Dev deploy with a swap would
+# ship an unintended image to production.
+concurrency:
+  group: spark-dev-slot
+  cancel-in-progress: false
 
 env:
   ACR_NAME: yuvi720acr
@@ -45,9 +63,17 @@ jobs:
       - name: Build and push Docker image
         run: |
           docker build --platform linux/amd64 \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest .
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # `latest` means "what main last built". A branch preview must not
+      # overwrite it — deploy-production-ref.yml relies on that tag staying
+      # trustworthy.
+      - name: Tag latest (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
   # ── Job 2: Deploy to Dev slot (always runs) ───────────────────
@@ -211,15 +237,24 @@ jobs:
         run: az logout
         if: always()
 
-  # ── Job 3: Swap Dev → Production (only on manual trigger) ─────
+  # ── Job 3: Swap Dev → Production (manual trigger, from main only) ─
+  # The Dev slot may hold a branch preview; a swap must only ever carry a
+  # build of main. The `if` keeps the job out of a branch run entirely, and
+  # the first step is a loud second lock in case the condition is edited.
   promote-production:
     runs-on: ubuntu-latest
     needs: deploy-dev
-    if: github.event_name == 'workflow_dispatch' && inputs.promote == true
+    if: github.event_name == 'workflow_dispatch' && inputs.promote == true && github.ref == 'refs/heads/main'
     environment:
       name: production
       url: https://spark.yuvilab.ai
     steps:
+      - name: Refuse to promote anything but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Refusing to swap: promote was requested from ${{ github.ref_name }}, not main."
+          exit 1
+
       - name: Log in to Azure
         uses: azure/login@v2
         with:
