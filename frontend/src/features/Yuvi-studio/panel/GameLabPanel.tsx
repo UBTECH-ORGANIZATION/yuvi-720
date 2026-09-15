@@ -4,7 +4,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
 import { useAuth } from '../../../providers/AuthProvider'
 import {
-  GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames,
+  GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames, setGameLiked,
   type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject, prepareGame } from '../../../services/games'
 import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
@@ -145,6 +145,31 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
     activity.noteGame(game, at)
   }
 
+  // Shelf filter: everything, the liked ones, or one subject. Subjects come
+  // from the games on the shelf, so a chip only exists for something there is
+  // a game in. A filter that empties (last like removed) falls back to all.
+  const [filter, setFilter] = useState<'all' | 'liked' | `subject:${string}`>('all')
+  const subjects = Array.from(new Set(games.map((game) => game.subject).filter((s): s is string => Boolean(s))))
+  const likedCount = games.filter((game) => game.liked).length
+  const matches = (game: LearnerGame) =>
+    filter === 'all' ? true : filter === 'liked' ? Boolean(game.liked) : game.subject === filter.slice(8)
+  const shown = games.filter(matches)
+  useEffect(() => {
+    if (filter === 'liked' && likedCount === 0) setFilter('all')
+    if (filter.startsWith('subject:') && !subjects.includes(filter.slice(8))) setFilter('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [likedCount, subjects.join('|')])
+
+  const toggleLike = async (game: LearnerGame) => {
+    const liked = !game.liked
+    replace({ ...game, liked })                       // optimistic: the heart fills now
+    try {
+      replace(await setGameLiked(game.game_id, liked))
+    } catch {
+      replace({ ...game, liked: !liked })             // the server said no; put it back
+    }
+  }
+
   return (
     <section className="ys-section ys-gamelab">
       {/* No heading here: the tab strip above already names this view. */}
@@ -165,14 +190,32 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
           </button>
         </div>
       )}
-      {games.length > 0 && (
+      {games.length > 1 && (
+        <div className="ys-gamelab-filters" role="group" aria-label={t('studio.gamelab.filter.all')}>
+          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} label={t('studio.gamelab.filter.all')} count={games.length} />
+          {likedCount > 0 && (
+            <FilterChip active={filter === 'liked'} onClick={() => setFilter('liked')} label={t('studio.gamelab.filter.liked')} count={likedCount} icon="heart" />
+          )}
+          {subjects.map((subject) => (
+            <FilterChip
+              key={subject}
+              active={filter === `subject:${subject}`}
+              onClick={() => setFilter(`subject:${subject}`)}
+              label={subjectLabel(subject, t)}
+              count={games.filter((game) => game.subject === subject).length}
+            />
+          ))}
+        </div>
+      )}
+      {shown.length > 0 && (
         <ul className="ys-gamelab-list">
-          {games.map((game) => (
+          {shown.map((game) => (
             <GameCard
               key={game.game_id}
               game={game}
               stage={cardStage(game, activity)}
               onDeleted={() => remove(game.game_id)}
+              onToggleLike={() => void toggleLike(game)}
             />
           ))}
         </ul>
@@ -184,6 +227,18 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
         </button>
       )}
     </section>
+  )
+}
+
+function FilterChip({ active, onClick, label, count, icon }: {
+  active: boolean; onClick: () => void; label: string; count: number; icon?: 'heart'
+}) {
+  return (
+    <button type="button" className="ys-gamelab-filter" aria-pressed={active} onClick={onClick}>
+      {icon && <Icon name={icon} size={13} />}
+      <bdi dir="auto">{label}</bdi>
+      <span className="ys-gamelab-filter__count">{count}</span>
+    </button>
   )
 }
 
@@ -206,11 +261,12 @@ const STAGE_ICON: Record<BuildStage, string> = { queued: '⏳', thinking: '🧠'
 /** A game on the shelf: its name, objective, state and cost. Changing and
  * fixing happen inside the player, so the card only plays or deletes. */
 function GameCard({
-  game, stage, onDeleted,
+  game, stage, onDeleted, onToggleLike,
 }: {
   game: LearnerGame
   stage: BuildStage | null
   onDeleted: () => void
+  onToggleLike: () => void
 }) {
   const { t } = useI18n()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -309,6 +365,16 @@ function GameCard({
             <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={play} disabled={!openable}>
               <Icon name={busy ? 'eye' : 'play'} size={14} />
               {t(busy ? 'studio.gamelab.action.watch' : 'studio.gamelab.action.play')}
+            </button>
+            <button
+              type="button"
+              className="ys-btn ys-btn--ghost ys-btn--sm ys-gamelab-like"
+              aria-pressed={Boolean(game.liked)}
+              onClick={onToggleLike}
+              aria-label={t(game.liked ? 'studio.gamelab.action.unlike' : 'studio.gamelab.action.like')}
+              title={t(game.liked ? 'studio.gamelab.action.unlike' : 'studio.gamelab.action.like')}
+            >
+              <Icon name="heart" size={15} />
             </button>
             <button
               type="button"

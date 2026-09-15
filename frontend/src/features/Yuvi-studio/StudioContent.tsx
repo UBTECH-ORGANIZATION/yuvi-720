@@ -883,7 +883,9 @@ export function StudioContent({
             : menuStation === 'gamelab'
               ? { label: t('YuviStudio.zone.gamelab'), icon: 'gamepad', onClick: () => { setPropMenu(null); goToStation('gamelab') } }
               : undefined}
-          onMove={menuStation === 'avatar' ? undefined : () => startMove(propMenu.uid)}
+          /* Every station moves, the platform included; it is round, so only
+             the spin is meaningless for it. */
+          onMove={() => startMove(propMenu.uid)}
           onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}

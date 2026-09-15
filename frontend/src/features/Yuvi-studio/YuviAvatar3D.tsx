@@ -1611,13 +1611,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         camEye.set(lookX + camOffset.x + parallaxX, lookY + camOffset.y - parallaxY, lookZ + camOffset.z)
         camAim.set(lookX + parallaxX * 0.22, lookY - parallaxY * 0.12, lookZ)
 
-        // On the platform he hovers; on the floor he walks, bobbing on each step.
+        // Standing still he stands still — no idle hover, it read as floating.
+        // Walking, the body bobs a touch on each step.
         const walkPhase = t * 9
         const walkStride = Math.sin(walkPhase)
         const groundY = -0.82 - (1 - deckBlend) * DECK_LIFT
-        const bodyY = groundY
-          + Math.sin(t * 1.4) * 0.02 * (1 - roamSpeed)
-          + Math.abs(walkStride) * 0.03 * roamSpeed
+        const bodyY = groundY + Math.abs(walkStride) * 0.03 * roamSpeed
 
         // Blend into first person. The eye target is pushed out to the same
         // distance as the orbit target so the hand-over reads as a turn of the

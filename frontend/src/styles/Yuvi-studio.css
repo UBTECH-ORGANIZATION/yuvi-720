@@ -1141,6 +1141,26 @@
 @media (prefers-reduced-motion: reduce) { .ys-gamelab-pipe li.is-now .ys-gamelab-pipe__dot { animation: none; } }
 
 .ys-gamelab-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: auto; }
+/* Shelf filters: a chip row above the cards — everything, the liked ones, then
+   one chip per subject the learner actually has games in. */
+.ys-gamelab-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-block-end: 12px; }
+.ys-gamelab-filter {
+  display: inline-flex; align-items: center; gap: 5px; min-block-size: 32px; padding: 0 12px;
+  border-radius: 999px; border: 1px solid var(--ys-border, rgba(120, 110, 200, 0.28));
+  background: var(--ys-chip-bg, rgba(255, 255, 255, 0.55)); color: inherit; font: inherit; font-size: 0.86rem;
+  cursor: pointer; transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+.ys-gamelab-filter[aria-pressed='true'] {
+  background: var(--ys-accent-soft, #ebe7ff); border-color: var(--ys-accent, #6d5cff); color: var(--ys-accent-ink, #3d2fb3);
+}
+.ys-gamelab-filter__count { opacity: 0.7; font-size: 0.78em; }
+/* The like: a ghost button that fills when pressed. Only transform/opacity
+   animate — the fill is a colour transition. */
+.ys-gamelab-like { transition: color 200ms ease, background-color 200ms ease; }
+.ys-gamelab-like svg { transition: transform 300ms cubic-bezier(0.2, 0.8, 0.3, 1.1); }
+.ys-gamelab-like[aria-pressed='true'] { color: var(--ys-like, #e0457b); }
+.ys-gamelab-like[aria-pressed='true'] svg { fill: currentColor; transform: scale(1.15); }
+@media (prefers-reduced-motion: reduce) { .ys-gamelab-like svg { transition: none; } }
 .ys-gamelab-card__actions .ys-btn { display: inline-flex; align-items: center; gap: 5px; min-block-size: 36px; }
 .ys-gamelab-danger { color: var(--ys-danger); }
 .ys-gamelab-danger-fill { background: var(--ys-danger); }

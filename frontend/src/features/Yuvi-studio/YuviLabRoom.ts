@@ -1885,14 +1885,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
     }))
     if (zone.id === 'avatar') {
-      // A head and a halo: "this is where you change Yuvi".
-      const head = new THREE.Mesh(track(new THREE.SphereGeometry(0.16, 18, 12)), markerMat)
-      head.position.y = 0.06
-      marker.add(head)
-      const halo = new THREE.Mesh(track(new THREE.TorusGeometry(0.3, 0.018, 8, 32)), markerMat)
-      halo.rotation.x = Math.PI / 2
-      halo.position.y = 0.3
-      marker.add(halo)
+      // No sign over the platform: Yuvi standing on it IS the sign, and the
+      // floating head-and-halo read as a thing to pick up that could not be.
     } else if (zone.id === 'gamelab') {
       // A little monitor: "this is where you make games". The desk's own
       // floating mark is the status light; this sign only says the place exists.
@@ -1912,15 +1906,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       roof.position.y = 0.25
       roof.rotation.y = Math.PI / 4
       marker.add(roof)
-    }
-    if (zone.id === 'avatar') {
-      // The light column belongs to the platform; the bench is its own landmark.
-      const beacon = new THREE.Mesh(track(new THREE.CylinderGeometry(0.05, 0.32, 1.9, 16, 1, true)), track(new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending,
-        depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      })))
-      beacon.position.y = -1.05
-      marker.add(beacon)
     }
 
     zonePads.set(zone.id, { ring, ringMat, marker, glow, glowMat, color, radius: pad.radius, markerY: pad.markerY })

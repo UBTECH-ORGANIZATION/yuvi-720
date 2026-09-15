@@ -69,9 +69,12 @@ test('tintable furniture offers colours only through its hover menu', () => {
   assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
 })
 
-test('hovering Yuvi station offers only the Design Yuvi action', () => {
+test('hovering Yuvi station offers Design Yuvi and a move, never a spin', () => {
   assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
-  assert.match(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
+  // The platform is a station like the others: it can be picked up and put
+  // down elsewhere. It is round, so rotating it is the one thing withheld.
+  assert.match(studio, /onMove=\{\(\) => startMove\(propMenu\.uid\)\}/)
+  assert.doesNotMatch(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
   assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
   assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
 })

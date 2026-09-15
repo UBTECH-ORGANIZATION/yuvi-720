@@ -45,6 +45,10 @@ export interface LearnerGame {
   objective_title: string
   component_title: string
   title: string
+  /** The catalogue's subject for the objective (science / math / …), or null. */
+  subject?: string | null
+  /** The learner marked this one as a favourite. */
+  liked?: boolean
   /** Yuvi's design brief for the game, in the kid's language (may be empty). */
   description?: string
   /** Which model wrote it and how hard it thought — set at create, kept on edits. */
@@ -252,6 +256,11 @@ export function prepareGame(componentId: string, language?: string) {
 
 export function revertGame(gameId: string, v: number) {
   return apiPost<LearnerGame>(`/api/games/${encodeURIComponent(gameId)}/revert`, { v })
+}
+
+/** Mark or unmark a game as one the learner likes. Resolves to the fresh row. */
+export function setGameLiked(gameId: string, liked: boolean): Promise<LearnerGame> {
+  return apiPost<LearnerGame>(`/api/games/${encodeURIComponent(gameId)}/like`, { liked })
 }
 
 export function deleteGame(gameId: string) {
