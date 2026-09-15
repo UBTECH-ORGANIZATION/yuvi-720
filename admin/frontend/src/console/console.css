@@ -1,0 +1,201 @@
+/* Organisation console. Prefix `adm-`, tokens only, logical properties only —
+   the same markup has to read right in Hebrew, Arabic and English. */
+
+.adm { display: grid; gap: 1.25rem; max-inline-size: 100rem; margin-inline: auto; padding: clamp(1.2rem, 3vw, 2.5rem); }
+.adm__head { margin-block-end: 0; }
+.adm__refreshing { color: var(--faint); font-size: 0.72rem; padding-block-start: 0.5rem; }
+
+/* ── tabs ─────────────────────────────────────────────────────────────────── */
+
+.adm__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; padding-block-end: 0.5rem; border-block-end: 1px solid var(--border); }
+.adm__tabs a { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 999px; color: var(--muted); font-size: 0.82rem; font-weight: 650; text-decoration: none; transition: 180ms var(--ease); }
+.adm__tabs a:hover { color: var(--ink); background: rgba(255, 255, 255, 0.035); }
+.adm__tabs a.is-active { color: var(--accent-light); background: linear-gradient(135deg, rgba(124, 92, 252, 0.18), rgba(168, 85, 247, 0.08)); font-weight: 700; }
+
+.adm-tab { display: grid; gap: 1.25rem; }
+
+/* ── sections & panels ────────────────────────────────────────────────────── */
+
+.adm-section { display: grid; gap: 0.75rem; }
+.adm-section__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.adm-section__head h2 { margin: 0; color: var(--ink); font-size: 1rem; font-weight: 650; letter-spacing: -0.015em; }
+.adm-section__hint { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.76rem; }
+
+.adm-surface { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow); }
+.adm-panel { display: grid; gap: 0.75rem; padding: 1rem; }
+.adm-panel h3 { margin: 0; color: var(--ink); font-size: 0.9rem; font-weight: 650; }
+.adm-panel__hint { margin: 0; color: var(--muted); font-size: 0.76rem; }
+
+/* The two "nobody is watching this" panels carry a warn accent: they are the
+   only things on Overview that are actionable problems rather than facts. */
+.adm-panel--warn { border-inline-start: 3px solid var(--amber); }
+
+.adm-muted { margin: 0; color: var(--faint); font-size: 0.7rem; }
+.adm-sr-only { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.adm-icon { display: inline-block; flex: none; vertical-align: middle; }
+[dir="rtl"] .adm-icon--flip { transform: scaleX(-1); }
+
+/* ── counts ───────────────────────────────────────────────────────────────── */
+
+.adm-gapGrid, .adm-counts { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+/* Size each panel to its own content: when one problem list is empty and the
+   other has ten rows, stretching them to a shared height leaves a wall of
+   whitespace next to the thing that actually needs attention. */
+.adm-gapGrid { align-items: start; }
+
+.adm-count { display: grid; gap: 0.25rem; padding: 1rem; }
+.adm-count__label { color: var(--muted); font-size: 0.7rem; }
+.adm-count__value { color: var(--ink); font-size: 1.6rem; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+
+/* ── lists ────────────────────────────────────────────────────────────────── */
+
+.adm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.adm-list__row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--ink-soft); font-size: 0.82rem; }
+.adm-list__row strong { color: var(--ink); }
+
+.adm-id { display: inline-block; margin-inline-start: 0.5rem; padding: 0.1rem 0.35rem; border-radius: 5px; background: rgba(129, 140, 248, 0.1); color: #a5b4fc; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.65rem; direction: ltr; unicode-bidi: isolate; }
+
+.adm-list--people { max-block-size: 420px; overflow-y: auto; }
+
+.adm-personRow { inline-size: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0.75rem; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-soft); font: inherit; font-size: 0.82rem; text-align: start; cursor: pointer; transition: 150ms var(--ease); }
+.adm-personRow:hover { background: rgba(255, 255, 255, 0.035); }
+.adm-personRow.is-active { border-color: rgba(124, 92, 252, 0.7); background: rgba(124, 92, 252, 0.12); color: var(--ink); }
+.adm-personRow__name { font-weight: 620; }
+.adm-personRow__meta { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ── pills & state blocks ─────────────────────────────────────────────────── */
+
+.adm-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.64rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.adm-pill__dot { inline-size: 6px; block-size: 6px; border-radius: 999px; background: currentColor; }
+.adm-pill--strong { color: var(--cyan); background: rgba(34, 211, 238, 0.12); }
+.adm-pill--steady { color: var(--accent-light); background: rgba(124, 92, 252, 0.14); }
+.adm-pill--support { color: var(--amber); background: rgba(251, 191, 36, 0.13); }
+.adm-pill--neutral { color: var(--ink-soft); background: rgba(255, 255, 255, 0.06); }
+
+.adm-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; padding: 2rem 1.25rem; color: var(--faint); text-align: center; }
+.adm-state__icon { color: var(--faint); }
+.adm-state--error .adm-state__icon, .adm-state--error .adm-state__title { color: var(--rose); }
+.adm-state__title { margin: 0; color: var(--ink-soft); font-size: 0.9rem; font-weight: 650; }
+.adm-state__body { margin: 0; max-inline-size: 42ch; font-size: 0.78rem; }
+
+/* ── buttons & inputs ─────────────────────────────────────────────────────── */
+
+.adm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-block-size: 2.1rem; padding-inline: 0.8rem; border: 1px solid var(--border-light); border-radius: 8px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 0.76rem; font-weight: 700; line-height: 1; cursor: pointer; transition: 180ms var(--ease); }
+.adm-btn:hover:not(:disabled) { color: var(--ink); transform: translateY(-1px); }
+.adm-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.adm-btn--primary { border-color: transparent; background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; box-shadow: 0 6px 18px rgba(124, 92, 252, 0.27); }
+.adm-btn--primary:hover:not(:disabled) { color: #fff; }
+.adm-btn--ghost { border-style: dashed; }
+.adm-btn--danger { border-color: transparent; background: var(--rose); color: #0b0d1a; }
+.adm-btn--danger:hover:not(:disabled) { color: #0b0d1a; filter: brightness(1.06); }
+.adm-btn--dangerText { color: var(--rose); }
+.adm-btn--dangerText:hover:not(:disabled) { color: var(--rose); border-color: rgba(251, 113, 133, 0.5); }
+
+.adm-input { inline-size: 100%; min-inline-size: 0; min-block-size: 2.1rem; padding: 0.35rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; background: var(--input); color: var(--ink-soft); font: inherit; font-size: 0.8rem; text-align: start; }
+.adm-input::placeholder { color: var(--faint); }
+.adm-input:focus { border-color: rgba(124, 92, 252, 0.7); background: #12152d; }
+.adm-input:disabled { opacity: 0.6; }
+.adm-input--auto { inline-size: auto; }
+textarea.adm-input { min-block-size: 6rem; resize: vertical; }
+
+/* ── filters ──────────────────────────────────────────────────────────────── */
+
+.adm-filters { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.adm-filters__roles { display: inline-flex; gap: 0.25rem; }
+.adm-filters__roles button { padding: 0.3rem 0.75rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.7rem; font-weight: 650; cursor: pointer; transition: 150ms var(--ease); }
+.adm-filters__roles button:hover { color: var(--ink); }
+.adm-filters__roles button.is-active { border-color: rgba(124, 92, 252, 0.7); background: rgba(124, 92, 252, 0.14); color: var(--accent-light); }
+
+.adm-search { display: inline-flex; align-items: center; gap: 0.5rem; flex: 1 1 200px; color: var(--muted); }
+.adm-search input, .adm-search select { inline-size: 100%; }
+
+/* ── two-column layouts ───────────────────────────────────────────────────── */
+
+.adm-people, .adm-groups { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; }
+.adm-people__list, .adm-groups__list { display: grid; gap: 1rem; min-inline-size: 0; }
+.adm-people__detail, .adm-groups__detail { min-inline-size: 0; }
+
+@media (max-width: 900px) {
+  .adm-people, .adm-groups { grid-template-columns: minmax(0, 1fr); }
+}
+
+.adm-detail { gap: 1rem; }
+.adm-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.adm-detail__head h2 { margin: 0; color: var(--ink); font-size: 1.15rem; font-weight: 650; }
+.adm-detail__roles { display: inline-flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.adm-adminGrant { display: grid; gap: 0.5rem; justify-items: start; padding: 0.75rem; border-radius: var(--radius-sm); background: var(--surface-soft); }
+
+.adm-membership { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.adm-membership__col { display: grid; gap: 0.5rem; align-content: start; }
+.adm-membership__col h3 { margin: 0; color: var(--ink-soft); font-size: 0.86rem; font-weight: 650; }
+
+/* ── pickers ──────────────────────────────────────────────────────────────── */
+
+.adm-picker { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.adm-picker--block { display: flex; }
+.adm-picker select { inline-size: auto; min-inline-size: 160px; flex: 1 1 160px; }
+
+/* ── refusals ─────────────────────────────────────────────────────────────── */
+
+.adm-refusal { display: grid; gap: 0.5rem; padding: 0.75rem; border: 1px solid rgba(251, 113, 133, 0.25); border-inline-start: 3px solid var(--rose); border-radius: var(--radius-sm); background: rgba(251, 113, 133, 0.08); color: var(--ink-soft); font-size: 0.8rem; }
+.adm-refusal p { margin: 0; }
+.adm-refusal__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* An overridable refusal is a question, not a wall. */
+.adm-refusal--overridable { border-color: rgba(251, 191, 36, 0.2); border-inline-start-color: var(--amber); background: rgba(251, 191, 36, 0.07); }
+
+/* ── create / import panels ───────────────────────────────────────────────── */
+
+.adm-create { padding: 0.75rem 1rem; }
+.adm-create__toggle { display: inline-flex; align-items: center; gap: 0.5rem; justify-self: start; padding: 0; border: 0; background: transparent; color: var(--accent-light); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.adm-create__form { display: grid; gap: 0.75rem; }
+.adm-create__form label { display: grid; gap: 0.25rem; font-size: 0.8rem; }
+.adm-create__form label > span { color: var(--muted); font-size: 0.7rem; font-weight: 650; }
+.adm-create__roles { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.adm-checkbox { display: inline-flex !important; flex-direction: row; align-items: center; gap: 0.5rem; color: var(--ink-soft); }
+.adm-checkbox input { accent-color: var(--accent); }
+
+.adm-create__result { display: grid; gap: 0.25rem; padding: 0.75rem; border: 1px solid rgba(52, 211, 153, 0.25); border-radius: var(--radius-sm); background: rgba(52, 211, 153, 0.08); color: var(--ink-soft); font-size: 0.8rem; }
+.adm-create__result p { margin: 0; }
+.adm-create__password code { padding: 0.15rem 0.4rem; border-radius: 5px; background: rgba(255, 255, 255, 0.06); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; font-weight: 700; unicode-bidi: isolate; }
+
+.adm-import__input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.7rem; }
+.adm-import__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.adm-import__diff { display: grid; gap: 0.5rem; color: var(--ink-soft); font-size: 0.8rem; }
+.adm-import__diff p { margin: 0; }
+
+/* ── audit ────────────────────────────────────────────────────────────────── */
+
+.adm-audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.adm-auditRow { display: grid; gap: 0.25rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.adm-auditRow__head { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.adm-auditRow__action { color: var(--ink); font-size: 0.84rem; font-weight: 650; }
+.adm-auditRow__who { color: var(--muted); font-size: 0.76rem; }
+.adm-auditRow__at { margin-inline-start: auto; color: var(--faint); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+.adm-auditRow__target { color: var(--muted); font-size: 0.76rem; }
+.adm-auditRow__target .adm-id { margin-inline-start: 0; margin-inline-end: 0.5rem; }
+
+.adm-auditRow__toggle { display: inline-flex; align-items: center; gap: 0.25rem; justify-self: start; padding: 0; border: 0; background: transparent; color: var(--accent-light); font: inherit; font-size: 0.7rem; font-weight: 650; cursor: pointer; }
+
+.adm-auditRow__diff { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); padding: 0.75rem; box-shadow: none; background: var(--surface-soft); }
+.adm-auditRow__diff h4 { margin: 0 0 0.25rem; color: var(--faint); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+/* Raw documents are wide; they scroll inside their own box so the page never
+   scrolls horizontally. */
+.adm-auditRow__diff pre { margin: 0; overflow-x: auto; color: var(--ink-soft); font-size: 0.68rem; white-space: pre-wrap; word-break: break-word; text-align: start; }
+
+/* ── Games: cost per learner and daily caps ───────────────────────────────── */
+
+.adm-table__wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.adm-table { inline-size: 100%; border-collapse: collapse; color: var(--ink-soft); font-size: 0.74rem; }
+.adm-table th, .adm-table td { padding: 0.6rem 0.72rem; border-block-end: 1px solid var(--border); text-align: start; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-table td:first-child { white-space: normal; }
+.adm-table td { color: var(--ink-soft); }
+.adm-table td strong { display: block; color: var(--ink); font-size: 0.76rem; }
+.adm-table td .adm-id { margin-inline-start: 0; }
+.adm-table tr.is-capped td:nth-child(5) { color: var(--amber); }
+
+.adm-caps { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 0.75rem; }
+.adm-caps label { display: grid; gap: 2px; color: var(--muted); font-size: 0.68rem; font-weight: 650; }
+.adm-caps--add { align-items: center; }
+.adm-capInput { inline-size: 5.5rem; direction: ltr; text-align: start; }

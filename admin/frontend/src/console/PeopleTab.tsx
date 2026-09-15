@@ -11,20 +11,19 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { navigate } from '../../app/router'
-import { EmptyState, Icon, Panel, StatusPill } from '../../components/primitives'
-import { useI18n } from '../../i18n/I18nProvider'
+import { useI18n } from '../i18n/I18nProvider'
 import {
   createUser, enrollLearners, getLearnerConnections, getTeacherConnections,
   grantAdmin, linkTeacher, revokeAdmin, unenrollLearner, unlinkTeacher,
   type CreatedUser, type LearnerConnections, type Person, type TeacherConnections,
-} from '../../services/admin'
-import type { AdminData } from './AdminConsolePage'
-import { AdminSection, RefusalNotice, nameOf, useAdminMutation } from './AdminShared'
+} from './api'
+import type { AdminData } from './ConsoleDashboard'
+import { EmptyState, Icon, Panel, StatusPill } from './primitives'
+import { AdminSection, RefusalNotice, nameOf, useAdminMutation, useUnauthorizedGuard } from './shared'
 
 type RoleFilter = 'all' | 'teacher' | 'learner'
 
-export function AdminPeopleTab({ data }: { data: AdminData }) {
+export function PeopleTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
   const [role, setRole] = useState<RoleFilter>('all')
   const [query, setQuery] = useState('')
@@ -62,11 +61,11 @@ export function AdminPeopleTab({ data }: { data: AdminData }) {
               ))}
             </div>
             <label className="adm-search">
-              <Icon name="search" size={15} aria-hidden="true" />
-              <span className="sp-sr-only">{t('adm.people.search')}</span>
+              <Icon name="search" size={15} />
+              <span className="adm-sr-only">{t('adm.people.search')}</span>
               <input
                 type="search"
-                className="sp-input"
+                className="adm-input"
                 value={query}
                 placeholder={t('adm.people.search')}
                 onChange={(event) => setQuery(event.target.value)}
@@ -118,6 +117,7 @@ export function AdminPeopleTab({ data }: { data: AdminData }) {
 
 function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
   const { t } = useI18n()
+  const unauthorized = useUnauthorizedGuard()
   const [teacherConnections, setTeacherConnections] = useState<TeacherConnections | null>(null)
   const [learnerConnections, setLearnerConnections] = useState<LearnerConnections | null>(null)
   const [nonce, setNonce] = useState(0)
@@ -132,14 +132,16 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
     let active = true
     if (isTeacher) {
       getTeacherConnections(person.user_id)
-        .then((result) => { if (active) setTeacherConnections(result) }).catch(() => {})
+        .then((result) => { if (active) setTeacherConnections(result) })
+        .catch((error: unknown) => { if (active) unauthorized(error) })
     }
     if (isLearner) {
       getLearnerConnections(person.user_id)
-        .then((result) => { if (active) setLearnerConnections(result) }).catch(() => {})
+        .then((result) => { if (active) setLearnerConnections(result) })
+        .catch((error: unknown) => { if (active) unauthorized(error) })
     }
     return () => { active = false }
-  }, [person.user_id, isTeacher, isLearner, nonce])
+  }, [person.user_id, isTeacher, isLearner, nonce, unauthorized])
 
   const activeGroups = data.org.groups.filter((group) => group.active !== false)
   const linkedGroupIds = new Set((teacherConnections?.groups ?? []).map((group) => group._id))
@@ -180,12 +182,6 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
           hint={t('adm.detail.teaches.hint', {
             count: teacherConnections?.reachable_count ?? 0,
           })}
-          action={
-            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
-                    onClick={() => navigate('/teacher')}>
-              {t('adm.detail.openDashboard')}
-            </button>
-          }
         >
           {teacherConnections?.groups.length ? (
             <ul className="adm-list">
@@ -197,7 +193,7 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
                   </span>
                   <button
                     type="button"
-                    className="sp-btn sp-btn--sm adm-btn--danger"
+                    className="adm-btn adm-btn--danger"
                     disabled={mutation.busy}
                     onClick={() => mutation.run((confirm) =>
                       unlinkTeacher(person.user_id, group._id, confirm))}
@@ -224,7 +220,7 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
             {teacherConnections?.is_admin ? (
               <button
                 type="button"
-                className="sp-btn sp-btn--sm adm-btn--danger"
+                className="adm-btn adm-btn--danger"
                 disabled={mutation.busy}
                 onClick={() => mutation.run(() => revokeAdmin(person.user_id))}
               >
@@ -233,7 +229,7 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
             ) : (
               <button
                 type="button"
-                className="sp-btn sp-btn--sm"
+                className="adm-btn adm-btn--primary"
                 disabled={mutation.busy}
                 onClick={() => mutation.run(() => grantAdmin(person.user_id))}
               >
@@ -260,7 +256,7 @@ function PersonDetail({ person, data }: { person: Person; data: AdminData }) {
                   </span>
                   <button
                     type="button"
-                    className="sp-btn sp-btn--sm adm-btn--danger"
+                    className="adm-btn adm-btn--danger"
                     disabled={mutation.busy}
                     onClick={() => mutation.run(() =>
                       unenrollLearner(person.user_id, grant.group_id))}
@@ -300,7 +296,7 @@ function AddToGroup({ groups, label, busy, onPick }: {
   return (
     <div className="adm-picker adm-picker--block">
       <select
-        className="sp-input"
+        className="adm-input"
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
         aria-label={label}
@@ -312,7 +308,7 @@ function AddToGroup({ groups, label, busy, onPick }: {
       </select>
       <button
         type="button"
-        className="sp-btn sp-btn--sm"
+        className="adm-btn adm-btn--primary"
         disabled={!selected || busy}
         onClick={() => { onPick(selected); setSelected('') }}
       >
@@ -361,7 +357,7 @@ function CreateAccountPanel({ onCreated }: { onCreated: () => void }) {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <Icon name={open ? 'chevronUp' : 'plus'} size={15} aria-hidden="true" />
+        <Icon name={open ? 'chevronUp' : 'plus'} size={15} />
         {t('adm.create.title')}
       </button>
 
@@ -370,12 +366,12 @@ function CreateAccountPanel({ onCreated }: { onCreated: () => void }) {
           <RefusalNotice code={mutation.code} retry={mutation.retry} onDismiss={mutation.clear} />
           <label>
             <span>{t('adm.create.username')}</span>
-            <input className="sp-input" value={username}
+            <input className="adm-input" value={username}
                    onChange={(event) => setUsername(event.target.value)} />
           </label>
           <label>
             <span>{t('adm.create.displayName')}</span>
-            <input className="sp-input" value={displayName} dir="auto"
+            <input className="adm-input" value={displayName} dir="auto"
                    onChange={(event) => setDisplayName(event.target.value)} />
           </label>
           <div className="adm-create__roles" role="group" aria-label={t('adm.create.roles')}>
@@ -389,7 +385,7 @@ function CreateAccountPanel({ onCreated }: { onCreated: () => void }) {
           </div>
           <button
             type="button"
-            className="sp-btn sp-btn--sm"
+            className="adm-btn adm-btn--primary"
             disabled={!username.trim() || !roles.length || mutation.busy}
             onClick={submit}
           >
@@ -400,7 +396,7 @@ function CreateAccountPanel({ onCreated }: { onCreated: () => void }) {
             <div className="adm-create__result" role="status">
               <p>{t('adm.create.done', { name: created.user.display_name || created.user.user_id })}</p>
               <p className="adm-create__password">
-                {t('adm.create.tempPassword')}: <code>{created.temp_password}</code>
+                {t('adm.create.tempPassword')}: <code dir="ltr">{created.temp_password}</code>
               </p>
               <p className="adm-muted">{t('adm.create.onceOnly')}</p>
             </div>

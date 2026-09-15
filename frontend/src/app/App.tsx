@@ -9,7 +9,6 @@ import { TeacherGoalsPage } from '../features/teacher-app/goals/TeacherGoalsPage
 import { TeacherLearningsPage } from '../features/teacher-app/learnings/TeacherLearningsPage'
 import { LearningDetailPage } from '../features/teacher-app/learnings/LearningDetailPage'
 import { TeacherMessagesPage } from '../features/teacher-app/messages/TeacherMessagesPage'
-import { AdminConsolePage } from '../features/admin/AdminConsolePage'
 import { TeacherAppBar } from '../components/TeacherAppBar'
 import { ScopeNotice } from '../components/scope/ScopeNotice'
 import { AssistantDock } from '../features/teacher-app/assistant/AssistantDock'
@@ -72,12 +71,6 @@ const PROTECTED_ROUTES = [
   '/support'
 ]
 const TEACHER_ROUTES = ['/teacher']   // covers /teacher and the legacy /teacher-view
-/* The control plane. Guarded separately from the teacher lane: every teacher may
-   see their own groups, only an admin may change who is connected to whom.
-   The role here is the cheap client-side gate — the backend re-checks the live
-   `org_admins` grant on every request, so a revoked admin gets 403s regardless
-   of what their 12-hour token still claims. */
-const ADMIN_ROUTES = ['/admin']
 
 /* Routes a learner may reach before onboarding is finished. Everything else
    (dashboard, learning world, mentoring, studio) is gated until mapping and
@@ -103,10 +96,6 @@ function isProtected(pathname: string) {
 
 function isTeacherRoute(pathname: string) {
   return TEACHER_ROUTES.some((route) => pathname.startsWith(route))
-}
-
-function isAdminRoute(pathname: string) {
-  return ADMIN_ROUTES.some((route) => pathname.startsWith(route))
 }
 
 function isLandingRoute(pathname: string) {
@@ -136,7 +125,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/tasks', '/admin', '/mentoring', '/learning', '/games', '/support',
+  '/badges', '/tasks', '/mentoring', '/learning', '/games', '/support',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -153,13 +142,15 @@ function isKnownRoute(pathname: string) {
     (route) => path === route || path.startsWith(`${route}/`))
 }
 
-/* The most specific home this account can open. An admin who cannot teach must
-   not be sent to /teacher, where the teacher guard would immediately refuse
-   them; same reasoning as the landing-route redirect. */
+/* The most specific home this account can open. Only an account that can
+   teach and NOT learn goes to /teacher — anything else, including an admin who
+   cannot teach, lands where a learner does. The admin console is no longer a
+   Spark page (it lives in the standalone admin service), so there is no
+   admin-only home left to send anyone to. */
 function homeFor(user: { roles: string[] }) {
-  return user.roles.includes('learner')
-    ? '/student-dashboard'
-    : user.roles.includes('teacher') ? '/teacher' : '/admin'
+  return user.roles.includes('teacher') && !user.roles.includes('learner')
+    ? '/teacher'
+    : '/student-dashboard'
 }
 
 /* Teacher shell — the chrome + scope provider every teacher screen sits in.
@@ -277,12 +268,6 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/teacher')) {
     return <TeacherHomePage />
   }
-  // The control plane shares the teacher chrome deliberately: an admin moves
-  // between "who is connected to whom" and the dashboard constantly, and the
-  // group switcher above is already unlocked to every group for them.
-  if (pathname.startsWith('/admin')) {
-    return <AdminConsolePage />
-  }
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
   if (pathname.startsWith('/learning/lesson')) return <LessonPage />
   if (pathname.startsWith('/games/play')) return <GamePage />
@@ -312,7 +297,6 @@ export function App() {
   const routePath = useRoute()
   const { t, language, direction } = useI18n()
   const { user, isTeacher } = useAuth()
-  const isAdmin = Boolean(user?.roles.includes('admin'))
   const { stage } = useOnboarding()
   const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
   const studioTransition = useStudioTransition()
@@ -332,10 +316,9 @@ export function App() {
   // and its companion must not wrap it.
   const learnerRoute = isLearnerRoute(pathname) && Boolean(user)
   /* Same rule for the teacher chrome, plus the role: an account that fails the
-     teacher/admin guard gets an ErrorState, and wrapping that in the shell
-     would put a class switcher and an assistant around a refusal. */
-  const teacherShellRoute =
-    (isTeacherRoute(pathname) && isTeacher) || (isAdminRoute(pathname) && isAdmin)
+     teacher guard gets an ErrorState, and wrapping that in the shell would put
+     a class switcher and an assistant around a refusal. */
+  const teacherShellRoute = isTeacherRoute(pathname) && isTeacher
 
   // Send an unfinished learner back to the step their saved state says they are
   // on. Done as an effect (not during render) so the URL actually changes —
@@ -358,7 +341,7 @@ export function App() {
   // which is also what makes this fire right after logout, wherever it happens.
   useEffect(() => {
     if (user) return
-    const needsAuth = isProtected(pathname) || isTeacherRoute(pathname) || isAdminRoute(pathname)
+    const needsAuth = isProtected(pathname) || isTeacherRoute(pathname)
     if (needsAuth) navigate('/', { replace: true })
   }, [user, pathname])
 
@@ -402,10 +385,9 @@ export function App() {
     // the child's product, having asked for nothing of the sort.
     const home = !user ? '/'
       : isTeacherRoute(pathname) && isTeacher ? '/teacher'
-        : isAdminRoute(pathname) && isAdmin ? '/admin'
-          : homeFor(user)
+        : homeFor(user)
     navigate(home, { replace: true })
-  }, [user, pathname, isTeacher, isAdmin])
+  }, [user, pathname, isTeacher])
 
   // A learner who already finished the mapping questionnaire cannot open it
   // again by typing /learner-mapping — send them home instead of re-asking the
@@ -416,7 +398,7 @@ export function App() {
   }, [user, stage, pathname])
 
   const guarded = (() => {
-    const teacherLane = isTeacherRoute(pathname) || isAdminRoute(pathname)
+    const teacherLane = isTeacherRoute(pathname)
     const needsAuth = isProtected(pathname) || teacherLane
     // The redirect effect above is already moving us to '/'. Render the landing
     // page for that one frame — it IS the destination, so there is no flicker.
@@ -426,9 +408,6 @@ export function App() {
     if (user && isLandingRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
     // Same hold for an unknown URL: the effect above is already replacing it.
     if (!isKnownRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
-    if (isAdminRoute(pathname) && !isAdmin) {
-      return <ErrorState title={t('auth.guard.adminOnly')} />
-    }
     if (isTeacherRoute(pathname) && !isTeacher) {
       return <ErrorState title={t('auth.guard.teacherOnly')} />
     }

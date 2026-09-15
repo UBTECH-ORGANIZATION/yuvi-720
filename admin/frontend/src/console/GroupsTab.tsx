@@ -10,16 +10,16 @@
  */
 
 import { useMemo, useState } from 'react'
-import { EmptyState, Icon, Panel, StatusPill } from '../../components/primitives'
-import { useI18n } from '../../i18n/I18nProvider'
+import { useI18n } from '../i18n/I18nProvider'
 import {
   archiveGroup, enrollLearners, importRoster, linkTeacher, saveGroup,
   unenrollLearner, unlinkTeacher, type ImportResult,
-} from '../../services/admin'
-import type { AdminData } from './AdminConsolePage'
-import { AdminSection, RefusalNotice, nameOf, useAdminMutation } from './AdminShared'
+} from './api'
+import type { AdminData } from './ConsoleDashboard'
+import { EmptyState, Icon, Panel, StatusPill } from './primitives'
+import { AdminSection, RefusalNotice, nameOf, useAdminMutation } from './shared'
 
-export function AdminGroupsTab({ data }: { data: AdminData }) {
+export function GroupsTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
   const [selected, setSelected] = useState<string | null>(data.org.groups[0]?._id ?? null)
   const mutation = useAdminMutation(data.reload)
@@ -82,7 +82,7 @@ export function AdminGroupsTab({ data }: { data: AdminData }) {
                 </div>
                 <button
                   type="button"
-                  className="sp-btn sp-btn--sm adm-btn--danger"
+                  className="adm-btn adm-btn--danger"
                   disabled={mutation.busy || group.active === false}
                   onClick={() => mutation.run(() => archiveGroup(group._id))}
                 >
@@ -157,7 +157,7 @@ function MembershipColumn({
               </span>
               <button
                 type="button"
-                className="sp-btn sp-btn--ghost sp-btn--sm adm-btn--danger"
+                className="adm-btn adm-btn--ghost adm-btn--dangerText"
                 disabled={busy}
                 onClick={() => onRemove(userId)}
               >
@@ -173,7 +173,7 @@ function MembershipColumn({
       {pool.length ? (
         <div className="adm-picker adm-picker--block">
           <select
-            className="sp-input"
+            className="adm-input"
             value={selected}
             onChange={(event) => setSelected(event.target.value)}
             aria-label={addLabel}
@@ -187,7 +187,7 @@ function MembershipColumn({
           </select>
           <button
             type="button"
-            className="sp-btn sp-btn--sm"
+            className="adm-btn adm-btn--primary"
             disabled={!selected || busy}
             onClick={() => { onAdd(selected); setSelected('') }}
           >
@@ -212,7 +212,7 @@ function CreateGroupPanel({ data }: { data: AdminData }) {
     <Panel className="adm-panel adm-create">
       <button type="button" className="adm-create__toggle" aria-expanded={open}
               onClick={() => setOpen((value) => !value)}>
-        <Icon name={open ? 'chevronUp' : 'plus'} size={15} aria-hidden="true" />
+        <Icon name={open ? 'chevronUp' : 'plus'} size={15} />
         {t('adm.groups.create')}
       </button>
       {open ? (
@@ -220,16 +220,16 @@ function CreateGroupPanel({ data }: { data: AdminData }) {
           <RefusalNotice code={mutation.code} retry={mutation.retry} onDismiss={mutation.clear} />
           <label>
             <span>{t('adm.groups.field.id')}</span>
-            <input className="sp-input" value={id} onChange={(event) => setId(event.target.value)} />
+            <input className="adm-input" value={id} onChange={(event) => setId(event.target.value)} />
           </label>
           <label>
             <span>{t('adm.groups.field.name')}</span>
-            <input className="sp-input" value={name} dir="auto"
+            <input className="adm-input" value={name} dir="auto"
                    onChange={(event) => setName(event.target.value)} />
           </label>
           <label>
             <span>{t('adm.groups.field.school')}</span>
-            <select className="sp-input" value={schoolId}
+            <select className="adm-input" value={schoolId}
                     onChange={(event) => setSchoolId(event.target.value)}>
               {data.org.schools.map((school) => (
                 <option key={school._id} value={school._id}>{school.name || school._id}</option>
@@ -238,12 +238,12 @@ function CreateGroupPanel({ data }: { data: AdminData }) {
           </label>
           <label>
             <span>{t('adm.groups.field.subject')}</span>
-            <input className="sp-input" value={subject}
+            <input className="adm-input" value={subject}
                    onChange={(event) => setSubject(event.target.value)} />
           </label>
           <button
             type="button"
-            className="sp-btn sp-btn--sm"
+            className="adm-btn adm-btn--primary"
             disabled={!id.trim() || !schoolId || mutation.busy}
             onClick={() => mutation.run(async () => {
               const result = await saveGroup({
@@ -286,7 +286,7 @@ function RosterImportPanel({ onCommitted }: { onCommitted: () => void }) {
     <Panel className="adm-panel adm-create">
       <button type="button" className="adm-create__toggle" aria-expanded={open}
               onClick={() => setOpen((value) => !value)}>
-        <Icon name={open ? 'chevronUp' : 'plus'} size={15} aria-hidden="true" />
+        <Icon name={open ? 'chevronUp' : 'plus'} size={15} />
         {t('adm.import.title')}
       </button>
       {open ? (
@@ -294,10 +294,11 @@ function RosterImportPanel({ onCommitted }: { onCommitted: () => void }) {
           <p className="adm-muted">{t('adm.import.hint')}</p>
           <RefusalNotice code={mutation.code} retry={mutation.retry} onDismiss={mutation.clear} />
           <textarea
-            className="sp-input adm-import__input"
+            className="adm-input adm-import__input"
             rows={6}
             value={raw}
             spellCheck={false}
+            dir="ltr"
             placeholder='{"schools": [], "groups": [], "teacher_links": [], "enrollments": []}'
             onChange={(event) => { setRaw(event.target.value); setPreview(null) }}
           />
@@ -306,7 +307,7 @@ function RosterImportPanel({ onCommitted }: { onCommitted: () => void }) {
           <div className="adm-import__actions">
             <button
               type="button"
-              className="sp-btn sp-btn--sm"
+              className="adm-btn adm-btn--primary"
               disabled={!raw.trim() || mutation.busy}
               onClick={() => {
                 const roster = parsed()
@@ -322,7 +323,7 @@ function RosterImportPanel({ onCommitted }: { onCommitted: () => void }) {
             </button>
             <button
               type="button"
-              className="sp-btn sp-btn--sm adm-btn--danger"
+              className="adm-btn adm-btn--danger"
               disabled={!preview || mutation.busy}
               onClick={() => {
                 const roster = parsed()

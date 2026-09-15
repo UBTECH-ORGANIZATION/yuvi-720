@@ -1,4 +1,5 @@
-/* Pieces every admin tab needs: mutation plumbing, refusal messages, names.
+/* Pieces every console tab needs: mutation plumbing, refusal messages, names,
+ * and the shell hooks (tab navigation, 401 handling).
  *
  * The guardrails are the point of this console, so the way a refusal is shown
  * is a first-class concern rather than a catch-all toast. Two kinds:
@@ -9,9 +10,47 @@
  *     — rendered as a message with no override, because there isn't one.
  */
 
-import { useCallback, useState, type ReactNode } from 'react'
-import { useI18n } from '../../i18n/I18nProvider'
-import { AdminRefusal, isOverridable, type Person } from '../../services/admin'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { ApiError } from '../api'
+import { useI18n } from '../i18n/I18nProvider'
+import { AdminRefusal, isOverridable, type Person } from './api'
+
+export const CONSOLE_TABS = ['overview', 'people', 'groups', 'games', 'audit'] as const
+export type ConsoleTab = (typeof CONSOLE_TABS)[number]
+
+/** The hash the shell maps each tab to — `#org-people` deep-links to People. */
+export function consoleTabHash(tab: ConsoleTab): string {
+  return `#org-${tab}`
+}
+
+interface ConsoleShell {
+  /** Switch tabs; the shell owns the hash, the console only asks. */
+  goToTab: (tab: ConsoleTab) => void
+  /** 401 from the proxy: the admin session is gone, re-run the auth check. */
+  onUnauthorized: () => void
+}
+
+export const ConsoleContext = createContext<ConsoleShell>({
+  goToTab: (tab) => { window.location.hash = consoleTabHash(tab) },
+  onUnauthorized: () => {},
+})
+
+export function useConsoleShell(): ConsoleShell {
+  return useContext(ConsoleContext)
+}
+
+/** True (and the shell notified) when a fetch failed because the session is
+ *  gone. Tabs call this in their catch so a stale cookie sends the admin back
+ *  to the login page instead of leaving a silently empty panel. */
+export function useUnauthorizedGuard(): (error: unknown) => boolean {
+  const { onUnauthorized } = useConsoleShell()
+  return useCallback((error: unknown) => {
+    const status = error instanceof ApiError || error instanceof AdminRefusal ? error.status : 0
+    if (status !== 401) return false
+    onUnauthorized()
+    return true
+  }, [onUnauthorized])
+}
 
 /** Display name for a user id, falling back to the id itself — an admin console
  *  that hides the id it operates on is useless for support work, so both show. */
@@ -39,6 +78,7 @@ interface MutationState {
  */
 export function useAdminMutation(onDone: () => void) {
   const [state, setState] = useState<MutationState>({ busy: false, code: null, retry: null })
+  const unauthorized = useUnauthorizedGuard()
 
   const run = useCallback((factory: (confirm: boolean) => Promise<unknown>) => {
     const attempt = (confirm: boolean) => {
@@ -49,6 +89,7 @@ export function useAdminMutation(onDone: () => void) {
           onDone()
         })
         .catch((error: unknown) => {
+          if (unauthorized(error)) return
           const code = error instanceof AdminRefusal ? error.code : 'unexpected'
           setState({
             busy: false,
@@ -58,7 +99,7 @@ export function useAdminMutation(onDone: () => void) {
         })
     }
     attempt(false)
-  }, [onDone])
+  }, [onDone, unauthorized])
 
   const clear = useCallback(() => setState({ busy: false, code: null, retry: null }), [])
 
@@ -85,11 +126,11 @@ export function RefusalNotice({ code, retry, onDismiss }: RefusalNoticeProps) {
       </p>
       <div className="adm-refusal__actions">
         {retry ? (
-          <button type="button" className="sp-btn sp-btn--sm adm-btn--danger" onClick={retry}>
+          <button type="button" className="adm-btn adm-btn--danger" onClick={retry}>
             {t('adm.refusal.confirm')}
           </button>
         ) : null}
-        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onDismiss}>
+        <button type="button" className="adm-btn adm-btn--ghost" onClick={onDismiss}>
           {t('adm.refusal.dismiss')}
         </button>
       </div>

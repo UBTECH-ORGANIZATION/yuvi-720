@@ -12,22 +12,23 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { EmptyState, Panel } from '../../components/primitives'
-import { useI18n } from '../../i18n/I18nProvider'
+import { useI18n } from '../i18n/I18nProvider'
 import {
   getGamesJobs, getGamesUsage, resetLearnerGameCaps, setGameCapDefaults, setLearnerGameCaps,
   type GameCaps, type GameJobRow, type GameUsageReport, type GameUsageRow,
-} from '../../services/admin'
-import type { AdminData } from './AdminConsolePage'
-import { AdminSection, RefusalNotice, useAdminMutation } from './AdminShared'
+} from './api'
+import type { AdminData } from './ConsoleDashboard'
+import { EmptyState, Panel } from './primitives'
+import { AdminSection, RefusalNotice, useAdminMutation, useUnauthorizedGuard } from './shared'
 
 const usd = (value: number) => `$${value.toFixed(2)}`
 const secs = (value: number | undefined | null) => (typeof value === 'number' ? `${Math.round(value)}s` : '—')
 /** How far back the jobs table looks, in hours. */
 const JOB_WINDOWS = [24, 168, 720]
 
-export function AdminGamesTab({ data }: { data: AdminData }) {
+export function GamesTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
+  const unauthorized = useUnauthorizedGuard()
   const [report, setReport] = useState<GameUsageReport | null>(null)
   const [nonce, setNonce] = useState(0)
   const [jobs, setJobs] = useState<GameJobRow[] | null>(null)
@@ -35,15 +36,19 @@ export function AdminGamesTab({ data }: { data: AdminData }) {
 
   useEffect(() => {
     let active = true
-    getGamesUsage().then((result) => { if (active) setReport(result) }).catch(() => {})
+    getGamesUsage()
+      .then((result) => { if (active) setReport(result) })
+      .catch((error: unknown) => { if (active) unauthorized(error) })
     return () => { active = false }
-  }, [nonce])
+  }, [nonce, unauthorized])
 
   useEffect(() => {
     let active = true
-    getGamesJobs(200, sinceHours).then((result) => { if (active) setJobs(result.items) }).catch(() => { if (active) setJobs([]) })
+    getGamesJobs(200, sinceHours)
+      .then((result) => { if (active) setJobs(result.items) })
+      .catch((error: unknown) => { if (active && !unauthorized(error)) setJobs([]) })
     return () => { active = false }
-  }, [nonce, sinceHours])
+  }, [nonce, sinceHours, unauthorized])
 
   const refresh = () => setNonce((value) => value + 1)
   const mutation = useAdminMutation(refresh)
@@ -136,7 +141,8 @@ export function AdminGamesTab({ data }: { data: AdminData }) {
 
       <AdminSection title={t('adm.games.jobs')} hint={t('adm.games.jobs.hint')}>
         <div className="adm-caps adm-caps--compact">
-          <select className="adm-picker" value={sinceHours} onChange={(event) => setSinceHours(Number(event.target.value))}>
+          <select className="adm-input adm-input--auto" value={sinceHours}
+                  onChange={(event) => setSinceHours(Number(event.target.value))}>
             {JOB_WINDOWS.map((hours) => <option key={hours} value={hours}>{t('adm.games.jobs.window', { hours })}</option>)}
           </select>
         </div>
@@ -292,19 +298,19 @@ function CapsForm({ caps, busy, compact, onSave, onReset }: {
     >
       <label>
         <span>{t('adm.games.create')}</span>
-        <input className="adm-capInput" type="number" min={0} max={1000} inputMode="numeric"
+        <input className="adm-input adm-capInput" type="number" min={0} max={1000} inputMode="numeric"
           value={create} onChange={(event) => setCreate(event.target.value)} disabled={busy} />
       </label>
       <label>
         <span>{t('adm.games.edit')}</span>
-        <input className="adm-capInput" type="number" min={0} max={1000} inputMode="numeric"
+        <input className="adm-input adm-capInput" type="number" min={0} max={1000} inputMode="numeric"
           value={edit} onChange={(event) => setEdit(event.target.value)} disabled={busy} />
       </label>
-      <button type="submit" className="sp-btn sp-btn--primary" disabled={busy || !dirty}>
+      <button type="submit" className="adm-btn adm-btn--primary" disabled={busy || !dirty}>
         {t('adm.games.save')}
       </button>
       {onReset ? (
-        <button type="button" className="sp-btn" disabled={busy} onClick={onReset}>
+        <button type="button" className="adm-btn adm-btn--ghost" disabled={busy} onClick={onReset}>
           {t('adm.games.reset')}
         </button>
       ) : null}
@@ -322,7 +328,8 @@ function AddOverride({ people, defaults, busy, onSave }: {
   const [learnerId, setLearnerId] = useState('')
   return (
     <div className="adm-caps adm-caps--add">
-      <select className="adm-picker" value={learnerId} onChange={(event) => setLearnerId(event.target.value)} disabled={busy}>
+      <select className="adm-input adm-input--auto" value={learnerId}
+              onChange={(event) => setLearnerId(event.target.value)} disabled={busy}>
         <option value="">{t('adm.games.add.pick')}</option>
         {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
       </select>

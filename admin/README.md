@@ -1,6 +1,6 @@
 # Yuvilab Spark Administration
 
-This directory is an independently deployable administration service. It owns the AI-usage reporting UI; the learner-facing Spark service remains the only writer of provider usage events.
+This directory is an independently deployable administration service. It owns the AI-usage reporting UI, campaign leads, support triage, and the organisation/games console (the only admin console: the Spark app has no admin route). The learner-facing Spark service remains the only writer of provider usage events.
 
 Production URL: <https://admin.spark.yuvilab.ai>
 
@@ -16,6 +16,7 @@ Google administrator authentication is required by default. `ADMIN_PUBLIC_ACCESS
 - Prompts, model responses, names, learner emails, disclosures, provider URLs, headers, secrets, and exception messages are never queried.
 - Coach debug traces are always admin-only, including when public preview is enabled. They expose only an exchange timestamp and bounded technical step names/statuses; they never query learner identity, conversation content, prompts, tool arguments, model output, URLs, headers, or secrets.
 - The current container startup synchronizes the approved pricing catalog. Its MongoDB credential therefore needs read access to `ai_usage_events` and read/upsert/index access to `ai_usage_pricing`. It does not need write access to usage events.
+- The organisation console reads and writes the shared product collections directly (see below): `users`, `org_schools`, `org_groups`, `org_teacher_links`, `org_enrollments`, `org_admins`, `org_audit`, `learner_game_limits`, and reads `learner_games` / `learner_game_jobs`. Password hashes are written with the same PBKDF2 parameters Spark verifies; user rows never leave the API without the credential stripped.
 - The learner-facing Spark backend has the inverse responsibility: it inserts `ai_usage_events` and reads effective pricing from `ai_usage_pricing` when finalizing each event.
 
 ## Local run
@@ -26,6 +27,39 @@ Google administrator authentication is required by default. `ADMIN_PUBLIC_ACCESS
 4. Open `http://localhost:9998`.
 
 The script builds the React frontend and starts the standalone FastAPI service on port `9998`. The frontend can also run independently on port `5198`; its Vite proxy targets the admin API on `9998`.
+
+## Organisation console
+
+The console's five tabs — overview, people, groups, games, audit — live in
+this service's frontend and are served by `backend/console/`, which reads and
+writes the same MongoDB database as the Spark product backend. There is no
+proxy and no shared token: the Spark app has no admin route, and every
+`/api/admin/*` path here is the native implementation of the former Spark
+control plane (same paths, query parameters, bodies and `{"error": code}`
+answers — 409 for a guardrail refusal, 400 for bad input — with
+`Cache-Control: private, no-store`).
+
+- `backend/console/org_repository.py` — schools, groups, teacher links,
+  enrollments, admin grants, the append-only `org_audit` trail, and the scoping
+  helpers (who teaches whom). Links and enrollments are deactivated, never
+  deleted; groups are archived, never deleted.
+- `backend/console/org_service.py` — guardrails: `would_leave_group_unstaffed`
+  (needs `confirm_unstaffed`), `cannot_revoke_self`, `cannot_remove_last_admin`,
+  `username_taken` / `user_id_taken`; account provisioning with a one-time temp
+  password and `must_change_password`; roster import (preview by default,
+  `commit: true` to apply).
+- `backend/console/users.py` — the `users` lookups the console needs and the
+  PBKDF2-SHA256 password hashing copied from Spark, so a password set here logs
+  in on Spark.
+- `backend/console/games_budget.py` — Learning Game Lab usage report, the job
+  ledger (never the job payload), and the daily caps in `learner_game_limits`:
+  a learner row wins over the `__defaults__` row, which wins over
+  `GAMES_DAILY_CREATE_CAP` / `GAMES_DAILY_EDIT_CAP` (3 / 10 when unset).
+
+Every route sits behind the Google-authenticated `admin_required` dependency
+(never the public-preview `usage_access`), so public preview mode answers 401
+on every console route. Every mutation writes an `org_audit` row whose actor
+is `admin-console:<google email>` of the signed-in administrator.
 
 ## Model pricing
 
@@ -71,6 +105,8 @@ Configure these App Service settings:
 - `ADMIN_EMAILS`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+- `GAMES_DAILY_CREATE_CAP=3` / `GAMES_DAILY_EDIT_CAP=10` (Learning Game Lab fallback caps; same values as the Spark backend)
+- `SUPPORT_PEER_BASE_URL=https://spark.yuvilab.ai`
 
 `MONGODB_CONNECTION_STRING` is the only place the production cluster
 (`yuvi720`) belongs; locally, `admin/.env` points at the dev cluster

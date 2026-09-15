@@ -34,7 +34,7 @@ export interface ScopeDimensions {
   subject: boolean
 }
 
-/* Nothing. The admin console and every non-teacher route. */
+/* Nothing. Every non-teacher route. */
 const NONE: ScopeDimensions = { class: false, subgroup: false, subject: false }
 
 /* One class, and no way to slice it. */
@@ -106,10 +106,6 @@ const ROUTES: [prefix: string, dimensions: ScopeDimensions][] = [
          in science. There is no subject on the data and inventing one would be
          a fabrication, not a filter. */
   ['/teacher', { class: true, subgroup: true, subject: true }],
-
-  /* The control plane borrows the teacher chrome, but it is about who is
-     connected to whom across every group. Nothing to narrow. */
-  ['/admin', NONE],
 ]
 
 /** The tail of `/teacher/tasks/...`, or null when this is the task list. */
