@@ -1773,11 +1773,18 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         const isPresenting = presentingRef.current && !isMoving && !isPulling
         const presentSign = presentingSideRef.current === 'left' ? -1 : 1
         const presentStrength = isPresenting ? 1 : 0
+        // Roaming, the body already faces where he walked (`robotYaw`, set
+        // above). The idle sway below eases toward the lens; with his back to
+        // it the shortest-path turn flips sign as the sway crosses zero, and
+        // he visibly swung round every time he stopped. So while roaming the
+        // only yaw offsets are the panel gestures, on top of the walked yaw.
         const robotYawTarget = isMoving
           ? headingYaw
           : isPresenting
             ? 0.46 * presentSign
-            : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength + 1.28 * pushDirection * pushStrength
+            : roam
+              ? robot.rotation.y + 0.34 * pullDirection * gripStrength + 1.28 * pushDirection * pushStrength
+              : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength + 1.28 * pushDirection * pushStrength
         // Shortest-path turn so crossing the ±π (facing-away) seam doesn't spin Yuvi the long way round.
         const yawDelta = Math.atan2(Math.sin(robotYawTarget - robot.rotation.y), Math.cos(robotYawTarget - robot.rotation.y))
         robot.rotation.y += yawDelta * postureEase
