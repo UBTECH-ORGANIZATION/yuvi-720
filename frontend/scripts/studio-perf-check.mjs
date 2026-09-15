@@ -105,19 +105,6 @@ const dpr = Number(/dpr ([\d.]+)/.exec(hud)?.[1] ?? NaN)
 if (dpr <= 1) ok(`pixel ratio capped at 1 (${dpr})`)
 else bad(`pixel ratio capped at 1 (${dpr})`)
 
-// The toggle exists and cycles.
-const toggle = page.locator('.ys-stage-tools [data-quality]')
-if (await toggle.count()) {
-  const before = await toggle.getAttribute('data-quality')
-  await toggle.click()
-  await page.waitForTimeout(300)
-  const after = await toggle.getAttribute('data-quality')
-  if (before !== after) ok(`quality toggle cycles (${before} → ${after})`)
-  else bad('quality toggle cycles')
-  // Back to auto so the next run starts clean.
-  await page.evaluate(() => { try { localStorage.removeItem('spark.renderTier.forced') } catch {} })
-} else bad('quality toggle is in the toolbar')
-
 // ── the cards come from files, not from a WebGL context ────────────────────
 // The active tab's gear is requested the moment the studio mounts, so by now
 // a missing file would already have opened the fallback renderer. Walking to

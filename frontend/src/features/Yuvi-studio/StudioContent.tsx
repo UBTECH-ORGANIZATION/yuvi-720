@@ -9,7 +9,6 @@ import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
 import { assetsForSlot, assetThumbnailCache, renderAssetThumbnail, type YuviAsset } from './YuviAssets'
 import { useThumbnails } from './useThumbnails'
-import { readForcedTier, storeForcedTier, type RenderTierChoice } from './renderTier'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
@@ -88,15 +87,6 @@ export function StudioContent({
   const { t } = useI18n()
   const { user } = useAuth()
   const { isTouch } = useResponsive()
-  /* Render quality, cycled from the stage toolbar: auto → light → full. Stored
-     per device, not per learner (see renderTier.ts); remounting the avatar on
-     a change is fine, the `loaded &&` gate below already handles a remount. */
-  const [qualityChoice, setQualityChoice] = useState<RenderTierChoice>(() => readForcedTier() ?? 'auto')
-  const cycleQuality = () => {
-    const next: RenderTierChoice = qualityChoice === 'auto' ? 'low' : qualityChoice === 'low' ? 'high' : 'auto'
-    storeForcedTier(next === 'auto' ? null : next)
-    setQualityChoice(next)
-  }
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
@@ -675,11 +665,9 @@ export function StudioContent({
         <div className="ys-stage__canvas">
           {loaded && (
             <YuviAvatar3D
-              key={qualityChoice}
               ref={avatarRef}
               initialDesign={design}
               muted={muted}
-              renderTier={qualityChoice}
               orbit
               stage
               roam
@@ -802,19 +790,6 @@ export function StudioContent({
               <Icon name={firstPerson ? 'orbit' : 'eye'} size={18} />
             </button>
           )}
-          {/* Render quality. A school PC that the probe called "high" gets a
-             way down that does not involve a teacher; a good laptop that the
-             governor demoted gets a way back up. */}
-          <button
-            type="button"
-            className={`ys-iconbtn${qualityChoice !== 'auto' ? ' is-on' : ''}`}
-            onClick={cycleQuality}
-            data-quality={qualityChoice}
-            aria-label={t(`YuviStudio.quality.${qualityChoice}`)}
-            title={t(`YuviStudio.quality.${qualityChoice}`)}
-          >
-            <Icon name="chip" size={18} />
-          </button>
           <button
             type="button"
             className={`ys-iconbtn${muted ? ' is-off' : ''}`}

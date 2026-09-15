@@ -30,7 +30,11 @@ export const lowerTier = (a: RenderTier, b: RenderTier): RenderTier => (rank(a) 
    "this GPU cannot keep 30 fps with shadows" must not follow them home — so it
    is stored where the GPU is. Clearing site data costs one governor warm-up. */
 const STORED_KEY = 'spark.renderTier.v1'      // governor-confirmed tier for this device
-const FORCED_KEY = 'spark.renderTier.forced'  // the toolbar toggle: low / high / (absent = auto)
+// Developer override only (the thumbnail render page sets it). The toolbar
+// toggle that used to write the old key is gone: a forced 'low' hid the
+// room's props and read as "things don't render". New key so a value left
+// behind by that toggle is ignored.
+const FORCED_KEY = 'spark.renderTier.override'
 
 const isTier = (value: unknown): value is RenderTier =>
   value === 'low' || value === 'medium' || value === 'high'
@@ -159,7 +163,7 @@ export interface ResolvedTier {
   cores: number | null
 }
 
-/** forced prop > toolbar choice > governor-stored tier > detection. A
+/** forced prop > developer override > governor-stored tier > detection. A
  *  `performanceMode === 'low'` caller (the learning track's mascot) is clamped
  *  to low whatever the device — that prop meant "cheap" before tiers existed. */
 export function resolveRenderTier(choice: RenderTierChoice = 'auto', clampLow = false): ResolvedTier {
