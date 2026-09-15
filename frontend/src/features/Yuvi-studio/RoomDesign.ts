@@ -73,9 +73,10 @@ export const DEFAULT_STATIONS: RoomStations = {
   room: { x: -9, z: 3.9, rot: DEFAULT_BENCH_ROT, placed: false },
   explore: { x: 8.8, z: -7.5, rot: -0.7, placed: true },
   mission: { x: 5.6, z: -3.3, rot: -0.72, placed: true },
-  // The Game Lab desk: a fixed prop on the right, beside the globe and the
-  // kiosk, angled so its screen faces the middle of the room.
-  gamelab: { x: 9.6, z: -2.0, rot: -1.05, placed: true },
+  // The Game Lab desk: placed during the intro like the table and the
+  // platform; this is only where it starts on the cursor, angled so its
+  // screen faces the middle of the room.
+  gamelab: { x: 9.6, z: -2.0, rot: -1.05, placed: false },
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
@@ -116,13 +117,16 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
  * three-step walkthrough again on their next visit, every time.
  */
 export function resetRoom(room: RoomDesign): RoomDesign {
-  return { ...cloneRoom(DEFAULT_ROOM), introDone: room.introDone, tutorialDone: room.tutorialDone }
   const reset = cloneRoom(DEFAULT_ROOM)
   reset.introDone = room.introDone
   reset.tutorialDone = room.tutorialDone
+  // The intro is what places the three walk-in stations. A room reset after
+  // it never runs the intro again, so the stations come back at their
+  // default spots instead of vanishing with no way to place them.
   if (room.introDone) {
     reset.stations.avatar.placed = true
     reset.stations.room.placed = true
+    reset.stations.gamelab.placed = true
   }
   return reset
 }

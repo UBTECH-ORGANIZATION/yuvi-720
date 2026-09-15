@@ -360,7 +360,7 @@ export function StudioContent({
       return
     }
     if (introScene === 1) {
-      if (!stations.room.placed || !stations.avatar.placed) { setIntroCheckFailed(true); return }
+      if (!stations.room.placed || !stations.avatar.placed || !stations.gamelab.placed) { setIntroCheckFailed(true); return }
       setIntroCheckFailed(false)
       setIntroAvatarChanged(false)
       setIntroScene(2)
@@ -394,9 +394,14 @@ export function StudioContent({
     } else {
       roomState.place(placing.kind, x, z, placing.rot ?? 0)
     }
+    // The intro hands the learner the next station as soon as one is down:
+    // the room table, then the Yuvi platform, then the game desk.
     if (introScene === 1 && placing.station === 'room') {
       const avatar = roomState.room.stations.avatar
       setPlacing({ kind: 'station:avatar', station: 'avatar', rot: avatar.rot, rot0: avatar.rot })
+    } else if (introScene === 1 && placing.station === 'avatar') {
+      const gamelab = roomState.room.stations.gamelab
+      setPlacing({ kind: 'station:gamelab', station: 'gamelab', rot: gamelab.rot, rot0: gamelab.rot })
     } else {
       setPlacing(null)
     }
@@ -715,7 +720,9 @@ export function StudioContent({
                       ? 'YuviStudio.intro.station.room'
                       : !stations.avatar.placed
                         ? 'YuviStudio.intro.station.avatar'
-                        : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
+                        : !stations.gamelab.placed
+                          ? 'YuviStudio.intro.station.gamelab'
+                          : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
                     : introScene === 2
                       ? introAvatarChanged ? 'YuviStudio.intro.avatar.done' : introCheckFailed ? 'YuviStudio.intro.avatar.missing' : 'YuviStudio.intro.avatar.pick'
                       : `YuviStudio.intro.scene${introScene}`,
