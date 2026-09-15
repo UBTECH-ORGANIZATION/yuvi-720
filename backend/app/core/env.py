@@ -88,14 +88,26 @@ def is_local() -> bool:
     return environment_name() in _LOCAL_NAMES
 
 
-def password_login_allowed() -> bool:
-    """Username/password login is a local-development affordance only.
+def password_login_enabled_by_setting() -> bool:
+    """PASSWORD_LOGIN_ENABLED, the Dev slot's opt-in (a slot setting there, so
+    it can never travel through a swap)."""
+    return (os.environ.get("PASSWORD_LOGIN_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
 
-    In the cloud the Ministry of Education OIDC provider is the single way in,
+
+def password_login_allowed() -> bool:
+    """Username/password login: always on a developer machine, on the Dev slot
+    when PASSWORD_LOGIN_ENABLED says so, never in production.
+
+    In production the Ministry of Education OIDC provider is the single way in,
     so a stolen or seeded password cannot become an entry point to real learner
-    data. `POST /api/auth/login` 404s everywhere else.
+    data — the production check comes first and no setting overrides it.
+    `POST /api/auth/login` 404s wherever this is false.
     """
-    return is_local() and not is_production()
+    if is_production():
+        return False
+    return is_local() or password_login_enabled_by_setting()
 
 
 def signing_secret() -> str:

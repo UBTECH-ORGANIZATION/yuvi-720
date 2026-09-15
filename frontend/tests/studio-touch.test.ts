@@ -69,9 +69,12 @@ test('tintable furniture offers colours only through its hover menu', () => {
   assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
 })
 
-test('hovering Yuvi station offers only the Design Yuvi action', () => {
+test('hovering Yuvi station offers Design Yuvi and a move, never a spin', () => {
   assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
-  assert.match(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
+  // The platform is a station like the others: it can be picked up and put
+  // down elsewhere. It is round, so rotating it is the one thing withheld.
+  assert.match(studio, /onMove=\{\(\) => startMove\(propMenu\.uid\)\}/)
+  assert.doesNotMatch(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
   assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
   assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
 })
@@ -85,7 +88,8 @@ test('globe and mission furniture open hover menus with move and rotate only', (
   assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission' \| 'gamelab'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
-  assert.match(studio, /onRemove=\{menuStation \? undefined/)
+  // Walk-in stations cannot be removed; the decorative plinth and totem can.
+  assert.match(studio, /onRemove=\{menuStation\s*\n?\s*\? \(menuStation === 'explore' \|\| menuStation === 'mission'/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
   assert.equal(he['YuviStudio.zone.mission'], 'עמדת המשימות')
 })
@@ -129,7 +133,9 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.match(labRoom, /platform\.visible = stations\.avatar\.placed/)
   assert.match(labRoom, /bench\.visible = stations\.room\.placed/)
   assert.match(studio, /carryStation\('room', stations\.room\.rot\)/)
-  assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed\)/)
+  assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed \|\| !stations\.gamelab\.placed\)/)
+  assert.match(studio, /placing\.station === 'avatar'\) \{[\s\S]{0,120}station: 'gamelab'/)
+  assert.match(studio, /YuviStudio\.intro\.station\.gamelab/)
   assert.match(studio, /placing\.station === 'room'/)
   assert.match(studio, /station: 'avatar'/)
   assert.match(studio, /goToStation\('avatar'\)/)
@@ -144,7 +150,7 @@ test('a first visit gets a four-step in-world welcome without reopening the old 
   assert.match(welcome, /role="dialog"/)
   assert.equal(he['YuviStudio.intro.continue'], 'יאללה, בונים')
   assert.match(he['YuviStudio.intro.station.room'], /שולחן עיצוב החדר/)
-  assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שני הרהיטים בחדר, אפשר להמשיך.')
+  assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שלושת הרהיטים בחדר, אפשר להמשיך.')
   assert.match(he['YuviStudio.intro.avatar.done'], /עיצוב יובי/)
   assert.equal(he['YuviStudio.intro.finish'], 'יוצאים לשחק')
 })

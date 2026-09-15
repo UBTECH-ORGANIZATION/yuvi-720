@@ -203,6 +203,9 @@ export function CompanionChat() {
     itemOrder,
     currentQuestionKey,
     pendingAlternative,
+    handUnlock,
+    unlockHand,
+    relockHand,
     pendingKudos,
     acknowledgeKudos,
     openExplainer,
@@ -300,23 +303,46 @@ export function CompanionChat() {
   // While raised the button glows and CANCELS instead (#450) — taking your own
   // hand down is safe and needs no confirm; the server keeps a safety
   // escalation out of that path's reach.
+  // And before any of that it is LOCKED: grey until Yuvi, a struggle detector
+  // or the wrong-answers valve opens it (`handUnlock`, server truth). The
+  // server refuses a raise the gate has not opened, so the client never
+  // offers one it cannot deliver.
   const [handState, setHandState] =
-    useState<'idle' | 'confirming' | 'sending' | 'sent' | 'unreached'>('idle')
+    useState<'idle' | 'confirming' | 'sending' | 'sent' | 'unreached' | 'unlocked' | 'locked'>('idle')
   const [handCooling, setHandCooling] = useState(false)
   const [handRaised, setHandRaised] = useState(false)
-  const handTimers = useRef<{ note?: number; cool?: number }>({})
+  // One-shot activation cue (pop + ring) the moment the button opens.
+  const [handUnlocking, setHandUnlocking] = useState(false)
+  const handTimers = useRef<{ note?: number; cool?: number; unlock?: number }>({})
   useEffect(() => () => {
     window.clearTimeout(handTimers.current.note)
     window.clearTimeout(handTimers.current.cool)
+    window.clearTimeout(handTimers.current.unlock)
   }, [])
+  const noteHand = (state: 'sent' | 'unreached' | 'unlocked' | 'locked') => {
+    setHandState(state)
+    window.clearTimeout(handTimers.current.note)
+    handTimers.current.note = window.setTimeout(
+      () => setHandState((value) => (value === 'sending' ? value : 'idle')),
+      6000)
+  }
   // Server truth on mount: a reload must not silently lower a raised hand's
-  // glow, and the client cooldown alone forgets on refresh.
+  // glow, re-lock a hand Yuvi opened, and the client cooldown alone forgets
+  // on refresh. Restored as `sync` so the activation cue does not replay.
   useEffect(() => {
     if (!isTaskMode) return
     let alive = true
     getCoachHandoffState()
       .then((state) => {
-        if (!alive || !state.raised) return
+        if (!alive) return
+        if (state.unlocked && !state.raised) {
+          unlockHand({
+            reason: state.unlock_reason ?? 'open',
+            questionKey: state.unlock_question_key ?? null,
+            source: 'sync',
+          })
+        }
+        if (!state.raised) return
         setHandRaised(true)
         setHandCooling(true)
       })
@@ -324,6 +350,15 @@ export function CompanionChat() {
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTaskMode])
+  // The button opening is an event, not a state: pop once, say it once.
+  useEffect(() => {
+    if (!handUnlock || handUnlock.source === 'sync') return
+    setHandUnlocking(true)
+    window.clearTimeout(handTimers.current.unlock)
+    handTimers.current.unlock = window.setTimeout(() => setHandUnlocking(false), 700)
+    noteHand('unlocked')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handUnlock])
   const lowerHand = async () => {
     try {
       await cancelCoachHandoff()
@@ -335,17 +370,24 @@ export function CompanionChat() {
     setHandRaised(false)
     setHandCooling(false)
     setHandState('idle')
+    relockHand()
   }
+  // `aria-disabled`, not `disabled`: a native disabled button drops out of the
+  // tab order and takes its tooltip with it, so the child is left with a dull
+  // button and no way to learn why it will not respond (#517).
+  const handLocked = isTaskMode && !handRaised && !handUnlock
+  const handBlocked = handState === 'sending' || (handCooling && !handRaised) || handLocked
   const raiseHand = () => {
     if (handState === 'sending') return
     if (handRaised) { void lowerHand(); return }
-    if (handCooling) return
+    if (handBlocked) return
     setHandState((value) => (value === 'confirming' ? 'idle' : 'confirming'))
   }
-  // The teacher marking the request handled unlocks the button early — the
-  // cooldown guards against re-sending into an alert nobody has seen yet, and
-  // a resolved alert is the opposite of that. Shared refcounted stream: this
-  // is the same connection the message toast rides.
+  // The teacher marking the request handled ends the cooldown early — it
+  // guards against re-sending into an alert nobody has seen yet, and a
+  // resolved alert is the opposite of that. The gate re-locks: "handled" is
+  // the end of the moment the hand was opened for. Shared refcounted stream:
+  // this is the same connection the message toast rides.
   useEffect(() => {
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
       if (frame.type !== 'hand_resolved') return
@@ -354,7 +396,9 @@ export function CompanionChat() {
       setHandRaised(false)
       setHandCooling(false)
       setHandState('idle')
+      relockHand()
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const sendHand = async () => {
     if (handState === 'sending' || handCooling) return
@@ -368,28 +412,30 @@ export function CompanionChat() {
         ...(surface.component_id ? { component_id: surface.component_id } : {}),
       })
       // `notified: 0` reported honestly — no cooldown either, because nothing
-      // was delivered and blocking the retry would strand the child.
-      setHandState(notified > 0 ? 'sent' : 'unreached')
+      // was delivered and blocking the retry would strand the child. A
+      // delivered raise spends the unlock (the server already cleared it).
+      noteHand(notified > 0 ? 'sent' : 'unreached')
       if (notified > 0) {
         setHandRaised(true)
         setHandCooling(true)
+        relockHand()
         handTimers.current.cool = window.setTimeout(() => setHandCooling(false), 5 * 60_000)
       }
-    } catch {
-      setHandState('unreached')
+    } catch (error) {
+      // The gate closed under us (a new question, a teacher resolve): the
+      // server says so with a 409, same shape as the support refusal.
+      if ((error as { status?: number }).status === 409) {
+        relockHand()
+        noteHand('locked')
+        return
+      }
+      noteHand('unreached')
     }
-    window.clearTimeout(handTimers.current.note)
-    handTimers.current.note = window.setTimeout(
-      () => setHandState((value) => (value === 'sending' ? value : 'idle')),
-      6000)
   }
-  // `aria-disabled`, not `disabled`: a native disabled button drops out of the
-  // tab order and takes its tooltip with it, so the child is left with a dull
-  // button and no way to learn why it will not respond (#517).
-  const handBlocked = handState === 'sending' || (handCooling && !handRaised)
   const handLabel = handRaised
     ? t('companion.hand.raisedTooltip')
-    : handCooling ? t('companion.hand.sent') : t('companion.hand.tooltip')
+    : handCooling ? t('companion.hand.sent')
+      : handLocked ? t('companion.hand.lockedTooltip') : t('companion.hand.tooltip')
   const [speech, setSpeech] = useState<{ messageId: string | null; state: SpeechState }>({
     messageId: null,
     state: 'idle',
@@ -1117,14 +1163,14 @@ export function CompanionChat() {
 
           {/* Raise-hand outcome, said out loud: a child who asked for a person must
           see whether one is coming. `role="status"` so it is announced too. */}
-          {(handState === 'sent' || handState === 'unreached') && (
+          {(handState === 'sent' || handState === 'unreached' || handState === 'unlocked' || handState === 'locked') && (
             <p
-              className={`sp-companion__hand-status${handState === 'unreached' ? ' is-unreached' : ''}`}
+              className={`sp-companion__hand-status${handState === 'unreached' || handState === 'locked' ? ' is-unreached' : ''}`}
               role="status"
               dir="auto"
             >
               <Icon name="hand" size={13} strokeWidth={2} aria-hidden="true" />
-              {t(handState === 'sent' ? 'companion.hand.sent' : 'companion.hand.unreached')}
+              {t(`companion.hand.${handState}`)}
             </p>
           )}
 
@@ -1539,9 +1585,14 @@ export function CompanionChat() {
                   <button
                     type="button"
                     data-tour="learner.lessonHand"
-                    className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}`}
+                    className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${
+                      // One visual state at a time: up beats spent beats locked.
+                      handRaised ? ' is-raised'
+                        : handState === 'sending' || handCooling ? ' is-blocked'
+                          : handLocked ? ' is-locked' : ''
+                    }${handUnlocking ? ' is-unlocking' : ''}`}
                     onClick={raiseHand}
-                    disabled={handState === 'sending' || (handCooling && !handRaised)}
+                    aria-disabled={handBlocked || undefined}
                     aria-label={handLabel}
                     aria-expanded={handState === 'confirming'}
                     data-tooltip={handLabel}

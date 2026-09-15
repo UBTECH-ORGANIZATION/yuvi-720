@@ -614,3 +614,73 @@ class SurfaceSignalTest(unittest.IsolatedAsyncioTestCase):
         arrived = presence.snapshot("kid")["surface_at"]
         presence.note_surface("kid", "learning_create")
         self.assertEqual(presence.snapshot("kid")["surface_at"], arrived)
+
+
+class HandUnlockTest(unittest.IsolatedAsyncioTestCase):
+    """The raise-hand gate's server truth. Durable (a reload must not re-lock a
+    hand Yuvi opened) but not forever: it is about the question in front of the
+    child, and a persisted unlock from yesterday must not open today's first
+    screen."""
+
+    async def asyncSetUp(self):
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        self._collection = patch("app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+        self._teachers = patch("app.brain.org.teachers_for_learner",
+                               new=AsyncMock(return_value=[]))
+        self._teachers.start()
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+        self._teachers.stop()
+
+    @staticmethod
+    def _ago(**delta) -> str:
+        return (datetime.now(timezone.utc) - timedelta(**delta)).isoformat()
+
+    def _unlock(self, at: str) -> dict:
+        return {"question_key": "c|i|q1", "reason": "idle", "source": "detector", "at": at}
+
+    def test_the_default_is_locked(self):
+        self.assertIsNone(presence.snapshot("kid")["hand_unlock"])
+
+    async def test_note_and_clear(self):
+        written = presence.note_hand_unlocked(
+            "kid", question_key="c|i|q1", reason="stuck_after_help", source="coach")
+        self.assertEqual(presence.snapshot("kid")["hand_unlock"], written)
+        self.assertEqual(written["reason"], "stuck_after_help")
+        presence.clear_hand_unlock("kid")
+        self.assertIsNone(presence.snapshot("kid")["hand_unlock"])
+
+    async def test_clearing_nothing_costs_no_frame(self):
+        """Runs on every screen change — it must not persist each time."""
+        with patch.object(presence, "_changed") as changed:
+            presence.clear_hand_unlock("kid")
+        changed.assert_not_called()
+
+    async def test_an_unlock_outlives_a_restart(self):
+        rows = [{
+            "_id": "kid", "learner_id": "kid", "status": presence.STATUS_ONLINE,
+            "last_seen_at": self._ago(minutes=1), "hand_unlock": self._unlock(self._ago(minutes=1)),
+        }]
+        with patch("app.brain.repository._get_collection_named",
+                   return_value=_FakeCollection(rows)):
+            self.assertEqual(await presence.rehydrate(), 1)
+        self.assertEqual(presence.snapshot("kid")["hand_unlock"]["question_key"], "c|i|q1")
+
+    async def test_a_stale_unlock_in_a_merged_row_is_dropped(self):
+        stored = {
+            "_id": "kid", "learner_id": "kid", "status": presence.STATUS_OFFLINE,
+            "connections": 0, "last_seen_at": self._ago(minutes=30),
+            "hand_unlock": self._unlock(self._ago(hours=3)),
+        }
+        self.assertIsNone(presence._merged("kid", stored)["hand_unlock"])
+
+    async def test_a_recent_unlock_in_a_merged_row_survives(self):
+        stored = {
+            "_id": "kid", "learner_id": "kid", "status": presence.STATUS_OFFLINE,
+            "connections": 0, "last_seen_at": self._ago(minutes=30),
+            "hand_unlock": self._unlock(self._ago(minutes=10)),
+        }
+        self.assertEqual(presence._merged("kid", stored)["hand_unlock"]["reason"], "idle")

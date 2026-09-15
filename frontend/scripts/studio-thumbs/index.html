@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Dev-only Vite entry for scripts/render-studio-thumbs.mjs. Served by the
+     dev server at /scripts/studio-thumbs/; not an input of the production
+     build, so nothing here ships. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Yuvi Studio thumbnail render page</title>
+    <script>
+      // The shared renderer picks DPR from the render tier; the files must be
+      // 2× whatever machine renders them.
+      try { localStorage.setItem('spark.renderTier.override', 'high') } catch {}
+    </script>
+  </head>
+  <body>
+    <p>Rendering surface for <code>scripts/render-studio-thumbs.mjs</code>.</p>
+    <script type="module" src="./page.ts"></script>
+  </body>
+</html>

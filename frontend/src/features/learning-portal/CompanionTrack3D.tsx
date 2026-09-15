@@ -22,6 +22,7 @@ import * as THREE from 'three'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3D'
+import { useRenderTier } from '../Yuvi-studio/renderTier'
 import type { LearningComponentDTO, LearningProgressState, LearningUnitDTO } from '../../services/learning'
 import { horizon, stationGlyph } from '../learning/pathView'
 import { buildPlatform, designFor, type RoomKind } from './track-platform'
@@ -95,6 +96,9 @@ export function CompanionTrack3D({
 }: CompanionTrack3DProps) {
   const { t } = useI18n()
   const { design } = useYuviDesign()
+  // The track already owns one WebGL context; on a low device the mascot
+  // riding on it is a sprite, not a second renderer.
+  const renderTier = useRenderTier()
   const hostRef = useRef<HTMLDivElement>(null)
   const labelLayerRef = useRef<HTMLDivElement>(null)
   /** Where the real avatar is parked over the canvas, written by the loop. */
@@ -700,6 +704,10 @@ export function CompanionTrack3D({
       scrollEl?.removeEventListener('pointercancel', onScrollUp)
       disposables.forEach((item) => item.dispose())
       renderer.dispose()
+      // Same reason as YuviAvatar3D: `dispose()` leaves the live context on the
+      // detached canvas until GC, and the browser kills the OLDEST context
+      // once ~16 are alive — usually the dock's Yuvi.
+      renderer.forceContextLoss()
       host.removeChild(renderer.domElement)
     }
     // Rebuilt only when the route or the learner's place on it really changes.
@@ -714,13 +722,19 @@ export function CompanionTrack3D({
       {/* The learner's REAL Yuvi, parked on the station they are on. Positioned
           by the render loop from his projected world position. */}
       <div className="ct3d__mascot" ref={mascotRef} aria-hidden="true">
-        <YuviAvatar3D
-          initialDesign={design}
-          label=""
-          muted
-          grounded
-          performanceMode="low"
-        />
+        {renderTier === 'low' ? (
+          <div className="Yuvi-avatar-canvas" data-webgl-state="unavailable" style={{ position: 'relative' }}>
+            <img className="Yuvi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" />
+          </div>
+        ) : (
+          <YuviAvatar3D
+            initialDesign={design}
+            label=""
+            muted
+            grounded
+            performanceMode="low"
+          />
+        )}
       </div>
 
       {/* The real, focusable stations. Positioned over the canvas by the loop. */}

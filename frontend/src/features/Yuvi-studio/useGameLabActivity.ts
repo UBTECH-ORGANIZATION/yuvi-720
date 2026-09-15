@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getGame, getGameLive, isBusy, isGameFrame, listGames, type GameFrame, type GameLive, type LearnerGame } from '../../services/games'
 import { subscribe } from '../../services/realtime'
-import type { Stamped } from './panel/gameLabModel'
+import { buildStage, type BuildStage, type Stamped } from './panel/gameLabModel'
 import type { GameLabState } from './YuviLabRoom'
 
 /**
@@ -129,4 +129,13 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     busyIds,
     noteGame,
   }
+}
+
+/** The step a busy card shows: the newer of the last live frame and the last
+ *  snapshot read decides, the row's status is the fallback. */
+export function cardStage(game: Pick<LearnerGame, 'game_id' | 'status'>, activity: GameLabActivity): BuildStage | null {
+  const frame = activity.frames[game.game_id]
+  const phase = activity.phases[game.game_id]
+  const event = frame && (!phase || frame.at >= phase.at) ? frame.value.event : undefined
+  return buildStage(game.status, event, phase?.value)
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
+import yuviFaviconUrl from '../../assets/yuvi-badge.webp'
 import { getAsset } from '../Yuvi-studio/YuviAssets'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { normalizeDesign, type YuviDesign, type YuviSlot } from '../Yuvi-studio/YuviDesign'
@@ -1005,6 +1005,10 @@ export function YuviRobot3D({
       // sparkBadgeTexture is the shared module-cached favicon — do not dispose it
       // here or other live Yuvi instances would lose their chest mark.
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement)
+      // `dispose()` leaves the live context on the detached canvas until GC;
+      // the mapping → results hand-off mounts a second robot before that, and
+      // the browser kills the oldest live context once ~16 exist.
+      renderer.forceContextLoss()
       canvasElRef.current = null
       applyDesignRef.current = null
     }

@@ -40,7 +40,7 @@ import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
@@ -225,6 +225,10 @@ def _public_game(game: dict[str, Any], *, lang: str = "he",
         "component_id": game.get("component_id"),
         "objective_title": kata_catalog.objective_title(game.get("objective_id"), lang),
         "component_title": kata_catalog.component_title(game.get("component_id"), lang),
+        # Derived, never stored: the catalogue owns which subject an objective
+        # belongs to, so a re-tag upstream shows here without a migration.
+        "subject": kata_catalog.subject_of(game.get("objective_id")),
+        "liked": bool(game.get("liked")),
         "title": game.get("title") or "",
         "genre": game.get("genre"),
         "prompt": game.get("prompt") or "",
@@ -698,6 +702,26 @@ async def revert_game(game_id: str, data: RevertRequest, learner_id: str = Depen
         raise HTTPException(status_code=404, detail=str(exc)) from None
     await kata_catalog.ensure_loaded()
     return JSONResponse(content=_public_game(updated), headers=_NO_STORE)
+
+
+@router.post("/{game_id}/like")
+async def like_game(
+    game_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    lang: str = Query("he", max_length=5),
+    learner_id: str = Depends(require_learner),
+    admin: bool = Depends(_admin_reader),
+):
+    """Mark (or unmark) a game as one the learner likes. Body: {"liked": bool}."""
+    await _owned_game(game_id, learner_id)
+    await kata_catalog.ensure_loaded()
+    game = await store.update_game(game_id, liked=bool(payload.get("liked", True)))
+    if game is None:
+        raise HTTPException(status_code=404, detail="game_not_found")
+    return JSONResponse(
+        content=_public_game(game, lang=lang, last_job=await store.latest_job(game_id), admin=admin),
+        headers=_NO_STORE,
+    )
 
 
 @router.delete("/{game_id}")

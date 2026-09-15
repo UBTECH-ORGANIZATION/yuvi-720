@@ -7,11 +7,12 @@ import { useAuth } from '../../providers/AuthProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
-import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
+import { assetsForSlot, assetThumbnailCache, renderAssetThumbnail, type YuviAsset } from './YuviAssets'
+import { useThumbnails } from './useThumbnails'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { claimedSurpriseItems, renderRoomThumbnail, roomThumbnailCache, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { gameLabStandingSpot, roomStandingSpot, type LabRoomZoneId } from './YuviLabRoom'
@@ -86,7 +87,6 @@ export function StudioContent({
   const { t } = useI18n()
   const { user } = useAuth()
   const { isTouch } = useResponsive()
-  const thumbnails = useMemo(() => getThumbnails(), [])
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
@@ -350,7 +350,7 @@ export function StudioContent({
       return
     }
     if (introScene === 1) {
-      if (!stations.room.placed || !stations.avatar.placed) { setIntroCheckFailed(true); return }
+      if (!stations.room.placed || !stations.avatar.placed || !stations.gamelab.placed) { setIntroCheckFailed(true); return }
       setIntroCheckFailed(false)
       setIntroAvatarChanged(false)
       setIntroScene(2)
@@ -384,9 +384,14 @@ export function StudioContent({
     } else {
       roomState.place(placing.kind, x, z, placing.rot ?? 0)
     }
+    // The intro hands the learner the next station as soon as one is down:
+    // the room table, then the Yuvi platform, then the game desk.
     if (introScene === 1 && placing.station === 'room') {
       const avatar = roomState.room.stations.avatar
       setPlacing({ kind: 'station:avatar', station: 'avatar', rot: avatar.rot, rot0: avatar.rot })
+    } else if (introScene === 1 && placing.station === 'avatar') {
+      const gamelab = roomState.room.stations.gamelab
+      setPlacing({ kind: 'station:gamelab', station: 'gamelab', rot: gamelab.rot, rot0: gamelab.rot })
     } else {
       setPlacing(null)
     }
@@ -468,7 +473,10 @@ export function StudioContent({
     return () => window.clearTimeout(id)
   }, [loaded, roomState.loaded, roomState.room.tutorialDone, avatarRef])
 
-  const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
+  // Stable per tab: the thumbnail hook keys its idle schedule on this identity.
+  const slotAssets = useMemo(() => activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot), [activeTab])
+  // Cards show their dot first; pictures arrive in idle-time chunks.
+  const thumbnails = useThumbnails(slotAssets, renderAssetThumbnail, assetThumbnailCache)
   const visibleAssets = slotAssets.filter((asset) => {
     const locked = isLocked(asset)
     if (filter === 'owned') return !locked
@@ -700,7 +708,9 @@ export function StudioContent({
                       ? 'YuviStudio.intro.station.room'
                       : !stations.avatar.placed
                         ? 'YuviStudio.intro.station.avatar'
-                        : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
+                        : !stations.gamelab.placed
+                          ? 'YuviStudio.intro.station.gamelab'
+                          : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
                     : introScene === 2
                       ? introAvatarChanged ? 'YuviStudio.intro.avatar.done' : introCheckFailed ? 'YuviStudio.intro.avatar.missing' : 'YuviStudio.intro.avatar.pick'
                       : `YuviStudio.intro.scene${introScene}`,
@@ -855,11 +865,19 @@ export function StudioContent({
             : menuStation === 'gamelab'
               ? { label: t('YuviStudio.zone.gamelab'), icon: 'gamepad', onClick: () => { setPropMenu(null); goToStation('gamelab') } }
               : undefined}
-          onMove={menuStation === 'avatar' ? undefined : () => startMove(propMenu.uid)}
+          /* Every station moves, the platform included; it is round, so only
+             the spin is meaningless for it. */
+          onMove={() => startMove(propMenu.uid)}
           onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
-          onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
+          /* The walk-in stations are doors, not furniture; the explore plinth
+             and the mission totem are decoration and can be put away. */
+          onRemove={menuStation
+            ? (menuStation === 'explore' || menuStation === 'mission'
+              ? () => { setPropMenu(null); roomState.removeStation(menuStation) }
+              : undefined)
+            : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
           colors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable ? ITEM_TINTS.slice(0, 5) : undefined}
           onTint={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
             ? (hex) => roomState.tint(menuItem!.uid, hex)
@@ -1129,7 +1147,7 @@ function RoomPanel({
       : ROOM_CATEGORIES.includes(category as RoomItemCategory) ? itemsInCategory(category as RoomItemCategory) : [],
     [category, surpriseRewards],
   )
-  const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
+  const roomThumbnails = useThumbnails(categoryItems, renderRoomThumbnail, roomThumbnailCache)
 
   const pick = (kind: string) => {
     if (full || isPropLocked(kind)) return

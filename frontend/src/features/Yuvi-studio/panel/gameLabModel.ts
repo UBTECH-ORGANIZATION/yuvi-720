@@ -58,6 +58,8 @@ export function isBusyStatus(status: GameStatus | string): boolean {
 export type BuildStage = 'queued' | 'thinking' | 'writing' | 'checking' | 'judging'
 /** The strip's nodes in order; `queued` sits before the first one. */
 export const BUILD_PIPE: BuildStage[] = ['thinking', 'writing', 'checking', 'judging']
+/** One glyph per stage — the strip's dots, in the studio and in the chat. */
+export const STAGE_ICON: Record<BuildStage, string> = { queued: '⏳', thinking: '🧠', writing: '✍️', checking: '🧪', judging: '⚖️' }
 
 const EVENT_STAGE: Record<string, BuildStage> = {
   plan: 'thinking', build: 'thinking', thinking: 'thinking',

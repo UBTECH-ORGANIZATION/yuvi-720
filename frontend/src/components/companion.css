@@ -634,6 +634,152 @@
   to { transform: translateX(120%); }
 }
 
+/* "Create" turned into "back": same button, the arrow says where it goes. */
+.sp-companion__games-create.is-back {
+  background: var(--sp-surface, #fff);
+}
+
+[dir='rtl'] .sp-companion__games-create.is-back .sp-icon {
+  transform: scaleX(-1);
+}
+
+/* The studio's wizard in the chat column: its `.ys-*` skin reads the chat's
+   palette through the `--ys-*` tokens, which the studio root normally sets. */
+.sp-companion__wizard {
+  --ys-panel-bg: var(--sp-surface, #fff);
+  --ys-surface: var(--sp-surface, #fff);
+  --ys-surface-hover: var(--sp-primary-050, #f4f1ff);
+  --ys-sunken: var(--sp-primary-050, #f4f1ff);
+  --ys-ink: var(--sp-ink-900, #241f3d);
+  --ys-ink-soft: var(--sp-ink-chat-meta, var(--sp-ink-400, #6b6880));
+  --ys-line: var(--sp-border, #e8e2f7);
+  --ys-accent: var(--sp-primary-600, #6f5bff);
+  --ys-accent-ink: var(--sp-primary-700, #4c39d6);
+  --ys-accent-soft: rgba(111, 91, 255, .12);
+  --ys-danger: var(--sp-danger-600, #ff5d73);
+  --ys-radius-card: 14px;
+  --ys-radius-ctl: 10px;
+  color: var(--ys-ink);
+}
+
+[data-theme='dark'] .sp-companion__wizard {
+  --ys-panel-bg: #1c1d38;
+  --ys-surface: #1c1d38;
+  --ys-surface-hover: #24264a;
+  --ys-sunken: #15162a;
+  --ys-ink: #eef0ff;
+  --ys-ink-soft: #9fa8c5;
+  --ys-line: rgba(166, 150, 255, .18);
+  --ys-accent: #8b78ff;
+  --ys-accent-ink: #d8d0ff;
+  --ys-accent-soft: rgba(118, 101, 245, .22);
+}
+
+/* The build strip on a busy card: four dots, the done ones ticked, the
+   current one lit and breathing (a transform-only pulse), the rest waiting. */
+.sp-companion__game-pipe {
+  display: flex;
+  align-items: flex-start;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-companion__game-pipe li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--sp-ink-chat-meta);
+  font: 700 10px/1.15 var(--sp-font);
+  text-align: center;
+}
+
+.sp-companion__game-pipe li::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 50%;
+  inline-size: 100%;
+  block-size: 2px;
+  background: var(--sp-border);
+}
+
+.sp-companion__game-pipe li:first-child::before {
+  display: none;
+}
+
+.sp-companion__game-pipe li.is-done::before,
+.sp-companion__game-pipe li.is-now::before {
+  background: var(--sp-primary-300, #b9c3ff);
+}
+
+.sp-companion__game-pipe i {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border: 2px solid var(--sp-border);
+  border-radius: 50%;
+  background: var(--sp-surface, #fff);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.sp-companion__game-pipe li.is-done i {
+  border-color: transparent;
+  background: var(--sp-gradient-soft);
+  color: #fff;
+  font-size: 12px;
+}
+
+.sp-companion__game-pipe li.is-now {
+  color: var(--sp-primary-700);
+}
+
+.sp-companion__game-pipe li.is-now i {
+  border-color: var(--sp-primary-500);
+  background: var(--sp-primary-050);
+  animation: sp-companion-pipe-pulse 1.6s var(--sp-ease) infinite;
+}
+
+.sp-companion__game-pipe li.is-next {
+  opacity: .5;
+}
+
+@keyframes sp-companion-pipe-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-companion__game-pipe li.is-now i {
+    animation-duration: 3.2s;
+  }
+}
+
+[data-theme='dark'] .sp-companion__games-create.is-back {
+  background: #1c1d38;
+}
+
+[data-theme='dark'] .sp-companion__game-pipe i {
+  background: #1c1d38;
+  border-color: rgba(166, 150, 255, .25);
+}
+
+[data-theme='dark'] .sp-companion__game-pipe li.is-now {
+  color: #d8d0ff;
+}
+
+[data-theme='dark'] .sp-companion__game-pipe li.is-now i {
+  background: #302957;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sp-companion__game-status.is-busy .sp-pill::after {
     animation: none;
@@ -2672,7 +2818,13 @@
 }
 
 /* Raise-hand, beside the send (#249). Its own warm identity — it calls a
-   person, not the model — and an armed state that reads as a question. */
+   person, not the model — and an armed state that reads as a question.
+
+   It starts LOCKED in a lesson (grey, `aria-disabled`, still in the tab order
+   so the tooltip can say why) and activates when Yuvi or a detector opens it:
+   a 300ms colour transition plus a one-shot pop and an expanding ring. All
+   motion here is transform/opacity on the button and its `::before` ring
+   (`::after` is the tooltip) — never box-shadow, never filter. */
 .sp-companion__handBtn {
   flex: none;
   position: relative;
@@ -2685,15 +2837,43 @@
   background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 10%, var(--sp-surface));
   color: var(--sp-warn-600, #b8860b);
   cursor: pointer;
+  transition:
+    color 300ms var(--sp-ease),
+    background-color 300ms var(--sp-ease),
+    border-color 300ms var(--sp-ease),
+    transform 200ms var(--sp-ease);
+}
+
+.sp-companion__handBtn::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  border: 2px solid var(--sp-warn-600, #b8860b);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sp-companion__handBtn:hover:not([aria-disabled='true']) {
   background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 18%, var(--sp-surface));
 }
 
+.sp-companion__handBtn:active:not([aria-disabled='true']) {
+  transform: scale(.96);
+}
+
 .sp-companion__handBtn.is-armed {
   background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 26%, var(--sp-surface));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-warn-600, #b8860b) 22%, transparent);
+}
+
+/* Locked: nobody has said a person is needed yet. Grey and quiet, not broken
+   — the tooltip (hover AND focus) says to keep working with Yuvi. */
+.sp-companion__handBtn.is-locked {
+  border-color: var(--sp-border-strong);
+  background: var(--sp-surface-2, var(--sp-surface));
+  color: var(--sp-ink-400);
+  cursor: not-allowed;
 }
 
 /* Already called: not merely dimmed, but visibly spent — a dashed, drained
@@ -2707,32 +2887,62 @@
   cursor: not-allowed;
 }
 
-/* While the hand is up (#450): a steady yellow glow that survives reload
-   (server truth), pulsing gently so "still raised" reads at a glance. The
-   button stays enabled — pressing it now takes the hand DOWN. */
+/* Activation: the colour transition above carries grey → yellow; the pop and
+   the ring are the one-shot cue that something just changed. */
+.sp-companion__handBtn.is-unlocking {
+  animation: sp-companion-hand-pop 700ms var(--sp-ease);
+}
+
+.sp-companion__handBtn.is-unlocking::before {
+  animation: sp-companion-hand-ring 700ms ease-out;
+}
+
+@keyframes sp-companion-hand-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); }
+  65% { transform: scale(.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes sp-companion-hand-ring {
+  0% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+/* While the hand is up (#450): a steady yellow state that survives reload
+   (server truth), with the ring breathing gently so "still raised" reads at a
+   glance. The button stays enabled — pressing it now takes the hand DOWN. */
 .sp-companion__handBtn.is-raised {
   color: var(--sp-warn-600);
   border-color: var(--sp-warn-600);
   background: var(--sp-warn-100);
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--sp-warn-600) 55%, transparent);
-  animation: spHandGlow 2.2s ease-in-out infinite;
 }
 
-@keyframes spHandGlow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--sp-warn-600) 40%, transparent);
-  }
-
-  50% {
-    box-shadow: 0 0 12px 4px color-mix(in srgb, var(--sp-warn-600) 60%, transparent);
-  }
+.sp-companion__handBtn.is-raised::before {
+  animation: sp-companion-hand-pulse 2.2s ease-in-out infinite;
 }
 
+@keyframes sp-companion-hand-pulse {
+  0%, 100% { opacity: .35; transform: scale(1); }
+  50% { opacity: 0; transform: scale(1.25); }
+}
+
+/* Reduced motion: gentler, not gone. The colour transition still says the
+   button opened; the pop, the ring and the breathing are dropped. */
 @media (prefers-reduced-motion: reduce) {
-  .sp-companion__handBtn.is-raised {
+  .sp-companion__handBtn,
+  .sp-companion__handBtn.is-unlocking,
+  .sp-companion__handBtn.is-unlocking::before,
+  .sp-companion__handBtn.is-raised::before {
     animation: none;
+  }
+
+  .sp-companion__handBtn:active:not([aria-disabled='true']) {
+    transform: none;
+  }
+
+  .sp-companion__handBtn.is-raised::before {
+    opacity: .35;
   }
 }
 

@@ -147,7 +147,14 @@ export interface CoachHistoryMessage {
   question_key?: string | null
   /** Server-classified intent of the learner request that produced this turn. */
   query_intent?: string | null
-  meta?: { actions?: CoachActionOffer[] }
+  meta?: { actions?: CoachActionOffer[]; teacher_suggestion?: CoachTeacherSuggestion }
+}
+
+/** The lesson coach opened the raise-hand button on this reply (reason only —
+ *  the model's evidence sentence stays server-side). */
+export interface CoachTeacherSuggestion {
+  reason: string
+  question_key?: string | null
 }
 
 export interface CoachConversationPage {
@@ -242,9 +249,19 @@ export function cancelCoachHandoff() {
   return apiPost<{ resolved: number }>('/api/agent/coach/handoff/cancel', {})
 }
 
-/** Server truth for the raised-hand glow — a reload must not lower it. */
+/** Server truth for the hand: raised (a reload must not lower the glow) and
+ *  unlocked (a reload must not re-lock a hand Yuvi opened). */
+export interface CoachHandoffState {
+  raised: boolean
+  since: string | null
+  unlocked: boolean
+  unlock_reason: string | null
+  unlock_source: string | null
+  unlock_question_key: string | null
+}
+
 export function getCoachHandoffState() {
-  return apiGet<{ raised: boolean; since: string | null }>('/api/agent/coach/handoff/state')
+  return apiGet<CoachHandoffState>('/api/agent/coach/handoff/state')
 }
 
 /** Tell presence where this client is, for the teacher's live view.
@@ -319,6 +336,7 @@ export async function streamAgent(
             pointer?: CoachPointerFrame
             tool_trace?: CoachToolTraceStep[]
             query_intent?: string
+            teacher_suggestion?: CoachTeacherSuggestion
             phase?: 'thinking' | 'speaking'
           }
           handlers.onEvent?.(parsed as Record<string, unknown>)
@@ -598,7 +616,13 @@ export interface Trigger {
     // A teacher sent praise. The frame says only that one exists — the words
     // are fetched from the store, so nothing on the wire can forge them.
     | 'kudos'
+    // The raise-hand gate: Yuvi or a detector opened the button for this
+    // question; the teacher marked the request handled.
+    | 'hand_unlock' | 'hand_resolved'
     | '_heartbeat'
+  /** `hand_unlock` only: why the button opened and who decided. */
+  reason?: string | null
+  source?: 'coach' | 'detector' | null
   /** 720 misconception response: a same-objective component in a different
    *  representation the learner can switch to (video instead of text, …). */
   alternative?: TriggerAlternative

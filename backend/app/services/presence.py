@@ -114,6 +114,11 @@ def _blank(learner_id: str) -> dict[str, Any]:
         "lesson_entered_at": None,
         "struggling": None,
         "help_requested_at": None,
+        # The raise-hand gate: `{question_key, reason, source, at}` while Yuvi
+        # (or a detector) has opened the hand on the current question, else
+        # None. Durable so a reload keeps the button open; capped by age like
+        # the hand itself, and cleared by the next screen change.
+        "hand_unlock": None,
         # The catalog's name (and subject key) for the learning the client
         # reports being on (lesson screen only). Display-level, server-side.
         "surface_title": None,
@@ -156,6 +161,10 @@ STALE_ONLINE_SECONDS = 900.0
 # is a phantom (a stale persisted row with nothing left to lower it did exactly
 # that: the clear's best-effort persist failed once and the wave was permanent).
 HAND_STALE_SECONDS = 4 * 3600.0
+# An unlock is a judgement about the question in front of the child right now.
+# Shorter than the hand: a persisted unlock from yesterday's lesson must not
+# open the button on today's first screen before any screen change clears it.
+HAND_UNLOCK_STALE_SECONDS = 2 * 3600.0
 
 
 def _cap_hand(row: dict[str, Any]) -> dict[str, Any]:
@@ -164,6 +173,12 @@ def _cap_hand(row: dict[str, Any]) -> dict[str, Any]:
         and _seconds_since(row["help_requested_at"]) > HAND_STALE_SECONDS
     ):
         row["help_requested_at"] = None
+    unlock = row.get("hand_unlock")
+    if (
+        isinstance(unlock, dict)
+        and _seconds_since(unlock.get("at")) > HAND_UNLOCK_STALE_SECONDS
+    ):
+        row["hand_unlock"] = None
     return row
 
 
@@ -330,6 +345,7 @@ def note_disconnection(learner_id: str) -> None:
 _DURABLE_ON_BOOT = (
     "last_seen_at",
     "help_requested_at",
+    "hand_unlock",
     "component_id", "unit_id", "objective_id",
     "subject", "unit_title", "objective_title",
     "session_id",
@@ -634,6 +650,32 @@ def clear_help_requested(learner_id: str) -> None:
     """
     entry = _entry(learner_id)
     entry["help_requested_at"] = None
+    _changed(learner_id, persist=True)
+
+
+def note_hand_unlocked(
+    learner_id: str, *, question_key: Optional[str], reason: str, source: str
+) -> dict[str, Any]:
+    """Open the raise-hand button for this question (the gate's server truth)."""
+    entry = _entry(learner_id)
+    entry["hand_unlock"] = {
+        "question_key": question_key,
+        "reason": reason,
+        "source": source,
+        "at": _now(),
+    }
+    _changed(learner_id, persist=True)
+    return dict(entry["hand_unlock"])
+
+
+def clear_hand_unlock(learner_id: str) -> None:
+    """Re-lock the hand: the question moved on, the hand was raised, or the
+    teacher resolved it. Quiet when nothing is open — this runs on every screen
+    change and must not cost a persist each time."""
+    entry = _entry(learner_id)
+    if entry.get("hand_unlock") is None:
+        return
+    entry["hand_unlock"] = None
     _changed(learner_id, persist=True)
 
 

@@ -435,10 +435,13 @@ async def _set_status(teacher_id: str, alert_key: str, status: str) -> Optional[
         if existing.get("kind") in {"coach_handoff", "safety_flag", "help_requested"}:
             from app.services import presence
             presence.clear_help_requested(existing["learner_id"])
+            # The gate too: "handled" means the moment Yuvi opened the hand for
+            # is over. If the child is still stuck, the next signal reopens it.
+            presence.clear_hand_unlock(existing["learner_id"])
             # Tell the child, too: their raise-hand button sits behind a client
             # cooldown after a delivered request, and the teacher marking it
-            # handled is exactly the moment that lock should open — so they can
-            # call again if they are still stuck.
+            # handled is exactly the moment that cooldown should end — so they
+            # can call again once the hand is opened for them again.
             realtime.publish(
                 f"learner:{existing['learner_id']}", {"type": "hand_resolved"}
             )

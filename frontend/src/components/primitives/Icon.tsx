@@ -30,6 +30,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
   inbox: <><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M4 13 6 5h12l2 8v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
   trash: <><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></>,
+  heart: <path d="M12 20.5s-7.5-4.6-9.3-9.4C1.6 8 3.6 4.9 6.8 4.9c1.9 0 3.5 1 4.4 2.5.9-1.5 2.5-2.5 4.4-2.5 3.2 0 5.2 3.1 4.1 6.2C19.5 15.9 12 20.5 12 20.5z" />,
   calculator: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8" /><path d="M8 11h.01M12 11h.01M16 11h.01M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h4" /></>,
   document: <><path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></>,
   chevronLeft: <path d="m14 6-6 6 6 6" />,

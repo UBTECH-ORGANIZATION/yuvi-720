@@ -14,14 +14,18 @@
  * Performance rules of the house:
  *  - one shadow-casting light, everything else is baked into emissive/additive
  *  - geometries and materials are shared between repeated props
- *  - `quality: 'low'` drops the props, the motes and the shadow map
+ *  - `quality: 'medium'` drops the props and the shadow map, `'low'` also the
+ *    motes, the clearcoat materials and most of the lights (see setQuality)
  */
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
-import yuviMarkUrl from '../../assets/yuvi-favicon.png'
+import yuviMarkUrl from '../../assets/yuvi-badge.webp'
+import { detectRenderTier, type RenderTier } from './renderTier'
+import { shellMaterial } from './tierMaterials'
 import { DEFAULT_STATIONS, STATION_IDS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
-export type LabRoomQuality = 'high' | 'low'
+/** Same three steps as the avatar's render tier; `high` is the reference look. */
+export type LabRoomQuality = RenderTier
 
 export interface LabRoomOptions {
   quality?: LabRoomQuality
@@ -74,7 +78,12 @@ export interface LabRoom {
   bounds: LabRoomBounds
   /** The one light that casts a shadow — callers point it at their character. */
   keyLight: THREE.SpotLight
-  update: (t: number, dt: number) => void
+  /** `frustum` is the camera's view this frame; screens outside it skip their
+   *  repaint. Optional — without it every screen paints on its own clock. */
+  update: (t: number, dt: number, frustum?: THREE.Frustum | null) => void
+  /** Bumps whenever a prop, station or ghost is placed, moved or removed —
+   *  the caller's shadow-map gate keys on it. */
+  layoutVersion: () => number
   /** Assembly flash: a light ring and a puff of energy motes at a world point. */
   burst: (position: THREE.Vector3) => void
   /** Retint the LEDs, hologram edges and floor bounce. */
@@ -107,7 +116,17 @@ export interface LabRoom {
   stationAnchor: (id: StationId) => THREE.Vector3
   /** Drive the Game Lab desk: idle code rain, a building pulse, a ready flash. */
   setGameLabState: (state: GameLabState) => void
+  /** Runtime-safe tier change: the light budget and the motes. Returns what the
+   *  caller's own rig should do to make up for the lights that went out. */
+  setQuality: (quality: LabRoomQuality) => LabRoomHemiHint
   dispose: () => void
+}
+
+/** How much the caller's hemisphere light should rise, and toward which colour,
+ *  when the room turns its zone lights off. Zero on high. */
+export interface LabRoomHemiHint {
+  boost: number
+  tint: THREE.ColorRepresentation | null
 }
 
 /**
@@ -160,21 +179,22 @@ export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.
 export const PROP_SCALE = 1.75
 
 /**
- * Cheap capability probe. Weak machines get the reduced-effects room instead of
- * a slideshow; `prefers-reduced-motion` also implies "keep it calm".
+ * Capability probe. Delegates to the avatar's tier detection so the room and
+ * the robot standing in it never disagree about what the GPU can do.
  */
 export function detectLabQuality(): LabRoomQuality {
-  if (typeof window === 'undefined') return 'low'
-  const nav = window.navigator as any
-  if (nav?.deviceMemory && nav.deviceMemory <= 4) return 'low'
-  if (nav?.hardwareConcurrency && nav.hardwareConcurrency <= 4) return 'low'
-  if (window.matchMedia?.('(max-width: 720px)').matches) return 'low'
-  return 'high'
+  return detectRenderTier().tier
 }
 
 export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = {}): LabRoom {
   const quality: LabRoomQuality = options.quality ?? 'high'
-  const rich = quality === 'high'
+  // `rich` is the full room: every prop, texture size and geometry segment
+  // count that makes high the reference look. Medium keeps ALL of it — it is
+  // the same room at a lower pixel ratio with no shadow map, fewer lights and
+  // fewer motes (those are tier settings, decided elsewhere). Only low, the
+  // integrated-GPU floor, gets the reduced room. Every `rich ?` branch keeps
+  // its high-side value untouched.
+  const rich = quality !== 'low'
   const reduceMotion = options.reduceMotion ?? false
   const deckY = options.deckY ?? -0.92
   const accent = new THREE.Color(options.accent ?? VIOLET)
@@ -231,6 +251,45 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     const texture = new THREE.CanvasTexture(canvas)
     texture.colorSpace = THREE.SRGBColorSpace
     return track(texture)
+  }
+
+  // ── Repainted screens ────────────────────────────────────────────────────
+  // Every animated readout shares one budget: a repaint rate per tier on a dt
+  // accumulator (a hitch never queues catch-up paints), no paint while the
+  // mesh is outside the camera, and an upload only when the paint changed.
+  // High keeps its mipmaps — the monitor is a hand's width on screen and the
+  // glyphs would shimmer without them; the other tiers trade that for not
+  // regenerating a mip chain on every upload.
+  const SCREEN_FPS = quality === 'high'
+    ? { idle: 8, busy: 24, kiosk: 12 }
+    : quality === 'medium' ? { idle: 6, busy: 12, kiosk: 6 } : { idle: 4, busy: 8, kiosk: 4 }
+  let viewFrustum: THREE.Frustum | null = null
+  const makeScreen = (canvas: HTMLCanvasElement) => {
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    if (quality !== 'high') {
+      texture.generateMipmaps = false
+      texture.minFilter = THREE.LinearFilter
+    }
+    track(texture)
+    let acc = 0
+    let lastKey = ''
+    let mesh: THREE.Object3D | null = null
+    /** True when the caller should paint now; the upload rides the next render.
+     *  `key` names the content: an identical key means nothing to redraw. */
+    const due = (dt: number, fps: number, key: string) => {
+      acc = Math.min(acc + dt, 1)
+      if (acc < 1 / fps) return false
+      // Off camera the clock keeps its charge, so the screen repaints the
+      // moment it swings back into view rather than a beat later.
+      if (mesh && viewFrustum && !viewFrustum.intersectsObject(mesh)) return false
+      acc = 0
+      if (key === lastKey) return false
+      lastKey = key
+      texture.needsUpdate = true
+      return true
+    }
+    return { texture, due, attach: (m: THREE.Object3D) => { mesh = m } }
   }
 
   /** Per-vertex alpha for additive meshes: black edges dissolve into the room. */
@@ -310,7 +369,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   addWall(DEPTH, CEIL_Y - FLOOR_Y, [HALF_X, (CEIL_Y + FLOOR_Y) / 2, MID_Z], -Math.PI / 2)
 
   // Polished floor. Deliberately unlit: any PBR deck under this rig picks up
-  // the environment probe and the fills and settles into the flat mid-grey that
+  // the environment probe and the fills and settles into the flat rich-grey that
   // made the room read like a 3D viewport. Painting the deck instead gives
   // exact control — a near-black slab with a soft warm-to-cool falloff and a
   // wet sheen towards the window — and the additive pools, zone rings and
@@ -447,7 +506,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   platform.add(podium)
 
   const baseGeo = track(new THREE.CylinderGeometry(1.24, 1.34, 0.13, 56))
-  const baseMat = track(new THREE.MeshPhysicalMaterial({
+  const baseMat = track(shellMaterial(rich, {
     color: 0x211f4e, roughness: 0.34, metalness: 0.62,
     clearcoat: 1, clearcoatRoughness: 0.22, envMapIntensity: 1,
   }))
@@ -457,7 +516,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   podium.add(base)
 
   const deckGeo = track(new THREE.CylinderGeometry(1.16, 1.16, 0.05, 56))
-  const deckMat = track(new THREE.MeshPhysicalMaterial({
+  const deckMat = track(shellMaterial(rich, {
     color: 0x171441, roughness: 0.05, metalness: 0.8,
     clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.4,
   }))
@@ -542,14 +601,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const darkMat = track(new THREE.MeshStandardMaterial({ color: 0x11142f, roughness: 0.68, metalness: 0.4, envMapIntensity: 0.35 }))
   // Four distinct surfaces instead of one plastic. Brushed steel, dark wood and
   // glass are what stop the props reading as untextured blockout geometry.
-  const brushedMat = track(new THREE.MeshPhysicalMaterial({
+  const brushedMat = track(shellMaterial(rich, {
     color: 0x39406e, roughness: 0.34, metalness: 0.95,
     clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.9,
   }))
   const woodMat = track(new THREE.MeshStandardMaterial({
     color: WOOD, roughness: 0.74, metalness: 0.04, envMapIntensity: 0.25,
   }))
-  const glassMat = track(new THREE.MeshPhysicalMaterial({
+  const glassMat = track(shellMaterial(rich, {
     color: 0x9fd8ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.15,
     clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.6, side: THREE.DoubleSide,
   }))
@@ -754,7 +813,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     updaters.push((t) => { artefact.rotation.y = t * 0.35 })
 
     // ── MISSION ────────────────────────────────────────────────────────────
-    // A kiosk angled at the platform, mid-ground on the right. It reads as the
+    // A kiosk angled at the platform, rich-ground on the right. It reads as the
     // secondary focus: something is waiting to be done.
     mission = new THREE.Group()
     mission.position.set(MISSION_AT[0], FLOOR_Y, MISSION_AT[1])
@@ -775,6 +834,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     const kiosk = new THREE.Mesh(track(new THREE.PlaneGeometry(1.04, 1.5)), missionScreen.material)
     kiosk.position.set(0, 1.16, 0.11)
     totem.add(kiosk)
+    missionScreen.attach(kiosk)
     const kioskGlow = new THREE.Mesh(track(new THREE.PlaneGeometry(1.7, 2.2)), track(new THREE.MeshBasicMaterial({
       map: radialTexture('rgba(150,180,255,0.35)', 'rgba(150,180,255,0)'),
       transparent: true, opacity: 0.5, depthWrite: false,
@@ -822,11 +882,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const rain = (() => {
     const W = rich ? 384 : 256, H = rich ? 240 : 160
     const { canvas, ctx } = canvasOf(W, H)
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.colorSpace = THREE.SRGBColorSpace
-    track(texture)
+    const screen = makeScreen(canvas)
     const material = track(new THREE.MeshBasicMaterial({
-      map: texture, transparent: true, opacity: 0.96, toneMapped: false, side: THREE.DoubleSide,
+      map: screen.texture, transparent: true, opacity: 0.96, toneMapped: false, side: THREE.DoubleSide,
     }))
     const GLYPHS = '0123456789+−×÷=<>≠√π{}[]()%'
     // Big glyphs: the monitor is a hand's width on screen, so the rain has
@@ -948,14 +1006,16 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       ] as Array<[number, number, number, number]>) {
         ctx.beginPath(); ctx.moveTo(x + sx * arm, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * arm); ctx.stroke()
       }
-      texture.needsUpdate = true
     }
+    // The first paint is the static frame the tier-gated ticker builds on.
+    screen.texture.needsUpdate = true
     paint(0, 0, 0, 0)
-    return { material, paint }
+    return { material, paint, due: screen.due, attach: screen.attach }
   })()
   const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.94, 0.56)), rain.material)
   screen.position.set(0, 1.38, -0.19)
   gamelab.add(screen)
+  rain.attach(screen)
 
   // Glass over the panel: a fixed reflection along the top edge, and a
   // diagonal sheen that slides across while a game builds — the screen reads
@@ -1019,12 +1079,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   let gameLabMode: 'idle' | 'building' = 'idle'
   let gameLabFlashAt = -10
   let gameLabNow = 0
-  let gameLabLastPaint = -1
   const setGameLabState = (state: GameLabState) => {
     if (state === 'ready') { gameLabFlashAt = gameLabNow; return }
     gameLabMode = state
   }
-  updaters.push((t) => {
+  updaters.push((t, dt) => {
     gameLabNow = t
     const building = gameLabMode === 'building'
     const lift = building ? 1 : 0
@@ -1038,11 +1097,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     screenSheenMat.opacity = building ? 0.42 + pulse * 0.15 : 0.22
     screenSheenTex.offset.x = building && !reduceMotion ? -((t * 0.22) % 1) : 0.15
     // The rain repaints at up to 24 fps while building, slower idle, and
-    // barely at all on weak machines — never per frame.
-    const fps = rich ? (building ? 24 : 8) : (building ? 8 : 3)
-    if (t - gameLabLastPaint >= 1 / fps) {
-      gameLabLastPaint = t
-      rain.paint(t, building ? 1 : 0, flash, reduceMotion ? (building ? 0.5 : 0) : pulse)
+    // slower again on weak machines — never per frame. The falling columns
+    // are the one thing that always ticks, so the paint key carries `t`.
+    const energy = building ? 1 : 0
+    const beat = reduceMotion ? (building ? 0.5 : 0) : pulse
+    if (rain.due(dt, building ? SCREEN_FPS.busy : SCREEN_FPS.idle, `${t}|${energy}|${flash.toFixed(2)}|${beat.toFixed(2)}`)) {
+      rain.paint(t, energy, flash, beat)
     }
   })
 
@@ -1088,7 +1148,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     ctx.fillStyle = sun
     ctx.fillRect(0, 0, W, H)
 
-    // Three silhouette layers: distant ridge, mid skyline, near towers.
+    // Three silhouette layers: distant ridge, rich skyline, near towers.
     const layer = (baseY: number, height: number, step: number, fill: string, lights: string | null) => {
       ctx.fillStyle = fill
       ctx.beginPath()
@@ -1459,16 +1519,19 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   /**
    * Mission kiosk readout: a target, a sweep, and three step markers. Purely
    * graphic — no glyphs, so the room never needs translating, and no numbers,
-   * so it can never imply a score. Repainted at 12fps, not every frame.
+   * so it can never imply a score. Repainted at 12fps on high, slower below,
+   * never every frame.
    */
   function missionScreenMat() {
+    // Drawn in a fixed 220×320 layout; the low tier only shrinks the pixels
+    // under it, so every mark keeps its place and its proportion.
     const W = 220, H = 320
-    const { canvas, ctx } = canvasOf(W, H)
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.colorSpace = THREE.SRGBColorSpace
-    track(texture)
+    const scale = quality === 'low' ? 0.8 : 1
+    const { canvas, ctx } = canvasOf(Math.round(W * scale), Math.round(H * scale))
+    ctx.setTransform(scale, 0, 0, scale, 0, 0)
+    const screen = makeScreen(canvas)
     const material = track(new THREE.MeshBasicMaterial({
-      map: texture, transparent: true, opacity: 0.94, toneMapped: false, side: THREE.DoubleSide,
+      map: screen.texture, transparent: true, opacity: 0.94, toneMapped: false, side: THREE.DoubleSide,
     }))
 
     const cx = W / 2, cy = H * 0.42, r = W * 0.3
@@ -1543,19 +1606,16 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       ] as Array<[number, number, number, number]>) {
         ctx.beginPath(); ctx.moveTo(x + sx * arm, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * arm); ctx.stroke()
       }
-      texture.needsUpdate = true
     }
 
+    screen.texture.needsUpdate = true
     paint(0)
-    let acc = 0
+    // Reduced motion holds the first frame: a constant key means the readout
+    // is painted once and never uploaded again.
     const update = (t: number, dt: number) => {
-      if (reduceMotion) return
-      acc += dt
-      if (acc < 1 / 12) return
-      acc = 0
-      paint(t)
+      if (screen.due(dt, SCREEN_FPS.kiosk, reduceMotion ? 'still' : String(t))) paint(t)
     }
-    return { material, update }
+    return { material, update, attach: screen.attach }
   }
 
   // ── Holographic projectors ───────────────────────────────────────────────
@@ -1664,7 +1724,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const projectorSpecs = rich
     ? [
         { pos: [0, 0.98, 0] as [number, number, number], radius: 0.26, height: 0.72, color: 0xffb374, detail: 0, spin: 0.3, phase: 0, parent: bench },
-        { pos: [EXPLORE_AT[0], FLOOR_Y + 1.08, EXPLORE_AT[1]] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9 },
+        // Parented to the plinth so it moves, hides and is picked with it —
+        // unparented it stayed behind in mid-air when the plinth was moved.
+        explore
+          ? { pos: [0, 1.08, 0] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9, parent: explore }
+          : { pos: [EXPLORE_AT[0], FLOOR_Y + 1.08, EXPLORE_AT[1]] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9 },
       ]
     : [
         { pos: [-6.1, FLOOR_Y, -6.68] as [number, number, number], radius: 0.5, height: 1.6, color: 0x7fe4ff, detail: 1, spin: 0.2, phase: 0 },
@@ -1722,7 +1786,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // ── Ambient motes ────────────────────────────────────────────────────────
   let motes: THREE.Points | null = null
   let moteSpeeds: Float32Array | null = null
-  const MOTES = reduceMotion ? 0 : rich ? 170 : 60
+  // High keeps its 170; medium the 60 the reduced room always had; low none —
+  // a Points draw with a per-frame attribute upload is not free on a UHD 620.
+  const MOTES = reduceMotion ? 0 : quality === 'high' ? 170 : quality === 'medium' ? 60 : 0
   if (MOTES > 0) {
     const positions = new Float32Array(MOTES * 3)
     moteSpeeds = new Float32Array(MOTES)
@@ -1747,7 +1813,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // ── Assembly burst ───────────────────────────────────────────────────────
   // Equipping a part fires a ring of light and a puff of energy motes at the
   // slot, so an upgrade lands as an event instead of a silent swap.
-  const BURST_N = rich ? 64 : 24
+  const BURST_N = quality === 'high' ? 64 : quality === 'medium' ? 40 : 24
   const burstPositions = new Float32Array(BURST_N * 3)
   const burstVelocities = new Float32Array(BURST_N * 3)
   const burstGeo = track(new THREE.BufferGeometry())
@@ -1826,8 +1892,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   )
 
   const decorBlockers = (): LabRoomCircle[] => [
-    { x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore },
-    { x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission },
+    ...(stations.explore.placed ? [{ x: stations.explore.x, z: stations.explore.z, radius: STATION_RADIUS.explore }] : []),
+    ...(stations.mission.placed ? [{ x: stations.mission.x, z: stations.mission.z, radius: STATION_RADIUS.mission }] : []),
     ...(stations.gamelab.placed ? [{ x: stations.gamelab.x, z: stations.gamelab.z, radius: STATION_RADIUS.gamelab }] : []),
   ]
 
@@ -1868,7 +1934,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
     }))
     if (zone.id === 'avatar') {
-      // A head and a halo: "this is where you change Yuvi".
+      // A head and a halo: "this is where you change Yuvi" — the platform's
+      // own sign, like the house over the bench and the monitor over the desk.
       const head = new THREE.Mesh(track(new THREE.SphereGeometry(0.16, 18, 12)), markerMat)
       head.position.y = 0.06
       marker.add(head)
@@ -1896,15 +1963,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       roof.rotation.y = Math.PI / 4
       marker.add(roof)
     }
-    if (zone.id === 'avatar') {
-      // The light column belongs to the platform; the bench is its own landmark.
-      const beacon = new THREE.Mesh(track(new THREE.CylinderGeometry(0.05, 0.32, 1.9, 16, 1, true)), track(new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending,
-        depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      })))
-      beacon.position.y = -1.05
-      marker.add(beacon)
-    }
 
     zonePads.set(zone.id, { ring, ringMat, marker, glow, glowMat, color, radius: pad.radius, markerY: pad.markerY })
   }
@@ -1913,7 +1971,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
    * Move a station and everything that belongs to it: the object, its pad, its
    * sign, the zone the learner walks into, and the footprint others avoid.
    */
+  // Counts layout edits (props, stations, the ghost) for the caller's shadow gate.
+  let layoutEdits = 0
+  const layoutVersion = () => layoutEdits
+
   const setStations = (next: RoomStations) => {
+    layoutEdits++
     stations.avatar = { ...next.avatar }
     stations.room = { ...next.room }
     stations.explore = { ...next.explore }
@@ -1926,11 +1989,13 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     bench.rotation.y = stations.room.rot
     bench.visible = stations.room.placed
     explore?.position.set(stations.explore.x, FLOOR_Y, stations.explore.z)
-    if (explore) explore.rotation.y = stations.explore.rot
+    if (explore) { explore.rotation.y = stations.explore.rot; explore.visible = stations.explore.placed }
     mission?.position.set(stations.mission.x, FLOOR_Y, stations.mission.z)
-    if (mission) mission.rotation.y = stations.mission.rot
+    if (mission) { mission.rotation.y = stations.mission.rot; mission.visible = stations.mission.placed }
     exploreShadow?.position.set(stations.explore.x, FLOOR_Y + 0.006, stations.explore.z)
+    if (exploreShadow) exploreShadow.visible = stations.explore.placed
     missionShadow?.position.set(stations.mission.x, FLOOR_Y + 0.006, stations.mission.z)
+    if (missionShadow) missionShadow.visible = stations.mission.placed
     gamelab.position.set(stations.gamelab.x, FLOOR_Y, stations.gamelab.z)
     gamelab.rotation.y = stations.gamelab.rot
     gamelab.visible = stations.gamelab.placed
@@ -1999,6 +2064,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   const setUserItems = (items: RoomItem[]) => {
+    layoutEdits++
     const seen = new Set<string>()
     for (const item of items) {
       seen.add(item.uid)
@@ -2043,8 +2109,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const pickStation = (raycaster: THREE.Raycaster): StationId | null => {
     if (stations.avatar.placed && raycaster.intersectObject(podium, true).length) return 'avatar'
     if (stations.room.placed && raycaster.intersectObject(bench, true).length) return 'room'
-    if (explore && raycaster.intersectObject(explore, true).length) return 'explore'
-    if (mission && raycaster.intersectObject(mission, true).length) return 'mission'
+    if (explore && stations.explore.placed && raycaster.intersectObject(explore, true).length) return 'explore'
+    if (mission && stations.mission.placed && raycaster.intersectObject(mission, true).length) return 'mission'
     if (stations.gamelab.placed && raycaster.intersectObject(gamelab, true).length) return 'gamelab'
     return null
   }
@@ -2185,9 +2251,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
   const setGhost = (kind: string | null, x = 0, z = 0, rot = 0, valid = true, tint?: string) => {
     if (!kind) {
+      if (ghostGroup.visible) layoutEdits++
       ghostGroup.visible = false
       return
     }
+    layoutEdits++
     const key = `${kind}:${tint ?? ''}`
     if (key !== ghostKind) {
       if (ghostBody) ghostBodyHolder.remove(ghostBody)
@@ -2389,7 +2457,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     burstLight.color.copy(accent)
   }
 
-  const update = (t: number, dt: number) => {
+  const update = (t: number, dt: number, frustum: THREE.Frustum | null = null) => {
+    viewFrustum = frustum
     if (!reduceMotion) {
       for (const built of builtItems.values()) {
         if (built.kind !== 'weekly_surprise_covered' && built.kind !== 'weekly_surprise_ready') continue
@@ -2461,6 +2530,35 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     for (const fn of updaters) fn(t, dt)
   }
 
+  // ── Light budget ─────────────────────────────────────────────────────────
+  // Every light is built once, above, whatever the tier; the budget only flips
+  // `visible`. Three recompiles every program when the number of lights
+  // changes, so this is decided per tier change and never per frame.
+  //   high   — all of them (this is the reference look; nothing is touched)
+  //   medium — no window bounce, no screen bounce, no burst flash
+  //   low    — key + the platform and bench points; the rim, the explore cool
+  //            fill and the rest go dark and the caller lifts its hemisphere
+  const applyLightBudget = (q: LabRoomQuality) => {
+    const high = q === 'high'
+    const notLow = q !== 'low'
+    keyLight.visible = true
+    accentLight.visible = true
+    warmLight.visible = true
+    rimLight.visible = notLow
+    coolLight.visible = notLow
+    windowLight.visible = high
+    if (screenLight) screenLight.visible = high
+    burstLight.visible = high
+    if (motes) motes.visible = notLow
+  }
+  const setQuality = (q: LabRoomQuality): LabRoomHemiHint => {
+    applyLightBudget(q)
+    if (q === 'high') return { boost: 0, tint: null }
+    if (q === 'medium') return { boost: 0.12, tint: null }
+    return { boost: 0.3, tint: 0x93a9ff }
+  }
+  applyLightBudget(quality)
+
   const dispose = () => {
     scene.remove(group)
     group.traverse((obj: any) => {
@@ -2473,8 +2571,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   return {
-    group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
+    group, quality, deckY, bounds, keyLight, update, layoutVersion, burst, setAccent, dispose,
     zones: ZONES, setZoneHighlight, setUserItems, setGhost, setTarget, setRoomStyle, blockers, noBuildZones,
-    setStations, pickItem, pickStation, itemAnchor, stationAnchor, setGameLabState,
+    setStations, pickItem, pickStation, itemAnchor, stationAnchor, setGameLabState, setQuality,
   }
 }

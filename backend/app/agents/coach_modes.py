@@ -113,6 +113,37 @@ TEACHER_CHAT_ACTION_REPLY_INSTRUCTIONS = {
 }
 
 
+# Applied only after the lesson coach opened the raise-hand button. The tool
+# itself contacts nobody, so the sentence must not promise a person is coming —
+# it says the door is open and the choice is the child's.
+TEACHER_HELP_REPLY_INSTRUCTIONS = {
+    "he": (
+        "זה עתה נפתח ללומד/ת כפתור \"לקרוא למורה\" ליד תיבת ההודעה. הוסף/הוסיפי לתשובה "
+        "משפט אחד קצר וחם שאומר שאפשר עכשיו לקרוא למורה דרך הכפתור, ושזו בחירה — לא חובה. "
+        "אל תבטיח/י שמורה מגיע/ה, אל תאמר/י שיצרת קשר עם מישהו, ואל תתאר/י איפה הכפתור "
+        "או איך לוחצים עליו. המשך/י ללוות את הלומד/ת בשאלה כרגיל."
+    ),
+    "ar": (
+        "فُتح للتوّ للطالب/ة زر \"مناداة المعلّم/ة\" بجانب صندوق الرسالة. أضف/أضيفي إلى الرد "
+        "جملة واحدة قصيرة ودافئة تقول إنّه يمكن الآن مناداة المعلّم/ة عبر الزر، وإنّ ذلك خيار — "
+        "لا واجب. لا تعِد/ي بأنّ معلّمًا/ة قادم/ة، ولا تقُل/تقولي إنّك تواصلت مع أحد، ولا تصف/ي "
+        "مكان الزر أو طريقة الضغط عليه. واصل/ي مرافقة الطالب/ة في السؤال كالمعتاد."
+    ),
+    "en": (
+        "The \"call the teacher\" button next to the message box was just opened for the learner. "
+        "Add one short, warm sentence saying they can now call the teacher through the button, and "
+        "that it is their choice, not a must. Do not promise a teacher is coming, do not say you "
+        "contacted anyone, and do not describe where the button is or how to press it. Keep "
+        "coaching the learner on the question as usual."
+    ),
+}
+
+
+def teacher_help_reply_instruction(language: str) -> str:
+    """Return the reply boundary for a turn that opened the raise-hand button."""
+    return TEACHER_HELP_REPLY_INSTRUCTIONS.get(language, TEACHER_HELP_REPLY_INSTRUCTIONS["he"])
+
+
 def navigation_action_reply_instruction(language: str, action_id: str) -> str:
     """Return the reply boundary appropriate for the offered navigation action."""
     if action_id == "open_teacher_chat":

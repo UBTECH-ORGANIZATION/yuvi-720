@@ -35,7 +35,9 @@ let starting = false
 /* Calls made before the SDK finishes loading are not lost — the first seconds
    of a session are precisely the slow part we care about. Bounded so a failed
    init can never grow without limit. */
-type PendingEvent = { kind: 'metric'; name: string; value: number; props: Record<string, unknown> }
+type PendingEvent =
+  | { kind: 'metric'; name: string; value: number; props: Record<string, unknown> }
+  | { kind: 'event'; name: string; props: Record<string, unknown> }
 const pending: PendingEvent[] = []
 const PENDING_LIMIT = 100
 
@@ -96,7 +98,8 @@ function flushPending() {
   if (!client) return
   while (pending.length) {
     const event = pending.shift()!
-    client.trackMetric({ name: event.name, average: event.value }, event.props)
+    if (event.kind === 'event') client.trackEvent({ name: event.name }, event.props)
+    else client.trackMetric({ name: event.name, average: event.value }, event.props)
   }
 }
 
@@ -125,6 +128,19 @@ export function trackApiCall(method: string, path: string, ms: number, status: n
 /** Time anything else worth naming: a 3D scene mounting, a lesson opening. */
 export function trackTiming(name: string, ms: number, props: Record<string, unknown> = {}) {
   record(`spark.timing.${name}`, ms, props)
+}
+
+/** A named fact with no duration — which render tier the studio picked, say.
+ *
+ * Same pending queue as the metrics: the tier decision is made in the first
+ * second of a studio open, long before the SDK has loaded. Props follow the
+ * same privacy rule as everything else here: device facts, never learner facts. */
+export function trackEvent(name: string, props: Record<string, unknown> = {}) {
+  if (client) {
+    client.trackEvent({ name: `spark.${name}` }, props)
+    return
+  }
+  if (pending.length < PENDING_LIMIT) pending.push({ kind: 'event', name: `spark.${name}`, props })
 }
 
 /** Report a handled failure without leaking its message.

@@ -297,6 +297,8 @@ async def create_game(
         "status": "queued",
         "current_version": 0,
         "versions": [],
+        # The learner's own mark: "this one I like". Filters the shelf, nothing else.
+        "liked": False,
         "thumb_blob_path": None,
         # The last runtime errors the player reported — what a fix job starts
         # from, and what the card shows under "Yuvi noticed a bug".

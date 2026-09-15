@@ -388,6 +388,21 @@ class GamesRoutesTest(unittest.TestCase):
         # Deleting does not refund the daily cap.
         self.assertEqual(self._run(store.count_created_today(LEARNER)), 1)
 
+    def test_like_is_the_learners_mark_and_rides_the_list(self):
+        gid = self._create()["game_id"]
+        self.assertFalse(self.client.get(f"/api/games/{gid}").json()["liked"])
+        liked = self.client.post(f"/api/games/{gid}/like", json={"liked": True})
+        self.assertEqual(liked.status_code, 200, liked.text)
+        self.assertTrue(liked.json()["liked"])
+        # The list carries it, and the subject the shelf filters on.
+        row = self.client.get("/api/games").json()["games"][0]
+        self.assertTrue(row["liked"])
+        self.assertIn("subject", row)
+        # Unmark; an empty body means "like" (the button's common case).
+        self.assertFalse(self.client.post(f"/api/games/{gid}/like", json={"liked": False}).json()["liked"])
+        self.assertTrue(self.client.post(f"/api/games/{gid}/like").json()["liked"])
+        self.assertEqual(self.client.post("/api/games/nope/like", json={"liked": True}).status_code, 404)
+
     # ── queue modes ──────────────────────────────────────────────────────────
 
     def test_service_bus_failure_marks_the_job_and_game_failed(self):

@@ -2,20 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { navigate } from '../../../app/router'
-import { useAuth } from '../../../providers/AuthProvider'
-import {
-  GAME_INSPIRATIONS, createGame, deleteGame, gamePlayPath, gameThumbUrl, getPicker, listGames,
-  type GameInspiration, type LearnerGame, type PickerComponent, type PickerObjective, type PickerSubject, prepareGame } from '../../../services/games'
+import { deleteGame, gamePlayPath, gameThumbUrl, listGames, setGameLiked, type LearnerGame } from '../../../services/games'
 import { subjectLabel } from '../../teacher-app/shared/subjectLabel'
 import { StationPanel } from './StationPanel'
 import { SegmentedNav } from './SegmentedNav'
 import {
-  BUILD_PIPE, TITLE_MAX, VIBE_MAX, buildStage, createErrorKey, findComponent, findObjective, genreIcon, isBusyStatus,
-  mergeUpdates, orderComponents, orderObjectives, statusTone, upsertGame, type BuildStage, type GameLabPreselect, type GameLabTab,
+  BUILD_PIPE, STAGE_ICON, genreIcon, isBusyStatus, mergeUpdates, statusTone, upsertGame,
+  type BuildStage, type GameLabPreselect, type GameLabTab,
 } from './gameLabModel'
-import type { GameLabActivity } from '../useGameLabActivity'
-
-/** Admin bake-off choices; empty means the deployment default. */
+import { cardStage, type GameLabActivity } from '../useGameLabActivity'
+// The wizard is shared with the lesson chat's Games tab (features/games).
+import { CreateGameWizard } from '../../games/CreateGameWizard'
 
 const PAGE_SIZE = 12
 
@@ -55,7 +52,7 @@ export function GameLabPanel({
       {tab === 'mine'
         ? <MyGames activity={activity} onCreate={() => setTab('create')} />
         : (
-          <CreateWizard
+          <CreateGameWizard
             isTouch={isTouch}
             preselect={preselect}
             onCreated={(game) => { activity.noteGame(game); setTab('mine') }}
@@ -145,6 +142,31 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
     activity.noteGame(game, at)
   }
 
+  // Shelf filter: everything, the liked ones, or one subject. Subjects come
+  // from the games on the shelf, so a chip only exists for something there is
+  // a game in. A filter that empties (last like removed) falls back to all.
+  const [filter, setFilter] = useState<'all' | 'liked' | `subject:${string}`>('all')
+  const subjects = Array.from(new Set(games.map((game) => game.subject).filter((s): s is string => Boolean(s))))
+  const likedCount = games.filter((game) => game.liked).length
+  const matches = (game: LearnerGame) =>
+    filter === 'all' ? true : filter === 'liked' ? Boolean(game.liked) : game.subject === filter.slice(8)
+  const shown = games.filter(matches)
+  useEffect(() => {
+    if (filter === 'liked' && likedCount === 0) setFilter('all')
+    if (filter.startsWith('subject:') && !subjects.includes(filter.slice(8))) setFilter('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [likedCount, subjects.join('|')])
+
+  const toggleLike = async (game: LearnerGame) => {
+    const liked = !game.liked
+    replace({ ...game, liked })                       // optimistic: the heart fills now
+    try {
+      replace(await setGameLiked(game.game_id, liked))
+    } catch {
+      replace({ ...game, liked: !liked })             // the server said no; put it back
+    }
+  }
+
   return (
     <section className="ys-section ys-gamelab">
       {/* No heading here: the tab strip above already names this view. */}
@@ -165,14 +187,32 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
           </button>
         </div>
       )}
-      {games.length > 0 && (
+      {games.length > 1 && (
+        <div className="ys-gamelab-filters" role="group" aria-label={t('studio.gamelab.filter.all')}>
+          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} label={t('studio.gamelab.filter.all')} count={games.length} />
+          {likedCount > 0 && (
+            <FilterChip active={filter === 'liked'} onClick={() => setFilter('liked')} label={t('studio.gamelab.filter.liked')} count={likedCount} icon="heart" />
+          )}
+          {subjects.map((subject) => (
+            <FilterChip
+              key={subject}
+              active={filter === `subject:${subject}`}
+              onClick={() => setFilter(`subject:${subject}`)}
+              label={subjectLabel(subject, t)}
+              count={games.filter((game) => game.subject === subject).length}
+            />
+          ))}
+        </div>
+      )}
+      {shown.length > 0 && (
         <ul className="ys-gamelab-list">
-          {games.map((game) => (
+          {shown.map((game) => (
             <GameCard
               key={game.game_id}
               game={game}
               stage={cardStage(game, activity)}
               onDeleted={() => remove(game.game_id)}
+              onToggleLike={() => void toggleLike(game)}
             />
           ))}
         </ul>
@@ -187,30 +227,32 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
   )
 }
 
+function FilterChip({ active, onClick, label, count, icon }: {
+  active: boolean; onClick: () => void; label: string; count: number; icon?: 'heart'
+}) {
+  return (
+    <button type="button" className="ys-gamelab-filter" aria-pressed={active} onClick={onClick}>
+      {icon && <Icon name={icon} size={13} />}
+      <bdi dir="auto">{label}</bdi>
+      <span className="ys-gamelab-filter__count">{count}</span>
+    </button>
+  )
+}
+
 /** Pagination appends; a row already on screen keeps its place. */
 function upsertGameAtEnd(list: LearnerGame[], game: LearnerGame): LearnerGame[] {
   return list.some((row) => row.game_id === game.game_id) ? list : [...list, game]
 }
 
-/** The step a busy card shows: the newer of the last live frame and the last
- *  snapshot read decides, the row's status is the fallback. */
-function cardStage(game: LearnerGame, activity: GameLabActivity): BuildStage | null {
-  const frame = activity.frames[game.game_id]
-  const phase = activity.phases[game.game_id]
-  const event = frame && (!phase || frame.at >= phase.at) ? frame.value.event : undefined
-  return buildStage(game.status, event, phase?.value)
-}
-
-const STAGE_ICON: Record<BuildStage, string> = { queued: '⏳', thinking: '🧠', writing: '✍️', checking: '🧪', judging: '⚖️' }
-
 /** A game on the shelf: its name, objective, state and cost. Changing and
  * fixing happen inside the player, so the card only plays or deletes. */
 function GameCard({
-  game, stage, onDeleted,
+  game, stage, onDeleted, onToggleLike,
 }: {
   game: LearnerGame
   stage: BuildStage | null
   onDeleted: () => void
+  onToggleLike: () => void
 }) {
   const { t } = useI18n()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -312,6 +354,16 @@ function GameCard({
             </button>
             <button
               type="button"
+              className="ys-btn ys-btn--ghost ys-btn--sm ys-gamelab-like"
+              aria-pressed={Boolean(game.liked)}
+              onClick={onToggleLike}
+              aria-label={t(game.liked ? 'studio.gamelab.action.unlike' : 'studio.gamelab.action.like')}
+              title={t(game.liked ? 'studio.gamelab.action.unlike' : 'studio.gamelab.action.like')}
+            >
+              <Icon name="heart" size={15} />
+            </button>
+            <button
+              type="button"
               className="ys-btn ys-btn--ghost ys-btn--sm ys-gamelab-danger"
               onClick={() => setConfirmDelete(true)}
               aria-label={t('studio.gamelab.action.delete')}
@@ -336,256 +388,5 @@ function GameCard({
         )}
       </div>
     </li>
-  )
-}
-
-// ── Create ──────────────────────────────────────────────────────────────────
-
-function CreateWizard({
-  isTouch, preselect, onCreated,
-}: {
-  isTouch: boolean
-  preselect: GameLabPreselect | null
-  onCreated: (game: LearnerGame) => void
-}) {
-  const { t } = useI18n()
-  const { user } = useAuth()
-  const isAdmin = Boolean(user?.roles.includes('admin'))
-  const [subjects, setSubjects] = useState<PickerSubject[] | null>(null)
-  const [subject, setSubject] = useState<string | null>(null)
-  const [pickerError, setPickerError] = useState(false)
-  const [objective, setObjective] = useState<PickerObjective | null>(null)
-  const [component, setComponent] = useState<PickerComponent | null>(null)
-  const [inspirations, setInspirations] = useState<GameInspiration[]>([])
-  const [vibe, setVibe] = useState('')
-  const [name, setName] = useState('')
-  const [deep, setDeep] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const preselected = useRef(false)
-
-  useEffect(() => {
-    let active = true
-    setPickerError(false)
-    getPicker()
-      .then((result) => { if (active) setSubjects(result.subjects) })
-      .catch(() => { if (active) setPickerError(true) })
-    return () => { active = false }
-  }, [])
-
-  // The lesson page's "make a game for this" arrives with the objective and
-  // component already chosen; land the learner on the genre step.
-  useEffect(() => {
-    if (!subjects || preselected.current || !preselect?.objective) return
-    preselected.current = true
-    const found = findObjective(subjects, preselect.objective)
-    if (!found) return
-    setObjective(found)
-    const part = findComponent(found, preselect.component)
-    if (part) { setComponent(part); prepareGame(part.id).catch(() => {}) }
-  }, [subjects, preselect])
-
-  const step = !objective ? 1 : !component ? 2 : 3
-  const shownSubject = subjects?.find((row) => row.subject === subject) ?? subjects?.[0] ?? null
-
-  const toggleInspiration = (chip: GameInspiration) => {
-    setInspirations((current) => current.includes(chip) ? current.filter((c) => c !== chip) : [...current, chip])
-  }
-
-  const create = async () => {
-    if (!objective || !component || creating) return
-    setCreating(true)
-    setCreateError(null)
-    try {
-      const game = await createGame({
-        // A picker card may merge several catalog objectives with one title;
-        // the component knows which one it belongs to.
-        objective_id: component.objective_id || objective.id,
-        unit_id: component.unit_id,
-        component_id: component.id,
-        inspirations,
-        vibe: vibe.trim(),
-        title: name.trim().slice(0, TITLE_MAX),
-        device: isTouch ? 'touch' : 'keyboard',
-        deep_thinking: deep,
-      })
-      onCreated(game)
-    } catch (error) {
-      setCreateError(t(createErrorKey(error)))
-      setCreating(false)
-    }
-  }
-
-  return (
-    <section className="ys-section ys-gamelab">
-      <ol className="ys-gamelab-steps" aria-label={t('studio.gamelab.steps')}>
-        {[1, 2, 3].map((n) => (
-          <li
-            key={n}
-            className={n === step ? 'is-current' : n < step ? 'is-done' : ''}
-            aria-current={n === step ? 'step' : undefined}
-          >
-            <span className="ys-gamelab-steps__n" aria-hidden>{n < step ? <Icon name="check" size={12} /> : n}</span>
-            <span>{t(`studio.gamelab.step.${n}`)}</span>
-          </li>
-        ))}
-      </ol>
-
-      {step === 1 && (
-        <>
-          <h2 className="ys-section__title">{t('studio.gamelab.pick.objective')}</h2>
-          {pickerError && <p className="ys-note" role="alert">{t('studio.gamelab.error.picker')}</p>}
-          {!subjects && !pickerError && <p className="ys-empty">{t('studio.gamelab.loading')}</p>}
-          {subjects && subjects.length === 0 && <p className="ys-empty">{t('studio.gamelab.pick.none')}</p>}
-          {subjects && subjects.length > 1 && (
-            <div className="ys-gamelab-subjects" role="tablist" aria-label={t('studio.gamelab.pick.subject')}>
-              {subjects.map((row) => (
-                <button
-                  key={row.subject}
-                  type="button"
-                  role="tab"
-                  aria-selected={row.subject === shownSubject?.subject}
-                  className={`ys-chip${row.subject === shownSubject?.subject ? ' is-active' : ''}`}
-                  onClick={() => setSubject(row.subject)}
-                >
-                  {subjectLabel(row.subject, t)}
-                </button>
-              ))}
-            </div>
-          )}
-          {shownSubject && (
-            <ul className="ys-gamelab-picks">
-              {orderObjectives(shownSubject.objectives).map((row) => (
-                <li key={row.id}>
-                  <button type="button" className="ys-gamelab-pick" onClick={() => { setObjective(row); setComponent(null) }}>
-                    <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
-                    {row.topic_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.topic_title}</bdi></span>}
-                    {row.visited && <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-
-      {step === 2 && objective && (
-        <>
-          <ChosenBar
-            back={() => setObjective(null)}
-            backLabel={t('studio.gamelab.back.objective')}
-            lines={[objective.title]}
-          />
-          <h2 className="ys-section__title">{t('studio.gamelab.pick.component')}</h2>
-          <ul className="ys-gamelab-picks">
-            {orderComponents(objective.components).map((row) => (
-              <li key={row.id}>
-                <button type="button" className="ys-gamelab-pick" onClick={() => { setComponent(row); prepareGame(row.id).catch(() => {}) }}>
-                  <span className="ys-gamelab-pick__title"><bdi dir="auto">{row.title}</bdi></span>
-                  {row.unit_title && <span className="ys-gamelab-pick__sub"><bdi dir="auto">{row.unit_title}</bdi></span>}
-                  {row.purpose && <span className="ys-gamelab-pick__purpose"><bdi dir="auto">{row.purpose}</bdi></span>}
-                  {row.visited && (
-                    <span className="ys-gamelab-pick__foot">
-                      <span className="ys-gamelab-badge">{t('studio.gamelab.visited')}</span>
-                    </span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {step === 3 && objective && component && (
-        <>
-          <ChosenBar
-            back={() => setComponent(null)}
-            backLabel={t('studio.gamelab.back.component')}
-            lines={[objective.title, component.title]}
-          />
-          <h2 className="ys-section__title">{t('studio.gamelab.pick.brief')}</h2>
-          <p className="ys-gamelab-lead">{t('studio.gamelab.brief.lead')}</p>
-          <div className="ys-gamelab-field ys-gamelab-field--name">
-            <input
-              id="ys-gamelab-name"
-              className="ys-gamelab-input"
-              type="text"
-              maxLength={TITLE_MAX}
-              value={name}
-              aria-label={t('studio.gamelab.name.label')}
-              placeholder={t('studio.gamelab.name.placeholder')}
-              onChange={(change) => setName(change.target.value.slice(0, TITLE_MAX))}
-            />
-            <span className="ys-gamelab-counter" aria-live="polite">{name.length}/{TITLE_MAX}</span>
-          </div>
-          <div className="ys-gamelab-field">
-            <textarea
-              id="ys-gamelab-vibe"
-              className="ys-gamelab-textarea ys-gamelab-textarea--brief"
-              rows={5}
-              maxLength={VIBE_MAX}
-              value={vibe}
-              aria-label={t('studio.gamelab.pick.brief')}
-              placeholder={t('studio.gamelab.brief.placeholder')}
-              onChange={(change) => setVibe(change.target.value.slice(0, VIBE_MAX))}
-            />
-            <span className="ys-gamelab-counter" aria-live="polite">{vibe.length}/{VIBE_MAX}</span>
-          </div>
-
-          {/* Flavour only: Yuvi owns genre, engine and form. */}
-          <p className="ys-subhead">{t('studio.gamelab.inspire.label')}</p>
-          <div className="ys-chips" role="group" aria-label={t('studio.gamelab.inspire.label')}>
-            {GAME_INSPIRATIONS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className={`ys-chip ys-gamelab-genre${inspirations.includes(id) ? ' is-active' : ''}`}
-                aria-pressed={inspirations.includes(id)}
-                onClick={() => toggleInspiration(id)}
-              >
-                <span aria-hidden>{genreIcon(id)}</span>
-                {t(`studio.gamelab.inspire.${id}`)}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={deep}
-            className={`ys-gamelab-switch${deep ? ' is-on' : ''}`}
-            onClick={() => setDeep((on) => !on)}
-          >
-            <span className="ys-gamelab-switch__track" aria-hidden><span className="ys-gamelab-switch__knob" /></span>
-            <span className="ys-gamelab-switch__text">
-              <strong>{t('studio.gamelab.deep.label')}</strong>
-              <small>{t('studio.gamelab.deep.hint')}</small>
-            </span>
-          </button>
-
-
-
-          {createError && <p className="ys-note" role="alert">{createError}</p>}
-          <button type="button" className="ys-btn ys-btn--primary ys-gamelab-create" onClick={() => void create()} disabled={creating}>
-            <Icon name="wand" size={16} />
-            {t(creating ? 'studio.gamelab.creating' : 'studio.gamelab.create')}
-          </button>
-        </>
-      )}
-    </section>
-  )
-}
-
-/** What has been chosen so far, with one step back. */
-function ChosenBar({ back, backLabel, lines }: { back: () => void; backLabel: string; lines: string[] }) {
-  return (
-    <div className="ys-gamelab-chosen">
-      <div className="ys-gamelab-chosen__lines">
-        {lines.map((line, index) => (
-          <span key={index} className={index === lines.length - 1 ? 'is-last' : ''}><bdi dir="auto">{line}</bdi></span>
-        ))}
-      </div>
-      <button type="button" className="ys-chip" onClick={back}>{backLabel}</button>
-    </div>
   )
 }
