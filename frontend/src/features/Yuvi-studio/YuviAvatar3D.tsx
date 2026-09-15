@@ -1557,6 +1557,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             if (remaining > 0.05) roamStep.multiplyScalar(Math.min(ROAM_SPEED * dt, remaining) / remaining)
             else roamStep.set(0, 0)
           }
+          const keysDrove = roamDir.lengthSq() > 1e-6
           const moving = roamStep.lengthSq() > 1e-8
           if (moving) {
             roamPos.add(roamStep)
@@ -1564,6 +1565,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             // Face where he is actually going, not where he was asked to go.
             yawTarget = Math.atan2(roamStep.x, roamStep.y)
           }
+          // Keys pin the click target to where he stands — AFTER the step.
+          // Pinned before it, the frame the keys were released left one step
+          // of "distance to target" pointing backwards, and he turned round
+          // to walk it.
+          if (keysDrove) roamTarget.copy(roamPos)
           // In first person the body follows the gaze, so walking backwards
           // does not spin the camera the learner is looking through.
           if (fpActive) yawTarget = fpYaw
