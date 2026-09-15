@@ -882,10 +882,11 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             # frame ties the unlock to the reply that caused it, so the chat
             # can attach it to the message. Reason only — never the evidence.
             suggestion = teacher_suggestions[0]
-            yield f"data: {json.dumps({'teacher_suggestion': {
-                'reason': suggestion.get('reason'),
-                'question_key': suggestion.get('question_key'),
-            }}, ensure_ascii=False)}\n\n"
+            frame = {"teacher_suggestion": {
+                "reason": suggestion.get("reason"),
+                "question_key": suggestion.get("question_key"),
+            }}
+            yield f"data: {json.dumps(frame, ensure_ascii=False)}\n\n"
 
         response_text = "".join(response_parts)
         async for event in _stream_visual_tail(
