@@ -995,7 +995,14 @@ async def build_coach_bundle(
             "screen_enrichment": (
                 {
                     "visible_text": safe_text(screen_enrichment.get("visible_text"), 700),
-                    "media": [safe_text(m, 90) for m in screen_enrichment.get("media") or []],
+                    # Each line already carries the vision description, capped
+                    # at the source (ENRICHMENT_MEDIA_LABEL_CAP) plus a short
+                    # duration suffix; a tighter cap here threw that description
+                    # away after the nightly pass had paid for it.
+                    "media": [
+                        safe_text(m, content_intelligence.ENRICHMENT_MEDIA_LABEL_CAP + 16)
+                        for m in screen_enrichment.get("media") or []
+                    ],
                 }
                 if (screen_enrichment := (
                     content_intelligence.enrichment(component_id, item_id)
