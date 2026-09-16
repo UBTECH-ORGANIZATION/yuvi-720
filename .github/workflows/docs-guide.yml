@@ -123,6 +123,13 @@ jobs:
       PASSWORD_LOGIN_ENABLED: "1"
       DAILY_CHECKIN_DISABLED: "1"
       SECRET_KEY: docs-guide-ci-secret
+      # The learning spine is the vendor's (CET/Kata) catalogue: without it the
+      # history seeder has no objectives to write mastery against, and the
+      # learning screens have nothing to show. APIM is what makes the companion
+      # answer in the screenshot rather than render an error.
+      KATA_API_KEY: ${{ secrets.KATA_API_KEY }}
+      APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+      APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
       BASE_URL: http://127.0.0.1:8721
 
     steps:
