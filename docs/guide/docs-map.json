@@ -1,0 +1,163 @@
+{
+  "$comment": "Single source of truth for the Spark instructor guide. `watchPaths` drives which chapters a push to main re-captures — see frontend/scripts/docs/plan.mjs.",
+  "title": "מדריך המערכת למדריכי Spark",
+  "subtitle": "יובילאב ספארק · תוכנית 720 של משרד החינוך",
+  "output": "spark-user-guide-he.pdf",
+  "globalWatchPaths": [
+    "frontend/src/components/**",
+    "frontend/src/app/**",
+    "frontend/src/providers/**",
+    "frontend/src/i18n/**",
+    "locales/**",
+    "shared/theme.css"
+  ],
+  "$accountsComment": "onboarded=true asks the capture harness to mark mapping + profile verification complete over the API before shooting, so the onboarding gate does not swallow the screenshot. onboarded=false leaves the learner exactly as seeded.",
+  "accounts": {
+    "learner": { "username": "d450-12", "password": "Aa12345", "role": "learner", "onboarded": true },
+    "freshLearner": { "username": "dvir", "password": "Aa12345", "role": "learner", "onboarded": false },
+    "goalLearner": { "username": "d450-25", "password": "Aa12345", "role": "learner", "onboarded": true },
+    "teacher": { "username": "gal", "password": "Aa12345", "role": "teacher", "onboarded": true }
+  },
+  "chapters": [
+    {
+      "id": "getting-started",
+      "order": 1,
+      "lane": "shared",
+      "title": "כניסה למערכת, תפקידים ושפה",
+      "markdown": "chapters/01-getting-started.he.md",
+      "scenario": "getting-started",
+      "account": "learner",
+      "watchPaths": [
+        "frontend/src/features/landing-login/**",
+        "backend/app/routes/auth.py",
+        "backend/app/auth/**"
+      ]
+    },
+    {
+      "id": "learner-mapping",
+      "order": 2,
+      "lane": "student",
+      "title": "מיפוי הלומד",
+      "markdown": "chapters/02-learner-mapping.he.md",
+      "scenario": "learner-mapping",
+      "account": "freshLearner",
+      "watchPaths": [
+        "frontend/src/features/learner-mapping/**",
+        "frontend/src/features/results/**",
+        "backend/app/routes/learner_mapping.py",
+        "backend/questionnaire_locales.py"
+      ]
+    },
+    {
+      "id": "student-dashboard",
+      "order": 3,
+      "lane": "student",
+      "title": "הדשבורד של התלמיד",
+      "markdown": "chapters/03-student-dashboard.he.md",
+      "scenario": "student-dashboard",
+      "account": "learner",
+      "watchPaths": [
+        "frontend/src/features/student-dashboard/**",
+        "frontend/src/features/checkin/**",
+        "backend/app/routes/dashboard.py"
+      ]
+    },
+    {
+      "id": "learning",
+      "order": 4,
+      "lane": "student",
+      "title": "מסלול הלמידה, השיעור והחונך יובי",
+      "markdown": "chapters/04-learning.he.md",
+      "scenario": "learning",
+      "account": "learner",
+      "watchPaths": [
+        "frontend/src/features/learning-portal/**",
+        "frontend/src/features/learning-lesson/**",
+        "frontend/src/components/CompanionChat.tsx",
+        "frontend/src/components/YuviCompanionDock.tsx"
+      ]
+    },
+    {
+      "id": "student-tasks",
+      "order": 5,
+      "lane": "student",
+      "title": "משימות התלמיד",
+      "markdown": "chapters/05-student-tasks.he.md",
+      "scenario": "student-tasks",
+      "account": "learner",
+      "watchPaths": [
+        "frontend/src/features/student-tasks/**",
+        "frontend/src/features/tasks/**"
+      ]
+    },
+    {
+      "id": "mentoring",
+      "order": 6,
+      "lane": "student",
+      "title": "יעדים אישיים וליווי",
+      "markdown": "chapters/06-mentoring.he.md",
+      "scenario": "mentoring",
+      "account": "goalLearner",
+      "watchPaths": [
+        "frontend/src/features/mentoring/**",
+        "frontend/src/features/badges/**",
+        "backend/app/routes/mentoring.py"
+      ]
+    },
+    {
+      "id": "teacher-home",
+      "order": 7,
+      "lane": "teacher",
+      "title": "מסך הבית של המורה ורשימת התלמידים",
+      "markdown": "chapters/07-teacher-home.he.md",
+      "scenario": "teacher-home",
+      "account": "teacher",
+      "watchPaths": [
+        "frontend/src/features/teacher-app/home/**",
+        "frontend/src/features/teacher-app/students/**",
+        "frontend/src/features/teacher-app/student/**",
+        "frontend/src/app/TeacherLane.tsx"
+      ]
+    },
+    {
+      "id": "teacher-goals",
+      "order": 8,
+      "lane": "teacher",
+      "title": "שיחת ליווי ואשף היעדים",
+      "markdown": "chapters/08-teacher-goals.he.md",
+      "scenario": "teacher-goals",
+      "account": "teacher",
+      "watchPaths": [
+        "frontend/src/features/teacher-app/goals/**"
+      ]
+    },
+    {
+      "id": "teacher-tasks",
+      "order": 9,
+      "lane": "teacher",
+      "title": "יצירת משימות ומעקב אחריהן",
+      "markdown": "chapters/09-teacher-tasks.he.md",
+      "scenario": "teacher-tasks",
+      "account": "teacher",
+      "watchPaths": [
+        "frontend/src/features/teacher-app/tasks/**",
+        "backend/app/routes/tasks.py",
+        "backend/app/services/tasks/**"
+      ]
+    },
+    {
+      "id": "teacher-followup",
+      "order": 10,
+      "lane": "teacher",
+      "title": "לומדות, יומן והודעות",
+      "markdown": "chapters/10-teacher-followup.he.md",
+      "scenario": "teacher-followup",
+      "account": "teacher",
+      "watchPaths": [
+        "frontend/src/features/teacher-app/learnings/**",
+        "frontend/src/features/teacher-app/calendar/**",
+        "frontend/src/features/teacher-app/messages/**"
+      ]
+    }
+  ]
+}

@@ -80,6 +80,23 @@ def json_fallback_requested() -> bool:
     return (os.environ.get("SPARK_STORAGE") or "").strip().lower() == JSON
 
 
+def uses_tls(uri: Optional[str] = None) -> bool:
+    """Whether this cluster speaks TLS, so callers know to pass a CA bundle.
+
+    PyMongo turns TLS *on* the moment ``tlsCAFile`` is passed, so handing a CA
+    bundle to a plaintext ``mongodb://localhost`` cluster fails the handshake
+    before the first query — which is what a throwaway Mongo in CI or a local
+    container is. The managed clusters announce themselves either through
+    ``mongodb+srv://`` or an explicit ``tls=true``; anything else is plaintext.
+    """
+    raw = (connection_string() if uri is None else (uri or "")).strip().lower()
+    if not raw:
+        return False
+    if raw.startswith("mongodb+srv://"):
+        return True
+    return "tls=true" in raw or "ssl=true" in raw
+
+
 def production_hosts() -> tuple[str, ...]:
     configured = (os.environ.get("MONGODB_PRODUCTION_HOSTS") or "").strip()
     if not configured:
