@@ -1,4 +1,4 @@
-import type { RoomItem, RoomStations, StationId, WallAnchor } from './RoomDesign.ts'
+import { STATION_IDS, type RoomItem, type RoomStations, type StationId, type WallAnchor } from './RoomDesign.ts'
 import { PLAYGROUND_DECOR_BLOCKERS, PLAYGROUND_WALK_BARRIERS, PLAYGROUND_WALK_SURFACES } from './PlaygroundLayout.ts'
 
 export type RoomLayoutId = 'lab' | 'adventurePark' | 'sportsArena' | 'creatorLoft'
@@ -40,6 +40,7 @@ const LAB_STATIONS: RoomStations = {
   room: { x: -18, z: 7.8, rot: 1.2, placed: false },
   explore: { x: 17.6, z: -15, rot: -0.7, placed: true },
   mission: { x: 11.2, z: -6.6, rot: -0.72, placed: true },
+  gamelab: { x: 9.6, z: -2.0, rot: -1.05, placed: false },
 }
 
 const rectangleWalls = (halfX: number, backZ: number, frontZ: number): RoomLayoutWall[] => [
@@ -340,7 +341,7 @@ export function reconcileStationsForLayout(
       && !items.some((item) => !isWallItem(item) && overlaps(point, radius, item, options.itemRadiusFor(item)))
       && !accepted.some((station) => overlaps(point, radius, station, station.radius))
   }
-  for (const id of ['avatar', 'room', 'explore', 'mission'] as StationId[]) {
+  for (const id of STATION_IDS) {
     const current = stations[id]
     const target = fits(id, current)
       ? current

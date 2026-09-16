@@ -11,6 +11,9 @@ import { YuviRobot3D } from './YuviRobot3DLazy'
 import { Yuvi_INTRO_READY_DELAY_MS } from './yuviIntroTiming'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
 import { Toast } from '../../components/Toast'
+// Travels with this lazy page instead of the main bundle; the app-bar chrome it
+// shares with other pages lives in styles/app-chrome.css.
+import '../../styles/learner-mapping.css'
 
 type Screen = 'chat' | 'question'
 type ChatMode = 'intro' | 'section' | 'summary'

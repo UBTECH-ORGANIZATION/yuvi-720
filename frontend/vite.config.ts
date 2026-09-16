@@ -24,15 +24,21 @@ export default defineConfig({
   build: {
     outDir: '../static/react',
     emptyOutDir: true,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         /* Several lazy surfaces share these libraries. Naming them keeps one
            cached copy instead of a duplicate inside every chunk that imports
-           them, and keeps a Three.js upgrade from invalidating app code. */
-        manualChunks(id) {
-          if (id.includes('node_modules/three/')) return 'three'
-          if (id.includes('node_modules/katex/')) return 'katex'
-          return undefined
+           them, and keeps a Three.js (or React) upgrade from invalidating app
+           code. `codeSplitting.groups` is rolldown's replacement for
+           `manualChunks`; a library only lands in its group when something
+           actually imports it, so a chunk never ships empty. */
+        codeSplitting: {
+          groups: [
+            { name: 'three', test: /node_modules[\\/]three[\\/]/ },
+            { name: 'katex', test: /node_modules[\\/]katex[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'motion', test: /node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/ },
+          ],
         },
       },
     },

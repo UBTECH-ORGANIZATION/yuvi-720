@@ -46,7 +46,7 @@ describe('the assistant dock holds its width', () => {
 describe('a face that is not known yet', () => {
 
   it('renders as a placeholder rather than a letter cut from the id', () => {
-    assert.match(avatar, /if \(!active && isLoading\)/)
+    assert.match(avatar, /if \(!name && isLoading\)/)
     assert.match(avatar, /tch-avatar--pending/)
   })
 

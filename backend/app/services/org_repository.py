@@ -226,6 +226,12 @@ async def get_group(group_id: str) -> Optional[dict[str, Any]]:
     return await _find_one(GROUPS, group_id)
 
 
+def _bumps():
+    """Lazy: cache_bumps reaches back into the org read side."""
+    from app.services import cache_bumps
+    return cache_bumps
+
+
 async def upsert_group(
     group_id: str,
     *,
@@ -236,10 +242,12 @@ async def upsert_group(
     year: Optional[str] = None,
     active: bool = True,
 ) -> dict[str, Any]:
-    return await _upsert(GROUPS, {
+    row = await _upsert(GROUPS, {
         "_id": group_id, "school_id": school_id, "name": name, "subject": subject,
         "grade": grade, "year": year, "active": active,
     })
+    await _bumps().touch_group(group_id)
+    return row
 
 
 async def archive_group(group_id: str) -> Optional[dict[str, Any]]:
@@ -248,7 +256,9 @@ async def archive_group(group_id: str) -> Optional[dict[str, Any]]:
     group = await get_group(group_id)
     if group is None:
         return None
-    return await _upsert(GROUPS, {**group, "_id": group_id, "active": False})
+    row = await _upsert(GROUPS, {**group, "_id": group_id, "active": False})
+    await _bumps().touch_group(group_id)
+    return row
 
 
 # ── sub-groups ───────────────────────────────────────────────────────────────
@@ -330,11 +340,14 @@ async def link_teacher(
     active: bool = True,
 ) -> dict[str, Any]:
     role = link_role if link_role in LINK_ROLES else "teacher"
-    return await _upsert(TEACHER_LINKS, {
+    row = await _upsert(TEACHER_LINKS, {
         "_id": link_id(teacher_id, group_id), "teacher_id": teacher_id,
         "group_id": group_id, "school_id": school_id, "link_role": role,
         "active": active,
     })
+    await _bumps().touch_teacher(teacher_id)
+    await _bumps().touch_group(group_id)
+    return row
 
 
 async def unlink_teacher(teacher_id: str, group_id: str) -> Optional[dict[str, Any]]:
@@ -342,10 +355,13 @@ async def unlink_teacher(teacher_id: str, group_id: str) -> Optional[dict[str, A
     existing = await _find_one(TEACHER_LINKS, link_id(teacher_id, group_id))
     if existing is None:
         return None
-    return await _upsert(TEACHER_LINKS, {
+    row = await _upsert(TEACHER_LINKS, {
         **existing, "_id": link_id(teacher_id, group_id),
         "active": False, "revoked_at": _now(),
     })
+    await _bumps().touch_teacher(teacher_id)
+    await _bumps().touch_group(group_id)
+    return row
 
 
 # ── enrollments ──────────────────────────────────────────────────────────────
@@ -373,21 +389,25 @@ async def enroll_learner(
     school_id: Optional[str] = None,
     active: bool = True,
 ) -> dict[str, Any]:
-    return await _upsert(ENROLLMENTS, {
+    row = await _upsert(ENROLLMENTS, {
         "_id": enrollment_id(learner_id, group_id), "learner_id": learner_id,
         "group_id": group_id, "school_id": school_id, "active": active,
         "joined_at": _now(), "left_at": None,
     })
+    await _bumps().touch_enrollment(learner_id, group_id)
+    return row
 
 
 async def unenroll_learner(learner_id: str, group_id: str) -> Optional[dict[str, Any]]:
     existing = await _find_one(ENROLLMENTS, enrollment_id(learner_id, group_id))
     if existing is None:
         return None
-    return await _upsert(ENROLLMENTS, {
+    row = await _upsert(ENROLLMENTS, {
         **existing, "_id": enrollment_id(learner_id, group_id),
         "active": False, "left_at": _now(),
     })
+    await _bumps().touch_enrollment(learner_id, group_id)
+    return row
 
 
 # ── admins ───────────────────────────────────────────────────────────────────

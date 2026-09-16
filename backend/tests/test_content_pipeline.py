@@ -109,6 +109,43 @@ class TheWriteIsIdempotent(unittest.TestCase):
         self.assertEqual(lomda["texts"], {})
         self.assertEqual(lomda["slides"][0]["questions"][0]["texts"], {})
 
+    def _extraction(self, probed_at: str, mapped: int = 1) -> dict:
+        return {"verdict": "mapped", "probed_at": probed_at,
+                "player_host": "kata", "screens_seen": 1,
+                "screens_mapped": mapped}
+
+    def _write_with(self, model: dict, extraction: dict, stats: dict) -> bool:
+        committed = pipeline.load_committed(self.out)
+        shards = pipeline.build_shards(
+            model, committed, {"comp-1": extraction},
+            _generated_for(model) if not committed else {})
+        return pipeline.write_output(self.out, shards, [], stats)
+
+    def test_a_night_that_only_restamps_dates_writes_nothing(self):
+        self._write_with(_model(), self._extraction("2026-09-01T01:00:00Z"),
+                         {"texts_generated": 3})
+        before = {p: p.read_bytes() for p in self.out.rglob("*.json")}
+        # the same lomda re-measured a week later: a fresh probed_at, a fresh
+        # vendor timestamp, a different run tally — and no content at all
+        restamped = _model()
+        restamped["comp-1"]["kata_updated_at"] = "2026-09-08T00:00:00Z"
+        changed = self._write_with(
+            restamped, self._extraction("2026-09-08T01:00:00Z"),
+            {"texts_generated": 0})
+        self.assertFalse(changed)
+        self.assertEqual({p: p.read_bytes() for p in self.out.rglob("*.json")},
+                         before)
+
+    def test_a_real_change_still_lands_with_its_new_stamp(self):
+        self._write_with(_model(), self._extraction("2026-09-01T01:00:00Z"), {})
+        changed = self._write_with(
+            _model(), self._extraction("2026-09-08T01:00:00Z", mapped=0), {})
+        self.assertTrue(changed)
+        shard = json.loads(
+            (self.out / "MOE.SCI/MOE.SCI.X.json").read_text(encoding="utf-8"))
+        self.assertEqual(shard["lomdot"][0]["extraction"]["probed_at"],
+                         "2026-09-08T01:00:00Z")
+
     def test_a_removed_lomda_leaves_the_config(self):
         self._write(_model())
         pipeline.write_output(self.out, {}, [], {})

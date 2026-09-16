@@ -114,8 +114,26 @@ def serve_react_app():
 
 
 @router.get("/")
-async def root():
-    """Serve the React app shell at the site root."""
+async def root(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+):
+    """Serve the React app shell at the site root.
+
+    While the Ministry's registered redirect URI is the bare origin, a sign-in
+    comes back *here* carrying `code`/`state`, and serving the SPA would drop
+    the login on the floor. Only claimed when the redirect really points at the
+    root, so the dedicated callback path keeps this route untouched.
+    """
+    if code or error:
+        from app.auth.moe import redirect as moe_redirect
+
+        if moe_redirect.is_root_callback():
+            from app.routes.auth_moe import complete_login
+
+            return await complete_login(request, code=code, state=state, error=error)
     return serve_react_app()
 
 

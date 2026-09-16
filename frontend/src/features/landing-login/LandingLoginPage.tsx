@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type SVGProps } from 'react'
+import { useEffect, useState, type FormEvent, type SVGProps } from 'react'
 import { recordLoginIntent } from '../../app/router'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { BrandLogo } from '../../components/BrandLogo'
@@ -6,6 +6,7 @@ import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import { UserMenu } from '../../components/UserMenu'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
+import { consumeAuthError } from '../../services/authProviders'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYuviArtwork, LandingYuviJourney } from './LandingYuviJourney'
 import { LoginDialog } from './LoginDialog'
@@ -240,6 +241,18 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
   const [contactEmail, setContactEmail] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [contactStatus, setContactStatus] = useState<ContactStatus>('idle')
+  /* A failed Ministry sign-in returns here with `?auth_error=`. Saying why is
+     the difference between "try again" and a learner clicking the same button
+     forever. The code is a fixed vocabulary from our own callback, never text
+     from the provider. */
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const code = consumeAuthError()
+    if (!code) return
+    setAuthError(code)
+    setLoginIntent((current) => current ?? 'student')
+  }, [])
 
   const onLoginSuccess = () => {
     /* Record which door was used and stop — App's landing-route effect does the
@@ -620,7 +633,11 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
 
       <LoginDialog
         open={loginIntent !== null}
-        onClose={() => setLoginIntent(null)}
+        authError={authError}
+        onClose={() => {
+          setLoginIntent(null)
+          setAuthError(null)
+        }}
         onSuccess={onLoginSuccess}
       />
     </main>

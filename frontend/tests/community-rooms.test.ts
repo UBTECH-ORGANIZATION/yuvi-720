@@ -57,19 +57,13 @@ test('Studio opens through a cinematic loader after data and the first WebGL fra
   assert.match(studio, /const \[stageRendered, setStageRendered\] = useState\(false\)/)
   assert.match(studio, /onReady=\{\(\) => setStageRendered\(true\)\}/)
   assert.match(studio, /ready=\{loaded && roomState\.loaded && stageRendered\}/)
-  assert.match(studio, /<StudioLoadingExperience[\s\S]{0,120}design=\{activeDesign\}/)
-  assert.match(loader, /new THREE\.WebGLRenderer/)
-  assert.match(loader, /const portalSystem = new THREE\.Group\(\)/)
-  assert.match(loader, /portalSystem\.add\(portal\)/)
-  assert.match(loader, /portalSystem\.add\(particles\)/)
-  assert.match(loader, /<YuviAvatar3D key=\{designKey\(design\)\} initialDesign=\{design\} label="" performanceMode="low"/)
+  // The prologue owns no WebGL context: the stage is building its room and
+  // compiling its programs behind it, and a school PC has one GPU budget. The
+  // portal is CSS and Yuvi is the 2D robot the renderer keeps behind its canvas.
+  assert.doesNotMatch(loader, /WebGLRenderer|YuviAvatar3D|from 'three'/)
   assert.match(loader, /ys-loading__portal-system[\s\S]{0,300}ys-loading__yuvi/)
-  assert.doesNotMatch(loader, /new THREE\.SphereGeometry\(0\.46/)
-  assert.match(loader, /portal\.scale\.setScalar\(1\)/)
-  assert.match(loader, /\}, \[design\]\)/)
-  assert.match(loader, /new THREE\.Points/)
-  assert.match(loader, /new THREE\.TorusGeometry/)
-  assert.match(loader, /prefers-reduced-motion: reduce/)
+  assert.match(loader, /<img src="\/shared\/yubi-robot\.png"/)
+  assert.match(loader, /ys-loading__ring/)
 })
 
 test('a visited room removes the Capsule Olam panel and exposes an animated in-stage Like control', () => {

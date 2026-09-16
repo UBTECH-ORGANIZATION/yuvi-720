@@ -173,6 +173,14 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
       },
     }))
   }
+  /** Put a decorative station away. `moveStation` places it again (the room
+   *  reset restores everything), so nothing is lost for good. */
+  const removeStation = (id: StationId) => {
+    setRoom((prev) => ({
+      ...prev,
+      stations: { ...prev.stations, [id]: { ...prev.stations[id], placed: false } },
+    }))
+  }
   const rotateStation = (id: StationId, delta: number) => {
     setRoom((prev) => ({
       ...prev,
@@ -232,7 +240,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear, materializeWeeklyReward,
-    setFloor, setWall, setMood, setSound, setGamingRoomTitle, setActiveLayout, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
+    setFloor, setWall, setMood, setSound, setGamingRoomTitle, setActiveLayout, moveStation, rotateStation, removeStation, completeTutorial, completeIntro, reset, save, load,
   }
 }
 

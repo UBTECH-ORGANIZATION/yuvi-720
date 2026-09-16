@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { getAuthStatus, getEnvironmentBadge, logout } from './api'
+import { ConsoleDashboard } from './console/ConsoleDashboard'
+import { CONSOLE_TABS, consoleTabHash, type ConsoleTab } from './console/shared'
 import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
 import { LeadsDashboard } from './leads/LeadsDashboard'
 import { SupportDashboard } from './support/SupportDashboard'
@@ -9,12 +11,21 @@ import { UsageDashboard } from './usage/UsageDashboard'
 
 
 type LoadState = 'loading' | 'ready' | 'error'
-type Section = 'usage' | 'traces' | 'leads' | 'support'
+/** Organisation console tabs are sections of their own (`#org-people`), so a
+ *  deep link lands on the right tab and the sidebar highlights it. */
+type OrgSection = `org-${ConsoleTab}`
+type Section = 'usage' | 'traces' | 'leads' | 'support' | OrgSection
+
+const ORG_SECTIONS: Record<OrgSection, ConsoleTab> = Object.fromEntries(
+  CONSOLE_TABS.map((tab) => [`org-${tab}`, tab]),
+) as Record<OrgSection, ConsoleTab>
 
 function sectionFromHash(): Section {
   if (window.location.hash === '#leads') return 'leads'
   if (window.location.hash === '#support') return 'support'
   if (window.location.hash === '#traces') return 'traces'
+  const org = window.location.hash.slice(1)
+  if (org in ORG_SECTIONS) return org as OrgSection
   return 'usage'
 }
 
@@ -211,6 +222,25 @@ function AdminShell({
                 <SupportIcon />
                 <span>{t('nav.tickets')}</span>
               </a>
+              <p className="nav-label">{t('nav.organisation')}</p>
+              {CONSOLE_TABS.map((tab) => {
+                const orgSection: OrgSection = `org-${tab}`
+                const label = t(ORG_NAV_KEY[tab])
+                const OrgIcon = ORG_ICON[tab]
+                return (
+                  <a
+                    key={tab}
+                    className={`nav-item${activeSection === orgSection ? ' nav-item--active' : ''}`}
+                    href={consoleTabHash(tab)}
+                    title={label}
+                    aria-current={activeSection === orgSection ? 'page' : undefined}
+                    onClick={() => setSection(orgSection)}
+                  >
+                    <OrgIcon />
+                    <span>{label}</span>
+                  </a>
+                )
+              })}
             </>
           ) : null}
         </nav>
@@ -245,6 +275,12 @@ function AdminShell({
         {activeSection === 'support' ? <SupportDashboard onUnauthorized={onUnauthorized} /> : null}
         {activeSection === 'traces' && admin ? <CoachDebugTraceDashboard onUnauthorized={onUnauthorized} /> : null}
         {activeSection === 'usage' ? <UsageDashboard onUnauthorized={onUnauthorized} /> : null}
+        {admin && activeSection in ORG_SECTIONS ? (
+          <ConsoleDashboard
+            tab={ORG_SECTIONS[activeSection as OrgSection]}
+            onUnauthorized={onUnauthorized}
+          />
+        ) : null}
       </div>
     </div>
   )
@@ -326,6 +362,68 @@ function ChevronIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M15 6l-6 6 6 6" />
+    </svg>
+  )
+}
+
+/* Organisation console — one sidebar item per tab. Line glyphs in the style
+   of the icons above, so the group reads as part of the same menu. */
+
+const ORG_NAV_KEY: Record<ConsoleTab, string> = {
+  overview: 'nav.orgOverview',
+  people: 'nav.orgPeople',
+  groups: 'nav.orgGroups',
+  games: 'nav.orgGames',
+  audit: 'nav.orgAudit',
+}
+
+const ORG_ICON: Record<ConsoleTab, () => ReactElement> = {
+  overview: OrgOverviewIcon,
+  people: OrgPeopleIcon,
+  groups: OrgGroupsIcon,
+  games: OrgGamesIcon,
+  audit: OrgAuditIcon,
+}
+
+function OrgOverviewIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2.5 12h4l2.5-6 4 12 2.5-6h6" />
+    </svg>
+  )
+}
+
+function OrgPeopleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.8 20a6.2 6.2 0 0112.4 0M16.5 5.4a3.2 3.2 0 010 5.6M17.5 14.4A6.2 6.2 0 0121.2 20" />
+    </svg>
+  )
+}
+
+function OrgGroupsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 5h18v11H3zM8 20h8M12 16v4M7 12l3-3 2.5 2.5L17 8" />
+    </svg>
+  )
+}
+
+function OrgGamesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="7.5" width="19" height="9" rx="4.5" />
+      <path d="M7 10.5v3M5.5 12h3M15.5 11h.01M18 13h.01" />
+    </svg>
+  )
+}
+
+function OrgAuditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l3 2" />
     </svg>
   )
 }

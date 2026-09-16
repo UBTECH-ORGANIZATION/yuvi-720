@@ -30,6 +30,9 @@ export interface MentoringConversation {
   learner_id?: string
   date: string
   teacher_name: string
+  /** The teacher's id — the reliable join to a chat. Older records carry
+   *  only `teacher_name`, sometimes in another script than the roster. */
+  teacher_id?: string | null
   learner_name: string
   meeting_stage: string
   notes: string
@@ -41,6 +44,19 @@ export interface MentoringConversation {
   /** Sparks granted by the action that returned this record (progress/help). */
   reward?: RewardGrant
   xpReward?: XpAwardReceipt
+}
+
+/** One step of the ministry's ten-step mentoring ladder. */
+export interface MentoringPhase {
+  sorting: number
+  mentoringPhase: string
+  phaseName: string
+}
+
+/** The ladder, in order. Fetched rather than hard-coded so the form and the
+ *  reported `mentoringPhase` can never drift apart. */
+export function listMentoringPhases() {
+  return apiGet<{ phases: MentoringPhase[] }>('/api/mentoring/phases')
 }
 
 export function createMentoring(conv: MentoringConversation) {

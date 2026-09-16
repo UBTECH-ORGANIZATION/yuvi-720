@@ -7,15 +7,19 @@ import { useAuth } from '../../providers/AuthProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
-import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
+import { assetsForSlot, assetThumbnailCache, renderAssetThumbnail, type YuviAsset } from './YuviAssets'
+import { useThumbnails } from './useThumbnails'
 import { normalizeDesign, type YuviColors, type YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { claimedSurpriseItems, getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { claimedSurpriseItems, renderRoomThumbnail, roomThumbnailCache, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, WEEKLY_SURPRISE_READY, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { GAMING_ROOM_TITLE_IDS, MAX_ROOM_ITEMS, MOODS, normalizeRoom, ROOM_STYLES, SOUND_THEMES, WALL_STYLES, type GamingRoomTitleId, type RoomItem, type StationId } from './RoomDesign'
 import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { playgroundGiftPosition } from './PlaygroundLayout.ts'
-import { roomStandingSpot } from './YuviLabRoom'
+import { gameLabStandingSpot, roomStandingSpot, type LabRoomZoneId } from './YuviLabRoom'
+import { useGameLabActivity } from './useGameLabActivity'
+import { GameLabPanel } from './panel/GameLabPanel'
+import { readPreselect } from './panel/gameLabModel'
 import { StationPanel } from './panel/StationPanel'
 import { SegmentedNav } from './panel/SegmentedNav'
 import { ItemCard } from './panel/ItemCard'
@@ -53,10 +57,10 @@ const ROOM_STYLE_TABS: Array<{ id: Exclude<RoomTab, RoomItemCategory>; labelKey:
  * The studio is a room, not a form. Yuvi walks around it freely; standing on a
  * station is what opens that station's panel.
  */
-type StudioMode = 'roam' | 'avatar' | 'room' | 'friends'
+type StudioMode = 'roam' | 'avatar' | 'room' | 'friends' | 'gamelab'
 
 // Where Yuvi is sent when the learner closes a station panel — clear of every
-// station ring and of the three fixed lab props.
+// station ring and of the fixed lab props.
 const STEP_OFF: [number, number] = [0, 4.5]
 const TIME_REMINDER_SECONDS = new Set([15 * 60, 10 * 60, 5 * 60, 60])
 
@@ -104,7 +108,6 @@ export function StudioContent({
     saving, dirty, isLocked, isPropLocked, requirementFor, equip, setColor, reset, save,
     wallet, priceOf, buy, buying, isRoomUnlocked,
   } = studio
-  const thumbnails = useMemo(() => getThumbnails(), [])
   const [pending, setPending] = useState<PendingPurchase | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
@@ -140,7 +143,7 @@ export function StudioContent({
   const [helpOpen, setHelpOpen] = useState(false)
   const [activeHelpTopic, setActiveHelpTopic] = useState<StudioHelpTopic | null>(null)
   const helpRef = useRef<HTMLDivElement | null>(null)
-  const requestedStationRef = useRef<'avatar' | 'room' | null>(null)
+  const requestedStationRef = useRef<LabRoomZoneId | null>(null)
   const [placing, setPlacing] = useState<YuviPlacing | null>(null)
   // Hovering a prop opens its own menu over it.
   const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
@@ -259,6 +262,10 @@ export function StudioContent({
     }
     setWorldPurchaseError(result?.reason ?? 'unlock_failed')
   }
+  // The Game Lab desk keeps listening whether or not its panel is open.
+  const gameLab = useGameLabActivity(Boolean(user?.user_id))
+  // `?station=gamelab&objective=&component=` — the lesson page's shortcut.
+  const [gameLabPreselect] = useState(() => readPreselect(window.location.search))
   const { surprise: weeklySurprise, claimedRewards, claim: claimWeeklySurprise } = useWeeklyStudioSurprise(
     user?.user_id,
     roomState.loaded && roomState.room.introDone,
@@ -434,7 +441,7 @@ export function StudioContent({
   }
 
   /** Stepping onto a station opens it; stepping off closes it again. */
-  const handleZoneChange = (zone: 'avatar' | 'room' | 'mission' | null) => {
+  const handleZoneChange = (zone: LabRoomZoneId | null) => {
     if (requestedStationRef.current && zone !== requestedStationRef.current) return
     if (zone === requestedStationRef.current) requestedStationRef.current = null
     setPropMenu(null)
@@ -456,6 +463,13 @@ export function StudioContent({
       setFirstPerson(false)
       setMode('room')
       avatarRef.current?.focus('room')
+      return
+    }
+    if (zone === 'gamelab') {
+      setPlacing(null)
+      setFirstPerson(false)
+      setMode('gamelab')
+      avatarRef.current?.focus('roam')
       return
     }
     setPlacing(null)
@@ -525,7 +539,7 @@ export function StudioContent({
       if (!started) setReturning(false)
     })
   }
-  const handleVisitorZoneChange = (zone: 'avatar' | 'room' | 'explore' | 'mission' | null) => {
+  const handleVisitorZoneChange = (zone: LabRoomZoneId | null) => {
     if (zone === 'mission' && visitingAnotherRoom && travelPhase === 'idle') returnToOwnRoom()
   }
   useEffect(() => {
@@ -542,12 +556,13 @@ export function StudioContent({
       setVisitorRoom((current) => current ? { ...current, liked_by_me: result.liked_by_me } : null)
     } finally { setLikingRoom(false) }
   }
-  const goToStation = (station: 'avatar' | 'room') => {
+  const goToStation = (station: LabRoomZoneId) => {
     requestedStationRef.current = station
     setPlacing(null)
     setPropMenu(null)
     setFirstPerson(false)
-    setMode(station)
+    // The capsule's zone is 'mission'; the panel it opens is the friends list.
+    setMode(station === 'mission' ? 'friends' : station)
     if (station === 'avatar') {
       avatarRef.current?.focus(FOCUS_BY_TAB[activeTab])
       avatarRef.current?.walkTo(
@@ -555,6 +570,12 @@ export function StudioContent({
         roomState.room.stations.avatar.z,
         station,
       )
+      return
+    }
+    if (station === 'gamelab') {
+      const desk = gameLabStandingSpot(roomState.room.stations.gamelab)
+      avatarRef.current?.focus('roam')
+      avatarRef.current?.walkTo(desk.x, desk.z, station)
       return
     }
     const spot = roomStandingSpot(roomState.room.stations.room)
@@ -585,7 +606,7 @@ export function StudioContent({
       return
     }
     if (introScene === 1) {
-      if (!stations.room.placed || !stations.avatar.placed) { setIntroCheckFailed(true); return }
+      if (!stations.room.placed || !stations.avatar.placed || !stations.gamelab.placed) { setIntroCheckFailed(true); return }
       setIntroCheckFailed(false)
       setIntroScene(2)
       return
@@ -626,9 +647,14 @@ export function StudioContent({
       roomState.place(placing.kind, x, z, placing.rot ?? 0, wall ? { wallId: wall.wallId, offset: wall.offset, height: 0 } : undefined)
       if (introScene === 2) setIntroRoomItemAdded(true)
     }
+    // The intro hands the learner the next station as soon as one is down:
+    // the room table, then the Yuvi platform, then the game desk.
     if (introScene === 1 && placing.station === 'room') {
       const avatar = roomState.room.stations.avatar
       setPlacing({ kind: 'station:avatar', station: 'avatar', rot: avatar.rot, rot0: avatar.rot })
+    } else if (introScene === 1 && placing.station === 'avatar') {
+      const gamelab = roomState.room.stations.gamelab
+      setPlacing({ kind: 'station:gamelab', station: 'gamelab', rot: gamelab.rot, rot0: gamelab.rot })
     } else {
       setPlacing(null)
     }
@@ -684,6 +710,14 @@ export function StudioContent({
     avatarRef.current?.focus(FOCUS_BY_TAB[tab])
   }
 
+  // The desk's status light follows what the studio knows about builds.
+  useEffect(() => {
+    if (loaded) avatarRef.current?.setGameLabState(gameLab.state)
+  }, [gameLab.state, loaded, avatarRef])
+  useEffect(() => {
+    if (gameLab.flashKey) avatarRef.current?.setGameLabState('ready')
+  }, [gameLab.flashKey, avatarRef])
+
   // Frame the current category as soon as the WebGL controller is alive.
   const framedRef = useRef(false)
   useEffect(() => {
@@ -693,11 +727,19 @@ export function StudioContent({
     if (!loaded || !roomState.loaded || framedRef.current) return
     framedRef.current = true
     const view = roomState.room.tutorialDone ? 'roam' : 'room'
-    const id = window.setTimeout(() => avatarRef.current?.focus(view), 260)
+    const deepLinked = gameLabPreselect.open && roomState.room.introDone
+    const id = window.setTimeout(() => {
+      avatarRef.current?.focus(view)
+      // A deep link walks straight to the desk; the walkthrough comes first.
+      if (deepLinked) goToStation('gamelab')
+    }, 260)
     return () => window.clearTimeout(id)
   }, [loaded, roomState.loaded, roomState.room.tutorialDone, avatarRef])
 
-  const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
+  // Stable per tab: the thumbnail hook keys its idle schedule on this identity.
+  const slotAssets = useMemo(() => activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot), [activeTab])
+  // Cards show their dot first; pictures arrive in idle-time chunks.
+  const thumbnails = useThumbnails(slotAssets, renderAssetThumbnail, assetThumbnailCache)
   const visibleAssets = slotAssets.filter((asset) => {
     const locked = isLocked(asset)
     if (filter === 'owned') return !locked
@@ -763,6 +805,14 @@ export function StudioContent({
             onBuyRoom={(kind) => { setPurchaseError(null); setPending({ id: kind, labelKey: `YuviStudio.room.item.${kind}`, roomKind: kind }) }}
             surpriseRewards={claimedRewards}
             t={t}
+          />
+        )}
+        {mode === 'gamelab' && (
+          <GameLabPanel
+            onLeave={leaveStation}
+            isTouch={isTouch}
+            activity={gameLab}
+            preselect={gameLabPreselect}
           />
         )}
         {mode === 'avatar' && (
@@ -1030,7 +1080,9 @@ export function StudioContent({
                       ? 'YuviStudio.intro.station.room'
                       : !stations.avatar.placed
                         ? 'YuviStudio.intro.station.avatar'
-                        : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
+                        : !stations.gamelab.placed
+                          ? 'YuviStudio.intro.station.gamelab'
+                          : introCheckFailed ? 'YuviStudio.intro.station.missing' : 'YuviStudio.intro.station.done'
                     : introScene === 2
                       ? introRoomItemAdded ? 'YuviStudio.intro.roomCatalog.done' : introCheckFailed ? 'YuviStudio.intro.roomCatalog.missing' : 'YuviStudio.intro.roomCatalog.pick'
                       : introScene === 3
@@ -1188,7 +1240,6 @@ export function StudioContent({
       </section>
       {showLoadingExperience && (
         <StudioLoadingExperience
-          design={activeDesign}
           ready={loaded && roomState.loaded && stageRendered}
           onExited={() => setShowLoadingExperience(false)}
         />
@@ -1202,12 +1253,23 @@ export function StudioContent({
             : t(`YuviStudio.room.item.${menuItem!.kind}`)}
           primaryAction={menuStation === 'avatar'
             ? { label: t('YuviStudio.zone.avatar'), icon: 'spark', onClick: () => { setPropMenu(null); goToStation('avatar') } }
-            : undefined}
+            : menuStation === 'gamelab'
+              ? { label: t('YuviStudio.zone.gamelab'), icon: 'gamepad', onClick: () => { setPropMenu(null); goToStation('gamelab') } }
+              : undefined}
+          /* Every station moves, the platform included; it is round, so only
+             the spin is meaningless for it. */
           onMove={() => startMove(propMenu.uid)}
           onRotate={menuStation === 'avatar' ? undefined : menuStation
             ? () => roomState.rotateStation(menuStation, Math.PI / 8)
             : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
-          onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
+          /* The walk-in stations are doors, not furniture — and since the
+             World Capsule replaced the mission kiosk, that includes the
+             capsule. Only the explore plinth is decoration that can be put away. */
+          onRemove={menuStation
+            ? (menuStation === 'explore'
+              ? () => { setPropMenu(null); roomState.removeStation(menuStation) }
+              : undefined)
+            : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
           colors={!menuStation && roomItemSpec(menuItem!.kind)?.tintable ? ITEM_TINTS.slice(0, 5) : undefined}
           onTint={!menuStation && roomItemSpec(menuItem!.kind)?.tintable
             ? (hex) => roomState.tint(menuItem!.uid, hex)
@@ -1492,7 +1554,7 @@ function RoomPanel({
         : [],
     [category, hasCreatorLoft, hasSportsArena, surpriseRewards],
   )
-  const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
+  const roomThumbnails = useThumbnails(categoryItems, renderRoomThumbnail, roomThumbnailCache)
   const placementHint = placing && !placing.station && roomItemSpec(placing.kind)?.placement === 'wall'
     ? t(placing.uid ? 'YuviStudio.room.moveHint.wall' : 'YuviStudio.room.placeHint.wall')
     : placing ? t(placing.uid ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint') : null

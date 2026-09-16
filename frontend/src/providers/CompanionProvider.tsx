@@ -3,6 +3,7 @@ import {
   acknowledgeKudos,
   createCoachConversation,
   AgentStreamError,
+  type CoachTeacherSuggestion,
   coachSurfaceForPath,
   deleteCoachConversation,
   getCoachSupportState,
@@ -52,6 +53,8 @@ export interface CoachMessage {
   canVisualize?: boolean
   /** Server-validated navigation offers attached to this assistant reply. */
   actions?: CoachActionOffer[]
+  /** This reply opened the raise-hand button (the `suggest_teacher_help` tool). */
+  teacherSuggestion?: CoachTeacherSuggestion
   /** In-memory development trace, available only for the active streamed reply. */
   toolTrace?: CoachToolTraceStep[]
   isComplete: boolean
@@ -258,6 +261,12 @@ interface CompanionContextValue {
   /** 720 misconception response: a different-representation component the learner
    *  can switch to, offered after a repeated misconception (null when none). */
   pendingAlternative: TriggerAlternative | null
+  /** The raise-hand gate: null while the button is locked, else why and on
+   *  which question it opened. Server truth mirrored here — the chat reads it,
+   *  the lesson question change clears it. */
+  handUnlock: HandUnlock | null
+  unlockHand: (unlock: HandUnlock) => void
+  relockHand: () => void
   openExplainer: () => void
   closeExplainer: () => void
   explainerOpen: boolean
@@ -269,6 +278,13 @@ interface CompanionContextValue {
   loadMoreConversations: () => Promise<void>
   loadMoreMessages: () => Promise<void>
   reloadHistory: () => Promise<void>
+}
+
+export interface HandUnlock {
+  reason: string
+  questionKey: string | null
+  /** `sync` = restored from the server on mount — no activation cue replays. */
+  source: 'coach' | 'detector' | 'sync'
 }
 
 const CompanionContext = createContext<CompanionContextValue | null>(null)
@@ -290,6 +306,7 @@ function historyMessage(message: CoachHistoryMessage): CoachMessage {
     textAfter: message.text_after || undefined,
     visual: message.visual,
     actions: message.meta?.actions,
+    teacherSuggestion: message.meta?.teacher_suggestion,
     isComplete: true,
     createdAt: message.at,
     questionKey: message.question_key ?? null,
@@ -446,6 +463,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [itemGeneration, setItemGeneration] = useState(0)
   const [explainerOpen, setExplainerOpen] = useState(false)
   const [pendingAlternative, setPendingAlternative] = useState<TriggerAlternative | null>(null)
+  const [handUnlock, setHandUnlock] = useState<HandUnlock | null>(null)
   // Bumped when the lesson page creates a provider session. Every provider
   // launch gets its own clean Coach thread, keyed by the immutable session id.
   const [lessonEpoch, setLessonEpoch] = useState(0)
@@ -885,7 +903,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, pathname, selectConversation])
+    // NOT keyed on the route. This provider lives above the keyed route
+    // element precisely so the conversation survives navigation, and having
+    // `pathname` here re-ran the whole load — two requests, an emptied panel
+    // and a spinner — on every screen change, for a thread that had not
+    // changed. What legitimately re-keys the history is already in the list:
+    // the mode, the lesson epoch, and a lesson becoming ready.
+  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, selectConversation])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
@@ -1085,7 +1109,21 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
           const queryIntent = typeof event.query_intent === 'string' ? event.query_intent : undefined
-          if (!Array.isArray(actions) && !hasToolTrace && !queryIntent) return
+          const suggestion = event.teacher_suggestion
+          const teacherSuggestion = suggestion && typeof suggestion === 'object'
+            && typeof (suggestion as CoachTeacherSuggestion).reason === 'string'
+            ? suggestion as CoachTeacherSuggestion
+            : undefined
+          if (teacherSuggestion) {
+            // The trigger stream carries the same unlock; setting it here too
+            // means the button opens with the sentence that explains it.
+            setHandUnlock({
+              reason: teacherSuggestion.reason,
+              questionKey: teacherSuggestion.question_key ?? null,
+              source: 'coach',
+            })
+          }
+          if (!Array.isArray(actions) && !hasToolTrace && !queryIntent && !teacherSuggestion) return
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId
               ? {
@@ -1093,6 +1131,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 ...(Array.isArray(actions) ? { actions: actions as CoachActionOffer[] } : {}),
                 ...(hasToolTrace ? { toolTrace } : {}),
                 ...(queryIntent ? { queryIntent } : {}),
+                ...(teacherSuggestion ? { teacherSuggestion } : {}),
               }
               : m
           )))
@@ -1428,7 +1467,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (document.hidden) return
       void syncSupportState(controller.signal)
     }
-    const timer = window.setInterval(tick, 2500)
+    // A reconciler, not the signal: the server pushes `screen_change` the
+    // moment the fold moves the pointer, and this tick only catches what a
+    // dropped frame missed. At 2.5 s it was 800 brain reads a second across
+    // two thousand open lessons; ten seconds keeps the safety net and drops
+    // the cost by three quarters.
+    const timer = window.setInterval(tick, 10_000)
     const onVisible = () => { if (!document.hidden) tick() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
@@ -1802,6 +1846,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           loadKudosRef.current?.({ open: true })
           return
         }
+        // The raise-hand gate opened (Yuvi's tool or a struggle detector).
+        // Server-persisted, so a reconnect gap is healed by the mount sync.
+        if (trigger.type === 'hand_unlock') {
+          setHandUnlock({
+            reason: trigger.reason || 'other',
+            questionKey: trigger.question_key ?? null,
+            source: trigger.source === 'coach' ? 'coach' : 'detector',
+          })
+          return
+        }
         if (NUDGE_TYPES.has(trigger.type)) {
           if (trigger.type !== 'idle') activitySeqRef.current += 1   // answer-evidence = engagement
           // A repeated misconception carries an alternative representation to
@@ -1869,6 +1923,24 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // learner moves to a new screen or component (including after accepting it),
   // so a stale "want to see it another way?" never trails into the next question.
   useEffect(() => { setPendingAlternative(null) }, [surface.component_id, currentQuestionKey])
+
+  // The unlock is per question too — but unlike the offer above it is server
+  // truth restored on reload, and a reload resolves the key from null. So the
+  // first known key is not a move, and a key equal to the unlock's own is the
+  // same question seen again (the push and the poll both name it).
+  const previousQuestionKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    const previous = previousQuestionKeyRef.current
+    previousQuestionKeyRef.current = currentQuestionKey
+    setHandUnlock((unlock) => {
+      if (!unlock) return null
+      if (unlock.questionKey && unlock.questionKey === currentQuestionKey) return unlock
+      if (previous === null) return unlock
+      return null
+    })
+  }, [currentQuestionKey])
+  const unlockHand = useCallback((unlock: HandUnlock) => setHandUnlock(unlock), [])
+  const relockHand = useCallback(() => setHandUnlock(null), [])
 
   // "Learn it another way" now opens a generated, per-question explainer (slides
   // + Manim) instead of navigating to another Kata activity. The deck is cached
@@ -1947,6 +2019,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         currentQuestionKey,
         onQuestionFrame,
         pendingAlternative,
+        handUnlock,
+        unlockHand,
+        relockHand,
         pendingKudos,
         acknowledgeKudos: ackKudos,
         openExplainer,

@@ -220,6 +220,7 @@ async def document_conversation(
     notes: str = "",
     goals: Optional[list[dict[str, Any]]] = None,
     meeting_stage: str = "",
+    mentoring_phase: str = "",
     teacher_only_note: str = "",
     visibility: str = "shared",
     draft_id: str = "",
@@ -290,6 +291,9 @@ async def document_conversation(
         "language": language,
         "visibility": "teacher_only" if visibility == "teacher_only" else "shared",
         "meeting_stage": meeting_stage,
+        # The ministry's ladder step, when the form offered it. `mentoring`
+        # normalizes it and drops anything off the closed list.
+        "mentoring_phase": mentoring_phase or meeting_stage,
         "notes": notes,
         "teacher_only_note": (teacher_only_note or "").strip(),
         "draft_id": draft_id or None,

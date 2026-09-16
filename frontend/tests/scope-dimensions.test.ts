@@ -40,7 +40,6 @@ const TABLE: [string, boolean, boolean, boolean][] = [
   ['/teacher/tasks',                    true,  false, true ],
   ['/teacher/tasks/t-1',                true,  true,  false],
   ['/teacher/tasks/t-1/review',         true,  false, false],
-  ['/admin',                            false, false, false],
 ]
 
 describe('every teacher route says what it narrows by', () => {

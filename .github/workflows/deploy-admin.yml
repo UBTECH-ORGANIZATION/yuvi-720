@@ -6,7 +6,17 @@ on:
     paths:
       - "admin/**"
       - ".github/workflows/deploy-admin.yml"
+  # The admin app has no Dev slot: every deploy here IS production. A manual
+  # run therefore needs a typed confirmation and must come from main.
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type ADMIN-PRODUCTION to deploy main to the admin app"
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 env:
   ACR_LOGIN_SERVER: yuvi720acr.azurecr.io
@@ -18,8 +28,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Cheap gate first: an unconfirmed or off-main dispatch must not spend a CI run.
+  confirm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main and an explicit confirmation on manual runs
+        if: github.event_name == 'workflow_dispatch' && (inputs.confirm != 'ADMIN-PRODUCTION' || github.ref != 'refs/heads/main')
+        run: |
+          echo "Refusing: manual admin deploys need confirm=ADMIN-PRODUCTION and must run from main (got ${{ github.ref_name }})."
+          exit 1
+
   # Same gate as the spark pipeline: admin tests, backend tests, frontend tests.
   validate:
+    needs: confirm
     uses: ./.github/workflows/ci.yml
 
   build:
@@ -43,14 +64,20 @@ jobs:
           docker build --platform linux/amd64 \
             --file admin/Dockerfile \
             --tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest \
             admin
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Tag latest (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    if: github.ref == 'refs/heads/main'
     environment:
       name: admin
       url: ${{ vars.ADMIN_URL || 'https://ubi-admin-yuvi-720.azurewebsites.net' }}

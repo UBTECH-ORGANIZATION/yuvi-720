@@ -193,14 +193,31 @@ async def get_brain(learner_id: Optional[str] = None) -> dict[str, Any]:
     return brain
 
 
+async def _touch(learner_id: str) -> None:
+    """Every brain write moves the learner's cache version (and their
+    classes'): the dashboard, the catalog projection and the class snapshot
+    are all projections of this document. Lazy import — the cache layer sits
+    above the repository."""
+    try:
+        from app.services import cache_bumps
+        await cache_bumps.touch_learner(learner_id)
+    except Exception as exc:  # never let the cache cost a brain write
+        print(f"⚠️ cache bump failed for {learner_id}: {type(exc).__name__}")
+
+
 async def apply_brain_updates(
-    learner_id: Optional[str], updates: dict[str, Any]
+    learner_id: Optional[str], updates: dict[str, Any], *, touch: bool = True,
 ) -> dict[str, Any]:
     """Field-scoped `$set` write with a `version` bump (never whole-doc replace).
 
     `updates` may be dotted ({"profile.interests": [...]}) or nested; both are
     normalized to dotted `$set` keys. Scope enforcement lives in
     `context_engine.apply_writes` — call that, not this, from agent code.
+
+    `touch=False` is for a write-back of something a projection DERIVED from
+    the brain and the events (the dashboard's activeness drivers): the inputs
+    that moved it already bumped the cache, and bumping again here would
+    invalidate the very entry the projection just cached.
     """
     safe_id = normalize_learner_id(learner_id)
     await get_brain(safe_id)  # ensure the document exists (+ migration)
@@ -211,6 +228,8 @@ async def apply_brain_updates(
     flat["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     collection = _get_collection()
+    if touch:
+        await _touch(safe_id)
     if collection is not None:
         try:
             await collection.update_one(
@@ -253,6 +272,7 @@ async def apply_brain_operators(
     incs = {path: value for path, value in (inc_fields or {}).items() if value}
 
     collection = _get_collection()
+    await _touch(safe_id)
     if collection is not None:
         try:
             update: dict[str, Any] = {"$set": flat, "$inc": {"version": 1, **incs}}

@@ -3,6 +3,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useResponsive } from '../../hooks/useResponsive'
 import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3DLazy'
 import { DEFAULT_DESIGN } from '../Yuvi-studio/YuviDesign'
+import { useRenderTier } from '../Yuvi-studio/renderTier'
 
 type FlightPoint = {
   x: number
@@ -220,6 +221,20 @@ export function LandingYuviJourney() {
   const pilotRef = useRef<HTMLDivElement | null>(null)
   const sceneRef = useRef<string>('hero')
   const [scene, setScene] = useState<string>('hero')
+  /* The landing page is the first thing a school PC paints. Its Three.js pilot
+     mounts on the first idle moment after that paint, and on a low-tier device
+     not at all — the flat Yuvi flies the same path. */
+  const renderTier = useRenderTier()
+  const [pilotReady, setPilotReady] = useState(false)
+  useEffect(() => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback
+    if (idle) {
+      const handle = idle(() => setPilotReady(true), { timeout: 1500 })
+      return () => (window as Window & { cancelIdleCallback?: (h: number) => void }).cancelIdleCallback?.(handle)
+    }
+    const timer = window.setTimeout(() => setPilotReady(true), 300)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const root = document.querySelector<HTMLElement>('.landing720')
@@ -551,14 +566,20 @@ export function LandingYuviJourney() {
         <span className="landing720-Yuvi-speed landing720-Yuvi-speed--two" />
         <span className="landing720-Yuvi-speed landing720-Yuvi-speed--three" />
         <div className="landing720-Yuvi-pilot__robot">
-          <YuviAvatar3D
-            initialDesign={DEFAULT_DESIGN}
-            label={t('companion.title')}
-            muted
-            frontFacing={scene !== 'hero'}
-            presenting={scene === 'hero'}
-            presentingSide="right"
-          />
+          {pilotReady && renderTier !== 'low' ? (
+            <YuviAvatar3D
+              initialDesign={DEFAULT_DESIGN}
+              label={t('companion.title')}
+              muted
+              frontFacing={scene !== 'hero'}
+              presenting={scene === 'hero'}
+              presentingSide="right"
+            />
+          ) : (
+            <div className="Yuvi-avatar-canvas" data-webgl-state="unavailable" style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <img className="Yuvi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" />
+            </div>
+          )}
           <Thrusters />
         </div>
       </div>

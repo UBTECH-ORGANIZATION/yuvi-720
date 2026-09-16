@@ -24,6 +24,10 @@ MISCONCEPTION_STREAK = 3   # K consecutive fails on the same objective
 # cross-origin so the client can't observe idleness; the server event stream is
 # the only honest signal, so the watchdog lives here (not in the browser).
 IDLE_SECONDS = int(os.environ.get("LESSON_IDLE_SECONDS", "150"))
+# Safety valve for the raise-hand gate: this many effortful wrong answers on the
+# SAME question open the hand even when no detector has fired. Time alone never
+# does — slow reading is not stuck.
+HAND_UNLOCK_WRONG_ATTEMPTS = int(os.environ.get("HAND_UNLOCK_WRONG_ATTEMPTS", "2"))
 
 # Per-type cooldowns (seconds) + priority. The deep-flow test showed a generic
 # `slow_progress` firing first and masking the more specific nudges the learner
@@ -76,6 +80,9 @@ _last_mistake_key: dict[str, str] = {}
 # shape as the rest of this module (§ header); a multi-worker deploy would need
 # the shared-bus seam like everything else here.
 _last_screen_key: dict[str, str] = {}
+# Effortful wrong answers on the current question (learner → (key, count)); a
+# different question starts the count over. Feeds the hand's safety valve.
+_wrong_streak: dict[str, tuple[str, int]] = {}
 # Sustained-effort is celebrated once per session (learner → last streak session).
 _last_streak_session: dict[str, str] = {}
 # Screens already congratulated, per learner, keyed `session|item|question`.
@@ -187,6 +194,22 @@ def _publish(learner_id: str, trigger: dict[str, Any]) -> None:
     import time
     _last_published[(learner_id, str(trigger.get("type")))] = time.monotonic()
     realtime.publish(_topic(learner_id), trigger)
+
+
+def _consider_hand_unlock(learner_id: str, trigger: dict[str, Any]) -> None:
+    """A struggle signal may open the raise-hand button. Guarded: the nudge is
+    already delivered and must not be undone by the gate misbehaving."""
+    try:
+        from app.services import coach_handoff
+        coach_handoff.consider_unlock(learner_id, trigger)
+    except Exception as exc:
+        print(f"⚠️ hand unlock failed: {type(exc).__name__}: {exc}")
+
+
+def current_screen_key(learner_id: str) -> Optional[str]:
+    """The question key last pushed as `screen_change` — what "this question"
+    means to anything that scopes itself per screen (the hand unlock)."""
+    return _last_screen_key.get(learner_id)
 
 
 def _cancel_idle(learner_id: str) -> None:
@@ -312,6 +335,20 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
                 "question_id": event.get("question_id"),
                 "_key": mistake_key,
             }
+        # The hand's safety valve: a second effortful miss on the SAME question
+        # opens the button whether or not a detector fires. Not a nudge — it
+        # goes straight to the gate, never through the priority loop.
+        if event.get("effortful") is not False:
+            last_key, count = _wrong_streak.get(learner_id, (None, 0))
+            count = count + 1 if last_key == mistake_key else 1
+            _wrong_streak[learner_id] = (mistake_key, count)
+            if count >= HAND_UNLOCK_WRONG_ATTEMPTS:
+                _consider_hand_unlock(learner_id, {
+                    "type": "repeated_wrong",
+                    "objective_id": objective_id,
+                    "question_id": event.get("question_id"),
+                    "attempts": count,
+                })
 
     timing = event.get("timing") or {}
     elapsed = timing.get("elapsed_since_previous_seconds")
@@ -451,6 +488,7 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
             for private in ("_key", "_streak_session", "_success_key"):
                 trigger.pop(private, None)
             _publish(learner_id, trigger)
+            _consider_hand_unlock(learner_id, trigger)
             # Mirror into the teacher's live view. Guarded: the learner's nudge
             # has already been delivered and must not be undone by a roster
             # lookup or an alert write failing.
@@ -491,6 +529,7 @@ def publish_idle(learner_id: str, objective_id: Optional[str] = None) -> None:
         _arm_idle(learner_id, objective_id, delay=IDLE_SECONDS - chatted_ago)
         return
     _publish(learner_id, {"type": "idle", "objective_id": objective_id})
+    _consider_hand_unlock(learner_id, {"type": "idle", "objective_id": objective_id})
     # Durable trail (PBI 451): one row per genuinely fired idle episode — past
     # the cooldown and chat-rearm returns above, so retro idle-share can be
     # computed. No dedupe key: each firing is a distinct ≥IDLE_SECONDS stretch
@@ -537,6 +576,13 @@ def publish_screen_change(
     if _last_screen_key.get(learner_id) == question_key:
         return
     _last_screen_key[learner_id] = question_key
+    # The hand unlock is per question: a new screen re-locks the button. Guarded
+    # like the rest — the screen push must never fail on the gate.
+    try:
+        from app.services import presence
+        presence.clear_hand_unlock(learner_id)
+    except Exception as exc:
+        print(f"⚠️ hand re-lock failed: {type(exc).__name__}: {exc}")
     # A genuine new question is a fresh reaction context: clear the per-question
     # dedupe and the reaction cooldowns so the next question gets its first
     # mistake/success nudge even if the previous one fired seconds ago (two

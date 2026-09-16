@@ -59,6 +59,16 @@ ensure_env_loaded()
 
 _DEV_SIGNING_SECRET = "yuvi720-dev-secret"
 _PRODUCTION_NAMES = {"production", "prod"}
+_LOCAL_NAMES = {"local", "localhost", "test", "testing", ""}
+
+
+def environment_name() -> str:
+    """The deployed environment: local · dev · english · production."""
+    for name in ("SPARK_ENVIRONMENT", "ENVIRONMENT"):
+        value = (os.environ.get(name) or "").strip().lower()
+        if value:
+            return value
+    return ""
 
 
 def is_production() -> bool:
@@ -67,6 +77,37 @@ def is_production() -> bool:
         (os.environ.get(name) or "").strip().lower() in _PRODUCTION_NAMES
         for name in ("ENVIRONMENT", "SPARK_ENVIRONMENT")
     )
+
+
+def is_local() -> bool:
+    """True only on a developer machine or in the test suite.
+
+    An unset environment counts as local: every cloud slot sets
+    SPARK_ENVIRONMENT explicitly, so "unset" can only be a laptop or CI.
+    """
+    return environment_name() in _LOCAL_NAMES
+
+
+def password_login_enabled_by_setting() -> bool:
+    """PASSWORD_LOGIN_ENABLED, the Dev slot's opt-in (a slot setting there, so
+    it can never travel through a swap)."""
+    return (os.environ.get("PASSWORD_LOGIN_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
+def password_login_allowed() -> bool:
+    """Username/password login: always on a developer machine, on the Dev slot
+    when PASSWORD_LOGIN_ENABLED says so, never in production.
+
+    In production the Ministry of Education OIDC provider is the single way in,
+    so a stolen or seeded password cannot become an entry point to real learner
+    data — the production check comes first and no setting overrides it.
+    `POST /api/auth/login` 404s wherever this is false.
+    """
+    if is_production():
+        return False
+    return is_local() or password_login_enabled_by_setting()
 
 
 def signing_secret() -> str:

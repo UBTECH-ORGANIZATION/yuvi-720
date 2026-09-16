@@ -185,27 +185,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
   /* App shell: tighten chrome, allow the brand block to shrink. */
   .app-bar { padding-inline: var(--sp-gutter); gap: var(--sp-3); }
   .app-bar-brand { min-width: 0; }
-  .stage { padding-inline: var(--sp-gutter); }
   .step-label { display: none; }
   .app-bar-user .user-sub { display: none; }
-
-  /* Onboarding: stack the narrated stage on compact screens. */
-  .intro-stage { grid-template-columns: 1fr; height: auto; min-height: 0; gap: var(--sp-5); padding-block: var(--sp-5); overflow: visible; direction: inherit; }
-  .intro-robot-zone { grid-column: 1; grid-row: 1; block-size: auto; min-block-size: 0; }
-  .intro-stage-orbit { display: none; }
-  .intro-back-ring { display: none; }
-  .intro-stage-plate { display: none; }
-  .intro-stage .Yuvi-floater { position: relative; left: auto; top: auto; justify-self: center; width: clamp(180px, 42vw, 300px); margin: 0; transform: none; animation: YuviStageAppear .55s ease both; }
-  .intro-script { grid-column: 1; grid-row: 2; align-items: stretch; justify-self: center; justify-content: flex-start; width: min(620px, 100%); min-height: 0; padding-inline: var(--sp-4); direction: inherit; }
-  .intro-lines { min-height: 0; }
-  .intro-line { text-align: start; max-width: 100%; }
-  .intro-reveal { align-items: center; }
-  .intro-stage-actions, .intro-trust { justify-content: center; }
-
-  .intro-scene { flex-direction: column-reverse; align-items: center; max-inline-size: 560px; min-height: 0; gap: var(--sp-4); }
-  .chat-side { width: 100%; height: auto; min-height: 440px; }
-  .intro-scene > .Yuvi-floater { position: relative; inset-inline-start: auto; top: auto; transform: none; width: clamp(180px, 42vw, 300px); margin: 0 auto; animation: none; }
-  .Yuvi-floater::after { inset: 10% 8%; }
 
   /* Dense panels breathe less on tablets. */
   .sp-panel { padding: var(--sp-6); }
@@ -220,10 +201,11 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .sp-only-phone { display: revert; }
 
   /* Mapping keeps progress visible, but moves it onto a calm second row so
-     brand, language, theme, and learner controls never collide at 320–390px. */
-  .learner-mapping-page,
+     brand, language, theme, and learner controls never collide at 320–390px.
+     (The mapping page's own copy of these rules sits at the end of
+     learner-mapping.css — that file loads lazily, after this one, so its
+     breakpoint overrides have to live beside its base rules to win.) */
   .results-page { --mapping-app-bar-height: 104px; }
-  .learner-mapping-page .app-bar,
   .results-page .app-bar {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: 52px 34px;
@@ -232,19 +214,16 @@ img, svg, video, canvas { max-inline-size: 100%; }
     height: var(--mapping-app-bar-height);
     padding: 4px 10px 6px;
   }
-  .learner-mapping-page .app-bar-left,
   .results-page .app-bar-left {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
   }
-  .learner-mapping-page .app-bar-user,
   .results-page .app-bar-user {
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
   }
-  .learner-mapping-page .app-bar-steps--progress,
   .results-page .app-bar-steps--progress {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -270,16 +249,6 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .app-bar-left .yuvi-language-switcher > span { display: none; }
   .app-bar-left .yuvi-language-switcher select { max-inline-size: 58px; font-size: 11px; }
   .app-bar-left .yuvi-theme-switcher { min-inline-size: 42px; padding-inline: 2px; }
-
-  /* Onboarding scene/chat fills the width; bubbles get a touch more room. */
-  .intro-line { font-size: clamp(16px, 4.7vw, 22px); }
-  .intro-line-1 { font-size: clamp(20px, 6vw, 28px); }
-  .intro-line-5 { font-size: clamp(18px, 5.4vw, 25px); }
-  .intro-scene { max-inline-size: 100%; gap: var(--sp-4); }
-  .chat-side { padding: var(--sp-5) var(--sp-4) var(--sp-4); border-radius: 22px; }
-  .chat-bubble { max-width: 90%; }
-  .intro-stage .Yuvi-floater { width: clamp(150px, 42vw, 220px); }
-  .intro-script { padding-block-start: var(--sp-2); }
 
   /* Question screen: single-column options, comfortable touch targets. */
   .options-grid { grid-template-columns: 1fr !important; }

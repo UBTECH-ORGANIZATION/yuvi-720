@@ -4,7 +4,6 @@ import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
 import { useProgression } from '../providers/ProgressionProvider'
-import { openReportIssue } from '../features/support/ReportIssueDialog'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
 import { XpAwardPopup } from './XpAwardPopup'
@@ -13,6 +12,9 @@ import { XpAwardPopup } from './XpAwardPopup'
    belong to you (language, light/dark) and sign-out. Those settings live on the
    user document, so putting them behind the avatar is where people look for
    them — and it keeps the bar itself uncluttered. */
+
+/** The standalone admin service; opened in a new tab, it is its own app. */
+const ADMIN_CONSOLE_URL = 'https://admin.spark.yuvilab.ai'
 
 const LANGUAGES: Array<{ value: Language; label: string }> = [
   { value: 'he', label: 'עברית' },
@@ -39,7 +41,12 @@ export function UserMenu() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const route = useRoute()
-  const inTeacherApp = route.startsWith('/teacher') || route.startsWith('/admin')
+  const inTeacherApp = route.startsWith('/teacher')
+  /* The admin console is not a Spark page any more: it is the standalone admin
+     service. The role here only decides whether to show the door — the service
+     re-checks the live grant on its own. */
+  const isAdmin = Boolean(user?.roles.includes('admin'))
+  /* The XP chip is learner chrome: the teacher app keeps the plain avatar. */
   const showProgression = !inTeacherApp && progression !== null
   const xpMaximum = progression?.xpToNext ?? Math.max(1, progression?.currentLevelXp ?? 1)
   const xpNow = progression?.currentLevelXp ?? 0
@@ -194,16 +201,32 @@ export function UserMenu() {
             </button>
           ) : null}
 
+          {isAdmin ? (
+            <a
+              className="user-menu__row user-menu__row--link"
+              role="menuitem"
+              href={ADMIN_CONSOLE_URL}
+              target="_blank"
+              rel="noopener"
+              onClick={() => setOpen(false)}
+            >
+              <span>{t('tch.nav.admin')}</span>
+              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          ) : null}
+
           <button
             className="user-menu__row user-menu__row--link"
             type="button"
             role="menuitem"
             onClick={() => {
               setOpen(false)
-              openReportIssue()
+              navigate('/support')
             }}
           >
-            <span>{t('support.report.menuTitle')}</span>
+            <span>{t('supportWidget.menuTitle')}</span>
             <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

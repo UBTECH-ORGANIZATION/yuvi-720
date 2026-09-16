@@ -6,153 +6,6 @@
   overflow: hidden;
 }
 
-.app-bar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 18px;
-  padding: 8px 24px;
-  height: var(--mapping-app-bar-height);
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(232, 226, 247, 0.8);
-}
-
-.app-bar-left { grid-column: 1; justify-self: start; display: flex; align-items: center; gap: 12px; min-width: 0; }
-.app-bar-steps { grid-column: 2; justify-self: center; }
-
-.app-bar-brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 100px;
-  min-width: 0;
-  height: 52px;
-  overflow: hidden;
-  direction: ltr;
-  unicode-bidi: isolate;
-  color: var(--m-text);
-  font-weight: 800;
-}
-
-.app-bar-brand .yuvi-brand-logo {
-  width: 82px;
-  height: 52px;
-}
-
-.app-bar-brand b { color: var(--m-primary); }
-
-.app-bar-brand--debug {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.app-bar-brand--debug:focus-visible {
-  outline: 2px solid var(--sp-primary-500);
-  outline-offset: 2px;
-}
-
-.app-bar-brand--debug:disabled {
-  cursor: wait;
-}
-
-.app-bar-user {
-  grid-column: 3;
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.app-bar-menu-toggle,
-.app-bar-menu-backdrop,
-.app-bar-menu {
-  display: none;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-  background: var(--m-gradient-soft);
-  border: 2px solid #fff;
-  box-shadow: 0 5px 14px rgba(111, 91, 255, 0.3);
-}
-
-.user-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  min-width: 0;
-}
-
-.user-name { font-size: 14.5px; font-weight: 700; color: var(--m-text); }
-.user-sub { font-size: 11.5px; color: var(--m-text-light); white-space: nowrap; }
-
-.yuvi-language-switcher {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid rgba(111, 91, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 6px 18px rgba(111, 91, 255, 0.08);
-  color: var(--m-text-soft);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.yuvi-language-switcher select,
-.yuvi-theme-switcher select {
-  border: 0;
-  background: transparent;
-  color: var(--m-text);
-  font-weight: 700;
-  outline: none;
-}
-
-.stepper { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0; margin: 0; max-width: none; }
-
-.step-pair { display: contents; }
-.step { display: flex; flex-direction: row; align-items: center; gap: 7px; flex-shrink: 0; }
-.step-dot {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid var(--m-border);
-  color: var(--m-text-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
-  transition: all 0.4s cubic-bezier(.34,1.56,.64,1);
-  box-shadow: var(--m-shadow-sm);
-}
-.step-dot svg { width: 15px; height: 15px; }
-.step-label { font-size: 12px; font-weight: 600; color: var(--m-text-light); transition: color 0.3s; white-space: nowrap; }
-.step-line { width: 22px; height: 2px; border-radius: 2px; background: var(--m-border); margin: 0; transition: background 0.4s; }
-.step.active .step-dot { background: var(--m-gradient-soft); border-color: transparent; color: #fff; transform: scale(1.06); box-shadow: 0 6px 16px rgba(111, 91, 255, 0.32); }
-.step.active .step-label { color: var(--m-primary); }
-.step.done .step-dot { background: var(--m-soft-bg); border-color: var(--m-primary); color: var(--m-primary); }
-.step.done .step-label { color: var(--m-text-soft); }
-
 .stage { display: flex; align-items: center; justify-content: center; width: 100%; height: calc(100dvh - var(--mapping-app-bar-height)); min-height: 0; padding: 14px 22px; overflow: clip; }
 .stage:has(.reflection-stage) { padding: 0; background: #170d34; }
 .screen { width: 100%; min-height: 0; }
@@ -1480,4 +1333,67 @@
 
 @media (max-width: 599px) and (prefers-reduced-motion: reduce) {
   .reflection-speech.is-visible { transform: none; }
+}
+
+/* ── Breakpoints ──────────────────────────────────────────────────────────
+   Moved here from responsive.css: this file loads with the (lazy) mapping page,
+   i.e. AFTER responsive.css, so overrides of equal specificity have to come
+   after the base rules in the same file or the desktop layout wins on phones.
+   Breakpoints mirror styles/tokens.css. */
+@media (max-width: 899px) {
+  .stage { padding-inline: var(--sp-gutter); }
+  /* Onboarding: stack the narrated stage on compact screens. */
+  .intro-stage { grid-template-columns: 1fr; height: auto; min-height: 0; gap: var(--sp-5); padding-block: var(--sp-5); overflow: visible; direction: inherit; }
+  .intro-robot-zone { grid-column: 1; grid-row: 1; block-size: auto; min-block-size: 0; }
+  .intro-stage-orbit { display: none; }
+  .intro-back-ring { display: none; }
+  .intro-stage-plate { display: none; }
+  .intro-stage .Yuvi-floater { position: relative; left: auto; top: auto; justify-self: center; width: clamp(180px, 42vw, 300px); margin: 0; transform: none; animation: YuviStageAppear .55s ease both; }
+  .intro-script { grid-column: 1; grid-row: 2; align-items: stretch; justify-self: center; justify-content: flex-start; width: min(620px, 100%); min-height: 0; padding-inline: var(--sp-4); direction: inherit; }
+  .intro-lines { min-height: 0; }
+  .intro-line { text-align: start; max-width: 100%; }
+  .intro-reveal { align-items: center; }
+  .intro-stage-actions, .intro-trust { justify-content: center; }
+
+  .intro-scene { flex-direction: column-reverse; align-items: center; max-inline-size: 560px; min-height: 0; gap: var(--sp-4); }
+  .chat-side { width: 100%; height: auto; min-height: 440px; }
+  .intro-scene > .Yuvi-floater { position: relative; inset-inline-start: auto; top: auto; transform: none; width: clamp(180px, 42vw, 300px); margin: 0 auto; animation: none; }
+  .Yuvi-floater::after { inset: 10% 8%; }
+}
+
+@media (max-width: 599px) {
+  .learner-mapping-page { --mapping-app-bar-height: 104px; }
+  .learner-mapping-page .app-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 52px 34px;
+    align-items: center;
+    gap: 2px 8px;
+    height: var(--mapping-app-bar-height);
+    padding: 4px 10px 6px;
+  }
+  .learner-mapping-page .app-bar-left {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .learner-mapping-page .app-bar-user {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .learner-mapping-page .app-bar-steps--progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  /* Onboarding scene/chat fills the width; bubbles get a touch more room. */
+  .intro-line { font-size: clamp(16px, 4.7vw, 22px); }
+  .intro-line-1 { font-size: clamp(20px, 6vw, 28px); }
+  .intro-line-5 { font-size: clamp(18px, 5.4vw, 25px); }
+  .intro-scene { max-inline-size: 100%; gap: var(--sp-4); }
+  .chat-side { padding: var(--sp-5) var(--sp-4) var(--sp-4); border-radius: 22px; }
+  .chat-bubble { max-width: 90%; }
+  .intro-stage .Yuvi-floater { width: clamp(150px, 42vw, 220px); }
+  .intro-script { padding-block-start: var(--sp-2); }
 }

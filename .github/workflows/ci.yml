@@ -66,6 +66,9 @@ jobs:
           # misconfigured one — see backend/app/core/database.py.
           SPARK_STORAGE: json
           SPARK_ENVIRONMENT: test
+          # No cache either: every test computes, so no test can pass on
+          # another test's cached answer — see backend/app/core/cache.py.
+          SPARK_CACHE: "off"
         run: |
           quarantined=()
           while IFS= read -r node; do quarantined+=("$node"); done \
@@ -111,6 +114,9 @@ jobs:
         env:
           SPARK_STORAGE: json
           SPARK_ENVIRONMENT: test
+          # No cache either: every test computes, so no test can pass on
+          # another test's cached answer — see backend/app/core/cache.py.
+          SPARK_CACHE: "off"
         run: |
           quarantined=()
           while IFS= read -r node; do quarantined+=("$node"); done \

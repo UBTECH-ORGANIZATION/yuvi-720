@@ -34,6 +34,23 @@ async def create_mentoring(data: dict, session=Depends(require_learner_session))
     return JSONResponse(content=record)
 
 
+@router.get("/mentoring/phases")
+async def list_mentoring_phases(_=Depends(optional_user)) -> dict:
+    """The ministry's ten-step mentoring ladder, in order.
+
+    A closed list on the wire has to be a closed list in the form too — a free
+    text stage is exactly how an off-list `mentoringPhase` reached the LRS. The
+    codes come from the reporting module so the form and the statement can never
+    drift apart.
+    """
+    return {
+        "phases": [
+            {"sorting": index, "mentoringPhase": code, "phaseName": name}
+            for index, (code, name) in enumerate(mentoring.MENTORING_PHASES.items(), 1)
+        ]
+    }
+
+
 @router.get("/mentoring")
 async def list_mentoring(learner_id: str = Depends(require_learner)):
     """List a learner's own mentoring conversations, teacher-only notes stripped.

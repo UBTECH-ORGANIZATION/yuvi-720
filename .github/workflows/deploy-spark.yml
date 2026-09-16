@@ -6,13 +6,31 @@ on:
     paths-ignore:
       - "admin/**"
       - ".github/workflows/deploy-admin.yml"
+      # The game-gen worker has its own pipeline; a worker-only commit must
+      # not rebuild and redeploy the whole Spark image.
+      - "workers/**"
+      - "infra/game-gen/**"
+      - ".github/workflows/deploy-game-gen.yml"
   workflow_dispatch:
     inputs:
       promote:
-        description: "Promote Dev → Production after deploy?"
+        description: "Promote Dev → Production after deploy? (main only)"
         required: true
         type: boolean
         default: false
+
+# A branch dispatch is a Dev-slot preview; say so in the run list. An empty
+# run-name falls back to the workflow name.
+run-name: "${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' && format('Dev preview of {0}', github.ref_name) || '' }}"
+
+permissions:
+  contents: read
+
+# One deploy at a time: two runs interleaving a Dev deploy with a swap would
+# ship an unintended image to production.
+concurrency:
+  group: spark-dev-slot
+  cancel-in-progress: false
 
 env:
   ACR_NAME: yuvi720acr
@@ -45,9 +63,17 @@ jobs:
       - name: Build and push Docker image
         run: |
           docker build --platform linux/amd64 \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest .
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # `latest` means "what main last built". A branch preview must not
+      # overwrite it — deploy-production-ref.yml relies on that tag staying
+      # trustworthy.
+      - name: Tag latest (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
   # ── Job 2: Deploy to Dev slot (always runs) ───────────────────
@@ -78,6 +104,14 @@ jobs:
               COACH_TOOL_CALLING_ENABLED=true \
               COACH_DEBUG_TRACE_ENABLED=false \
               SPARK_ENVIRONMENT=dev \
+              PASSWORD_LOGIN_ENABLED=true \
+              MOE_OIDC_ENABLED=true \
+              MOE_OIDC_ISSUER=https://is.remote.education.gov.il/nidp/oauth/nam \
+              MOE_OIDC_REDIRECT_PATH=/api/auth/moe/callback \
+              MOE_OIDC_REDIRECT_URI=https://dev.spark.yuvilab.ai \
+              MOE_OIDC_SCOPES="openid profileEXT eduorg edustudent" \
+              MOE_OIDC_TOKEN_AUTH_METHOD=client_secret_basic \
+              MOE_OIDC_POST_LOGOUT_URL=https://dev.spark.yuvilab.ai \
             --output none
 
       - name: Refuse to deploy Dev against the production database
@@ -96,6 +130,26 @@ jobs:
           case "$dev_host" in
             yuvi720.mongocluster.cosmos.azure.com|yuvi720.global.mongocluster.cosmos.azure.com)
               echo "The Dev slot is pointed at the production cluster. Point it at yuvi720-dev."
+              exit 1
+              ;;
+          esac
+
+      - name: Refuse to deploy Dev against the production cache
+        run: |
+          # Same contract as the database: REDIS_CONNECTION_STRING is a slot
+          # setting, so it cannot drift through a swap, but a hand edit would
+          # be silent. Check the host, never print the string.
+          dev_cache="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --query "[?name=='REDIS_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          dev_cache_host="$(sed -E 's|.*@([^/?,:]+).*|\1|' <<< "$dev_cache")"
+          echo "Dev slot cache host: ${dev_cache_host:-none}"
+          case "$dev_cache_host" in
+            redis-yuvi-720.*)
+              echo "The Dev slot is pointed at the production cache. Point it at redis-yuvi-720-dev."
               exit 1
               ;;
           esac
@@ -139,6 +193,17 @@ jobs:
             LRS_SUPPLIER_DOMAIN
             APPLICATIONINSIGHTS_CONNECTION_STRING
             SPARK_ENVIRONMENT
+            REDIS_CONNECTION_STRING
+            SPARK_CACHE
+            MOE_OIDC_CLIENT_ID
+            MOE_OIDC_CLIENT_SECRET
+            MOE_LEARNER_ID_SALT
+            GAME_JOBS_MODE
+            GAME_JOBS_QUEUE
+            GAME_JOBS_SERVICEBUS_NAMESPACE
+            GAMES_STORAGE
+            GAMES_STORAGE_ACCOUNT_URL
+            GAMES_BLOB_CONTAINER
           )
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do
@@ -173,15 +238,24 @@ jobs:
         run: az logout
         if: always()
 
-  # ── Job 3: Swap Dev → Production (only on manual trigger) ─────
+  # ── Job 3: Swap Dev → Production (manual trigger, from main only) ─
+  # The Dev slot may hold a branch preview; a swap must only ever carry a
+  # build of main. The `if` keeps the job out of a branch run entirely, and
+  # the first step is a loud second lock in case the condition is edited.
   promote-production:
     runs-on: ubuntu-latest
     needs: deploy-dev
-    if: github.event_name == 'workflow_dispatch' && inputs.promote == true
+    if: github.event_name == 'workflow_dispatch' && inputs.promote == true && github.ref == 'refs/heads/main'
     environment:
       name: production
       url: https://spark.yuvilab.ai
     steps:
+      - name: Refuse to promote anything but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Refusing to swap: promote was requested from ${{ github.ref_name }}, not main."
+          exit 1
+
       - name: Log in to Azure
         uses: azure/login@v2
         with:
@@ -198,6 +272,48 @@ jobs:
           trace_enabled="$(jq -r '.[] | select(.name == \"COACH_DEBUG_TRACE_ENABLED\") | .value' <<< \"$production_flags\" | tr '[:upper:]' '[:lower:]')"
           if [[ "$tool_enabled" != "true" || "$trace_enabled" == "1" || "$trace_enabled" == "true" || "$trace_enabled" == "yes" || "$trace_enabled" == "on" ]]; then
             echo "Production Coach flags must be COACH_TOOL_CALLING_ENABLED=true and COACH_DEBUG_TRACE_ENABLED=false"
+            exit 1
+          fi
+
+      - name: Verify production has a working login path
+        run: |
+          # Password login is a developer-machine and Dev-slot affordance
+          # (app.core.env.password_login_allowed; PASSWORD_LOGIN_ENABLED is a Dev
+          # slot setting and the code refuses it in production regardless), so
+          # Ministry of Education SSO is the ONLY door into production. Swapping
+          # with it disabled would lock every user out silently. Fail loudly instead.
+          # To unblock: set MOE_OIDC_ENABLED / MOE_OIDC_CLIENT_ID / MOE_OIDC_CLIENT_SECRET /
+          # MOE_LEARNER_ID_SALT on the production slot once MoE issues prod credentials.
+          production_login="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --output json | jq -r '[.[] | select(.name | startswith("MOE_")) | select(.value != null and .value != "")] | map(.name) | join(" ")')"
+          moe_enabled="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='MOE_OIDC_ENABLED'].value | [0]" \
+            --output tsv | tr '[:upper:]' '[:lower:]')"
+          if [[ "$moe_enabled" != "true" && "$moe_enabled" != "1" && "$moe_enabled" != "yes" && "$moe_enabled" != "on" ]]; then
+            echo "MOE_OIDC_ENABLED is not true on the production slot."
+            echo "Password login is local-only, so production would have no login path. Refusing to swap."
+            exit 1
+          fi
+          for setting_name in MOE_OIDC_CLIENT_ID MOE_OIDC_CLIENT_SECRET MOE_LEARNER_ID_SALT; do
+            if ! grep -qw "$setting_name" <<< "$production_login"; then
+              echo "Missing production setting $setting_name; refusing to swap."
+              exit 1
+            fi
+          done
+          # Belt and braces: the code ignores it in production, but a hand-set
+          # PASSWORD_LOGIN_ENABLED on the production slot means someone expects
+          # it to work — say no before the swap rather than after.
+          password_flag="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='PASSWORD_LOGIN_ENABLED'].value | [0]" \
+            --output tsv | tr '[:upper:]' '[:lower:]')"
+          if [[ "$password_flag" == "1" || "$password_flag" == "true" || "$password_flag" == "yes" || "$password_flag" == "on" ]]; then
+            echo "PASSWORD_LOGIN_ENABLED is set on the production slot. Production is Ministry SSO only; remove it."
             exit 1
           fi
 
@@ -223,6 +339,18 @@ jobs:
           fi
           if [[ "$production_environment" != "production" ]]; then
             echo "SPARK_ENVIRONMENT on the production slot must be 'production'."
+            exit 1
+          fi
+          # And its cache: the swap must not move that either.
+          production_cache="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='REDIS_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          production_cache_host="$(sed -E 's|.*@([^/?,:]+).*|\1|' <<< "$production_cache")"
+          echo "Production cache host: ${production_cache_host:-none}"
+          if [[ "$production_cache_host" != redis-yuvi-720.* ]]; then
+            echo "Production is not pointed at the production cache (redis-yuvi-720); refusing to swap."
             exit 1
           fi
 

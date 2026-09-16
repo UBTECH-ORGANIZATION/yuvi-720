@@ -20,6 +20,10 @@ export interface DirectMessage {
   text: string
   created_at: string
   read_at: string | null
+  /** Set when the teacher said this to a whole sub-group; the child's copy
+   *  lives in their own thread, labelled with the group it was said to. */
+  subgroup_id?: string
+  subgroup_name?: string | null
 }
 
 /** A message a person was not allowed to send. `key` is a locale key, so the
@@ -85,7 +89,14 @@ export function markMessagesRead(learnerId: string) {
 export interface UnreadMap {
   unread: Record<string, number>
   total: number
+  /** Learner side only: the part of each teacher's count that was said to a
+   *  sub-group, per sub-group — the child reads those as their own chats. */
+  subgroups?: Record<string, number>
 }
+
+/** What a read receipt covers: the whole thread, only the lines said to the
+ *  child alone, or one sub-group's lines. */
+export type ReadScope = 'all' | 'private' | { subgroup: string }
 
 export async function getTeacherUnread(): Promise<UnreadMap> {
   const response = await fetch('/api/teacher/messages-unread', { credentials: 'include' })
@@ -110,8 +121,11 @@ export function sendMyMessage(teacherId: string, text: string, language: string)
   return send(`/api/me/messages/${encodeURIComponent(teacherId)}`, text, language)
 }
 
-export function markMyMessagesRead(teacherId: string) {
-  return fetch(`/api/me/messages/${encodeURIComponent(teacherId)}/read`,
+export function markMyMessagesRead(teacherId: string, scope: ReadScope = 'all') {
+  const query = typeof scope === 'object'
+    ? `?subgroup=${encodeURIComponent(scope.subgroup)}`
+    : scope === 'private' ? '?scope=private' : ''
+  return fetch(`/api/me/messages/${encodeURIComponent(teacherId)}/read${query}`,
     { method: 'PATCH', credentials: 'include' })
 }
 

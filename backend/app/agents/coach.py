@@ -25,6 +25,7 @@ from app.agents.coach_modes import (
     navigation_action_reply_instruction,
     project_bundle,
     resolve_mode,
+    teacher_help_reply_instruction,
 )
 from app.agents import manim_visual
 from app.agents import safety
@@ -501,6 +502,35 @@ VISUAL_REQUEST_ACK = {
     "he": "התלמיד/ה ביקש/ה במפורש לראות המחשה, והיא תצורף להודעה הזו. פתח/י במשפט אחד שמאשר ואומר מה האיור מראה (\"בשמחה — הנה איור שמראה את שלבי הפוטוסינתזה\"), ואז שני משפטים קצרים שמלווים אותו ומסבירים מה לשים לב אליו. כאן מותר לומר שהאיור נמצא כאן — אבל אל תתאר/י אותו כטקסט או ASCII, אל תכתוב/י בלוק קוד ואל תצרף/י קישור, תמונה או נתיב קובץ בעצמך.",
     "ar": "طلب/ت الطالب/ة صراحةً رؤية رسم توضيحي، وسيُرفق بهذه الرسالة. ابدأ/ي بجملة واحدة تؤكّد وتقول ماذا يُظهر الرسم (\"بكل سرور — إليك رسمًا يوضّح مراحل التركيب الضوئي\")، ثم جملتين قصيرتين ترافقانه وتوضّحان ما ينبغي الانتباه إليه. هنا يجوز القول إنّ الرسم موجود — لكن لا تصفه بنص أو ASCII، ولا تكتب كتلة شيفرة، ولا تُرفق رابطًا أو صورة أو مسار ملف بنفسك.",
     "en": "The learner explicitly asked to SEE something, and the visual will be attached to this message. Open with one sentence that confirms and says what the picture shows (\"Happy to — here's a diagram showing the stages of photosynthesis\"), then two short sentences alongside it saying what to look at. Here you may say the picture is here — but do not render it as text or ASCII, do not write a code block, and do not attach a link, image, or file path yourself.",
+}
+
+# When the lesson coach may open the raise-hand button (`suggest_teacher_help`).
+# Deliberately conservative: the button is the child's line to a person, and a
+# tool that opens it on every stumble makes the grey state meaningless. Only
+# appended when tool calling is on — with no tool to call, the rule is noise.
+TEACHER_HELP_TOOL_RULE = {
+    "he": (
+        "כפתור \"לקרוא למורה\" נעול עד שאת/ה פותח/ת אותו עם הכלי suggest_teacher_help. "
+        "הפעל/י אותו רק כשיש עדות ברורה שנדרש אדם: הלומד/ת ביקש/ה במפורש מורה (asked_for_teacher); "
+        "עדיין תקוע/ה גם אחרי רמז או הסבר (stuck_after_help); מצוקה שלא נרגעת למרות העידוד (emotional); "
+        "סטייה חוזרת מהמשימה למרות הכוונה (off_track). לעולם לא על רמז ראשון, שאלה רגילה או טעות בודדת. "
+        "לכל היותר פעם אחת לכל שאלה. הכלי לא יוצר קשר עם אף אחד — אל תבטיח/י שמורה מגיע/ה."
+    ),
+    "ar": (
+        "زر \"مناداة المعلّم/ة\" مقفل حتى تفتحه/تفتحيه بأداة suggest_teacher_help. "
+        "استخدم/ي الأداة فقط عند وجود دليل واضح على الحاجة إلى شخص: طلب/ت الطالب/ة المعلّم/ة صراحةً (asked_for_teacher)؛ "
+        "ما زال/ت عالقًا/ة حتى بعد تلميح أو شرح (stuck_after_help)؛ ضيق لا يهدأ رغم التشجيع (emotional)؛ "
+        "انحراف متكرر عن المهمة رغم التوجيه (off_track). أبدًا ليس عند التلميح الأول أو سؤال عادي أو خطأ واحد. "
+        "مرّة واحدة على الأكثر لكل سؤال. الأداة لا تتواصل مع أحد — لا تعِد/ي بأنّ معلّمًا/ة قادم/ة."
+    ),
+    "en": (
+        "The \"call the teacher\" button is locked until you open it with the suggest_teacher_help tool. "
+        "Call it only on clear evidence that a person is needed: the learner explicitly asked for the teacher "
+        "(asked_for_teacher); still stuck after a hint or an explanation (stuck_after_help); distress that is "
+        "not easing despite encouragement (emotional); drifting off the task despite redirection (off_track). "
+        "Never for a first hint, an ordinary question, or a single mistake. At most once per question. "
+        "The tool contacts nobody — do not promise a teacher is coming."
+    ),
 }
 
 # Shape the FORM of help to how THIS learner learns best (the bundle already
@@ -1068,6 +1098,7 @@ async def run_coach_stream(
     action_offers: Optional[list[dict[str, object]]] = None,
     visual_requests: Optional[list[dict[str, str]]] = None,
     pointer_requests: Optional[list[dict[str, object]]] = None,
+    teacher_suggestions: Optional[list[dict[str, object]]] = None,
     debug_trace: Optional[list[dict[str, str]]] = None,
     intent_out: Optional[list[str]] = None,
     diagnostics_out: Optional[dict[str, object]] = None,
@@ -1364,6 +1395,8 @@ async def run_coach_stream(
     )
     instructions = f"{instructions}\n- {GROUNDING_GUARDRAIL[lang]}"
     instructions = f"{instructions}\n- {NATURAL_LANGUAGE_RULES[lang]}"
+    if coach_mode is CoachMode.LESSON and _tool_calling_enabled():
+        instructions = f"{instructions}\n- {TEACHER_HELP_TOOL_RULE[lang]}"
     if bundle.get("activeness_map"):
         instructions = f"{instructions}\n- {ACTIVENESS_MAP_RULE[lang]}"
     address = await _address_form(learner_id)
@@ -1518,6 +1551,7 @@ async def run_coach_stream(
         action_offers=action_offers if action_offers is not None else [],
         visual_requests=visual_requests if visual_requests is not None else [],
         pointer_requests=pointer_requests if pointer_requests is not None else [],
+        teacher_suggestions=teacher_suggestions if teacher_suggestions is not None else [],
     )
     messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
     messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
@@ -1528,6 +1562,11 @@ async def run_coach_stream(
                 lang,
                 str(tool_context.action_offers[-1].get("action_id") or ""),
             ),
+        })
+    if coach_mode is CoachMode.LESSON and tool_context.teacher_suggestions:
+        messages.append({
+            "role": "system",
+            "content": teacher_help_reply_instruction(lang),
         })
 
     # Ground truth is in the prompt so the coach can guide accurately, and a
@@ -1786,7 +1825,9 @@ async def run_coach_stream(
                if tool_context.action_offers else {}),
             **({"pointer": tool_context.pointer_requests[0]}
                if tool_context.pointer_requests else {}),
-                **({"proactive_trigger": trigger} if trigger else {}),
+            **({"teacher_suggestion": tool_context.teacher_suggestions[0]}
+               if tool_context.teacher_suggestions else {}),
+            **({"proactive_trigger": trigger} if trigger else {}),
         } or None),
     )
     coach_debug_trace.append(debug_trace, "persist_conversation_turn")

@@ -847,12 +847,41 @@ def build_shards(
     return shards
 
 
+# Fields that say WHEN, not WHAT. A re-browse that measures a lomda and finds
+# it exactly as before still stamps a fresh probed_at/captured_at; the vendor
+# re-saves a lomda without touching it and kata_updated_at moves. Left alone,
+# each of those rewrites a shard and the nightly opens a pull request whose
+# whole diff is dates. The writer compares without them and keeps the old
+# file — old stamps included — when nothing else moved.
+STAMP_KEYS = frozenset({"generated_at", "probed_at", "captured_at",
+                        "kata_updated_at"})
+
+
+def _without_stamps(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _without_stamps(v) for k, v in value.items()
+                if k not in STAMP_KEYS}
+    if isinstance(value, list):
+        return [_without_stamps(v) for v in value]
+    return value
+
+
+def _materially_equal(existing: str, payload: str) -> bool:
+    """True when the two JSON documents differ in stamps only."""
+    try:
+        return _without_stamps(json.loads(existing)) == \
+            _without_stamps(json.loads(payload))
+    except json.JSONDecodeError:
+        return False
+
+
 def write_output(
     out_dir: Path, shards: dict[Path, dict[str, Any]],
     backlog_browse: list[str], stats: dict[str, Any],
 ) -> bool:
     """Write shards + index; prune shards for objectives that vanished.
-    Returns True when any byte changed."""
+    Returns True when anything other than a timestamp changed — a file whose
+    only news is a date is left exactly as it was."""
     changed = False
     wanted_paths = set()
     for rel_path, shard in shards.items():
@@ -860,7 +889,8 @@ def write_output(
         wanted_paths.add(target)
         target.parent.mkdir(parents=True, exist_ok=True)
         payload = ci.dump_shard(shard)
-        if not target.exists() or target.read_text(encoding="utf-8") != payload:
+        if not target.exists() or not _materially_equal(
+                target.read_text(encoding="utf-8"), payload):
             target.write_text(payload, encoding="utf-8")
             changed = True
     for stale in set(ci.shard_paths(out_dir)) - wanted_paths:
@@ -880,14 +910,18 @@ def write_output(
         "stats": stats,
     }
     index_path = out_dir / "index.json"
-    stable = {k: v for k, v in index.items() if k != "generated_at"}
+    # `stats` is this run's tally (how many texts it generated, how many it
+    # left pending) — a run log, not content; it rides along with a real
+    # change and never justifies one on its own.
+    volatile = STAMP_KEYS | {"stats"}
+    stable = {k: v for k, v in index.items() if k not in volatile}
     previous: dict[str, Any] = {}
     if index_path.exists():
         try:
             previous = json.loads(index_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             previous = {}
-    if {k: v for k, v in previous.items() if k != "generated_at"} != stable:
+    if {k: v for k, v in previous.items() if k not in volatile} != stable:
         index_path.write_text(
             json.dumps(index, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")

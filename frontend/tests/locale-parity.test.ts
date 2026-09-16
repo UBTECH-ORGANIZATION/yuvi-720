@@ -72,10 +72,10 @@ const IDENTICAL_BY_DESIGN = new Set([
   'tch.quality.score',
 ])
 
-/* The two namespaces added for the teacher/admin system. Both are large and both
-   were hand-edited across three files, so "same as Hebrew" means untranslated
-   unless the key is listed above. */
-for (const namespace of ['tch.', 'adm.'] as const) {
+/* The namespace added for the teacher system. It is large and was hand-edited
+   across three files, so "same as Hebrew" means untranslated unless the key is
+   listed above. */
+for (const namespace of ['tch.'] as const) {
   test(`the ${namespace}* namespace is fully translated`, () => {
     const [he, en, ar] = LANGS.map(load)
     const keys = Object.keys(he).filter((key) => key.startsWith(namespace))

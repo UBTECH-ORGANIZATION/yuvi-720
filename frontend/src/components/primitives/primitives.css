@@ -621,6 +621,45 @@ textarea[dir="auto"]:placeholder-shown {
   animation: spForgeCard .72s cubic-bezier(.24, .96, .3, 1.02) .34s both;
 }
 
+/* Ministry sign-in. In the cloud it is the only way in, so it sits above the
+   fold of the card with nothing competing for the first glance. */
+.auth-forge__sso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.auth-forge__sso-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-forge__card .sp-modal__hint {
+  margin: 0;
+  font-size: .86rem;
+  line-height: 1.45;
+  color: var(--sp-ink-500);
+}
+
+/* A rule with the word "or" sitting in the gap. Logical properties so the
+   Hebrew and Arabic RTL layouts need no separate rule. */
+.auth-forge__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0 0;
+  font-size: .82rem;
+  color: var(--sp-ink-500);
+}
+
+.auth-forge__divider::before,
+.auth-forge__divider::after {
+  content: '';
+  flex: 1 1 auto;
+  block-size: 1px;
+  background: var(--sp-border);
+}
+
 /* Full-bleed scene: the backdrop IS the slab, rather than an illustration
    framed inside it. Everything here is CSS so it scales to any slab size. */
 .auth-forge__sky {
@@ -1209,6 +1248,12 @@ textarea[dir="auto"]:placeholder-shown {
 
 .user-menu__row:hover {
   border-color: var(--sp-border-strong);
+}
+
+/* A row that is a link (the door to the standalone admin service) reads like
+   the button rows around it. */
+a.user-menu__row {
+  text-decoration: none;
 }
 
 .user-menu__row--danger {

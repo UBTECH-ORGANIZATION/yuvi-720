@@ -16,6 +16,7 @@ import {
 } from 'react'
 import { useRoute } from '../app/router'
 import { subscribe } from '../services/realtime'
+import { playNotificationChime } from '../services/notificationChime'
 import {
   dismissAllNotifications, dismissNotifications, listNotifications,
   markAllNotificationsRead, markNotificationsRead,
@@ -46,6 +47,10 @@ const NotificationsContext = createContext<NotificationsValue | null>(null)
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  // Keyed on the id and the hats, never the object: a preference write
+  // replaces `user` and used to refetch the bell and reopen the stream.
+  const userId = user?.user_id ?? null
+  const isLearnerAccount = !!user?.roles?.includes('learner')
   const pathname = useRoute()
 
   /* The portal names the hat. `gal` is a learner AND a teacher: standing in the
@@ -53,7 +58,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
      half of his account, and a bell that mixes them makes both unreadable. The
      server re-checks the role against the session, so this is a view choice,
      never an access one. */
-  const isTeacherPortal = pathname.startsWith('/teacher') || pathname.startsWith('/admin')
+  const isTeacherPortal = pathname.startsWith('/teacher')
   const canTeach = Boolean(user?.roles?.some((role) => role === 'teacher' || role === 'admin'))
   const isLearner = Boolean(user?.roles?.includes('learner'))
   const role: NotificationRole =
@@ -68,7 +73,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(() => setNonce((value) => value + 1), [])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setNotifications([]); setUnread(0); setIsLoading(false)
       return
     }
@@ -82,10 +87,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .catch(() => {})
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [user, nonce, role])
+  }, [userId, nonce, role])
 
   useEffect(() => {
-    if (!user || role !== 'learner') return
+    if (!userId || role !== 'learner') return
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }
@@ -97,14 +102,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', refreshWhenVisible)
       window.clearInterval(interval)
     }
-  }, [user, role, refresh])
+  }, [userId, role, refresh])
 
   // Live arrivals. The learner's stream is the coach channel (which also carries
   // their `user:` topic); a teacher-only account has no such stream, so their
   // bell fills on load and on refresh — teacher-side notifications are not
   // time-critical the way an alert is.
   useEffect(() => {
-    if (!user?.roles?.includes('learner')) return
+    if (!isLearnerAccount) return
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
       if (frame.type !== 'notification') return
       const incoming = frame.notification as AppNotification
@@ -113,8 +118,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setNotifications((current) =>
         current.some((row) => row._id === incoming._id) ? current : [incoming, ...current])
       setUnread((count) => count + 1)
+      // A game finishing is the one arrival worth a sound: the learner asked
+      // for it minutes ago and has moved on to something else. Only here —
+      // every other kind stays silent, as it always has.
+      if (typeof incoming.kind === 'string' && incoming.kind.startsWith('game_')) playNotificationChime()
     })
-  }, [user, role])
+  }, [isLearnerAccount, role])
 
   const markRead = useCallback(async (ids: string[]) => {
     setNotifications((current) => current.map((row) =>

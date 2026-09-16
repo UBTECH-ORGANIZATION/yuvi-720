@@ -137,8 +137,13 @@ class IndexBootstrap(unittest.TestCase):
             "learner_activity": {"learner_activity"},
             "mentoring_conversations": {"mentoring_conversations"},
             "reward_ledger": {"reward_ledger"},
+            # XP history, newest-first per learner (the transparent timeline).
+            "xp_ledger": {"xp_ledger"},
             "tutor_decisions": {"tutor_decisions"},
             "weekly_studio_surprises": {"weekly_studio_surprises"},
+            # Game Lab: cards per learner and the job queue (the admin report
+            # windows the queue on created_at).
+            "learner_games": {"learner_games", "learner_game_jobs"},
         }
         self.assertEqual(
             steps, set(owned), "server.py index_steps changed — update `owned` here too")

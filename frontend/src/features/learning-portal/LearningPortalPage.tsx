@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { navigate } from '../../app/router'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
-import { ErrorState, Icon, LoadingState } from '../../components/primitives'
+import { ErrorState, Icon, Skeleton } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
 import {
@@ -10,6 +10,7 @@ import {
   type LearningUnitDTO,
 } from '../../services/learning'
 import { SimpleTrackView, type TrackLesson } from './SimpleTrackView'
+import { TrackSkeleton } from './TrackSkeleton'
 import './learning-portal.css'
 
 const SUBJECT_ORDER: LearningSubject[] = ['math', 'science', 'other']
@@ -94,8 +95,6 @@ export function LearningPortalPage() {
     >
       <LearnerAppBar />
       <main className="learning-catalog-main">
-        {loading && <LoadingState title={t('learning.loading.title')} body={t('learning.loading.body')} />}
-
         {error && !loading && (
           <ErrorState
             title={t('learning.error.title')}
@@ -108,27 +107,41 @@ export function LearningPortalPage() {
           />
         )}
 
-        {!loading && !error && (
+        {/* The frame is up before the catalog is: real tabs when a previous
+            fetch left them, sketched pills on the first visit, and the track's
+            own skeleton below — the screen fills in where it stands instead of
+            being torn down around a spinner and rebuilt. */}
+        {!error && (
           <>
-            {availableSubjects.length > 0 && (
+            {(availableSubjects.length > 0 || loading) && (
               <div className="learning-catalog-tools">
-                <div className="learning-subject-filters" role="group" aria-label={t('learning.filters.subject')}>
-                  {availableSubjects.map((subject) => (
-                    <button
-                      className={selectedSubject === subject ? 'is-active' : ''}
-                      type="button"
-                      aria-pressed={selectedSubject === subject}
-                      onClick={() => setSelectedSubject(subject)}
-                      key={subject}
-                    >
-                      {t(`learning.subject.${subject}`)}
-                    </button>
-                  ))}
-                </div>
+                {availableSubjects.length > 0 ? (
+                  <div className="learning-subject-filters" role="group" aria-label={t('learning.filters.subject')}>
+                    {availableSubjects.map((subject) => (
+                      <button
+                        className={selectedSubject === subject ? 'is-active' : ''}
+                        type="button"
+                        aria-pressed={selectedSubject === subject}
+                        onClick={() => setSelectedSubject(subject)}
+                        key={subject}
+                      >
+                        {t(`learning.subject.${subject}`)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="learning-subject-filters learning-subject-filters--loading" aria-hidden="true">
+                    {[9, 7, 11].map((width, index) => (
+                      <Skeleton key={index} w={`${width}ch`} h={40} r="var(--sp-radius-pill)" />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {hasTrack && selectedSubject ? (
+            {loading ? (
+              <TrackSkeleton subject={selectedSubject} />
+            ) : hasTrack && selectedSubject ? (
               <SimpleTrackView subject={selectedSubject} units={subjectUnits} onOpenLesson={openLesson} />
             ) : (
               <section className="learning-empty" role="status">
@@ -138,10 +151,6 @@ export function LearningPortalPage() {
               </section>
             )}
 
-            <p className="learning-catalog-disclosure">
-              <Icon name="spark" size={14} />
-              <span>{t('learning.aiDisclosure')}</span>
-            </p>
           </>
         )}
       </main>

@@ -19,8 +19,9 @@ import './styles/theme.css'
 import './styles/global.css'
 import './components/primitives/primitives.css'
 import './styles/landing-login.css'
-import './styles/learner-mapping.css'
-import './styles/results.css'
+// App-bar chrome (bar, user chip, switchers, stepper). The mapping and results
+// pages import their own CSS: both are lazy routes now.
+import './styles/app-chrome.css'
 // Responsive foundation loads LAST so its breakpoint overrides win everywhere.
 import './styles/responsive.css'
 // Theme compatibility loads after legacy feature CSS; new UI should use tokens directly.

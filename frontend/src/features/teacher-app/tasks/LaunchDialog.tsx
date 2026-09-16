@@ -28,7 +28,6 @@ import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
-import { getGroupSnapshot } from '../../../services/teacher'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import './teacher-tasks.css'
 
@@ -54,8 +53,8 @@ interface Props {
 export function LaunchDialog({
   open, groupId, previousLaunches, suggested, busy, onClose, onLaunch,
 }: Props) {
-  const { t, language } = useI18n()
-  const { nameOf } = useTeacherRoster()
+  const { t } = useI18n()
+  const { nameOf, students: rosterRows, isLoading: rosterLoading } = useTeacherRoster()
   /* The provider's list — its one `groupId` prop is always the scoped class
      (TaskReviewPage reads it off the same provider), so a second fetch here was
      the same list twice. The AUDIENCE stays the dialog's own: who receives a
@@ -63,10 +62,16 @@ export function LaunchDialog({
   const { subgroups } = useTeacherScope()
   /* THIS class's learners, not the teacher's whole roster.
      `useTeacherRoster` is every learner across every class a teacher has — it
-     exists so a name can be resolved wherever an id turns up — and using it
-     here made the dialog promise 18 recipients for a send that reached 6. The
-     count above the send button has to be the number of people who receive it. */
-  const [members, setMembers] = useState<string[] | null>(null)
+     exists so a name can be resolved wherever an id turns up — and reading it
+     unfiltered here once made the dialog promise 18 recipients for a send that
+     reached 6. Each roster row carries its `group_id`, so the class's slice is
+     exact, and the count above the send button is the number of people who
+     receive it — without the class snapshot the dialog used to fetch for it. */
+  const members = useMemo(
+    () => (rosterLoading
+      ? null
+      : rosterRows.filter((row) => row.group_id === groupId).map((row) => row.learner_id)),
+    [rosterRows, rosterLoading, groupId])
   const [wholeClass, setWholeClass] = useState(true)
   const [pickedGroups, setPickedGroups] = useState<string[]>([])
   const [pickedLearners, setPickedLearners] = useState<string[]>([])
@@ -74,14 +79,6 @@ export function LaunchDialog({
   const [query, setQuery] = useState('')
   /** True while the ticks on screen are the ones this dialog made itself. */
   const [prefilled, setPrefilled] = useState(false)
-
-  useEffect(() => {
-    if (!open || !groupId) return
-    getGroupSnapshot(groupId, language)
-      .then((snapshot) => setMembers(
-        (snapshot.students ?? []).map((student) => student.learner_id)))
-      .catch(() => setMembers([]))
-  }, [open, groupId, language])
 
   // Reopening the dialog starts fresh: a selection left over from a send that
   // already happened is a selection nobody chose for this one.

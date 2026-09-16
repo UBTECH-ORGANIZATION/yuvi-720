@@ -223,12 +223,6 @@ button:disabled {
   inline-size: 100%;
 }
 
-/* Keep a clear corner so page-end content never rests beneath the fixed Yuvi
-   companion. Only applies to routes where Yuvi is shown (not the task screen). */
-.sp-learner-shell:not(.is-task-route) .sp-learner-shell__content {
-  padding-block-end: var(--sp-companion-safe-area, 128px);
-}
-
 /* These migrated learning workspaces use viewport-fixed chrome. Shift its
    physical right edge too, so it reflows with the coach instead of hiding below it. */
 .sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,

@@ -36,9 +36,22 @@ async def _units_for(lang: str) -> list[dict]:
     held = _units_cache.get(lang)
     if held and (time.monotonic() - held[0]) < _UNITS_TTL_SECONDS:
         return held[1]
-    units = await content_provider.list_units(language=lang)
+    # Behind the in-process copy, the shared one: a deploy or a swap used to
+    # cold-start this for every language, and every instance paid it again.
+    from app.services import cache_store
+    units = await cache_store.remember(
+        "kata", lang, "units", "", int(_UNITS_TTL_SECONDS),
+        lambda: content_provider.list_units(language=lang), versioned=False,
+    )
     _units_cache[lang] = (time.monotonic(), units)
     return units
+
+
+# The per-learner projection, keyed by the learner's cache version (moved by
+# every brain write, so a fold on an answer invalidates it) and by the catalog
+# generation. Two minutes bounds any staleness the version misses. This was
+# the heaviest handler in the app AND the one the lesson page polled.
+_PROJECTION_TTL_SECONDS = 120
 
 
 def reset_units_cache_for_tests() -> None:
@@ -69,9 +82,9 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
     and next step are the same ones the lesson flow and the launch gate use.
     """
     try:
-        from app.services import kata_catalog
+        from app.services import cache_store, kata_catalog
         await kata_catalog.ensure_loaded()
-        units = await _units_for(lang)
+        catalog_generation = int(kata_catalog.loaded_at() or 0)
 
         async def _project(unit: dict) -> dict:
             roadmap = await project_unit_roadmap(unit, learner_id, locale=lang)
@@ -99,7 +112,14 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
         # this route ~2s on a real account — the dashboard's "recent lessons"
         # rail visibly trailing the page. Concurrency, not caching: the payload
         # stays identical, order included (gather preserves it).
-        units = list(await asyncio.gather(*(_project(unit) for unit in units)))
+        async def _project_all() -> list[dict]:
+            units = await _units_for(lang)
+            return list(await asyncio.gather(*(_project(unit) for unit in units)))
+
+        units = await cache_store.remember(
+            "learner", learner_id, "catalog", f"{lang}:{catalog_generation}",
+            _PROJECTION_TTL_SECONDS, _project_all,
+        )
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
     return {
@@ -158,6 +178,45 @@ async def record_path_choice(
     component = kata_catalog.get_component(data.component_id) or {}
     await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
     return {"ok": True}
+
+
+class SkipComponentRequest(BaseModel):
+    component_id: str = Field(min_length=1, max_length=160)
+
+
+@router.post("/skip-component")
+async def skip_component(
+    data: SkipComponentRequest, learner_id: str = Depends(require_learner),
+) -> dict:
+    """The learner chose to move past this component without finishing it.
+
+    720 §דילוג defines a `skipped` on a component, and it only exists as an
+    event because the platform gives the learner the choice — that is the
+    פעלנות side of the same principle `path-choice` serves. The decision is
+    stored as our own evidence (so the path engine and the teacher view can see
+    it) and reported to the ministry LRS as `skipped` on the component.
+    """
+    from app.services import kata_catalog
+    from app.services.events import record_path_choice as store
+
+    await kata_catalog.ensure_loaded()
+    component = kata_catalog.get_component(data.component_id) or {}
+    if not component:
+        raise HTTPException(status_code=404, detail="unknown_component")
+    await store(learner_id, data.component_id, component.get("unit_id"), "skip")
+    try:
+        from app.auth.repository import get_user_by_id
+        from app.services.lrs import reporter as lrs_reporter
+
+        user = await get_user_by_id(learner_id)
+        session_id = (user or {}).get("current_moe_session_id")
+        if session_id:
+            await lrs_reporter.report_component_skipped(
+                learner_id, session_id, data.component_id
+            )
+    except Exception as exc:  # reporting never breaks the learner's flow
+        print(f"⚠️ component skip report skipped: {type(exc).__name__}")
+    return {"ok": True, "skipped": data.component_id}
 
 
 @router.get("/units/{unit_id}/path")

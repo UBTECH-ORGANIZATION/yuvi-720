@@ -31,10 +31,7 @@
 .mt-conv__goal { margin-block-start: var(--sp-2); }
 
 /* Student goals: one active target, one action, then a quiet conversation history. */
-.mt-student { position: relative; max-inline-size: 1080px; padding-block-end: 132px; }
-/* No floating compose FAB on empty/loading/error views — drop the FAB safe-area
-   so the screen doesn't gain ~half a screen of empty scroll below the content. */
-.mt-student--sparse { padding-block-end: var(--sp-6); }
+.mt-student { position: relative; max-inline-size: 1080px; }
 /* Lively, warm brand backdrop so the screen never reads flat/dark. Very
    transparent radial tints over the app background — lifts dark, warms light. */
 .mt-student::before {

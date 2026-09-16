@@ -11,6 +11,7 @@ import {
   getLearningCatalog,
   getLearningTiming,
   reportPathChoice,
+  skipComponent,
   type LearningComponentDTO,
   type LearningSessionDTO,
   type LearningTimingDTO,
@@ -34,7 +35,12 @@ type FrameState = 'loading' | 'ready' | 'error'
 const PROVIDER_READY_TIMEOUT_MS = 15000
 // How often to poll the catalog for a Kata-relayed completion while a lesson is
 // open (cross-origin content can't postMessage us — see the completion effect).
-const COMPLETION_POLL_MS = 5000
+// Completion arrives as a pushed `completion` trigger (CompanionProvider
+// re-dispatches it as `yuvilab:xapi-completion` below). This interval is
+// the fallback for a dropped frame, and it re-runs the heaviest handler in
+// the app: at five seconds that was 400 full projections a second across
+// two thousand open lessons. Thirty seconds is a safety net, not a signal.
+const COMPLETION_POLL_MS = 30_000
 
 function isProviderMessage(value: unknown): value is ProviderMessage {
   return typeof value === 'object' && value !== null
@@ -495,6 +501,26 @@ export function LessonPage() {
               >
                 <Icon name="chevronLeft" size={15} />
                 {t('learning.lesson.previous')}
+              </button>
+            )}
+            {/* 720 §דילוג — the route is a suggestion. A learner who already
+                knows this step may move on, and saying so is an event: it is
+                reported as `skipped` and the next re-plan stops re-offering it.
+                Quietest control on the bar, and only where there is somewhere
+                to go. */}
+            {session && nextComponent && (
+              <button
+                className="learning-lesson-skip"
+                type="button"
+                onClick={() => {
+                  const current = session.component.id
+                  void skipComponent(current)
+                  openRoadmapComponent(nextComponent)
+                }}
+                title={`${t('learning.lesson.skip')} · ${nextComponent.title}`}
+              >
+                {t('learning.lesson.skip')}
+                <Icon name="chevronRight" size={15} />
               </button>
             )}
           </nav>

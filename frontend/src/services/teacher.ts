@@ -1862,6 +1862,8 @@ export function documentMentoring(
     notes: string
     goals: { title: string; next_steps: string; deadline: string; action: GoalAction | null }[]
     meeting_stage?: string
+    /** `phase1`…`phase10` — the ministry's closed list, reported as-is. */
+    mentoring_phase?: string
     teacher_only_note?: string
     visibility?: 'shared' | 'teacher_only'
     draft_id: string
@@ -1917,6 +1919,7 @@ export interface TeacherMentoringDraft {
   notes: string
   teacher_only_note: string
   meeting_stage: string
+  mentoring_phase: string
   goals: MentoringGoalDraft[]
   qa: { q: string; a: string }[]
 }

@@ -41,6 +41,23 @@ def _identity_is_reportable() -> bool:
     return False
 
 
+async def _learner_session_id(learner_id: str) -> Optional[str]:
+    """The learner's own live MoE session, when they have one.
+
+    Used where the acting user is NOT the actor of the statement (a teacher
+    documenting a mentoring meeting): the learner's session is the truthful one
+    to file their event under, and it is only borrowed from the actor when the
+    learner has none open.
+    """
+    try:
+        from app.auth.repository import get_user_by_id
+
+        user = await get_user_by_id(learner_id)
+        return (user or {}).get("current_moe_session_id") or None
+    except Exception:
+        return None
+
+
 async def _content_context(
     learner_id: str,
     component_id: Optional[str] = None,
@@ -125,9 +142,22 @@ async def report_dashboard_viewed(
     learner_id: str,
     session_id: str,
     dashboard_type: str,
-    dashboard_id: str,
+    dashboard_id: Optional[str] = None,
     duration_seconds: Optional[float] = None,
+    *,
+    subject_learner_id: Optional[str] = None,
 ) -> None:
+    """`learner_id` is the *viewer* (the actor); `subject_learner_id` is whose
+    dashboard is on screen.
+
+    The spec wants `dashboardId` to name the thing being looked at, so a teacher
+    opening one student's board must stamp that student's exidentifier — not
+    their own. Resolving it here keeps the exidentifier inside `lrs/`: callers
+    pass a plain learner id and never touch PII.
+    """
+    if dashboard_id is None and subject_learner_id and subject_learner_id != learner_id:
+        subject = await identity_mod.resolve_reporting_identity(subject_learner_id)
+        dashboard_id = subject["exidentifier"] if subject else None
     await _report(
         statements.dashboard_viewed,
         learner_id,
@@ -322,34 +352,58 @@ async def report_student_goal(
     )
 
 
+async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, str]:
+    """`(student_exid, mentor_exid)` for a teacher-authored event.
+
+    Each side is the person's own reporting identity when one resolves (a real
+    exidentifier after Ministry sign-in), else the staging stub — the same
+    value for both, which is what v1 staging reports everywhere. Reporting is
+    never withheld over the identities: the session rule below is the only
+    gate, and a stub-for-stub record on staging is the documented behaviour.
+    """
+    stub = config.test_exidentifier()
+    student_exid, mentor_exid = stub, stub
+    try:
+        learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
+        if learner_identity:
+            student_exid = learner_identity["exidentifier"]
+        if teacher_id:
+            teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
+            if teacher_identity:
+                mentor_exid = teacher_identity["exidentifier"]
+    except Exception:
+        pass
+    return student_exid, mentor_exid
+
+
 async def report_teacher_student_goal(
     learner_id: str,
     teacher_id: str,
     action: str,
     goal_id: str,
     goal_type: str,
+    *,
+    session_id: Optional[str] = None,
 ) -> None:
-    """Report a teacher's action on a learner goal with two distinct identities."""
-    try:
-        learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
-        teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
-    except Exception:
+    """A teacher's action on a learner's goal (an approval is `completed`).
+
+    The actor is the learner and the teacher is named as the instructor. The
+    session follows the same rule as a documented meeting: the learner's own
+    live MoE session, else the acting (teacher's) session handed in, and no
+    statement at all when there is neither — the spec allows no statement
+    without a session grouping.
+    """
+    session_id = await _learner_session_id(learner_id) or session_id
+    if not session_id:
         return
-    if (
-        learner_identity is None
-        or teacher_identity is None
-        or learner_identity["exidentifier"] == teacher_identity["exidentifier"]
-    ):
-        return
-    # The action belongs to the learner's goal; a teacher session would put that
-    # learner event in the wrong session grouping.
+    _student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
     await report_student_goal(
         learner_id,
-        None,
+        session_id,
         action,
         goal_id,
         goal_type,
-        instructor_exid=teacher_identity["exidentifier"],
+        instructor_exid=mentor_exid,
     )
 
 
@@ -371,47 +425,29 @@ async def report_mentoring_record(
         sees it, so there is no learning event to report;
       * `instructor_exid` is attached only when the teacher authored it.
 
-    ## No session grouping on a teacher-authored record
+    ## Which session a teacher-authored record is filed under
 
     The actor of every statement here is the LEARNER — it is their goal, their
-    meeting. But when a teacher documents the talk, the `sid` the route holds
-    is the **teacher's** MoE session, and `build_grouping` would hang it on the
-    statement as `.../session/{sid}`: the learner's event, filed inside someone
-    else's session. Borrowing it is not a smaller error than omitting it, so
-    these report with no session activity at all, which `build_grouping`
-    already allows. A teacher writing up a conversation is genuinely not inside
-    a learning session, and saying nothing is the only honest option available.
-
-    That also means a teacher-authored record reports whether or not the caller
-    has a session to offer; only the learner's own writing still needs one.
+    meeting — but when a teacher documents the talk, the `sid` the route holds
+    is the *teacher's* session. Spec v1.1 leaves no room to omit it ("כל הודעת
+    xAPI תכלול תחת grouping הפניה ל-Session", and the mentor-meeting example
+    carries lms + session + program), so the learner's own active MoE session is
+    resolved first and the acting session is only the fallback. Reporting
+    without a session, which is what we used to do, is the one option the spec
+    does not allow.
     """
     if not record:
         return
     learner_id = record.get("learner_id")
     if not learner_id:
         return
-    teacher_identity = None
-    learner_identity = None
-    if record.get("author") == "teacher":
-        session_id = None
-        teacher_id = str(record.get("teacher_id") or "")
-        if not teacher_id:
-            return
-        try:
-            learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
-            teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
-        except Exception:
-            return
-        if (
-            learner_identity is None
-            or teacher_identity is None
-            or learner_identity["exidentifier"] == teacher_identity["exidentifier"]
-        ):
-            return
-    elif not session_id:
+    session_id = await _learner_session_id(learner_id) or session_id
+    if not session_id:
         return
-    student_exid = (learner_identity or {}).get("exidentifier") or config.test_exidentifier()
-    mentor_exid = (teacher_identity or {}).get("exidentifier") or config.test_exidentifier()
+    # Both people by their own reporting identities when a teacher documented
+    # the talk; the learner's own writing has no second person in it.
+    teacher_id = str(record.get("teacher_id") or "") if record.get("author") == "teacher" else ""
+    student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
     await report_mentor_meeting_completed(
         learner_id,
         session_id,
@@ -419,7 +455,10 @@ async def report_mentoring_record(
         mentor_exid=mentor_exid,
         student_exid=student_exid,
         meeting_date=record.get("date") or "",
-        mentoring_phase=record.get("meeting_stage") or None,
+        # The dedicated field when the form offered the ladder; the free stage
+        # text only as a fallback for records written before it existed. Either
+        # way an off-list value normalizes away rather than reaching the wire.
+        mentoring_phase=record.get("mentoring_phase") or record.get("meeting_stage") or None,
     )
     if record.get("visibility") != "shared":
         return
@@ -505,6 +544,31 @@ async def report_component_completed(
     await _report(
         statements.component_completed, learner_id, session_id, component_id,
         source="kata", **kwargs,
+    )
+
+
+async def report_component_skipped(
+    learner_id: str, session_id: str, component_id: str,
+) -> None:
+    """The learner chose to move past a component without finishing it.
+
+    Spec v1.1 keeps `skipped` at the COMPONENT level ("דילוג על פריט הוחלף
+    בדילוג על רכיב"), and it is only reportable because the platform offers the
+    choice — a component the learner merely abandoned is not a skip.
+    """
+    context = await _content_context(learner_id, component_id)
+    object_id = ((context.get("hierarchy") or {}).get("self") or {}).get("id")
+    if not object_id:
+        # Without the catalog we cannot name the component in the ministry's own
+        # IRI space, and a skip pointing at an id they cannot resolve is noise.
+        return
+    await _report(
+        statements.content_skipped,
+        learner_id,
+        session_id,
+        object_id=object_id,
+        object_type="component",
+        **context,
     )
 
 

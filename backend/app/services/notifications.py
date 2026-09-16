@@ -62,12 +62,21 @@ KIND_PINNED_NEXT = "pinned_next"
 KIND_MODEL_OVERRIDE = "model_override"
 # A learner in the same group liked the recipient's shared Yuvi Studio room.
 KIND_ROOM_LIKED = "room_liked"
+# A learner-made game (Learning Game Lab) finished building — or gave up.
+# Four kinds rather than one with a param because the bell renders a different
+# sentence for each and the chime fires on all of them; the deep link is the
+# same player for all four (`games/notify.player_route`).
+KIND_GAME_READY = "game_ready"
+KIND_GAME_FAILED = "game_failed"
+KIND_GAME_EDIT_READY = "game_edit_ready"
+KIND_GAME_FIX_READY = "game_fix_ready"
 
 KINDS = (
     KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_GOAL_COMPLETED,
     KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
     KIND_TASK_ASSIGNED, KIND_DEADLINE_REMINDER, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
     KIND_PINNED_NEXT, KIND_MODEL_OVERRIDE, KIND_ROOM_LIKED,
+    KIND_GAME_READY, KIND_GAME_FAILED, KIND_GAME_EDIT_READY, KIND_GAME_FIX_READY,
 )
 
 # One person can be both. `gal` is a learner AND a teacher, and a bell that

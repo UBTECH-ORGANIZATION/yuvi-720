@@ -1,42 +1,15 @@
-import { LearnerMappingPage } from '../features/learner-mapping/LearnerMappingPage'
-import { ResultsPage } from '../features/results/ResultsPage'
 import { StudentDashboardPage } from '../features/student-dashboard/StudentDashboardPage'
-import { TeacherHomePage } from '../features/teacher-app/home/TeacherHomePage'
-import { TeacherStudentsPage } from '../features/teacher-app/students/TeacherStudentsPage'
-import { TeacherStudentPage } from '../features/teacher-app/student/TeacherStudentPage'
-import { TeacherCalendarPage } from '../features/teacher-app/calendar/TeacherCalendarPage'
-import { TeacherGoalsPage } from '../features/teacher-app/goals/TeacherGoalsPage'
-import { TeacherLearningsPage } from '../features/teacher-app/learnings/TeacherLearningsPage'
-import { LearningDetailPage } from '../features/teacher-app/learnings/LearningDetailPage'
-import { TeacherMessagesPage } from '../features/teacher-app/messages/TeacherMessagesPage'
-import { AdminConsolePage } from '../features/admin/AdminConsolePage'
-import { TeacherAppBar } from '../components/TeacherAppBar'
-import { ScopeNotice } from '../components/scope/ScopeNotice'
-import { AssistantDock } from '../features/teacher-app/assistant/AssistantDock'
-import { TeacherScopeProvider } from '../providers/TeacherScopeProvider'
-import { TeacherRosterProvider } from '../providers/TeacherRosterProvider'
-import { TeacherLiveProvider } from '../providers/TeacherLiveProvider'
 import { TourProvider } from '../components/tour/TourProvider'
 import { getGroupSnapshot, listGroups } from '../services/teacher'
-import { MentoringPage } from '../features/mentoring/MentoringPage'
 import { LearningPortalPage } from '../features/learning-portal/LearningPortalPage'
 import { LessonPage } from '../features/learning-lesson/LessonPage'
-import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
+import { GamePage } from '../features/games/GamePage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
-/* The studio is a 3D room editor: it owns the avatar renderer, the lab room and
-   the asset catalog. Loading it with the rest of the app put Three.js on every
-   learner's and teacher's first paint, for a route most sessions never open. */
-const YuviStudioPage = lazy(() =>
-  import('../features/Yuvi-studio/YuviStudioPage').then((m) => ({ default: m.YuviStudioPage })))
 import { MyTasksPage } from '../features/student-tasks/MyTasksPage'
 import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
-import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage'
-import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
-import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { LearnerMessageToast } from '../components/LearnerMessageToast'
 import { CheckinGate } from '../features/checkin/CheckinDialog'
-import { PublicReportPage } from '../features/support/PublicReportPage'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -48,6 +21,52 @@ import { useAuth } from '../providers/AuthProvider'
 import { useCompanion } from '../providers/CompanionProvider'
 import { STAGE_ROUTE, useOnboarding } from '../providers/OnboardingProvider'
 import { consumeLoginIntent, navigate, useRoute } from './router'
+
+/* Everything a learner's first paint does not need loads on demand. The main
+   chunk used to carry the whole teacher app, the onboarding screens and the
+   support pages, and a 4-core school PC parsed all of it before showing the
+   dashboard. Landing/login, the dashboard, the learning portal, lessons and
+   tasks stay eager: they are the screens a session actually opens first. */
+/* The studio is a 3D room editor: it owns the avatar renderer, the lab room and
+   the asset catalog. Loading it with the rest of the app put Three.js on every
+   learner's and teacher's first paint, for a route most sessions never open. */
+const YuviStudioPage = lazy(() =>
+  import('../features/Yuvi-studio/YuviStudioPage').then((m) => ({ default: m.YuviStudioPage })))
+const LearnerMappingPage = lazy(() =>
+  import('../features/learner-mapping/LearnerMappingPage').then((m) => ({ default: m.LearnerMappingPage })))
+const ResultsPage = lazy(() =>
+  import('../features/results/ResultsPage').then((m) => ({ default: m.ResultsPage })))
+const MentoringPage = lazy(() =>
+  import('../features/mentoring/MentoringPage').then((m) => ({ default: m.MentoringPage })))
+const LomdaCreatorPage = lazy(() =>
+  import('../features/learning-create/LomdaCreatorPage').then((m) => ({ default: m.LomdaCreatorPage })))
+const SupportPage = lazy(() =>
+  import('../features/support-widget/SupportPage').then((m) => ({ default: m.SupportPage })))
+const PublicReportPage = lazy(() =>
+  import('../features/support/PublicReportPage').then((m) => ({ default: m.PublicReportPage })))
+/* One module, one chunk: the shell (mounted above the route key, see App) and
+   every teacher page resolve from the same import, so a teacher pays for the
+   lane once and a learner never does. */
+const lane = () => import('./TeacherLane')
+const TeacherShell = lazy(() => lane().then((m) => ({ default: m.TeacherShell })))
+const TeacherHomePage = lazy(() => lane().then((m) => ({ default: m.TeacherHomePage })))
+const TeacherStudentsPage = lazy(() => lane().then((m) => ({ default: m.TeacherStudentsPage })))
+const TeacherStudentPage = lazy(() => lane().then((m) => ({ default: m.TeacherStudentPage })))
+const TeacherCalendarPage = lazy(() => lane().then((m) => ({ default: m.TeacherCalendarPage })))
+const TeacherGoalsPage = lazy(() => lane().then((m) => ({ default: m.TeacherGoalsPage })))
+const TeacherLearningsPage = lazy(() => lane().then((m) => ({ default: m.TeacherLearningsPage })))
+const LearningDetailPage = lazy(() => lane().then((m) => ({ default: m.LearningDetailPage })))
+const TeacherMessagesPage = lazy(() => lane().then((m) => ({ default: m.TeacherMessagesPage })))
+const TeacherTasksPage = lazy(() => lane().then((m) => ({ default: m.TeacherTasksPage })))
+const TaskReviewPage = lazy(() => lane().then((m) => ({ default: m.TaskReviewPage })))
+const TaskTrackingPage = lazy(() => lane().then((m) => ({ default: m.TaskTrackingPage })))
+
+/** A lazy page's fallback: the same spinner the auth guard shows, so a chunk
+ *  that is still downloading looks like the app resuming, not a blank page. */
+function RouteFallback() {
+  const { t } = useI18n()
+  return <LoadingState title={t('auth.guard.resuming')} />
+}
 
 /* Route guarding lives here because the router is a 19-line pushState wrapper
    with no loader/guard concept. A protected route with no session REDIRECTS to
@@ -63,21 +82,18 @@ const PROTECTED_ROUTES = [
   '/student-dashboard',
   '/mentoring',
   '/learning',
-  '/tasks'
+  '/games',
+  '/tasks',
+  '/support'
 ]
 const TEACHER_ROUTES = ['/teacher']   // covers /teacher and the legacy /teacher-view
-/* The control plane. Guarded separately from the teacher lane: every teacher may
-   see their own groups, only an admin may change who is connected to whom.
-   The role here is the cheap client-side gate — the backend re-checks the live
-   `org_admins` grant on every request, so a revoked admin gets 403s regardless
-   of what their 12-hour token still claims. */
-const ADMIN_ROUTES = ['/admin']
 
 /* Routes a learner may reach before onboarding is finished. Everything else
    (dashboard, learning world, mentoring, studio) is gated until mapping and
    profile verification are done — otherwise those surfaces render against a
-   half-built brain. */
-const ONBOARDING_ROUTES = ['/learner-mapping', '/results']
+   half-built brain. Support is here because a learner who is stuck in
+   onboarding is exactly the one who needs to reach a human. */
+const ONBOARDING_ROUTES = ['/learner-mapping', '/results', '/support']
 
 function isOnboardingRoute(pathname: string) {
   return ONBOARDING_ROUTES.some((route) => pathname.startsWith(route))
@@ -96,10 +112,6 @@ function isProtected(pathname: string) {
 
 function isTeacherRoute(pathname: string) {
   return TEACHER_ROUTES.some((route) => pathname.startsWith(route))
-}
-
-function isAdminRoute(pathname: string) {
-  return ADMIN_ROUTES.some((route) => pathname.startsWith(route))
 }
 
 function isLandingRoute(pathname: string) {
@@ -129,7 +141,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/tasks', '/admin', '/mentoring', '/learning',
+  '/tasks', '/mentoring', '/learning', '/games', '/support',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -146,64 +158,26 @@ function isKnownRoute(pathname: string) {
     (route) => path === route || path.startsWith(`${route}/`))
 }
 
-/* The most specific home this account can open. An admin who cannot teach must
-   not be sent to /teacher, where the teacher guard would immediately refuse
-   them; same reasoning as the landing-route redirect. */
+/* The most specific home this account can open. Only an account that can
+   teach and NOT learn goes to /teacher — anything else, including an admin who
+   cannot teach, lands where a learner does. The admin console is no longer a
+   Spark page (it lives in the standalone admin service), so there is no
+   admin-only home left to send anyone to. */
 function homeFor(user: { roles: string[] }) {
-  return user.roles.includes('learner')
-    ? '/student-dashboard'
-    : user.roles.includes('teacher') ? '/teacher' : '/admin'
-}
-
-/* Teacher shell — the chrome + scope provider every teacher screen sits in.
-   Mirrors `sp-learner-shell`, and like it, this is mounted ABOVE the keyed
-   route div (see App below). That placement is load-bearing, not cosmetic:
-   inside the keyed div every navigation remounts it, which reset the selected
-   class back to the first group and wiped the assistant conversation the moment
-   a teacher clicked a student reference in the chat. State that must survive
-   navigation lives above the key. */
-function TeacherShell({ children }: { children: React.ReactNode }) {
-  return (
-    <TeacherScopeProvider>
-      {/* Names for every class, fetched once and held above the route key. A
-          per-group name map is what turned a named student in the chat back
-          into a raw id whenever the class picker moved. */}
-      <TeacherRosterProvider>
-      {/* Live inside the scope provider: the stream is per selected group, so it
-          has to be able to read (and re-subscribe on) the current group id. */}
-      <TeacherLiveProvider>
-        <div className="sp-teacher-shell">
-          <TeacherAppBar />
-          {/* Two-column workspace: pages scroll in their own column while the
-              assistant holds the full height of the other — the same "the
-              companion is always beside you" contract as the student's chat
-              panel, not a launcher hiding in a corner (A8). */}
-          <div className="sp-teacher-shell__work">
-            {/* Above every page, never inside one: a screen that does not narrow
-                by a filter the teacher has set must say so, and a new screen
-                must not be able to forget to. */}
-            <main className="sp-teacher-shell__main">
-              <ScopeNotice />
-              {children}
-            </main>
-            <AssistantDock />
-          </div>
-        </div>
-      </TeacherLiveProvider>
-      </TeacherRosterProvider>
-    </TeacherScopeProvider>
-  )
+  return user.roles.includes('teacher') && !user.roles.includes('learner')
+    ? '/teacher'
+    : '/student-dashboard'
 }
 
 function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
   // Deliberately outside PROTECTED_ROUTES: someone locked out must still reach it.
   if (pathname.startsWith('/report')) return <PublicReportPage />
+  // Its own screen, in neither shell: asking a person for help is the whole task.
+  if (pathname.startsWith('/support')) return <SupportPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
-  if (pathname.startsWith('/yuvi-studio')) {
-    return <Suspense fallback={null}><YuviStudioPage /></Suspense>
-  }
+  if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   // Solve before list, or `/tasks/:id` resolves to the list — the same
   // ordering trap the teacher lane below documents.
@@ -267,14 +241,9 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/teacher')) {
     return <TeacherHomePage />
   }
-  // The control plane shares the teacher chrome deliberately: an admin moves
-  // between "who is connected to whom" and the dashboard constantly, and the
-  // group switcher above is already unlocked to every group for them.
-  if (pathname.startsWith('/admin')) {
-    return <AdminConsolePage />
-  }
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
   if (pathname.startsWith('/learning/lesson')) return <LessonPage />
+  if (pathname.startsWith('/games/play')) return <GamePage />
   if (pathname.startsWith('/learning/create')) return <LomdaCreatorPage />
   if (pathname.startsWith('/learning')) return <LearningPortalPage />
   return <LandingLoginPage />
@@ -288,6 +257,7 @@ function isLearnerRoute(pathname: string) {
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning') ||
+    pathname.startsWith('/games') ||
     /* Both task screens sit in the learner shell. The solve screen is a focus
        surface, and `isActiveTaskRoute` collapses the chrome around it — the
        same arrangement a lesson already uses, rather than a second one. */
@@ -299,7 +269,6 @@ export function App() {
   const routePath = useRoute()
   const { t, language, direction } = useI18n()
   const { user, isTeacher } = useAuth()
-  const isAdmin = Boolean(user?.roles.includes('admin'))
   const { stage } = useOnboarding()
   const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
   const studioTransition = useStudioTransition()
@@ -313,16 +282,15 @@ export function App() {
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
   /* Focus surfaces: a lesson, and now solving a task. Both are screens where
      the surrounding chrome is a way to lose work, so the shell collapses. */
-  const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
+  const isActiveTaskRoute = pathname.startsWith('/learning/lesson') || pathname.startsWith('/games/play')
     || pathname.startsWith('/tasks/')
   // While signed out the guard renders the landing page, so the learner shell
   // and its companion must not wrap it.
   const learnerRoute = isLearnerRoute(pathname) && Boolean(user)
   /* Same rule for the teacher chrome, plus the role: an account that fails the
-     teacher/admin guard gets an ErrorState, and wrapping that in the shell
-     would put a class switcher and an assistant around a refusal. */
-  const teacherShellRoute =
-    (isTeacherRoute(pathname) && isTeacher) || (isAdminRoute(pathname) && isAdmin)
+     teacher guard gets an ErrorState, and wrapping that in the shell would put
+     a class switcher and an assistant around a refusal. */
+  const teacherShellRoute = isTeacherRoute(pathname) && isTeacher
 
   // Send an unfinished learner back to the step their saved state says they are
   // on. Done as an effect (not during render) so the URL actually changes —
@@ -351,7 +319,7 @@ export function App() {
   // which is also what makes this fire right after logout, wherever it happens.
   useEffect(() => {
     if (user) return
-    const needsAuth = isProtected(pathname) || isTeacherRoute(pathname) || isAdminRoute(pathname)
+    const needsAuth = isProtected(pathname) || isTeacherRoute(pathname)
     if (needsAuth) navigate('/', { replace: true })
   }, [user, pathname])
 
@@ -395,10 +363,9 @@ export function App() {
     // the child's product, having asked for nothing of the sort.
     const home = !user ? '/'
       : isTeacherRoute(pathname) && isTeacher ? '/teacher'
-        : isAdminRoute(pathname) && isAdmin ? '/admin'
-          : homeFor(user)
+        : homeFor(user)
     navigate(home, { replace: true })
-  }, [user, pathname, isTeacher, isAdmin])
+  }, [user, pathname, isTeacher])
 
   // A learner who already finished the mapping questionnaire cannot open it
   // again by typing /learner-mapping — send them home instead of re-asking the
@@ -409,7 +376,7 @@ export function App() {
   }, [user, stage, pathname])
 
   const guarded = (() => {
-    const teacherLane = isTeacherRoute(pathname) || isAdminRoute(pathname)
+    const teacherLane = isTeacherRoute(pathname)
     const needsAuth = isProtected(pathname) || teacherLane
     // The redirect effect above is already moving us to '/'. Render the landing
     // page for that one frame — it IS the destination, so there is no flicker.
@@ -419,9 +386,6 @@ export function App() {
     if (user && isLandingRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
     // Same hold for an unknown URL: the effect above is already replacing it.
     if (!isKnownRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
-    if (isAdminRoute(pathname) && !isAdmin) {
-      return <ErrorState title={t('auth.guard.adminOnly')} />
-    }
     if (isTeacherRoute(pathname) && !isTeacher) {
       return <ErrorState title={t('auth.guard.teacherOnly')} />
     }
@@ -436,7 +400,7 @@ export function App() {
     if (user && stage !== 'loading' && stage !== 'done' && isProtected(pathname) && !isOnboardingRoute(pathname)) {
       return <LoadingState title={t('auth.guard.resuming')} />
     }
-    return pageForRoute(pathname)
+    return <Suspense fallback={<RouteFallback />}>{pageForRoute(pathname)}</Suspense>
   })()
 
   const routePage = <div key={`${language}:${pathname}`}>{guarded}</div>
@@ -474,7 +438,7 @@ export function App() {
         /* The selected class and the assistant conversation belong to the
            session, not to the page — so the shell wraps the keyed div rather
            than living inside it. */
-        <TeacherShell>{routePage}</TeacherShell>
+        <Suspense fallback={<RouteFallback />}><TeacherShell>{routePage}</TeacherShell></Suspense>
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}

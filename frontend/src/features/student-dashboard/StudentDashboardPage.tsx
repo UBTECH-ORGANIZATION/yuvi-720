@@ -38,6 +38,11 @@ export function StudentDashboardPage() {
   const [isStarting, setIsStarting] = useState(false)
   const [actionError, setActionError] = useState(false)
   const [minimumLoadElapsed, setMinimumLoadElapsed] = useState(false)
+  // The calendar and chat sub-routes render their own pane and never show
+  // the dashboard, the calendar strip or the roadmap — so they do not load
+  // them. Read once per mount: the route key remounts this page per path.
+  const isOverview = !window.location.pathname.endsWith('/calendar')
+    && !window.location.pathname.endsWith('/chat')
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMinimumLoadElapsed(true), 1600)
@@ -45,7 +50,7 @@ export function StudentDashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (!learnerId) return
+    if (!learnerId || !isOverview) return
     let active = true
     const controller = new AbortController()
     if (!dashboard) setLoading(true)
@@ -71,12 +76,13 @@ export function StudentDashboardPage() {
     }
     // `dashboard` deliberately stays out: reloadKey controls background refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [learnerId, language, reloadKey])
+  }, [learnerId, language, reloadKey, isOverview])
 
   // The lesson catalog loads once per visit (or language switch). It is NOT
   // tied to the focus/brain-updated refresh cycle — refetching it made the
   // whole carousel remount and replay its entrance animation mid-session.
   useEffect(() => {
+    if (!isOverview) return
     let active = true
     const controller = new AbortController()
     getLearningCatalog(controller.signal, language)
@@ -88,7 +94,7 @@ export function StudentDashboardPage() {
       active = false
       controller.abort()
     }
-  }, [learnerId, language])
+  }, [learnerId, language, isOverview])
 
   useEffect(() => {
     const refresh = () => setReloadKey((key) => key + 1)
@@ -109,8 +115,6 @@ export function StudentDashboardPage() {
   // than settling halfway between two. Scoped to <html> because that is the
   // scroll container, and only while the overview itself is on screen — the
   // calendar and chat sub-routes scroll normally.
-  const isOverview = !window.location.pathname.endsWith('/calendar')
-    && !window.location.pathname.endsWith('/chat')
   const snapReady = isOverview && minimumLoadElapsed && !!dashboard
 
   useEffect(() => {

@@ -1,6 +1,10 @@
 # Nightly content intelligence: keep content/context/ in step with the live
 # Kata catalog. Fetch → fingerprint diff → browse changed lomdot → regenerate
-# stale texts → open a pull request. A quiet catalog opens nothing.
+# stale texts → open a pull request. A quiet catalog opens nothing, and
+# neither does a night whose only news is timestamps: the pipeline's writer
+# (content_pipeline.write_output) leaves a file alone when it differs from the
+# committed one in probed_at / captured_at / kata_updated_at / generated_at
+# and nothing else, so `git diff` below is empty and the step exits early.
 #
 # A PR, not a push: `main` only accepts pull requests with the three CI checks
 # green (repository rule), so a direct push from here is rejected. The change
@@ -37,10 +41,12 @@ on:
         type: boolean
         default: false
 
+# `actions: write` (needed only to ask ci.yml for the branch-rule checks) can
+# dispatch ANY workflow, including the production deploys. It lives on its own
+# job below, apart from the token that pushes and opens the PR.
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 concurrency:
   group: content-nightly
@@ -50,6 +56,9 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    outputs:
+      branch: ${{ steps.propose.outputs.branch }}
+      pushed: ${{ steps.propose.outputs.pushed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -109,37 +118,65 @@ jobs:
           if-no-files-found: ignore
 
       - name: Open (or update) the content pull request
+        id: propose
         if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: content/nightly
+          # The PR body is written by the model from a structured diff of the
+          # shards (backend/scripts/content_pr_summary.py); same gateway and
+          # Mongo-free settings as the pipeline step above.
+          APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
         run: |
           git config user.name "content-pipeline[bot]"
           git config user.email "content-pipeline@users.noreply.github.com"
           git add content/context
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
           if git diff --cached --quiet; then
             echo "catalog unchanged — nothing to propose"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
           stamp="$(date -u +%F)"
+          # What changed and why, per file — from the staged shards, before
+          # the commit so the index still holds both sides. Falls back to a
+          # plain rendering of the same diff if the model is unavailable.
+          python backend/scripts/content_pr_summary.py --staged \
+            --out backend/artifacts/content-pipeline/pr_body.md \
+            --summary-out backend/artifacts/content-pipeline/pr_summary.json
           git commit -m "content: nightly context refresh ${stamp}"
           # Force, on purpose: the branch is rebuilt from tonight's main every
           # run, so an unmerged PR simply moves forward to the newest refresh.
           git push --force origin "HEAD:refs/heads/${BRANCH}"
 
-          if [ -z "$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')" ]; then
+          existing="$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')"
+          if [ -z "$existing" ]; then
             gh pr create --base main --head "${BRANCH}" \
               --title "content: nightly context refresh ${stamp}" \
-              --body "$(cat <<EOF
-          Automated refresh of \`content/context/\` from the live Kata catalog by the content-nightly pipeline.
-
-          Merging ships it to the dev slot through the normal push→main deploy. Nothing reaches production without the manual promote.
-
-          If this PR sits unmerged, the next nightly run updates it in place rather than opening another.
-          EOF
-          )"
+              --body-file backend/artifacts/content-pipeline/pr_body.md
+          else
+            # The branch was rebuilt from tonight's main, so the old body no
+            # longer describes the diff: title and body follow the refresh.
+            gh pr edit "$existing" \
+              --title "content: nightly context refresh ${stamp}" \
+              --body-file backend/artifacts/content-pipeline/pr_body.md
           fi
 
-          # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not
-          # fire them, so ask for them on this exact commit.
-          gh workflow run ci.yml --ref "${BRANCH}"
+  # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not fire
+  # them, so ask for them on this exact commit — with a token that can do
+  # nothing else.
+  request-checks:
+    needs: refresh
+    if: needs.refresh.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch ci.yml on the content branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref "${{ needs.refresh.outputs.branch }}"

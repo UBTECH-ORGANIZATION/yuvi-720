@@ -162,3 +162,123 @@ class TriggerBusContractTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HandUnlockOverTheBusTest(unittest.IsolatedAsyncioTestCase):
+    """Which bus signals open the raise-hand button, and what re-locks it. The
+    learner's client learns about the unlock over the same stream as the nudge."""
+
+    async def asyncSetUp(self):
+        from unittest.mock import AsyncMock, patch
+        from app.services import presence, realtime
+        triggers._last_published.clear()
+        triggers._last_screen_key.clear()
+        triggers._last_mistake_key.clear()
+        triggers._wrong_streak.clear()
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        for item in (
+            patch("app.brain.repository._get_collection_named", return_value=None),
+            patch("app.brain.org.teachers_for_learner", new=AsyncMock(return_value=[])),
+            patch.dict("os.environ", {"HAND_UNLOCK_GATE_ENABLED": "1"}),
+        ):
+            item.start()
+            self.addCleanup(item.stop)
+
+    async def test_struggle_signals_unlock_and_gentle_nudges_do_not(self):
+        from app.services import coach_handoff, presence
+        for kind in ("wheel_spinning", "misconception", "rapid_guessing", "idle", "repeated_wrong"):
+            presence.reset_for_tests()
+            coach_handoff.consider_unlock("kid-a", {"type": kind})
+            self.assertEqual(
+                (presence.snapshot("kid-a")["hand_unlock"] or {}).get("reason"), kind, kind)
+        for kind in ("mistake", "slow_progress", "partial", "success", "screen_change"):
+            presence.reset_for_tests()
+            coach_handoff.consider_unlock("kid-a", {"type": kind})
+            self.assertIsNone(presence.snapshot("kid-a")["hand_unlock"], kind)
+
+    async def test_the_unlock_rides_the_learner_stream_scoped_to_the_current_screen(self):
+        from app.services import coach_handoff
+        stream = await _Stream("kid-a").opened()
+        triggers.publish_screen_change("kid-a", "c|i|q1")
+        self.assertEqual((await stream.next())["type"], "screen_change")
+
+        coach_handoff.consider_unlock("kid-a", {"type": "idle"})
+        frame = await stream.next()
+        self.assertEqual(frame, {
+            "type": "hand_unlock", "reason": "idle", "source": "detector",
+            "question_key": "c|i|q1",
+        })
+        await stream.close()
+
+    async def test_a_new_screen_re_locks(self):
+        from app.services import coach_handoff, presence
+        triggers.publish_screen_change("kid-a", "c|i|q1")
+        coach_handoff.consider_unlock("kid-a", {"type": "misconception"})
+        self.assertIsNotNone(presence.snapshot("kid-a")["hand_unlock"])
+        # Same screen again: nothing changes.
+        triggers.publish_screen_change("kid-a", "c|i|q1")
+        self.assertIsNotNone(presence.snapshot("kid-a")["hand_unlock"])
+        triggers.publish_screen_change("kid-a", "c|i|q2")
+        self.assertIsNone(presence.snapshot("kid-a")["hand_unlock"])
+
+
+class RepeatedWrongValveTest(unittest.IsolatedAsyncioTestCase):
+    """The safety valve: one effortful miss is a nudge, the second on the same
+    question opens the hand — through `evaluate`, so the count is the real one."""
+
+    def setUp(self):
+        from unittest.mock import AsyncMock, patch
+        from app.services import presence, realtime
+        triggers._last_published.clear()
+        triggers._last_mistake_key.clear()
+        triggers._wrong_streak.clear()
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        for item in (
+            patch("app.services.events.get_recent_events", new=AsyncMock(return_value=[])),
+            patch("app.services.events.get_session_events", new=AsyncMock(return_value=[])),
+            patch("app.services.events.is_component_completion", return_value=False),
+            patch("app.brain.repository._get_collection_named", return_value=None),
+            patch("app.brain.org.teachers_for_learner", new=AsyncMock(return_value=[])),
+            patch("app.services.teacher_alerts.escalate_trigger", new=AsyncMock()),
+            patch.object(triggers, "_arm_idle", lambda *a, **k: None),
+            patch.object(triggers, "_cancel_idle", lambda *a, **k: None),
+            patch.dict("os.environ", {"HAND_UNLOCK_GATE_ENABLED": "1"}),
+        ):
+            item.start()
+            self.addCleanup(item.stop)
+
+    @staticmethod
+    def _wrong(object_id: str, *, effortful: bool = True) -> dict:
+        return {
+            "learner_id": "kid-a", "verb": "answered", "objective_id": "OBJ.1",
+            "object_id": object_id, "question_id": "q1", "session_id": "s1",
+            "result": {"success": False}, "effortful": effortful, "timing": {},
+        }
+
+    async def test_the_first_miss_nudges_but_does_not_unlock(self):
+        from app.services import presence
+        fired = await triggers.evaluate("kid-a", self._wrong("item-1"))
+        self.assertEqual((fired or {}).get("type"), "mistake")
+        self.assertIsNone(presence.snapshot("kid-a")["hand_unlock"])
+
+    async def test_the_second_miss_on_the_same_question_unlocks(self):
+        from app.services import presence
+        await triggers.evaluate("kid-a", self._wrong("item-1"))
+        await triggers.evaluate("kid-a", self._wrong("item-1"))
+        unlock = presence.snapshot("kid-a")["hand_unlock"]
+        self.assertEqual((unlock or {}).get("reason"), "repeated_wrong")
+        self.assertEqual(unlock["source"], "detector")
+
+    async def test_misses_on_different_questions_do_not_add_up(self):
+        from app.services import presence
+        await triggers.evaluate("kid-a", self._wrong("item-1"))
+        await triggers.evaluate("kid-a", self._wrong("item-2"))
+        self.assertIsNone(presence.snapshot("kid-a")["hand_unlock"])
+
+    async def test_rapid_guesses_are_not_effort(self):
+        from app.services import presence
+        await triggers.evaluate("kid-a", self._wrong("item-1", effortful=False))
+        await triggers.evaluate("kid-a", self._wrong("item-1", effortful=False))
+        self.assertIsNone(presence.snapshot("kid-a")["hand_unlock"])

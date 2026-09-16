@@ -49,7 +49,6 @@ describe('nothing renders a date through the browser locale', () => {
       '../src/features/teacher-app/tasks/TaskTrackingPage.tsx',
       '../src/features/teacher-app/goals/GoalDialog.tsx',
       '../src/components/NotificationBell.tsx',
-      '../src/features/admin/AdminAuditTab.tsx',
       '../src/features/student-tasks/MyTasksPage.tsx',
     ]
     for (const file of files) {

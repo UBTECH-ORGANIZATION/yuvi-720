@@ -1,5 +1,6 @@
 import { forwardRef, lazy, Suspense } from 'react'
 import type { YuviAvatarHandle } from './YuviAvatar3D'
+import '../../styles/yuvi-avatar-canvas.css'
 
 /* Same reasoning as `YuviRobot3DLazy`: the avatar drags in Three.js plus the
    lab-room and asset builders. Screens that only decorate with it load it after

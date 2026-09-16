@@ -34,6 +34,10 @@ const MOODS: Record<MoodId, { cool: THREE.Color; warm: THREE.Color; energy: numb
   sunset: { cool: new THREE.Color(0xff9b72), warm: new THREE.Color(0xf2c879), energy: 0.72 },
   night: { cool: new THREE.Color(0x76dfff), warm: VIOLET, energy: 0.62 },
   party: { cool: ROSE, warm: new THREE.Color(0xffd36a), energy: 1 },
+  aqua: { cool: new THREE.Color(0x7de7dd), warm: new THREE.Color(0xa8fff4), energy: 0.78 },
+  rose: { cool: new THREE.Color(0xff9fbd), warm: new THREE.Color(0xffd0dc), energy: 0.7 },
+  arcade: { cool: new THREE.Color(0xa66cff), warm: new THREE.Color(0x56f1e4), energy: 0.95 },
+  aurora: { cool: new THREE.Color(0x75f0c1), warm: new THREE.Color(0xc4e3ff), energy: 0.85 },
 }
 
 function seeded(index: number, salt: number) {

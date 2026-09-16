@@ -97,9 +97,6 @@ function screenFor(pathname: string, groupId: string | null, scopeSubject: strin
   if (pathname.startsWith('/teacher/messages')) {
     return { route: pathname, screen: 'messages', group_id: groupId, subject }
   }
-  if (pathname.startsWith('/admin')) {
-    return { route: pathname, screen: 'admin_console', group_id: null, subject: null }
-  }
   return { route: pathname, screen: 'home', group_id: groupId, subject }
 }
 

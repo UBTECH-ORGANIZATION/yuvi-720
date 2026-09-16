@@ -69,9 +69,12 @@ test('tintable furniture offers colours only through its hover menu', () => {
   assert.equal(he['YuviStudio.room.moreColors'], 'צבעים נוספים')
 })
 
-test('hovering Yuvi station offers Design Yuvi and Move actions', () => {
+test('hovering Yuvi station offers Design Yuvi and a move, never a spin', () => {
   assert.match(studio, /primaryAction=\{menuStation === 'avatar'/)
+  // The platform is a station like the others: it can be picked up and put
+  // down elsewhere. It is round, so rotating it is the one thing withheld.
   assert.match(studio, /onMove=\{\(\) => startMove\(propMenu\.uid\)\}/)
+  assert.doesNotMatch(studio, /onMove=\{menuStation === 'avatar' \? undefined/)
   assert.match(studio, /onRotate=\{menuStation === 'avatar' \? undefined/)
   assert.match(propMenu, /primaryAction\?: \{ label: string; icon: string; onClick: \(\) => void \}/)
 })
@@ -82,17 +85,19 @@ test('only the visible Yuvi podium, not its light pool, opens the station menu',
 })
 
 test('globe and World Capsule furniture open hover menus with move and rotate only', () => {
-  assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission'/)
+  assert.match(roomDesign, /StationId = 'avatar' \| 'room' \| 'explore' \| 'mission' \| 'gamelab'/)
   assert.match(labRoom, /raycaster\.intersectObject\(explore, true\).*return 'explore'/s)
   assert.match(labRoom, /raycaster\.intersectObject\(mission, true\).*return 'mission'/s)
-  assert.match(studio, /onRemove=\{menuStation \? undefined/)
+  // Walk-in stations cannot be removed — the World Capsule is one, so only the
+  // decorative plinth can be put away.
+  assert.match(studio, /onRemove=\{menuStation\s*\n?\s*\? \(menuStation === 'explore'\n/)
   assert.equal(he['YuviStudio.zone.explore'], 'עמדת הגלובוס')
   assert.equal(he['YuviStudio.zone.mission'], 'ביקור אצל חברים')
 })
 
 test('Visit Friends opens only friend choices while Room Design owns world switching', () => {
   assert.match(studio, /const leaveStation = \(\) => \{[\s\S]{0,180}setPlacing\(null\)[\s\S]{0,160}setMode\('roam'\)/)
-  assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission'/)
+  assert.match(labRoom, /LabRoomZoneId = 'avatar' \| 'room' \| 'mission' \| 'gamelab'/)
   assert.match(labRoom, /\{ id: 'mission', x: stations\.mission\.x, z: stations\.mission\.z, radius: MISSION_APPROACH_RADIUS \}/)
   assert.match(labRoom, /const decorBlockers = \(\): LabRoomCircle\[\] => \[[\s\S]{0,180}roomLayout\(layoutId\)\.walkBlockers/)
   assert.match(labRoom, /noBuildZones[\s\S]{0,700}roomLayout\(layoutId\)\.decorBlockers/)
@@ -163,7 +168,9 @@ test('a first visit gets a five-step welcome that teaches catalog furniture plac
   assert.match(labRoom, /platform\.visible = stations\.avatar\.placed/)
   assert.match(labRoom, /bench\.visible = stations\.room\.placed/)
   assert.match(studio, /carryStation\('room', stations\.room\.rot\)/)
-  assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed\)/)
+  assert.match(studio, /if \(!stations\.room\.placed \|\| !stations\.avatar\.placed \|\| !stations\.gamelab\.placed\)/)
+  assert.match(studio, /placing\.station === 'avatar'\) \{[\s\S]{0,120}station: 'gamelab'/)
+  assert.match(studio, /YuviStudio\.intro\.station\.gamelab/)
   assert.match(studio, /placing\.station === 'room'/)
   assert.match(studio, /station: 'avatar'/)
   assert.match(studio, /const \[introRoomItemAdded, setIntroRoomItemAdded\] = useState\(false\)/)
@@ -184,7 +191,7 @@ test('a first visit gets a five-step welcome that teaches catalog furniture plac
   assert.match(welcome, /role="dialog"/)
   assert.equal(he['YuviStudio.intro.continue'], 'יאללה, בונים')
   assert.match(he['YuviStudio.intro.station.room'], /שולחן עיצוב החדר/)
-  assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שני הרהיטים בחדר, אפשר להמשיך.')
+  assert.equal(he['YuviStudio.intro.station.done'], 'מעולה, שלושת הרהיטים בחדר, אפשר להמשיך.')
   assert.match(he['YuviStudio.intro.roomCatalog.pick'], /קטגוריה מהלשוניות.*רהיט.*מקום פנוי/)
   assert.match(he['YuviStudio.intro.avatar.done'], /עיצוב יובי/)
   assert.equal(he['YuviStudio.intro.scene4'], 'החדר והיובי שלכם מוכנים. מוכנים לצאת להרפתקה?')

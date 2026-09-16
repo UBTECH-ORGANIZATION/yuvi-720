@@ -4,7 +4,7 @@ import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useR
 import { useStudioDesign } from './useStudioDesign'
 import { navigate } from '../../app/router'
 import { enterStudio, getStudioTime, leaveStudio, type StudioTimeBudget } from '../../services/api'
-import '../../styles/Yuvi-studio.css'
+import '../../styles/yuvi-avatar-canvas.css'
 
 /* This provider wraps the whole app, but the studio it can open is a Three.js
    room editor. Importing the content eagerly put the renderer on every user's

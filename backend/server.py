@@ -18,10 +18,11 @@ from app.core.env import ensure_env_loaded
 ensure_env_loaded()
 
 from app.core import database
+from app.core import cache as cache_config
 from app.routes.auth import router as auth_router
+from app.routes.auth_moe import router as auth_moe_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
-from app.routes.admin_org import router as admin_org_router
 from app.routes.teacher import router as teacher_router
 from app.routes.teacher_students import router as teacher_students_router
 from app.routes.teacher_catalog import router as teacher_catalog_router
@@ -34,6 +35,7 @@ from app.routes.student_calendar import router as student_calendar_router
 from app.routes.teacher_live import router as teacher_live_router
 from app.routes.teacher_calendar import router as teacher_calendar_router
 from app.routes.notifications import router as notifications_router
+from app.routes.games import router as games_router
 from app.routes.me import router as me_router
 from app.routes.teacher_assistant import router as teacher_assistant_router
 from app.routes.mentoring import router as mentoring_router
@@ -57,6 +59,7 @@ from app.routes.static_pages import (
     install_spa_fallback, mount_static_assets, router as static_pages_router,
 )
 from app.routes.support import internal_router as support_internal_router, router as support_router
+from app.routes.support_widget import router as support_widget_router
 from app.routes.telemetry import router as telemetry_router
 from app.routes.xapi import router as xapi_router
 from app.core.telemetry import configure_telemetry
@@ -118,9 +121,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     relay_probe = asyncio.create_task(probe_relay_base_url())
     # Presence listens to the bus's connect/disconnect hooks. Not an index step,
     # but it has to happen before the first SSE connection either way.
-    from app.services import presence
+    from app.services import presence, realtime
 
     presence.install_hooks()
+    # The bus bridge: with Redis, frames published on one instance reach the
+    # subscribers on every other, which is what lets a slot run more than one.
+    try:
+        bridged = await realtime.start_bridge()
+        if bridged:
+            print("🔗 realtime bus bridged over Redis — multi-instance delivery on")
+    except Exception as exc:  # a missing bridge is single-instance delivery, never a failed boot
+        bridged = False
+        print(f"⚠️ realtime bridge not started: {type(exc).__name__}")
 
     # Index setup for every collection the teacher lane introduced.
     #
@@ -139,6 +151,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
     from app.services.progression import ledger as progression_ledger
     from app.services.rewards import wallet
+    from app.services.games import store as games_store
 
     index_steps = (
         # Every login resolves a username; without this it scans the collection.
@@ -148,6 +161,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # The replay cursor query, (teacher_id, seq).
         ("teacher_alerts", teacher_alerts.ensure_indexes),
         ("notifications", notifications.ensure_indexes),
+        # The worker polls (status, created_at); the card list reads (learner, created_at).
+        ("learner_games", games_store.ensure_indexes),
         ("kudos", kudos.ensure_indexes),
         # The message thread: read by (conversation, created_at) on every open,
         # and by (conversation, sender, read_at) on every mark-read.
@@ -211,7 +226,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # their teacher's stream can land on different processes and simply never
     # meet. Warn loudly rather than let it look like a flaky feature.
     workers = os.environ.get("WEB_CONCURRENCY")
-    if workers and workers.isdigit() and int(workers) > 1:
+    if not bridged and workers and workers.isdigit() and int(workers) > 1:
         print(
             f"⚠️ WEB_CONCURRENCY={workers}: the realtime bus is in-process, so "
             "presence and teacher alerts will fragment across workers. Run a "
@@ -222,6 +237,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         async with content_catalog_mcp_lifespan():
             yield
     finally:
+        await realtime.stop_bridge()
         if sweeper:
             sweeper.cancel()
         relay_probe.cancel()
@@ -238,6 +254,9 @@ def create_app() -> FastAPI:
     # not allowed to open, and say out loud which one it is.
     database.verify_configuration()
     database.announce()
+    # And the same for the cache: which Redis (or none, on purpose), said once.
+    cache_config.verify_configuration()
+    cache_config.announce()
 
     app = FastAPI(title="Yuvilab Spark", version="1.0.0", lifespan=lifespan)
 
@@ -251,6 +270,9 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Without this the browser hides both headers from our own code, and the
+        # support widget has nothing to hand the developer.
+        expose_headers=["x-correlation-id", "server-timing"],
     )
 
     # The built bundle and stylesheet are ~3.7MB of text, and nothing was
@@ -266,6 +288,7 @@ def create_app() -> FastAPI:
     app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
     app.include_router(auth_router)
+    app.include_router(auth_moe_router)
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
     app.include_router(room_community_router)
@@ -288,9 +311,9 @@ def create_app() -> FastAPI:
     app.include_router(teacher_live_router)
     app.include_router(teacher_calendar_router)
     app.include_router(notifications_router)
+    app.include_router(games_router)
     app.include_router(me_router)
     app.include_router(teacher_assistant_router)
-    app.include_router(admin_org_router)
     app.include_router(mentoring_router)
     app.include_router(progression_router)
     app.include_router(rewards_router)
@@ -302,6 +325,7 @@ def create_app() -> FastAPI:
     app.include_router(campaign_router)
     app.include_router(support_router)
     app.include_router(support_internal_router)
+    app.include_router(support_widget_router)
     app.include_router(checkin_router)
     app.include_router(telemetry_router)
 

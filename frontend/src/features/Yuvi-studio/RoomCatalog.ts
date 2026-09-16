@@ -27,6 +27,8 @@ import { createPlaygroundKit } from './PlaygroundKit'
 import { buildPlaygroundRide, PLAYGROUND_RIDE_BOUNDS, type PlaygroundRideKind } from './PlaygroundCatalog'
 import { buildPlaygroundEquipment } from './PlaygroundEquipment.ts'
 import { PLAYGROUND_EQUIPMENT, type PlaygroundEquipmentKind } from './PlaygroundItems.ts'
+import { renderThumbnail } from './thumbnailRenderer'
+import { preRenderedThumbs } from './studioThumbs'
 export { SPORTS_ARENA_STARTER_PROP_IDS } from './SportsArenaCatalog'
 
 export type RoomItemCategory = 'seating' | 'desk' | 'play' | 'nature' | 'light' | 'tech' | 'wall'
@@ -1968,53 +1970,35 @@ export function claimedSurpriseItems(rewardKinds: string[]): RoomItemSpec[] {
   return WEEKLY_SURPRISE_ITEMS.filter((spec) => spec.id !== WEEKLY_SURPRISE_COVERED && owned.has(spec.id))
 }
 
-// Incremental 3D thumbnail cache. Rendering the whole catalog on opening the
-// studio exhausts GPU resources on lower-powered school devices.
-const thumbnailCache: Record<string, string> = {}
+// ── 3D thumbnails: pre-rendered files first, the live renderer for the rest ──
+// Rendering the whole catalog on opening the studio exhausted GPU resources on
+// lower-powered school devices, and opening a context per category switch was
+// stranding contexts. Every prop now ships as a pre-rendered WebP in
+// `assets/studio-thumbs/room/` (see `scripts/render-studio-thumbs.mjs`), which
+// seeds this cache, so a complete catalogue opens no WebGL context for its
+// cards. A prop without a file still renders live through the one shared
+// thumbnail renderer, on idle, once per session.
+//
+// The cards always show a prop in its default tint — the learner's own colour
+// is applied to the placed item in the room, never to the catalogue — so every
+// prop can be pre-rendered.
+export const roomThumbnailCache: Record<string, string> = preRenderedThumbs('room')
 
-export function getRoomThumbnails(items: RoomItemSpec[]): Record<string, string> {
-  const missing = items.filter((spec) => !thumbnailCache[spec.id])
-  if (!missing.length) return thumbnailCache
-  try {
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
-    renderer.setPixelRatio(2)
-    renderer.setSize(140, 140)
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+// The kit's shared geometries are built once for thumbnails; each render
+// disposes only the object it built, never the kit.
+let thumbnailKit: RoomKit | null = null
 
-    const scene = new THREE.Scene()
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd9ddff, 1.5))
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.1)
-    keyLight.position.set(4, 6, 5)
-    scene.add(keyLight)
-    const fillLight = new THREE.DirectionalLight(0xaebfff, 0.8)
-    fillLight.position.set(-4, 3, 2)
-    scene.add(fillLight)
-    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
-    const { kit, dispose } = createRoomKit(true)
+/** What a card shows: the prop in its default tint, built with the rich kit.
+ *  One definition for the live renderer and the pre-render page. */
+export function roomThumbnailObject(spec: RoomItemSpec): THREE.Object3D {
+  thumbnailKit ??= createRoomKit(true).kit
+  return spec.build(thumbnailKit, new THREE.Color(spec.tint ?? '#7c6bff'))
+}
 
-    for (const spec of missing) {
-      const object = spec.build(kit, new THREE.Color(spec.tint ?? '#7c6bff'))
-      const bounds = new THREE.Box3().setFromObject(object)
-      const center = bounds.getCenter(new THREE.Vector3())
-      const size = bounds.getSize(new THREE.Vector3())
-      object.position.sub(center)
-      const dimension = Math.max(size.x, size.y, size.z) || 1
-      const distance = dimension * 2.4
-      camera.position.set(distance * 0.55, distance * 0.4, distance)
-      camera.lookAt(0, 0, 0)
-      scene.add(object)
-      renderer.render(scene, camera)
-      thumbnailCache[spec.id] = renderer.domElement.toDataURL('image/png')
-      scene.remove(object)
-    }
-
-    dispose()
-    renderer.dispose()
-  } catch {
-    // WebGL unavailable — ItemCard falls back to the item's colour swatch.
-  }
-  return thumbnailCache
+export async function renderRoomThumbnail(spec: RoomItemSpec): Promise<string | null> {
+  if (roomThumbnailCache[spec.id]) return roomThumbnailCache[spec.id]
+  const url = await renderThumbnail('room', () => roomThumbnailObject(spec))
+  if (url) roomThumbnailCache[spec.id] = url
+  return url
 }
 

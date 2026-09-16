@@ -37,6 +37,12 @@ def _now() -> float:
     return time.time()
 
 
+def loaded_at() -> float:
+    """When the snapshot was last (re)loaded — the catalog generation stamp
+    cached projections carry, so an import invalidates them without a purge."""
+    return float(_SNAPSHOT.get("loaded_at") or 0.0)
+
+
 def _order_objectives(objectives: dict[str, dict[str, Any]], subject: str) -> list[str]:
     """Order a subject's goals the way the ministry orders them.
 
