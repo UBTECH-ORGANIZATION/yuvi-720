@@ -2,7 +2,6 @@
    access is group-scoped server-side. */
 
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './api'
-import type { AvatarChoice } from '../features/badges/types'
 
 export interface AttentionFlag {
   reason: string
@@ -355,9 +354,6 @@ export interface RosterEntry {
   learner_id: string
   /** Null for a learner who never finished mapping — render the id, not a guess. */
   display_name: string | null
-  /** The learner's own avatar choice, or null when they have not made one.
-   *  Same shape as `learner_state.avatar`; `StudentAvatar` resolves it. */
-  avatar?: AvatarChoice | null
   group_id: string
 }
 
@@ -385,6 +381,13 @@ export function getGroupSnapshot(groupId: string, language: string, days?: numbe
   const params = new URLSearchParams({ language })
   if (days) params.set('days', String(days))
   return apiGet<GroupInsight>(`/api/teacher/groups/${groupId}/snapshot?${params}`)
+}
+
+export function reportGroupDashboardViewed(groupId: string, durationSeconds: number) {
+  return apiPost<{ reported: boolean }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/dashboard-viewed`,
+    { duration_seconds: durationSeconds }
+  )
 }
 
 /* The subjects this class can be narrowed to — per class, from what it has
@@ -483,17 +486,18 @@ export function getStudentDetail(learnerId: string, language: string, subject?: 
   return apiGet<StudentDetail>(`/api/teacher/students/${learnerId}?${params}`)
 }
 
+export function reportStudentDashboardViewed(learnerId: string, durationSeconds: number) {
+  return apiPost<{ reported: boolean }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/dashboard-viewed`,
+    { duration_seconds: durationSeconds }
+  )
+}
+
 export function getStudentActivity(learnerId: string, subject?: string) {
   const params = new URLSearchParams()
   if (subject) params.set('subject', subject)
   return apiGet<{ questions: QuestionRow[] }>(
     `/api/teacher/students/${learnerId}/activity?${params}`
-  )
-}
-
-export function getStudentBadges(learnerId: string, lang: string) {
-  return apiGet<{ badges: TeacherBadge[] }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/badges?lang=${lang}`
   )
 }
 
@@ -864,6 +868,10 @@ export function getLive(groupId?: string) {
   return apiGet<LiveSnapshot>(`/api/teacher/live${query}`)
 }
 
+export function reportRealtimeDashboardViewed(groupId: string) {
+  return apiPost<{ reported: boolean }>('/api/teacher/live/viewed', { group_id: groupId })
+}
+
 export function acknowledgeAlert(alertId: string) {
   return apiPost<TeacherAlert>(`/api/teacher/alerts/${encodeURIComponent(alertId)}/ack`, {})
 }
@@ -1028,7 +1036,7 @@ export function assignGroupGoal(
   )
 }
 
-/* ── Phase 7: moments, kudos, digest, badges, meeting prep ─────────────────── */
+/* ── Phase 7: moments, kudos, digest, meeting prep ────────────────────────── */
 
 /** One narrated change. Displayed chronologically, never as a ranking of
  *  students (MoE C5) — `weight` only decides which moments make the cut. */
@@ -1123,21 +1131,6 @@ export function getGroupDigest(groupId: string, language: string, refresh = fals
     `/api/teacher/groups/${encodeURIComponent(groupId)}/digest?language=${language}&refresh=${refresh}`
   )
 }
-
-export interface TeacherBadge {
-  subject: string
-  glyph: string
-  tier: string
-  state: 'earned' | 'inprogress' | 'locked'
-  progress: number
-  title: string
-  meta: string
-  certifies: string[]
-  earned: boolean
-  category: string
-  howToEarn?: string
-}
-
 
 /* ── learnings analytics ──────────────────────────────────────────────────── */
 

@@ -5,7 +5,6 @@ import { LearningPortalPage } from '../features/learning-portal/LearningPortalPa
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { GamePage } from '../features/games/GamePage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
-import { BadgesPage } from '../features/badges/BadgesPage'
 import { MyTasksPage } from '../features/student-tasks/MyTasksPage'
 import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
@@ -84,7 +83,6 @@ const PROTECTED_ROUTES = [
   '/mentoring',
   '/learning',
   '/games',
-  '/badges',
   '/tasks',
   '/support'
 ]
@@ -143,7 +141,7 @@ function isLandingRoute(pathname: string) {
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
   '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/tasks', '/mentoring', '/learning', '/games', '/support',
+  '/tasks', '/mentoring', '/learning', '/games', '/support',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
   '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
@@ -181,7 +179,6 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
-  if (pathname.startsWith('/badges')) return <BadgesPage />
   // Solve before list, or `/tasks/:id` resolves to the list — the same
   // ordering trap the teacher lane below documents.
   if (pathname.startsWith('/tasks/')) {
@@ -261,7 +258,6 @@ function isLearnerRoute(pathname: string) {
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning') ||
     pathname.startsWith('/games') ||
-    pathname.startsWith('/badges') ||
     /* Both task screens sit in the learner shell. The solve screen is a focus
        surface, and `isActiveTaskRoute` collapses the chrome around it — the
        same arrangement a lesson already uses, rather than a second one. */
@@ -308,6 +304,12 @@ export function App() {
     const target = STAGE_ROUTE[stage]
     if (!pathname.startsWith(target)) navigate(target)
   }, [user, stage, pathname, isTeacher])
+
+  // Friends' rooms now opens inside Yuvi Studio. Keep old bookmarks useful
+  // while removing the separate community screen from the learner experience.
+  useEffect(() => {
+    if (routePath.startsWith('/yuvi-studio/community')) navigate('/yuvi-studio', { replace: true })
+  }, [routePath])
 
   // Signed out on a protected URL → go to the landing page for real. As an
   // effect (not during render) so the address bar actually changes; `replace`

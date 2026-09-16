@@ -352,6 +352,61 @@ async def report_student_goal(
     )
 
 
+async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, str]:
+    """`(student_exid, mentor_exid)` for a teacher-authored event.
+
+    Each side is the person's own reporting identity when one resolves (a real
+    exidentifier after Ministry sign-in), else the staging stub — the same
+    value for both, which is what v1 staging reports everywhere. Reporting is
+    never withheld over the identities: the session rule below is the only
+    gate, and a stub-for-stub record on staging is the documented behaviour.
+    """
+    stub = config.test_exidentifier()
+    student_exid, mentor_exid = stub, stub
+    try:
+        learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
+        if learner_identity:
+            student_exid = learner_identity["exidentifier"]
+        if teacher_id:
+            teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
+            if teacher_identity:
+                mentor_exid = teacher_identity["exidentifier"]
+    except Exception:
+        pass
+    return student_exid, mentor_exid
+
+
+async def report_teacher_student_goal(
+    learner_id: str,
+    teacher_id: str,
+    action: str,
+    goal_id: str,
+    goal_type: str,
+    *,
+    session_id: Optional[str] = None,
+) -> None:
+    """A teacher's action on a learner's goal (an approval is `completed`).
+
+    The actor is the learner and the teacher is named as the instructor. The
+    session follows the same rule as a documented meeting: the learner's own
+    live MoE session, else the acting (teacher's) session handed in, and no
+    statement at all when there is neither — the spec allows no statement
+    without a session grouping.
+    """
+    session_id = await _learner_session_id(learner_id) or session_id
+    if not session_id:
+        return
+    _student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
+    await report_student_goal(
+        learner_id,
+        session_id,
+        action,
+        goal_id,
+        goal_type,
+        instructor_exid=mentor_exid,
+    )
+
+
 async def report_mentoring_record(
     record: dict[str, Any],
     *,
@@ -389,13 +444,16 @@ async def report_mentoring_record(
     session_id = await _learner_session_id(learner_id) or session_id
     if not session_id:
         return
-    stub_exid = config.test_exidentifier()
+    # Both people by their own reporting identities when a teacher documented
+    # the talk; the learner's own writing has no second person in it.
+    teacher_id = str(record.get("teacher_id") or "") if record.get("author") == "teacher" else ""
+    student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
     await report_mentor_meeting_completed(
         learner_id,
         session_id,
         record["id"],
-        mentor_exid=stub_exid,
-        student_exid=stub_exid,
+        mentor_exid=mentor_exid,
+        student_exid=student_exid,
         meeting_date=record.get("date") or "",
         # The dedicated field when the form offered the ladder; the free stage
         # text only as a fallback for records written before it existed. Either
@@ -404,7 +462,7 @@ async def report_mentoring_record(
     )
     if record.get("visibility") != "shared":
         return
-    instructor = stub_exid if record.get("author") == "teacher" else None
+    instructor = mentor_exid if record.get("author") == "teacher" else None
     for goal in record.get("goals") or []:
         await report_student_goal(
             learner_id,

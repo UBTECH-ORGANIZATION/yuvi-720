@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from app.auth.dependencies import require_learner
 from app.core.localization import normalize_language
 from app.services.profile_summary import apply_profile_feedback, generate_profile_summary
+from app.services import progression, rewards
+from learner_state import get_learner_state
 
 
 router = APIRouter(prefix="/api", tags=["profile"])
@@ -49,3 +51,16 @@ async def profile_feedback(
     if not applied:
         raise HTTPException(status_code=404, detail="profile_claim_not_found")
     return {"ok": True, "verdict": data.verdict}
+
+
+@router.post("/profile-summary/complete")
+async def complete_profile_summary(learner_id: str = Depends(require_learner)) -> dict:
+    """Open the learner's personal path once mandatory onboarding is complete."""
+    state = await get_learner_state(learner_id)
+    mapping = state.get("mapping_progress") or {}
+    summary = state.get("profile_summary_progress") or {}
+    if not mapping.get("completed") or not summary.get("completed"):
+        raise HTTPException(status_code=409, detail="onboarding_not_complete")
+    xp_reward = await progression.award_personal_path_started(learner_id)
+    reward = await rewards.grant_personal_path_started(learner_id)
+    return {"xpReward": xp_reward, "reward": reward}

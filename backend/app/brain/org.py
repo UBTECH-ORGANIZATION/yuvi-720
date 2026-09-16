@@ -111,6 +111,20 @@ async def groups_for_learner(learner_id: str) -> list[str]:
     return [row["group_id"] for row in rows]
 
 
+async def learners_sharing_a_group(learner_id: str) -> list[str]:
+    """Active peers sharing any current group with a learner.
+
+    This is deliberately resolved from live enrollments for every request. The
+    returned ids establish scope only; callers must not expose which group made
+    a peer eligible.
+    """
+    peers: set[str] = set()
+    for group_id in await groups_for_learner(learner_id):
+        peers.update(await learners_in_group(group_id))
+    peers.discard(learner_id)
+    return sorted(peers)
+
+
 async def teachers_for_learner(learner_id: str) -> list[str]:
     """Every teacher who may currently read this learner.
 

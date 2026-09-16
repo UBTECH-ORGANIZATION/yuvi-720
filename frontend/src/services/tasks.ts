@@ -214,6 +214,7 @@ export interface SubmitResult {
   answered: number
   total: number
   content: TaskContent
+  xpReward: import('./progression').XpAwardReceipt | null
 }
 
 export function listMyTasks(signal?: AbortSignal) {

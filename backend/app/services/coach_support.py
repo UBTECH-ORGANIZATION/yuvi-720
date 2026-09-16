@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from app.agents import tutor_decision
 
@@ -20,6 +20,7 @@ class SupportQuestionChangedError(RuntimeError):
 class SupportReservation:
     question_key: str
     hint_level: Optional[int]
+    xp_reward: Optional[dict[str, Any]] = None
 
 
 async def reserve_support(
@@ -77,4 +78,14 @@ async def reserve_support(
             help_type=support,
             component_id=component_id if component_iri else None,
         )
-    return SupportReservation(question_key=question_key, hint_level=hint_level)
+    from app.services import progression
+
+    xp_reward = await progression.record_qualifying_help(
+        learner_id,
+        f"coach:{conversation_id}:{question_key}:{support}",
+    )
+    return SupportReservation(
+        question_key=question_key,
+        hint_level=hint_level,
+        xp_reward=xp_reward,
+    )

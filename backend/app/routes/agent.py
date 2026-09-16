@@ -807,9 +807,14 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     moe_sid = session.get("sid")
     component_iri = _surface_component_iri(request.surface)
     if moe_sid and not is_chat_hint:
+        proactive_trigger = await sessions.latest_proactive_trigger(
+            learner_id, conversation_id, role="lesson_coach"
+            if request.surface.screen == "learning_lesson" else "general_companion",
+        )
         await lrs_reporter.report_conversation_interacted(
             learner_id, moe_sid, conversation_id,
-            speaker="student", conversation_trigger="student-request",
+            speaker="student",
+            conversation_trigger=_MOE_TRIGGER.get(proactive_trigger or "", "student-request"),
             component_id=component_iri,
         )
 

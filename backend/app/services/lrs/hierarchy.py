@@ -205,7 +205,8 @@ _ALWAYS_REPORTED: tuple[str, ...] = (
 def _vendor_code(manufacture: Any) -> Optional[int | str]:
     """The ministry vendor code for a catalog `manufacture` name — numeric when
     it is a number (the spec example sends `"manufacturer": 33`)."""
-    code = config.content_vendor_id(manufacture if isinstance(manufacture, str) else None)
+    value = manufacture.strip() if isinstance(manufacture, str) else ""
+    code = value if value.isdigit() else config.content_vendor_id(value)
     if not code:
         return None
     return int(code) if code.isdigit() else code
@@ -377,7 +378,11 @@ async def ecat_item_for(
     )
     if published or configured:
         return published or configured
-    vendor_id = config.content_vendor_id(manufacture, subject=subject)
+    vendor_id = (
+        manufacture.strip()
+        if isinstance(manufacture, str) and manufacture.strip().isdigit()
+        else config.content_vendor_id(manufacture, subject=subject)
+    )
     if vendor_id:
         return f"{CONTENT_VENDOR_BASE}/{vendor_id}"
     return None

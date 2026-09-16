@@ -23,7 +23,7 @@ from typing import Any, Optional
 from urllib.parse import urlsplit
 
 from app.brain.repository import apply_brain_updates, get_brain
-from app.services import kata_client
+from app.services import catalog_i18n, kata_catalog, kata_client
 from app.services.events import mint_launch
 from app.services.learning_progress import project_unit_roadmap
 from learner_state import normalize_learner_id  # type: ignore
@@ -45,6 +45,20 @@ def _public_base_url(request_base_url: str) -> str:
             "a public tunnel (e.g. `cloudflared tunnel --url http://localhost:8000`)."
         )
     return base
+
+
+def _lesson_header_title(unit: dict[str, Any], language: str) -> str:
+    """Return a learner-facing unit label without leaking English into Hebrew."""
+    titles = unit.get("titles") or {}
+    title = str(titles.get(language) or titles.get("he") or unit.get("title") or "").strip()
+    if language != "he" or catalog_i18n.source_locale_of(title) == "he":
+        return title
+
+    # CET's flat unit title is sometimes an English machine label even on a
+    # Hebrew launch. The Ministry objective title is the reliable Hebrew label
+    # already carried by the loaded catalog hierarchy.
+    objective_title = kata_catalog.objective_title(unit.get("objective_id"), "he")
+    return objective_title or ""
 
 
 # Player hosts that are known to be unusable inside our lesson frame, so we can
@@ -273,13 +287,7 @@ async def create_provider_session(
     return {
         "unit": {
             "id": unit["id"],
-            # The flat `title` on CET rows is an English machine label; the
-            # learner-facing name lives in the translations (same trap
-            # `title_translations` documents). Requested language first,
-            # Hebrew-first fallback like every other catalog surface.
-            "title": (unit.get("titles") or {}).get(language)
-                     or (unit.get("titles") or {}).get("he")
-                     or unit["title"],
+            "title": _lesson_header_title(unit, language),
             "sub_topic": unit["sub_topic"],
             "objective_id": unit["objective_id"],
             "subject": unit["subject"],

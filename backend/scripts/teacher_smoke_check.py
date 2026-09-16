@@ -74,6 +74,8 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "school_calendar_days": [("school_id", "date")],
     # Weekly studio surprise state, one row per (learner, week).
     "weekly_studio_surprises": [("learner_id", "week")],
+    # XP history, read newest-first per learner on every timeline open.
+    "xp_ledger": [("learner_id", "at")],
 }
 
 # Brain paths the teacher assistant must never be able to read.

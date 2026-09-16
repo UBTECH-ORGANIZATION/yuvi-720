@@ -28,6 +28,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services import catalog_i18n, kata_catalog, kata_client
+from app.services.learning_sessions import _lesson_header_title
 
 
 def run(coro):
@@ -88,6 +89,27 @@ class TitleTranslationsTest(unittest.TestCase):
             "id": "o", "title": "d", "subtopic": {"id": "s", "title": "t", **payload},
         })
         self.assertEqual(unit["titles"], objective["sub_topic"]["titles"])
+
+
+class LessonHeaderTitleTest(unittest.TestCase):
+    def test_hebrew_header_uses_the_provider_translation(self):
+        title = _lesson_header_title({
+            "title": "Writing coordinates of a point",
+            "titles": {"he": "כתיבת שיעורי נקודה - 1א"},
+            "objective_id": "objective",
+        }, "he")
+        self.assertEqual(title, "כתיבת שיעורי נקודה - 1א")
+
+    @patch("app.services.learning_sessions.kata_catalog.objective_title")
+    def test_hebrew_header_rejects_an_english_provider_fallback(self, objective_title):
+        objective_title.return_value = "מערכת הצירים"
+        title = _lesson_header_title({
+            "title": "Writing coordinates of a point",
+            "titles": {},
+            "objective_id": "objective",
+        }, "he")
+        self.assertEqual(title, "מערכת הצירים")
+        objective_title.assert_called_once_with("objective", "he")
 
 
 class SourceLocaleTest(unittest.TestCase):

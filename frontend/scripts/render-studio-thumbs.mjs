@@ -13,14 +13,18 @@
  * the real shared thumbnail renderer, renders each item at 2× (280×280) and
  * hands back a WebP; the files land in `src/assets/studio-thumbs/<kind>/<id>.webp`
  * and are committed with the catalogue change. Files whose id has left the
- * catalogue are deleted, so the glob never ships an orphan.
+ * catalogue are deleted, so the glob never ships an orphan. The ids rendered
+ * are also written to `src/assets/studio-thumbs/manifest.json`: the catalogue
+ * builds many ids in loops (`prestige_room_object_${level}`, the sports
+ * artwork, the park rides), which no source-level scan can enumerate, so the
+ * manifest is what `tests/studio-thumbs.test.ts` checks the files against.
  *
  * Playwright's default headless build is the "headless shell", which only has
  * SwiftShader; `channel: 'chromium'` is the full browser in new-headless mode
  * and renders on the machine's GPU (`npx playwright install chromium` if it is
  * missing). A software rasteriser is refused unless `--allow-software`. */
 
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
@@ -101,6 +105,11 @@ for (const [kind, buffers] of rendered) {
   totalBytes += bytes
   totalFiles += buffers.size
 }
+// The manifest keeps the other kind's list when only one was rendered.
+const manifestPath = join(OUT, 'manifest.json')
+const manifest = await readFile(manifestPath, 'utf8').then(JSON.parse).catch(() => ({}))
+for (const kind of kinds) manifest[kind] = [...items[kind]].sort()
+await writeFile(manifestPath, `${JSON.stringify({ avatar: manifest.avatar ?? [], room: manifest.room ?? [] }, null, 2)}\n`)
 console.log(`  · total: ${totalFiles} files, ${(totalBytes / 1024).toFixed(0)} KB at quality ${quality}, ${EXPECTED_PX}px`)
 console.log(failures ? `\n❌ ${failures} problem(s)` : '\n✅ thumbnails written to src/assets/studio-thumbs/')
 process.exit(failures ? 1 : 0)

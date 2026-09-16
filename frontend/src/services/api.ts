@@ -10,6 +10,28 @@
 import { trackApiCall } from './telemetry.ts'
 
 export const UNAUTHORIZED_EVENT = 'spark:unauthorized'
+const XP_AWARD_EVENT = 'spark:xp-award'
+
+function publishXpAwards(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return
+  const row = payload as Record<string, unknown>
+  const candidates = Array.isArray(row.xpRewards)
+    ? row.xpRewards
+    : row.xpReward ? [row.xpReward] : []
+  const receipts = candidates.filter((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false
+    const receipt = candidate as Record<string, unknown>
+    return Number(receipt.awarded) > 0 && receipt.duplicate !== true
+  })
+  if (!receipts.length) return
+  const reward = row.reward && typeof row.reward === 'object'
+    ? row.reward as Record<string, unknown>
+    : null
+  const sparks = Number(reward?.granted ?? row.sparks ?? 0)
+  window.dispatchEvent(new CustomEvent(XP_AWARD_EVENT, {
+    detail: { receipts, sparks: Number.isFinite(sparks) ? sparks : 0 }
+  }))
+}
 
 export class UnauthorizedError extends Error {
   constructor(path: string) {
@@ -63,7 +85,9 @@ async function request<T>(method: string, path: string, body?: unknown, init?: R
       } catch { /* not JSON — the status is all we have */ }
       throw failure
     }
-    return await (response.json() as Promise<T>)
+    const payload = await (response.json() as Promise<T>)
+    publishXpAwards(payload)
+    return payload
   } finally {
     // In `finally` so aborted and failed calls are measured too: a request that
     // times out is the worst latency there is, and counting only the successes
@@ -101,8 +125,6 @@ export interface LearnerState {
   profile_cache?: unknown
   dashboard_cache?: unknown
   game_progress?: Record<string, unknown>
-  /** The profile-picture choice (a badge coin, or the learner's letter). */
-  avatar?: unknown
   /** The Yuvi Studio character: variant, colours and equipped cosmetics. */
   yuvi_design?: unknown
   avatar_unlocks?: string[]
@@ -127,11 +149,60 @@ export function updateLearnerState(updates: Partial<LearnerState>) {
   return apiPatch<LearnerState>('/api/learner-state', updates)
 }
 
-export function getBadges(lang = 'he', signal?: AbortSignal) {
-  return apiGet<import('../features/badges/types').BadgeDTO[]>(
-    `/api/badges?lang=${encodeURIComponent(lang)}`,
-    signal ? { signal } : undefined,
-  )
+export interface StudioTimeBudget {
+  allowed: boolean
+  remaining_seconds: number
+  available_at: string
+}
+
+export function getStudioTime() {
+  return apiGet<StudioTimeBudget>('/api/studio-time')
+}
+
+export function enterStudio() {
+  return apiPost<StudioTimeBudget>('/api/studio-time/enter', {})
+}
+
+export function leaveStudio() {
+  return apiPost<StudioTimeBudget>('/api/studio-time/leave', {})
+}
+
+export interface CommunityRoom {
+  owner_id: string
+  display_name: string
+  room: unknown
+  yuvi_design: unknown
+  liked_by_me: boolean
+}
+
+export interface RoomSharing {
+  shared: boolean
+}
+
+export function getCommunityRooms(signal?: AbortSignal) {
+  return apiGet<CommunityRoom[]>('/api/community/rooms', signal ? { signal } : undefined)
+}
+
+export function getCommunityRoom(ownerId: string, signal?: AbortSignal) {
+  return apiGet<CommunityRoom>(`/api/community/rooms/${encodeURIComponent(ownerId)}`, signal ? { signal } : undefined)
+}
+
+export function getRoomSharing() {
+  return apiGet<RoomSharing>('/api/community/room-sharing')
+}
+
+export function updateRoomSharing(shared: boolean) {
+  return apiPatch<RoomSharing>('/api/community/room-sharing', { shared })
+}
+
+export function setRoomLike(ownerId: string) {
+  return apiPut<Pick<CommunityRoom, 'liked_by_me'>>(
+    `/api/community/rooms/${encodeURIComponent(ownerId)}/like`, {})
+}
+
+export function removeRoomLike(ownerId: string) {
+  return apiDelete<Pick<CommunityRoom, 'liked_by_me'>>(
+    `/api/community/rooms/${encodeURIComponent(ownerId)}/like`)
 }
 
 export async function streamPost(

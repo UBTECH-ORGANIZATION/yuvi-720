@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from app.agents.onboarding import run_onboarding
 from app.auth.dependencies import optional_user, require_learner, require_learner_session
@@ -18,6 +19,11 @@ from mock_data import DIMENSIONS, generate_insights, generate_recommendations
 
 
 router = APIRouter(prefix="/api", tags=["learner-mapping"])
+
+
+class QuestionnaireAnswerRequest(BaseModel):
+    question_number: int
+    option_index: int
 
 
 def _normalize_gender(value) -> str:
@@ -65,6 +71,31 @@ async def get_dimensions():
     return JSONResponse(content=DIMENSIONS)
 
 
+@router.post("/questionnaire/answer")
+async def report_questionnaire_answer(
+    data: QuestionnaireAnswerRequest,
+    session=Depends(require_learner_session),
+):
+    """Report one explicitly approved questionnaire answer to the MoE LRS."""
+    try:
+        entry = agency_mapping.resolve_official_answer(
+            data.question_number, data.option_index
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="invalid_questionnaire_answer") from exc
+
+    await lrs_reporter.report_agency_answered(
+        session["sub"],
+        session["sid"],
+        entry["question_number"],
+        entry["answer_id"],
+        score_raw=float(entry["value"]),
+        question_id=entry["question_id"],
+        answer_id=entry["answer_id"],
+    )
+    return {"reported": True}
+
+
 @router.post("/submit")
 async def submit_questionnaire(data: dict, session=Depends(require_learner_session)):
     """Submit questionnaire answers, score them, and persist mapping results."""
@@ -97,20 +128,6 @@ async def submit_questionnaire(data: dict, session=Depends(require_learner_sessi
     scored = agency_mapping.score_submission(int_answers)
     scores = scored["scores"]
     measure_results = scored["measure_results"]
-
-    # MoE agency questionnaire: one `answered` per question, carrying the
-    # official question + answer URL ids and the 1–5 value.
-    if session.get("sid"):
-        for entry in scored["official_answers"]:
-            await lrs_reporter.report_agency_answered(
-                learner_id,
-                session["sid"],
-                entry["question_number"],
-                entry["answer_id"],
-                score_raw=float(entry["value"]),
-                question_id=entry["question_id"],
-                answer_id=entry["answer_id"],
-            )
 
     insights = generate_insights(scores)
     recommendations = generate_recommendations(scores)

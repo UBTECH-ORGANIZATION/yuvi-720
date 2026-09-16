@@ -229,8 +229,7 @@ export function StudentSearch() {
                 onMouseEnter={() => setActive(index)}
                 onClick={() => pick(row)}
               >
-                <StudentAvatar learnerId={row.learner_id} name={row.display_name}
-                               size={28} choice={row.avatar ?? null} />
+                <StudentAvatar learnerId={row.learner_id} name={row.display_name} size={28} />
                 <span className="tch-search__name" dir="auto">
                   {row.display_name ?? row.learner_id}
                 </span>

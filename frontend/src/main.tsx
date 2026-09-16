@@ -7,6 +7,7 @@ import { BrainProvider } from './providers/BrainProvider'
 import { CompanionProvider } from './providers/CompanionProvider'
 import { OnboardingProvider } from './providers/OnboardingProvider'
 import { RewardsProvider } from './providers/RewardsProvider'
+import { ProgressionProvider } from './providers/ProgressionProvider'
 import { LessonRoadmapProvider } from './providers/LessonRoadmapProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
 import { StudioTransitionProvider } from './features/Yuvi-studio/StudioTransitionProvider'
@@ -38,6 +39,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
                 a goal wherever they are, not only on the dashboard. */}
             <NotificationsProvider>
             <RewardsProvider>
+            <ProgressionProvider>
             <OnboardingProvider>
             <CompanionProvider>
               <YuviDesignProvider>
@@ -49,6 +51,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
               </YuviDesignProvider>
             </CompanionProvider>
             </OnboardingProvider>
+            </ProgressionProvider>
             </RewardsProvider>
             </NotificationsProvider>
           </BrainProvider>

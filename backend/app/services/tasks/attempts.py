@@ -260,8 +260,19 @@ async def submit(
     )
     await _record_completion(store.task_of_launch(launch), learner_id, score)
     await _clear_task_pin(launch, learner_id)
-    return {"status": "submitted", **feedback,
-            "content": _with_explanations(snapshot, per_component)}
+    xp_reward = None
+    if answered == questions_seen:
+        from app.services import progression
+
+        xp_reward = await progression.award_teacher_quest_completed(
+            learner_id, launch
+        )
+    return {
+        "status": "submitted",
+        **feedback,
+        "xpReward": xp_reward,
+        "content": _with_explanations(snapshot, per_component),
+    }
 
 
 def _feedback(

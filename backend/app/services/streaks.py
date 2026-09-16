@@ -2,8 +2,8 @@
 
 Two different questions, deliberately kept apart:
 
-- ``longest_day_streak`` — the best run the learner has ever had. Badges use
-  this, so a coin once earned is never taken back.
+- ``longest_day_streak`` — the best run the learner has ever had, used for
+    historical trend reporting.
 - ``current_day_streak`` — the run they are on right now. Unlock rules use this,
   because "keep coming back" is only motivating while it is live.
 

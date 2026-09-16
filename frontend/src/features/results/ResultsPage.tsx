@@ -306,6 +306,7 @@ export function ResultsPage() {
         summary: summaryRef.current,
       }).catch(() => undefined)
     }
+    await apiPost('/api/profile-summary/complete', {})
     navigate('/student-dashboard')
   }
 

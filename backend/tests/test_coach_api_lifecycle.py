@@ -174,6 +174,31 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream_kwargs["hint_level"], 1)
         self.assertEqual(stream_kwargs["endpoint"], "/api/agent/coach/support")
 
+    async def test_general_reply_reports_the_latest_proactive_trigger(self):
+        self.app.dependency_overrides[require_learner_session] = lambda: {
+            "sub": LEARNER_ID, "roles": ["learner"], "sid": "moe-session",
+        }
+        latest_trigger = AsyncMock(return_value="lesson_welcome")
+        report = AsyncMock()
+
+        with (
+            patch.object(sessions, "latest_proactive_trigger", new=latest_trigger),
+            patch.object(agent.lrs_reporter, "report_conversation_interacted", new=report),
+        ):
+            text = await _collect_sse(self.client, {
+                "conversation_id": "general-proactive-reply",
+                "message": "תודה, אני מוכן ללמוד.",
+                "language": "he",
+                "surface": {"screen": "student_dashboard"},
+            })
+
+        self.assertEqual(text, "תשובה בטוחה")
+        latest_trigger.assert_awaited_once_with(
+            LEARNER_ID, "general-proactive-reply", role="general_companion",
+        )
+        self.assertEqual(report.await_args_list[0].kwargs["speaker"], "student")
+        self.assertEqual(report.await_args_list[0].kwargs["conversation_trigger"], "other")
+
     async def test_video_summary_requires_active_video_and_uses_summary_mode(self):
         self.get_brain.return_value = {
             "current_state": {

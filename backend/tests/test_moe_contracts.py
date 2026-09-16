@@ -353,20 +353,36 @@ class DeniedRequestsEmitNoLrsView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 403)
         reporter.assert_not_awaited()
 
-    async def test_an_allowed_read_does_report(self):
+    async def test_an_allowed_view_does_report(self):
         """The other half: a real view must still be recorded, or the LRS
-        contract is satisfied by simply never reporting."""
+        contract is satisfied by simply never reporting.
+
+        The GET no longer reports — a fetch is not a view, and it carried no
+        duration. The page reports the real time spent through the
+        `dashboard-viewed` POST, which is where the statement is made, stamped
+        with whose board it was."""
         from app.routes import teacher_students
 
         session = {"sub": "teacher-a", "sid": "session-1", "roles": ["teacher"]}
         reporter = AsyncMock()
         with patch("app.brain.org.teacher_can_access_learner", AsyncMock(return_value=True)), \
-             patch("app.services.insights.student_insights",
-                   AsyncMock(return_value={"learner_id": "kid-a"})), \
              patch.object(teacher_students.lrs_reporter, "report_dashboard_viewed", reporter):
-            await teacher_students.student_overview(
-                learner_id="kid-a", language="he", subject=None, session=session)
-        reporter.assert_awaited()
+            response = await teacher_students.report_student_dashboard_viewed(
+                learner_id="kid-a", data={"duration_seconds": 42.5}, session=session)
+        self.assertEqual(response.status_code, 200)
+        reporter.assert_awaited_once()
+        self.assertEqual(reporter.await_args.args[2], "student-view")
+        self.assertEqual(reporter.await_args.args[4], 42.5)
+        self.assertEqual(reporter.await_args.kwargs.get("subject_learner_id"), "kid-a")
+
+    async def test_a_denied_view_report_records_nothing(self):
+        from app.routes import teacher_students
+
+        response, reporter = await self._call(
+            teacher_students.report_student_dashboard_viewed,
+            learner_id="kid-a", data={"duration_seconds": 42.5})
+        self.assertEqual(response.status_code, 403)
+        reporter.assert_not_awaited()
 
 
 if __name__ == "__main__":

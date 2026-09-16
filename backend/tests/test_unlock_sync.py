@@ -30,14 +30,22 @@ def _state_for_sections(*sections: int) -> dict:
 
 
 class MappingSectionUnlockSyncTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sports_starter_props_require_individual_entitlements(self) -> None:
+        with patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value={"room_unlocks": []})):
+            without_arena = await unlock_sync.held_props(LEARNER)
+        with patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value={"room_unlocks": ["layout:sportsArena"]})):
+            with_arena = await unlock_sync.held_props(LEARNER)
+
+        self.assertNotIn("sportsDumbbellRack", without_arena)
+        self.assertNotIn("sportsDumbbellRack", with_arena)
+        self.assertIn("layout:sportsArena", with_arena)
+        self.assertNotIn("sportsCableMachine", with_arena)
+
     async def test_incomplete_section_does_not_unlock_its_reward(self) -> None:
         state = _state_for_sections(4)
         state["mapping_progress"]["answers"].popitem()
 
-        with patch.object(unlock_sync.kata_catalog, "ensure_loaded", AsyncMock()), \
-             patch.object(unlock_sync, "get_brain", AsyncMock(return_value={})), \
-             patch.object(unlock_sync, "_learner_events", AsyncMock(return_value=[])), \
-             patch.object(unlock_sync, "project_badges", return_value=[]), \
+        with patch.object(unlock_sync, "_learner_events", AsyncMock(return_value=[])), \
              patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value=state)), \
              patch.object(unlock_sync, "grant_unlock", AsyncMock()) as grant:
             result = await unlock_sync.sync_unlocks(LEARNER)
@@ -54,10 +62,7 @@ class MappingSectionUnlockSyncTests(unittest.IsolatedAsyncioTestCase):
             state["avatar_unlocks"].append(item_id)
             return {"granted": True}
 
-        with patch.object(unlock_sync.kata_catalog, "ensure_loaded", AsyncMock()), \
-             patch.object(unlock_sync, "get_brain", AsyncMock(return_value={})), \
-             patch.object(unlock_sync, "_learner_events", AsyncMock(return_value=[])), \
-             patch.object(unlock_sync, "project_badges", return_value=[]), \
+        with patch.object(unlock_sync, "_learner_events", AsyncMock(return_value=[])), \
              patch.object(unlock_sync, "get_learner_state", AsyncMock(return_value=state)), \
              patch.object(unlock_sync, "grant_unlock", AsyncMock(side_effect=grant)) as grant_unlock:
             first = await unlock_sync.sync_unlocks(LEARNER)

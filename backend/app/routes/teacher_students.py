@@ -48,13 +48,21 @@ async def _guard_group(session: dict, group_id: str) -> bool:
     return await org.teacher_can_access_group(session["sub"], group_id)
 
 
-async def _report(session: dict, dashboard_type: str) -> None:
-    """MoE 720 dashboard-viewed. Best-effort; never breaks the response."""
+async def _report(
+    session: dict, dashboard_type: str, duration_seconds: Optional[float] = None,
+    *, subject_learner_id: Optional[str] = None,
+) -> None:
+    """MoE 720 dashboard-viewed. Best-effort; never breaks the response.
+
+    `subject_learner_id` names whose board it was: a student view is stamped
+    with that student's exidentifier, never the teacher's.
+    """
     if not session.get("sid"):
         return
     try:
         await lrs_reporter.report_dashboard_viewed(
-            session["sub"], session["sid"], dashboard_type, None
+            session["sub"], session["sid"], dashboard_type, None, duration_seconds,
+            subject_learner_id=subject_learner_id,
         )
     except Exception as exc:  # pragma: no cover - reporting is never critical
         print(f"⚠️ dashboard-viewed report skipped: {type(exc).__name__}")
@@ -102,8 +110,26 @@ async def group_snapshot(
         return _denied()
     view = await insights.group_insights(
         group_id, normalize_language(language), window_days=days)
-    await _report(session, "learning-group")
     return _ok(view)
+
+
+@router.post("/groups/{group_id}/dashboard-viewed")
+async def report_group_dashboard_viewed(
+    group_id: str,
+    data: dict,
+    session=Depends(require_teacher_session),
+):
+    """Record the real time a teacher spent on their group dashboard."""
+    if not await _guard_group(session, group_id):
+        return _denied()
+    try:
+        duration_seconds = float(data.get("duration_seconds"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    if not 0 < duration_seconds <= 28_800:
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    await _report(session, "learning-group", duration_seconds)
+    return _ok({"reported": True})
 
 
 @router.get("/groups/{group_id}/engagement")
@@ -357,8 +383,27 @@ async def student_overview(
     if safe_id is None:
         return _denied()
     view = await insights.student_insights(safe_id, normalize_language(language), subject)
-    await _report(session, "student-view")
     return _ok(view)
+
+
+@router.post("/students/{learner_id}/dashboard-viewed")
+async def report_student_dashboard_viewed(
+    learner_id: str,
+    data: dict,
+    session=Depends(require_teacher_session),
+):
+    """Record the real time a teacher spent on an authorized student dashboard."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        duration_seconds = float(data.get("duration_seconds"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    if not 0 < duration_seconds <= 28_800:
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    await _report(session, "student-view", duration_seconds, subject_learner_id=safe_id)
+    return _ok({"reported": True})
 
 
 @router.get("/students/{learner_id}/activity")
@@ -435,28 +480,6 @@ async def student_scores(
     if safe_id is None:
         return _denied()
     return _ok(await learner_scores.student_scores(safe_id))
-
-
-@router.get("/students/{learner_id}/badges")
-async def student_badges(
-    learner_id: str,
-    lang: str = Query("he"),
-    session=Depends(require_teacher_session),
-):
-    """Badges as learning evidence (design doc §22.7)."""
-    safe_id = await _guard_learner(session, learner_id)
-    if safe_id is None:
-        return _denied()
-    from app.brain.repository import get_brain
-    from app.services.badges import project_badges
-    from app.services.events import get_learner_events
-
-    brain = await get_brain(safe_id)
-    try:
-        events = await get_learner_events(safe_id)
-    except Exception:
-        events = []
-    return _ok({"badges": project_badges(brain, locale=lang, events=events)})
 
 
 @router.get("/students/{learner_id}/focus/roadmap")
@@ -837,6 +860,13 @@ async def approve_student_goal(
     except goal_approval.ApprovalError as exc:
         status = 403 if exc.code == "not_authorized" else 404
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
+    if not result.get("already_approved"):
+        # Filed under the learner's own MoE session when they have one; the
+        # teacher's session is the fallback (see the reporter).
+        await lrs_reporter.report_teacher_student_goal(
+            safe_id, session["sub"], "completed", goal_id, "academic",
+            session_id=session.get("sid"),
+        )
     return _ok(result)
 
 

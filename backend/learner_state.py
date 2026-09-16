@@ -98,14 +98,13 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "profile_cache": None,
         "dashboard_cache": None,
         "game_progress": {},
-        # `avatar` is the profile-picture choice; `yuvi_design` is the studio's
-        # 3D character. They were one field once, and one silently ate the other.
-        "avatar": None,
+        # `yuvi_design` is the Studio's 3D character. Legacy documents may still
+        # contain the old `avatar` field; the removal migration cleans it up.
         "yuvi_design": None,
         "avatar_unlocks": [],
         "room_unlocks": [],
-        "badges": [],
         "room": None,
+        "studio_time": None,
         "activeness_map": None,
         "mentoring_draft": None,
     }
@@ -172,13 +171,10 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     # writable, the room items are additionally screened on the way in.
     # `theme` is NOT here either: it lives on the user document
     # (`preferences.theme`) so one account keeps one theme across devices.
-    # `badges` is NOT here: they are a projection of the brain computed by
-    # services.badges.project_badges and served from /api/badges, so there is
-    # nothing for a client to write — a stored copy could only go stale.
     allowed = {
         "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
-        "profile_cache", "dashboard_cache", "game_progress", "avatar", "yuvi_design", "room",
-        "activeness_map", "mentoring_draft",
+        "profile_cache", "dashboard_cache", "game_progress", "yuvi_design", "room",
+        "studio_time", "activeness_map", "mentoring_draft",
     }
     now = datetime.now(timezone.utc).isoformat()
     set_data = {key: value for key, value in updates.items() if key in allowed}

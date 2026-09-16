@@ -85,8 +85,13 @@ describe('the route table and the renderer describe the same app', () => {
 
   it('matches on segment boundaries, not on string prefixes', () => {
     assert.equal(isKnown('/tasksomething'), false)
-    assert.equal(isKnown('/badgesx'), false)
+    assert.equal(isKnown('/student-dashboardx'), false)
     assert.ok(isKnown('/tasks/abc'))
+  })
+
+  it('redirects retired Friends room URLs into Yuvi Studio', () => {
+    assert.match(APP, /if \(routePath\.startsWith\('\/yuvi-studio\/community'\)\) navigate\('\/yuvi-studio', \{ replace: true \}\)/)
+    assert.doesNotMatch(pageForRouteBody(), /yuvi-studio\/community/)
   })
 
   it('lists the teacher lane screen by screen', () => {

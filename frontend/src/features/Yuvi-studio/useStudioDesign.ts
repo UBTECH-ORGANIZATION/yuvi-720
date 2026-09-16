@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import { getShop, purchaseAsset, type PurchaseResult, type ShopItem } from '../../services/rewards'
+import { LEVEL_REWARD_EVENT } from '../../services/progression'
 import { useRewards } from '../../providers/RewardsProvider'
 import type { YuviAvatarHandle } from './YuviAvatar3D'
 import {
@@ -10,6 +11,7 @@ import {
   type YuviColors, type YuviDesign, type YuviSlot,
 } from './YuviDesign'
 import type { YuviAsset } from './YuviAssets'
+import { SPORTS_ARENA_STARTER_PROP_IDS, sportsPropLocked } from './SportsArenaCatalog'
 import { useYuviDesign } from './YuviDesignProvider'
 
 /**
@@ -30,7 +32,7 @@ export function useStudioDesign(autoLoad = true) {
   const [baseline, setBaseline] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
   const [propUnlocks, setPropUnlocks] = useState<Set<string>>(() => new Set())
-  // id -> locale key naming the badge or streak that grants it.
+  // id -> locale key naming the XP, section, or streak requirement.
   const [requirements, setRequirements] = useState<Record<string, string>>({})
   const [streak, setStreak] = useState(0)
   const [shop, setShop] = useState<Record<string, ShopItem>>({})
@@ -52,12 +54,14 @@ export function useStudioDesign(autoLoad = true) {
     } catch { /* keep default */ }
     try {
       // The shop is the only source of prices — the client never sets one.
-      // The same read settles any badge/streak grant the learner has earned,
+      // The same read settles any section/streak grant the learner has earned,
       // so opening the studio is when a new reward becomes real.
       const catalog = await getShop()
       setShop(Object.fromEntries(catalog.items.map((item) => [item.id, item])))
       setWallet(catalog.wallet)
-      setPropUnlocks(new Set(catalog.roomUnlocks ?? []))
+      const roomUnlocks = new Set(catalog.roomUnlocks ?? [])
+      if (roomUnlocks.has('layout:triangularObservatory')) roomUnlocks.add('layout:creatorLoft')
+      setPropUnlocks(roomUnlocks)
       setStreak(catalog.streak ?? 0)
       setRequirements(Object.fromEntries((catalog.unlocks ?? []).map((row) => [row.id, row.requirementKey])))
       // A cosmetic granted by this very request would otherwise stay locked
@@ -70,12 +74,29 @@ export function useStudioDesign(autoLoad = true) {
   }, [refreshSavedDesign, setWallet])
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
+  useEffect(() => {
+    if (!autoLoad) return
+    const refreshUnlocks = () => { void load() }
+    window.addEventListener(LEVEL_REWARD_EVENT, refreshUnlocks)
+    return () => window.removeEventListener(LEVEL_REWARD_EVENT, refreshUnlocks)
+  }, [autoLoad, load])
 
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
   /** True when this room prop has to be earned and has not been. */
-  const isPropLocked = (kind: string) => kind in requirements && !propUnlocks.has(kind)
+  const isPropLocked = (kind: string) => {
+    if (kind in requirements) return !propUnlocks.has(kind)
+    const sportsLocked = sportsPropLocked(kind, propUnlocks)
+    if (sportsLocked !== undefined) return sportsLocked
+    return shop[kind]?.slot === 'room' && !propUnlocks.has(kind)
+  }
+  const isRoomUnlocked = (id: string) => propUnlocks.has(id)
+  const componentProgressFor = (assetId: string) => {
+    const item = shop[assetId]
+    if (item?.completedComponents === undefined || item.completedComponentsCurrent === undefined) return null
+    return { completed: item.completedComponentsCurrent, required: item.completedComponents }
+  }
   /** Locale key naming what earns an item, for the lock tooltip. */
-  const requirementFor = (id: string): string | undefined => requirements[id]
+  const requirementFor = (id: string): string | undefined => requirements[id] ?? (SPORTS_ARENA_STARTER_PROP_IDS.has(id) ? 'YuviStudio.unlock.sportsArena' : undefined)
   /** Sparks price for a locked item, or null when it can only be earned. */
   const priceOf = (assetId: string): number | null => shop[assetId]?.price ?? null
   const canAfford = (assetId: string) => {
@@ -91,7 +112,8 @@ export function useStudioDesign(autoLoad = true) {
       const result = await purchaseAsset(assetId)
       setWallet(result.wallet)
       if (result.ok) {
-        setUnlockedIds((prev) => new Set(prev).add(assetId))
+        if (shop[assetId]?.slot === 'room') setPropUnlocks((prev) => new Set(prev).add(assetId))
+        else setUnlockedIds((prev) => new Set(prev).add(assetId))
       }
       return result
     } catch {
@@ -140,7 +162,7 @@ export function useStudioDesign(autoLoad = true) {
   return {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
     muted, setMuted, justSaved, saving, dirty,
-    isLocked, isPropLocked, requirementFor, streak,
+    isLocked, isPropLocked, isRoomUnlocked, componentProgressFor, requirementFor, streak,
     equip, setColor, reset, save, load,
     wallet, priceOf, canAfford, buy, buying,
   }

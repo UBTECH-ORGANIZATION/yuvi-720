@@ -3,9 +3,10 @@ import { navigate, useRoute } from '../app/router'
 import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
-import { ProfileAvatar } from '../features/badges/ProfileAvatar'
+import { useProgression } from '../providers/ProgressionProvider'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
+import { XpAwardPopup } from './XpAwardPopup'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -35,18 +36,29 @@ export function UserMenu() {
   const { t, language, setLanguage } = useI18n()
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { status: progression, applyAward } = useProgression()
   const { startTour } = useTour()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  /* Badge avatars are a learner thing. In the teacher app the same menu drops
-     both badge affordances — a teacher grading a class has no badge gallery to
-     edit, and offering one was learner chrome leaking through. */
   const route = useRoute()
   const inTeacherApp = route.startsWith('/teacher')
   /* The admin console is not a Spark page any more: it is the standalone admin
      service. The role here only decides whether to show the door — the service
      re-checks the live grant on its own. */
   const isAdmin = Boolean(user?.roles.includes('admin'))
+  /* The XP chip is learner chrome: the teacher app keeps the plain avatar. */
+  const showProgression = !inTeacherApp && progression !== null
+  const xpMaximum = progression?.xpToNext ?? Math.max(1, progression?.currentLevelXp ?? 1)
+  const xpNow = progression?.currentLevelXp ?? 0
+  const progressPercent = Math.max(0, Math.min(100, (progression?.progress ?? 0) * 100))
+  const progressText = progression?.nextLevel
+    ? t('progression.tooltip', {
+        remaining: String(Math.max(0, (progression.xpToNext ?? 0) - xpNow)),
+        nextLevel: String(progression.nextLevel),
+        current: String(xpNow),
+        required: String(progression.xpToNext ?? 0)
+      })
+    : t('progression.maxLevel')
 
   useEffect(() => {
     if (!open) return
@@ -72,11 +84,6 @@ export function UserMenu() {
     navigate('/')
   }
 
-  const goBadges = () => {
-    setOpen(false)
-    navigate('/badges')
-  }
-
   const replayTour = () => {
     setOpen(false)
     // The tour's first step carries its own route, so this works from any screen.
@@ -86,55 +93,64 @@ export function UserMenu() {
   return (
     <div className="user-menu" ref={rootRef}>
       <button
-        className="user-menu__trigger"
+        className={`user-menu__trigger${showProgression ? ' user-menu__trigger--progression' : ''}`}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t('auth.menu.open')}
+        aria-label={showProgression && progression
+          ? t('progression.accountAria', {
+              name: user.display_name,
+              level: String(progression.level)
+            })
+          : t('auth.menu.open')}
         data-tour="learner.profileMenu"
         onClick={() => setOpen((value) => !value)}
       >
-        <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
-        <span className="user-menu__name" dir="auto">{user.display_name}</span>
+        {showProgression && progression ? (
+          <>
+            <span className="user-menu__medal" aria-hidden="true">
+              <span>{t('progression.level')}</span>
+              <strong>{progression.level}</strong>
+            </span>
+            <span className="user-menu__identity">
+              <span className="user-menu__name" dir="auto">{user.display_name}</span>
+              <span className="user-menu__xp" dir="ltr">
+                {progression.nextLevel
+                  ? t('progression.ratio', { current: String(xpNow), required: String(progression.xpToNext ?? 0) })
+                  : t('progression.maxLevel')}
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="user-avatar">{initialsOf(user.display_name)}</span>
+            <span className="user-menu__name" dir="auto">{user.display_name}</span>
+          </>
+        )}
         <svg className="user-menu__chevron" viewBox="0 0 24 24" aria-hidden="true">
           <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
+        {showProgression && progression ? (
+          <>
+            <span
+              className="user-menu__progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={xpMaximum}
+              aria-valuenow={xpNow}
+              aria-valuetext={progressText}
+            >
+              <span style={{ inlineSize: `${progressPercent}%` }} />
+            </span>
+            <span className="user-menu__progress-tip" role="tooltip">{progressText}</span>
+          </>
+        ) : null}
       </button>
+
+      {showProgression ? <XpAwardPopup paused={open} /> : null}
 
       {open && (
         <div className="user-menu__pop" role="menu">
-          <div className="user-menu__head">
-            {inTeacherApp ? (
-              <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
-            ) : (
-              <button
-                className="user-menu__avatar-edit"
-                type="button"
-                onClick={goBadges}
-                aria-label={t('badges.menuEdit')}
-                title={t('badges.menuEdit')}
-              >
-                <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
-                <span className="user-menu__pencil" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path
-                      d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              </button>
-            )}
-            <div className="user-menu__head-meta">
-              <span className="user-menu__head-name" dir="auto">{user.display_name}</span>
-              <span className="user-menu__head-handle" dir="ltr">@{user.username}</span>
-            </div>
-          </div>
-
           <div className="user-menu__group">
             <span className="user-menu__label">{t('language.switcherLabel')}</span>
             <div className="user-menu__choices">
@@ -166,20 +182,6 @@ export function UserMenu() {
               <span className={`user-menu__switch${theme === 'dark' ? ' is-on' : ''}`} aria-hidden="true" />
             </button>
           </div>
-
-          {!inTeacherApp ? (
-            <button
-              className="user-menu__row user-menu__row--link"
-              type="button"
-              role="menuitem"
-              onClick={goBadges}
-            >
-              <span>{t('badges.menuTitle')}</span>
-              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          ) : null}
 
           {/* The way back into the tour. Behind the avatar rather than on the
               dashboard because a child who feels lost is rarely on the screen

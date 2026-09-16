@@ -44,6 +44,8 @@ export interface ShopItem {
   slot: string
   tier: number
   owned: boolean
+  completedComponents?: number
+  completedComponentsCurrent?: number
 }
 
 /** Outcome of a grant, attached to mentoring responses so the UI can celebrate. */
@@ -66,7 +68,7 @@ export interface LedgerEntry {
 export interface UnlockRow {
   id: string
   kind: 'avatar' | 'prop'
-  /** Locale key describing the badge or streak that grants it. */
+  /** Locale key describing the XP, section, or streak requirement. */
   requirementKey: string
   owned: boolean
 }
@@ -93,8 +95,10 @@ export function getLedger(limit = 20) {
 
 export interface PurchaseResult {
   ok: boolean
-  reason?: 'not_for_sale' | 'owned' | 'insufficient' | 'unlock_failed'
+  reason?: 'not_for_sale' | 'owned' | 'insufficient' | 'prerequisite' | 'unlock_failed'
   missing?: number
+  completedComponents?: number
+  requiredComponents?: number
   assetId?: string
   price?: number
   wallet?: SparkWallet

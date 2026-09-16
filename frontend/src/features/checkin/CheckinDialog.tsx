@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useOnboarding } from '../../providers/OnboardingProvider'
+import { useTour } from '../../components/tour/TourProvider'
 import {
   answerCheckin, completeCheckin, getCheckinPending, sendCheckinFeeling,
   skipCheckin, startCheckin, type CheckinView,
@@ -30,31 +31,38 @@ type Step = 'callback' | 'feeling' | 'closing'
 export function CheckinGate() {
   const { stage } = useOnboarding()
   const { language } = useI18n()
+  const { isActive: isTourActive } = useTour()
   const [view, setView] = useState<CheckinView | null>(null)
   const [open, setOpen] = useState(false)
 
-  /* One pending read per mount, only after onboarding — a learner mid-mapping
-     must not be interrupted with "how do you feel today". Starting creates
-     the day's doc, which is what makes the ask once-per-day. */
+  /* One pending read after onboarding and any first-use tour. Starting creates
+     the day's doc, which is what makes the ask once-per-day. Deferring one task
+     lets the tour's own first-render effect claim the screen before this gate
+     decides whether to ask. */
   useEffect(() => {
-    if (stage !== 'done') return
+    if (stage !== 'done' || isTourActive) return
     let active = true
-    getCheckinPending()
-      .then(({ due }) => {
-        if (!active || !due) return null
-        return startCheckin(language).then((doc) => {
-          if (!active) return null
-          setView(doc)
-          setOpen(true)
-          return null
+    const start = window.setTimeout(() => {
+      getCheckinPending()
+        .then(({ due }) => {
+          if (!active || !due) return null
+          return startCheckin(language).then((doc) => {
+            if (!active) return null
+            setView(doc)
+            setOpen(true)
+            return null
+          })
         })
-      })
-      .catch(() => {})
-    return () => { active = false }
+        .catch(() => {})
+    }, 0)
+    return () => {
+      active = false
+      window.clearTimeout(start)
+    }
     // `language` is read at open time only: a later language switch must not
     // re-open a dialog that was already offered today.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage])
+  }, [stage, isTourActive])
 
   if (!open || !view) return null
   return (

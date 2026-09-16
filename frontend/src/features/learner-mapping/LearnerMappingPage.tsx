@@ -9,7 +9,6 @@ import { apiGet, apiPatch, apiPost } from '../../services/api'
 import type { ChatMessage, LearnerGender, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
 import { YuviRobot3D } from './YuviRobot3DLazy'
 import { Yuvi_INTRO_READY_DELAY_MS } from './yuviIntroTiming'
-import { PHASE_REWARDS, rewardLabelKey } from '../Yuvi-studio/yuviRewards'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
 import { Toast } from '../../components/Toast'
 // Travels with this lazy page instead of the main bundle; the app-bar chrome it
@@ -103,13 +102,8 @@ export function LearnerMappingPage() {
   const [reflectionPhase, setReflectionPhase] = useState<ReflectionPhase>('thinking')
   const [reflectionText, setReflectionText] = useState('')
   const [booting, setBooting] = useState(true)
-  // Phase reward: the asset just unlocked by completing a section (toast).
-  const [rewardAssetId, setRewardAssetId] = useState<string | null>(null)
   // Compliance reminder when a submit is attempted with unanswered questions.
   const [showIncompleteReminder, setShowIncompleteReminder] = useState(false)
-  // Rewards announced during this view. Their durable ownership is settled by
-  // the server from the persisted mapping answers when Studio or Badges opens.
-  const announcedRewardsRef = useRef<Set<string>>(new Set())
   const chatSequenceRunRef = useRef(0)
   const reflectionSpeechRunRef = useRef(0)
   const transitionRunRef = useRef(0)
@@ -290,15 +284,6 @@ export function LearnerMappingPage() {
     void apiPatch('/api/learner-state', {
       mapping_progress: progress,
     }).catch(() => {})
-  }
-
-  // Celebrate an earned section reward once in this view. The server grants it
-  // from persisted answers when the learner next opens Studio or Badges.
-  function grantPhaseReward(partIndex: number) {
-    const assetId = PHASE_REWARDS[partIndex]
-    if (!assetId || announcedRewardsRef.current.has(assetId)) return
-    announcedRewardsRef.current.add(assetId)
-    setRewardAssetId(assetId)
   }
 
   // Persist question/location progress (debounced) so a refresh resumes the
@@ -743,6 +728,11 @@ export function LearnerMappingPage() {
     const nextIndex = currentIndex + 1
     const answersSnapshot = { ...answers }
 
+    void apiPost('/api/questionnaire/answer', {
+      question_number: currentQuestion.id,
+      option_index: answers[currentQuestion.id],
+    }).catch(() => {})
+
     if (nextIndex >= totalQuestions) {
       void showSectionSummary(currentPart, true, answersSnapshot, currentIndex)
       return
@@ -782,9 +772,6 @@ export function LearnerMappingPage() {
     setIsTyping(true)
     setReflectionText('')
 
-    const entered = await enterReflectionStage()
-    if (!entered) return
-
     const questionsAndAnswers = part.questions.map((question) => {
       const answerIndex = nextAnswers[question.id]
       return {
@@ -792,15 +779,17 @@ export function LearnerMappingPage() {
         answer: answerIndex === undefined ? '' : question.options[answerIndex] || ''
       }
     })
-
+    // The reflection header is rendered during the Yuvi handoff, so prepare
+    // the next section's snapshot before that stage mounts.
     setSummaryPartIndex(partIndex)
     setSummaryTitle(part.title)
     setSummaryQa(questionsAndAnswers)
-    // Completing this section earns a Yuvi store item (if that part maps to one).
-    grantPhaseReward(partIndex)
     setLastSectionContext(
       `${part.title} - ${questionsAndAnswers.map((pair) => `${pair.question}: ${pair.answer}`).join(' | ')}`
     )
+
+    const entered = await enterReflectionStage()
+    if (!entered) return
 
     // New reflection: a short opener + up to 3 tap-to-answer questions about the
     // most extreme answers (no free text). Deterministic engine — text comes from
@@ -1109,18 +1098,6 @@ export function LearnerMappingPage() {
   return (
     <div className="learner-mapping-page">
       <AppBar activeStep={activeStep} />
-      {rewardAssetId && (
-        <Toast
-          variant="reward"
-          icon="🎉"
-          title={t('YuviStudio.reward.title')}
-          body={t('YuviStudio.reward.body', { item: t(rewardLabelKey(rewardAssetId)) })}
-          actionLabel={t('YuviStudio.reward.cta')}
-          onAction={() => navigate('/yuvi-studio')}
-          onDismiss={() => setRewardAssetId(null)}
-          dismissLabel={t('YuviStudio.reward.dismiss')}
-        />
-      )}
       {showIncompleteReminder && (
         <Toast
           variant="info"

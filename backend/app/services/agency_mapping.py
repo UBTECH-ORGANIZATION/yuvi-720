@@ -381,6 +381,14 @@ def score_submission(answers: dict[int, int]) -> dict[str, Any]:
     }
 
 
+def resolve_official_answer(question_number: int, option_index: int) -> dict[str, Any]:
+    """Resolve one validated UI choice to its official MoE identifiers."""
+    official_answers = score_submission({question_number: option_index})["official_answers"]
+    if len(official_answers) != 1:
+        raise ValueError("invalid questionnaire answer")
+    return official_answers[0]
+
+
 def total_questions() -> int:
     return len(_raw_questions())
 

@@ -1,27 +1,5 @@
-/* One avatar for every learner, on every teacher screen.
- *
- * There were eight of these — `.tch-studentCard__avatar` (38px, gradient),
- * `.tch-roster__avatar` (26px, flat), `.tch-tile__avatar` (28px),
- * `.tch-messages__avatar` (30px), `.tch-goalsPage__avatar` (30px, twice),
- * `.tch-student__avatar` (52px) and `.sd-chat-window__avatar` (42px, and not
- * even a circle) — each with its own `slice(0, 1)`. Six sizes, two fills, two
- * border radii, and a child who has earned a badge showed a grey letter on
- * every one of them.
- *
- * The badge system already solved this on the student profile. This makes that
- * the rule rather than the exception: the coin the learner chose is who they
- * are in this product, so it is who they are in the teacher's list too.
- *
- * The initial is not a placeholder — a learner who has *chosen* no badge must
- * render a letter, never an empty coin. That is only true once the roster has
- * answered, though: before it does, the letter would be cut from the learner
- * id rather than their name, so a not-yet-known face renders as a pulsing
- * circle instead of a wrong letter.
- */
-
-import { Badge } from '../../../components/Badge'
+/* One initials avatar for every learner, on every teacher screen. */
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
-import type { AvatarChoice } from '../../badges/types'
 
 interface Props {
   learnerId: string
@@ -30,41 +8,19 @@ interface Props {
   /** Rendered pixel width. The coin and the letter both scale to it. */
   size?: number
   className?: string
-  /** Pass an avatar the caller already has, skipping the roster lookup. */
-  choice?: AvatarChoice | null
 }
 
-export function StudentAvatar({ learnerId, name, size = 32, className, choice }: Props) {
-  const { avatarOf, nameOf, isLoading } = useTeacherRoster()
-  const active = choice ?? avatarOf(learnerId)
+export function StudentAvatar({ learnerId, name, size = 32, className }: Props) {
+  const { nameOf, isLoading } = useTeacherRoster()
   const label = (name ?? nameOf(learnerId) ?? learnerId).trim()
 
   const classes = ['tch-avatar', className].filter(Boolean).join(' ')
   const style = { inlineSize: size, blockSize: size, fontSize: Math.round(size * 0.42) }
 
-  /* Nothing is known yet — not the coin, and often not even the name, so the
-     initial would come from the learner id and render a confidently wrong
-     letter that a badge then replaces. A circle in its place is honest about
-     the wait, and it is the same shape and size as the answer. */
-  if (!active && isLoading) {
+    if (!name && isLoading) {
     return (
       <span className={`${classes} tch-avatar--pending`} style={style}
             aria-hidden="true" data-pending="true" />
-    )
-  }
-
-  if (active && active.kind === 'badge') {
-    return (
-      <span className={`${classes} tch-avatar--badge`} style={style} aria-hidden="true">
-        <Badge
-          subject={active.badge.subject}
-          glyph={active.badge.glyph}
-          tier={active.badge.tier}
-          state="earned"
-          size={size}
-          mini
-        />
-      </span>
     )
   }
 

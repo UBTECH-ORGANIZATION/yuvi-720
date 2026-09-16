@@ -3,7 +3,6 @@ import { navigate } from '../../app/router'
 import { formatMessageTime } from '../../hooks/messageTime'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth } from '../../providers/AuthProvider'
-import { ProfileAvatar } from '../badges/ProfileAvatar'
 import { openReportIssue } from '../support/ReportIssueDialog'
 import { isSupportEnabled, useSupportSession } from './useSupportSession'
 import './support-page.css'
@@ -153,10 +152,9 @@ export function SupportPage() {
                 className={`support-page__row ${message.sender === 'user' ? 'is-mine' : 'is-theirs'}`}
               >
                 {message.sender === 'user' ? (
-                  <ProfileAvatar
-                    className="support-page__row-avatar support-page__row-avatar--me"
-                    fallback={initialsOf(user?.display_name ?? '')}
-                  />
+                  <span className="support-page__row-avatar support-page__row-avatar--me">
+                    {initialsOf(user?.display_name ?? '')}
+                  </span>
                 ) : (
                   <SupporterAvatar className="support-page__row-avatar" />
                 )}

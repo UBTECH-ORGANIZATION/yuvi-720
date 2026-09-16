@@ -1,0 +1,12 @@
+{
+  "frames": 48,
+  "width": 252,
+  "height": 156,
+  "worlds": [
+    "adventurePark",
+    "creatorLoft",
+    "lab",
+    "sportsArena"
+  ],
+  "quality": 0.8
+}

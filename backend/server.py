@@ -21,7 +21,6 @@ from app.core import database
 from app.core import cache as cache_config
 from app.routes.auth import router as auth_router
 from app.routes.auth_moe import router as auth_moe_router
-from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router
@@ -40,13 +39,16 @@ from app.routes.games import router as games_router
 from app.routes.me import router as me_router
 from app.routes.teacher_assistant import router as teacher_assistant_router
 from app.routes.mentoring import router as mentoring_router
+from app.routes.progression import router as progression_router
 from app.routes.rewards import router as rewards_router
 from app.routes.campaign import router as campaign_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
+from app.routes.room_community import router as room_community_router
 from app.routes.studio_surprises import router as studio_surprises_router
+from app.routes.studio_time import router as studio_time_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.learning_content import router as learning_content_router
 from app.routes.checkin import router as checkin_router
@@ -147,6 +149,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         school_calendar, studio_surprises, teacher_alerts,
         teacher_insights_store, timetable, weekly_digest, wellbeing,
     )
+    from app.services.progression import ledger as progression_ledger
     from app.services.rewards import wallet
     from app.services.games import store as games_store
 
@@ -191,6 +194,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("mentoring_conversations", mentoring.ensure_indexes),
         # The Sparks ledger, read newest-first per learner.
         ("reward_ledger", wallet.ensure_indexes),
+        # XP history, read newest-first for the learner's transparent timeline.
+        ("xp_ledger", progression_ledger.ensure_indexes),
         # Coach decision history, read newest-first per learner.
         ("tutor_decisions", tutor_decision.ensure_indexes),
     )
@@ -286,9 +291,10 @@ def create_app() -> FastAPI:
     app.include_router(auth_moe_router)
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
+    app.include_router(room_community_router)
     app.include_router(studio_surprises_router)
+    app.include_router(studio_time_router)
     app.include_router(brain_router)
-    app.include_router(badges_router)
     app.include_router(xapi_router)
     app.include_router(learning_catalog_router)
     app.include_router(illustrations_router)
@@ -309,6 +315,7 @@ def create_app() -> FastAPI:
     app.include_router(me_router)
     app.include_router(teacher_assistant_router)
     app.include_router(mentoring_router)
+    app.include_router(progression_router)
     app.include_router(rewards_router)
     app.include_router(profile_router)
     app.include_router(dashboard_router)

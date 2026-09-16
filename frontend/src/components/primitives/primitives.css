@@ -1175,90 +1175,6 @@ textarea[dir="auto"]:placeholder-shown {
   animation: spMenuIn .16s ease both;
 }
 
-.user-menu__head {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-menu__head-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.user-menu__head-name {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--sp-ink-900);
-}
-
-.user-menu__head-handle {
-  font-size: 12px;
-  color: var(--sp-ink-300);
-}
-
-/* Big avatar with an edit pencil — the entry to the badge/avatar picker. */
-.user-menu__avatar-edit {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: 16px;
-}
-
-.user-menu__avatar-edit:focus-visible {
-  outline: none;
-  box-shadow: var(--sp-ring);
-}
-
-.user-menu__head-avatar {
-  display: grid;
-  place-items: center;
-  inline-size: 54px;
-  block-size: 54px;
-  border-radius: 16px;
-  font-size: 22px;
-  font-weight: 800;
-  color: #fff;
-  background: var(--sp-gradient);
-  box-shadow: inset 0 0 0 1px var(--sp-border-strong);
-  overflow: hidden;
-  transition: transform .18s var(--sp-ease, ease);
-}
-
-.user-menu__avatar-edit:hover .user-menu__head-avatar {
-  transform: scale(1.04);
-}
-
-.user-menu__head-avatar .yv-badge {
-  width: 100%;
-}
-
-.user-menu__pencil {
-  position: absolute;
-  inset-block-end: -4px;
-  inset-inline-end: -4px;
-  inline-size: 22px;
-  block-size: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--sp-surface);
-  color: var(--sp-primary-600);
-  border: 1px solid var(--sp-border);
-  box-shadow: var(--sp-shadow-sm);
-}
-
-.user-menu__pencil svg {
-  width: 13px;
-  height: 13px;
-}
-
 .user-menu__row-chevron {
   width: 16px;
   height: 16px;
@@ -1541,4 +1457,102 @@ a.user-menu__row {
   padding-inline-start: var(--sp-4);
   display: grid;
   gap: 4px;
+}
+
+.user-menu__trigger--progression {
+  position: relative;
+  min-inline-size: 188px;
+  block-size: 52px;
+  padding: 5px 10px 8px 5px;
+  border-radius: 12px;
+  overflow: visible;
+}
+
+.user-menu__medal {
+  inline-size: 42px;
+  block-size: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-content: center;
+  border: 2px solid #f4c95d;
+  border-radius: 50%;
+  background: #173f5f;
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .18), 0 2px 5px rgba(23, 63, 95, .2);
+  text-align: center;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.user-menu__medal strong {
+  display: block;
+  margin-block-start: 2px;
+  color: #f4c95d;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.user-menu__identity {
+  min-inline-size: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.user-menu__xp {
+  color: var(--sp-ink-400);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.user-menu__progress {
+  position: absolute;
+  inset-inline: 10px;
+  inset-block-end: 3px;
+  block-size: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sp-border);
+}
+
+.user-menu__progress > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: #22a06b;
+  transition: inline-size .35s ease;
+}
+
+.user-menu__progress-tip {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + 7px);
+  z-index: 70;
+  inline-size: max-content;
+  max-inline-size: min(280px, 80vw);
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: var(--sp-ink-900);
+  color: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.user-menu__trigger--progression:hover .user-menu__progress-tip,
+.user-menu__trigger--progression:focus-visible .user-menu__progress-tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-menu__progress > span,
+  .user-menu__progress-tip { transition: none; }
 }

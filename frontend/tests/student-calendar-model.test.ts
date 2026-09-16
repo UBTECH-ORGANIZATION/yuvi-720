@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import type { CalendarItem } from '../src/services/calendar.ts'
 import {
-  formatCalendarRange, groupItemsByDay, itemLocalDate, shiftDate,
+  activeLessonMinutesRemaining, activeLessonProgressPercent, formatCalendarRange, groupItemsByDay, itemLocalDate, shiftDate,
   weekBoundsForDate, weekDays,
 } from '../src/features/student-dashboard/calendarModel.ts'
 
@@ -49,5 +49,27 @@ describe('student calendar model', () => {
     assert.match(label, /23/)
     assert.match(label, /29/)
     assert.match(label, /2026/)
+  })
+
+  it('counts down a timed lesson only while it is in progress', () => {
+    const lesson = { ...item('2026-08-19T08:00:00Z'), kind: 'lesson' as const, end_at: '2026-08-19T08:15:00Z' }
+    assert.equal(activeLessonMinutesRemaining(lesson, Date.parse('2026-08-19T08:03:01Z')), 12)
+    assert.equal(activeLessonMinutesRemaining(lesson, Date.parse('2026-08-19T07:59:59Z')), null)
+    assert.equal(activeLessonMinutesRemaining(lesson, Date.parse('2026-08-19T08:15:00Z')), null)
+  })
+
+  it('calculates elapsed progress only for an active timed lesson', () => {
+    const lesson = { ...item('2026-08-19T08:00:00Z'), kind: 'lesson' as const, end_at: '2026-08-19T08:30:00Z' }
+    assert.equal(activeLessonProgressPercent(lesson, Date.parse('2026-08-19T08:10:00Z')), 33)
+    assert.equal(activeLessonProgressPercent(lesson, Date.parse('2026-08-19T08:00:00Z')), 0)
+    assert.equal(activeLessonProgressPercent(lesson, Date.parse('2026-08-19T08:30:00Z')), null)
+  })
+
+  it('does not invent a countdown for all-day, incomplete, or invalid lessons', () => {
+    const now = Date.parse('2026-08-19T08:03:00Z')
+    const lesson = { ...item('2026-08-19T08:00:00Z'), kind: 'lesson' as const, end_at: '2026-08-19T08:15:00Z' }
+    assert.equal(activeLessonMinutesRemaining({ ...lesson, all_day: true }, now), null)
+    assert.equal(activeLessonMinutesRemaining({ ...lesson, end_at: null }, now), null)
+    assert.equal(activeLessonMinutesRemaining({ ...lesson, end_at: 'not-a-date' }, now), null)
   })
 })

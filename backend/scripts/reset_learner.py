@@ -42,6 +42,11 @@ COLLECTIONS = [
     ("tutor_decisions", "learner_id"),
     ("mentoring_conversations", "learner_id"),
     ("feedback_reports", "learner_id"),
+    ("learner_progression", "_id"),
+    ("xp_ledger", "learner_id"),
+    ("learner_wallet", "_id"),
+    ("reward_ledger", "learner_id"),
+    ("notifications", "learner_id"),
 ]
 # `lrs_outbox` is intentionally absent: it is the permanent MoE send ledger.
 

@@ -1,0 +1,326 @@
+{
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "quality": 0.85,
+  "maxPx": 1024,
+  "assets": [
+    {
+      "id": "gamepad",
+      "path": "creator-loft/gamepad/gamepad.gltf",
+      "bytes": 2584,
+      "md5": "b0f3b42e26871a2f984030037621f510",
+      "author": {
+        "Josh Dean": "All"
+      },
+      "page": "https://polyhaven.com/a/gamepad",
+      "source": {
+        "md5": "2da231143f1d95e653284ed7d0718019"
+      },
+      "dependencies": [
+        {
+          "path": "creator-loft/gamepad/textures/gamepad_nor_gl_2k.webp",
+          "bytes": 41632,
+          "md5": "ce8d27307ef95b154425f16d53b740b1",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gamepad/gamepad_nor_gl_2k.jpg",
+            "md5": "0323c24b7e530ba3e7e06bc239c3ade3",
+            "bytes": 908702
+          }
+        },
+        {
+          "path": "creator-loft/gamepad/textures/gamepad_diff_2k.webp",
+          "bytes": 29368,
+          "md5": "6e369a1dffeec5fc8905081aef995a2f",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gamepad/gamepad_diff_2k.jpg",
+            "md5": "94501ef34af97f0221b263efb03ec74c",
+            "bytes": 1055624
+          }
+        },
+        {
+          "path": "creator-loft/gamepad/textures/gamepad_arm_2k.webp",
+          "bytes": 71988,
+          "md5": "8e8c343466e1edef6d464b3b3089d1a9",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gamepad/gamepad_arm_2k.jpg",
+            "md5": "cf18b4166450f8a922b1c6657c773ace",
+            "bytes": 1794029
+          }
+        },
+        {
+          "path": "creator-loft/gamepad/gamepad.bin",
+          "bytes": 256796,
+          "md5": "06f345d9e959c3d265ff6f599b1640db",
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/gamepad/gamepad.bin",
+            "md5": "06f345d9e959c3d265ff6f599b1640db",
+            "bytes": 256796
+          }
+        }
+      ]
+    },
+    {
+      "id": "gaming_console",
+      "path": "creator-loft/gaming_console/gaming_console.gltf",
+      "bytes": 4483,
+      "md5": "563118a9d796dc687c0636f219b1ce9a",
+      "author": {
+        "Sean Buckley": "All"
+      },
+      "page": "https://polyhaven.com/a/gaming_console",
+      "source": {
+        "md5": "79beb9d0459f524baf68dee1a7168a48"
+      },
+      "dependencies": [
+        {
+          "path": "creator-loft/gaming_console/textures/gaming_console_emissive_2k.webp",
+          "bytes": 3294,
+          "md5": "0793542ba42d021d2c4c562d884df7cb",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gaming_console/gaming_console_emissive_2k.jpg",
+            "md5": "be8fc1fd71976293a839b1f22040589e",
+            "bytes": 73297
+          }
+        },
+        {
+          "path": "creator-loft/gaming_console/textures/gaming_console_nor_gl_2k.webp",
+          "bytes": 94458,
+          "md5": "4af81bd447f76ef65e63311a740801c1",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gaming_console/gaming_console_nor_gl_2k.jpg",
+            "md5": "96758b71af62a87a3520785a51b13884",
+            "bytes": 1311585
+          }
+        },
+        {
+          "path": "creator-loft/gaming_console/textures/gaming_console_diff_2k.webp",
+          "bytes": 51182,
+          "md5": "2f54fd07f1a015af1322cd2fa456c3a4",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gaming_console/gaming_console_diff_2k.jpg",
+            "md5": "f917536ec4861aa015e81908fc6bc67a",
+            "bytes": 1719779
+          }
+        },
+        {
+          "path": "creator-loft/gaming_console/textures/gaming_console_arm_2k.webp",
+          "bytes": 138502,
+          "md5": "b16abe7ac2bedc1b4612f8a88e44ebc6",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/gaming_console/gaming_console_arm_2k.jpg",
+            "md5": "86813553f5328536ffb8061fcce6c6e9",
+            "bytes": 2523141
+          }
+        },
+        {
+          "path": "creator-loft/gaming_console/gaming_console.bin",
+          "bytes": 1407028,
+          "md5": "3bd9ba4b7ce934dba5f2508e14c21625",
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/gaming_console/gaming_console.bin",
+            "md5": "3bd9ba4b7ce934dba5f2508e14c21625",
+            "bytes": 1407028
+          }
+        }
+      ]
+    },
+    {
+      "id": "rubber_duck_toy",
+      "path": "creator-loft/rubber_duck_toy/rubber_duck_toy.gltf",
+      "bytes": 2951,
+      "md5": "b0af9c009d8cec541c92a726ec13d47f",
+      "author": {
+        "Plat251": "All"
+      },
+      "page": "https://polyhaven.com/a/rubber_duck_toy",
+      "source": {
+        "md5": "0422903fb9822f207257261858393c82"
+      },
+      "dependencies": [
+        {
+          "path": "creator-loft/rubber_duck_toy/textures/rubber_duck_toy_nor_gl_2k.webp",
+          "bytes": 5204,
+          "md5": "5164afda29bd33683cb11a604bb571de",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rubber_duck_toy/rubber_duck_toy_nor_gl_2k.jpg",
+            "md5": "7947d883be44c7488a49f813b4be3c35",
+            "bytes": 170721
+          }
+        },
+        {
+          "path": "creator-loft/rubber_duck_toy/textures/rubber_duck_toy_diff_2k.webp",
+          "bytes": 23900,
+          "md5": "ed874b6073b6e2221a9fc14e1640254b",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rubber_duck_toy/rubber_duck_toy_diff_2k.jpg",
+            "md5": "8ab1c742d2a4543a7e4cd588cfb6fe28",
+            "bytes": 789401
+          }
+        },
+        {
+          "path": "creator-loft/rubber_duck_toy/textures/rubber_duck_toy_arm_2k.webp",
+          "bytes": 48812,
+          "md5": "dac1b0cf9bc3bfca41816e99b209c7e0",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rubber_duck_toy/rubber_duck_toy_arm_2k.jpg",
+            "md5": "587baf41a375418f9cc841cb49405afb",
+            "bytes": 1098944
+          }
+        },
+        {
+          "path": "creator-loft/rubber_duck_toy/rubber_duck_toy.bin",
+          "bytes": 105376,
+          "md5": "2ab5ea380067b76e3ba7e8db8ad0844a",
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/rubber_duck_toy/rubber_duck_toy.bin",
+            "md5": "2ab5ea380067b76e3ba7e8db8ad0844a",
+            "bytes": 105376
+          }
+        }
+      ]
+    },
+    {
+      "id": "digital_wrist_watch",
+      "path": "creator-loft/digital_wrist_watch/digital_wrist_watch.gltf",
+      "bytes": 8372,
+      "md5": "c69c0a8f8568077076e445c23509b0e6",
+      "author": {
+        "Adrian C": "All"
+      },
+      "page": "https://polyhaven.com/a/digital_wrist_watch",
+      "source": {
+        "md5": "2df5b40c37a4ebbc5178364dfb98bac2"
+      },
+      "dependencies": [
+        {
+          "path": "creator-loft/digital_wrist_watch/textures/digital_wrist_watch_nor_gl_2k.webp",
+          "bytes": 92378,
+          "md5": "e0d658745803611e3623b512f6185a85",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/digital_wrist_watch/digital_wrist_watch_nor_gl_2k.jpg",
+            "md5": "cd466e5f97f7882a5f4b9425acbb9f8a",
+            "bytes": 1640069
+          }
+        },
+        {
+          "path": "creator-loft/digital_wrist_watch/textures/digital_wrist_watch_diff_2k.webp",
+          "bytes": 95250,
+          "md5": "fb012b18e5fca49652c52cdade1fdb34",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/digital_wrist_watch/digital_wrist_watch_diff_2k.jpg",
+            "md5": "c28c82bf613e5120fc0e2884f277cc81",
+            "bytes": 1901704
+          }
+        },
+        {
+          "path": "creator-loft/digital_wrist_watch/textures/digital_wrist_watch_arm_2k.webp",
+          "bytes": 127324,
+          "md5": "f42fd734139ba05f4f59c478787f62d9",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/digital_wrist_watch/digital_wrist_watch_arm_2k.jpg",
+            "md5": "7410d8c3d56e5a1c145eb7f6e54a2737",
+            "bytes": 2218609
+          }
+        },
+        {
+          "path": "creator-loft/digital_wrist_watch/textures/digital_wrist_watch_diff_2k.webp",
+          "bytes": 95250,
+          "md5": "fb012b18e5fca49652c52cdade1fdb34",
+          "width": 1024,
+          "height": 1024,
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/digital_wrist_watch/digital_wrist_watch_diff_2k.jpg",
+            "md5": "c28c82bf613e5120fc0e2884f277cc81",
+            "bytes": 1901704
+          }
+        },
+        {
+          "path": "creator-loft/digital_wrist_watch/digital_wrist_watch.bin",
+          "bytes": 427780,
+          "md5": "54b64f23c8a83a9ef424d068a67151b3",
+          "source": {
+            "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/digital_wrist_watch/digital_wrist_watch.bin",
+            "md5": "54b64f23c8a83a9ef424d068a67151b3",
+            "bytes": 427780
+          }
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "path": "creator-loft/concrete/Diffuse.webp",
+      "bytes": 421806,
+      "md5": "42601798a2e8f298a3c750367bd489b4",
+      "width": 1024,
+      "height": 1024,
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "page": "https://polyhaven.com/a/concrete_floor_02",
+      "source": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_floor_02/concrete_floor_02_diff_2k.jpg",
+        "md5": "769c7bf30050cc57be848a67d5c20270",
+        "bytes": 3310792
+      }
+    },
+    {
+      "path": "creator-loft/concrete/nor_gl.webp",
+      "bytes": 197282,
+      "md5": "13acf32e305fbdb34e1aa11d3a50524a",
+      "width": 1024,
+      "height": 1024,
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "page": "https://polyhaven.com/a/concrete_floor_02",
+      "source": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_floor_02/concrete_floor_02_nor_gl_2k.jpg",
+        "md5": "3cc9918473a0c3d5ecb10f0ddc7e218d",
+        "bytes": 935810
+      }
+    },
+    {
+      "path": "creator-loft/concrete/Rough.webp",
+      "bytes": 170364,
+      "md5": "222fb993b77c568ffd4f3d2b59a3ccd1",
+      "width": 1024,
+      "height": 1024,
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "page": "https://polyhaven.com/a/concrete_floor_02",
+      "source": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_floor_02/concrete_floor_02_rough_2k.jpg",
+        "md5": "63b266940d40787b56822b7882819711",
+        "bytes": 1417673
+      }
+    }
+  ]
+}

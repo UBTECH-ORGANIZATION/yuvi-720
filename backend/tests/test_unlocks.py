@@ -1,14 +1,10 @@
-"""Unlock rules: what badges and streaks are worth, and that locks actually hold."""
+"""Unlock rules: what XP, mapping, and streak progress are worth."""
 
 import unittest
 from datetime import date
 
 from app.services import unlocks
 from app.services.streaks import active_days, current_day_streak, longest_day_streak
-
-
-def badge(subject, earned=True):
-    return {"subject": subject, "earned": earned}
 
 
 class StreakTests(unittest.TestCase):
@@ -37,41 +33,41 @@ class StreakTests(unittest.TestCase):
 
 class UnlockRuleTests(unittest.TestCase):
     def test_nothing_is_unlocked_without_progress(self) -> None:
-        self.assertEqual(unlocks.satisfied_ids([], 0), set())
+        self.assertEqual(unlocks.satisfied_ids(0), set())
 
-    def test_milestone_coin_is_matched_by_its_colour(self) -> None:
-        # `project_badges` labels milestones by coin colour, not by rule key.
-        got = unlocks.satisfied_ids([badge("spark")], 0)
-        self.assertIn("trophyShelf", got)
-        self.assertNotIn("podium", got)
+    def test_former_badge_rewards_are_xp_level_metadata(self) -> None:
+        expected = {
+            "trophyShelf": 4, "laurel": 7, "podium": 12,
+            "explorerGoggles": 16, "observatory": 19,
+            "mathBoard": 21, "championBanner": 28,
+        }
+        for asset_id, level in expected.items():
+            with self.subTest(asset_id=asset_id):
+                self.assertEqual(unlocks.UNLOCKS[asset_id]["rule"], {"type": "xp_level", "level": level})
 
-    def test_subject_coin_unlocks_its_own_prop(self) -> None:
-        got = unlocks.satisfied_ids([badge("science")], 0)
-        self.assertIn("rocketModel", got)
-        self.assertNotIn("mathBoard", got)
+    def test_regular_catalog_props_can_be_priced_or_starter_free(self) -> None:
+        from app.services.rewards.catalog import CATALOG
 
-    def test_free_catalog_props_are_never_gated(self) -> None:
-        # Gating an id that already ships free would retroactively lock a prop a
-        # learner has placed, and the room screen would then strip it.
-        for free_id in ("desk", "telescope", "plant", "banner", "frames", "bookshelf"):
-            self.assertNotIn(free_id, unlocks.PROP_IDS, free_id)
-
-    def test_unearned_badge_grants_nothing(self) -> None:
-        self.assertEqual(unlocks.satisfied_ids([badge("world", earned=False)], 0), set())
+        for asset_id in ("storage", "cactus", "bonsai"):
+            self.assertEqual(CATALOG[asset_id]["slot"], "room", asset_id)
+            self.assertGreater(CATALOG[asset_id]["price"], 0, asset_id)
+        self.assertNotIn("telescope", CATALOG)
+        for asset_id in ("desk", "bookshelf", "plant", "banner", "frames"):
+            self.assertNotIn(asset_id, CATALOG, asset_id)
 
     def test_streak_tiers_are_cumulative(self) -> None:
-        at_three = unlocks.satisfied_ids([], 3)
-        at_seven = unlocks.satisfied_ids([], 7)
+        at_three = unlocks.satisfied_ids(3)
+        at_seven = unlocks.satisfied_ids(7)
         self.assertEqual(at_three, {"streakScarf", "streakCalendar"})
         self.assertTrue(at_three < at_seven)
         self.assertIn("cometTrail", at_seven)
 
     def test_streak_below_the_tier_grants_nothing(self) -> None:
-        self.assertEqual(unlocks.satisfied_ids([], 2), set())
+        self.assertEqual(unlocks.satisfied_ids(2), set())
 
     def test_mapping_sections_unlock_only_their_matching_cosmetics(self) -> None:
-        at_four = unlocks.satisfied_ids([], 0, {4})
-        at_six = unlocks.satisfied_ids([], 0, {4, 5, 6})
+        at_four = unlocks.satisfied_ids(0, {4})
+        at_six = unlocks.satisfied_ids(0, {4, 5, 6})
         self.assertEqual(at_four, {"crown"})
         self.assertTrue(at_four < at_six)
         self.assertEqual({"crown", "jetpack", "ironman"}, at_six)
@@ -83,12 +79,18 @@ class UnlockRuleTests(unittest.TestCase):
 
     def test_gated_props_are_exactly_the_prop_rules(self) -> None:
         self.assertTrue(unlocks.is_gated_prop("trophyShelf"))
-        # An ordinary catalog prop stays free for everyone.
         self.assertFalse(unlocks.is_gated_prop("desk"))
         self.assertFalse(unlocks.is_gated_prop("laurel"))  # a cosmetic, not a prop
 
+    def test_sports_arena_props_are_gated_by_their_server_entitlements(self) -> None:
+        from app.services.rewards.catalog import CATALOG
+
+        self.assertTrue(unlocks.is_gated_prop("sportsDumbbellRack"))
+        self.assertTrue(unlocks.is_gated_prop("sportsCableMachine"))
+        self.assertEqual(CATALOG["sportsCableMachine"]["price"], 240)
+
     def test_every_earned_cosmetic_is_gated(self) -> None:
-        """All three promises — sparks, badges and mapping sections — or the
+        """All three promises — sparks, XP and mapping sections — or the
         padlock the learner sees is the only thing enforcing any of them."""
         for asset_id in ("laurel", "explorerGoggles", "streakScarf", "cometTrail"):
             self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
@@ -111,13 +113,6 @@ class UnlockRuleTests(unittest.TestCase):
         for asset_id, section in (("crown", 4), ("jetpack", 5), ("ironman", 6)):
             self.assertEqual(unlocks.UNLOCKS[asset_id]["rule"], {"type": "section", "number": section})
         self.assertNotIn("propeller", unlocks.UNLOCKS)
-
-    def test_badge_reports_what_it_unlocks(self) -> None:
-        self.assertEqual(unlocks.ids_for_badge("aim"), [{"id": "podium", "kind": "prop"}])
-        self.assertEqual(unlocks.ids_for_badge("cosmos"), [{"id": "observatory", "kind": "prop"}])
-        # Streak-gated items belong to no badge.
-        self.assertEqual(unlocks.ids_for_badge("flame"), [{"id": "laurel", "kind": "avatar"}])
-        self.assertEqual(unlocks.ids_for_badge("nonesuch"), [])
 
     def test_client_catalog_marks_what_is_held(self) -> None:
         rows = {r["id"]: r for r in unlocks.catalog_for_client(["laurel"], ["podium"])}

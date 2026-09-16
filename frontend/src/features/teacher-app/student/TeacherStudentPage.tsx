@@ -41,6 +41,7 @@ import {
   getStudentActivity,
   getStudentDetail,
   getStudentObjectives, getStudentScores, getStudentTrends,
+  reportStudentDashboardViewed,
   getTopicDigest,
   unpinNext,
   type RoadmapStep,
@@ -58,8 +59,6 @@ import {
 } from '../shared/EvidenceDisclosure'
 import { MentoringSection } from './MentoringSection'
 import { TeacherWellbeing } from './TeacherWellbeing'
-import { getStudentBadges, type TeacherBadge } from '../../../services/teacher'
-import { Badge, type BadgeGlyph, type BadgeTier } from '../../../components/Badge'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { agoLabel } from '../live/LiveNow'
 import { useRoute } from '../../../app/router'
@@ -100,7 +99,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
       ])),
     attention_flags: (detail.attention_all ?? []).length,
   } : null)
-  const [badges, setBadges] = useState<TeacherBadge[]>([])
   const [activity, setActivity] = useState<QuestionRow[] | null>(null)
   const [trends, setTrends] = useState<LearnerTrends | null>(null)
   const [scores, setScores] = useState<StudentScores | null>(null)
@@ -111,7 +109,24 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
      portrait re-reads what the model now believes. */
   const [detailNonce, setDetailNonce] = useState(0)
   const live = useTeacherLive()
-  const { avatarOf, nameOf } = useTeacherRoster()
+  const { nameOf } = useTeacherRoster()
+
+  useEffect(() => {
+    const startedAt = performance.now()
+    let reported = false
+    const reportDuration = () => {
+      if (reported) return
+      const durationSeconds = (performance.now() - startedAt) / 1_000
+      if (durationSeconds < 1) return
+      reported = true
+      void reportStudentDashboardViewed(learnerId, durationSeconds).catch(() => undefined)
+    }
+    window.addEventListener('pagehide', reportDuration)
+    return () => {
+      window.removeEventListener('pagehide', reportDuration)
+      reportDuration()
+    }
+  }, [learnerId])
 
   /* The learner read, fetched once for the whole page: the AI-analysis bar
      shows its subjects, and the recommendations panel leads with its
@@ -191,19 +206,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
   }, [learnerId, subject, language, detailNonce])
-
-  /* Badges load beside the detail, not after it: the header leads with the
-     child's latest badge — their own symbol of themselves — instead of a grey
-     initial. All states are kept: the earned ones decorate, the in-progress
-     ones are what the hover explains the child is working toward. */
-  useEffect(() => {
-    let active = true
-    setBadges([])
-    getStudentBadges(learnerId, language)
-      .then((response) => { if (active) setBadges(response.badges ?? []) })
-      .catch(() => { /* initial avatar is a fine fallback */ })
-    return () => { active = false }
-  }, [learnerId, language])
 
   /* The header KPIs, the independence dial and the topics all read from the
      same per-question rows. Loaded beside the detail; failure hides those
@@ -296,18 +298,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const rosterName = nameOf(learnerId)
   const name = rosterName ?? detail?.display_name ?? learnerId
   const nameKnown = Boolean(rosterName || detail)
-  /* Badges are per subject, so an active subject filter narrows them like
-     everything else on the page — a science filter showing a maths coin would
-     be the one element ignoring the bar. Client-side, because the earned list
-     is already loaded whole for the hero's newest-badge slot. */
-  const inSubject = (badge: TeacherBadge) =>
-    !subject || !badge.subject || badge.subject === subject
-  const earnedBadges = badges.filter((badge) => badge.earned && inSubject(badge))
-  const towardBadges = badges
-    .filter((badge) => badge.state === 'inprogress' && badge.progress > 0 && inSubject(badge))
-    .sort((a, b) => b.progress - a.progress)
-  const latestBadge = earnedBadges[0] ?? null
-  const avatarChoice = avatarOf(learnerId)
   const presence = live.presence[learnerId] ?? null
   /* The newest open disclosure, in the hero — the one line a teacher must not
      have to scroll for. It links down to the full record. */
@@ -339,80 +329,13 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             {t('tch.student.back')}
           </button>
 
-          {/* The badge cluster balances the back button on the other end of
-              the row, clear of the KPI strip below. The hover answers both
-              questions a cluster of icons raises: what are these, and what is
-              the child working toward. */}
-          {earnedBadges.length ? (
-            <Tooltip
-              label={t('tch.student.quickBadges')}
-              className="tch-student__badgeTip"
-              trigger={(
-                <span className="tch-student__badgeCluster">
-                  <span className="tch-student__badgeLabel">{t('tch.student.quickBadges')}</span>
-                  {earnedBadges.slice(0, 3).map((badge) => (
-                    <Badge
-                      key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
-                      subject={badge.subject}
-                      glyph={badge.glyph as BadgeGlyph}
-                      tier={badge.tier as BadgeTier}
-                      size={22}
-                      title={badge.title}
-                    />
-                  ))}
-                  <span>{earnedBadges.length}</span>
-                </span>
-              )}
-            >
-              <div className="tch-badgeTip">
-                {earnedBadges.slice(0, 4).map((badge) => (
-                  <div key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
-                       className="tch-badgeTip__row">
-                    <Badge subject={badge.subject} glyph={badge.glyph as BadgeGlyph}
-                           tier={badge.tier as BadgeTier} size={20} title={badge.title} />
-                    <span className="tch-badgeTip__text">
-                      <strong dir="auto">{badge.title}</strong>
-                      {badge.meta ? <span dir="auto">{badge.meta}</span> : null}
-                    </span>
-                  </div>
-                ))}
-                {towardBadges.length ? (
-                  <>
-                    <p className="tch-badgeTip__lead">{t('tch.student.badgeToward')}</p>
-                    {towardBadges.slice(0, 2).map((badge) => (
-                      <div key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
-                           className="tch-badgeTip__row is-toward">
-                        <Badge subject={badge.subject} glyph={badge.glyph as BadgeGlyph}
-                               tier={badge.tier as BadgeTier} size={20} title={badge.title} />
-                        <span className="tch-badgeTip__text">
-                          <strong dir="auto">{badge.title}</strong>
-                          <span>{Math.round(badge.progress * 100)}%</span>
-                        </span>
-                      </div>
-                    ))}
-                  </>
-                ) : null}
-              </div>
-            </Tooltip>
-          ) : null}
         </div>
 
         <div className="tch-student__identity">
-          {/* The same face the roster shows, so a child is recognisable across
-              screens. Their own choice wins; failing that their latest earned
-              badge, which is still their symbol rather than a grey initial. */}
           <StudentAvatar
             learnerId={learnerId}
             name={name}
             size={56}
-            choice={avatarChoice ?? (latestBadge ? {
-              kind: 'badge',
-              badge: {
-                subject: latestBadge.subject,
-                glyph: latestBadge.glyph as BadgeGlyph,
-                tier: latestBadge.tier as BadgeTier,
-              },
-            } : null)}
           />
           <div className="tch-student__who">
             {nameKnown

@@ -264,6 +264,13 @@ class HierarchyTests(unittest.TestCase):
         )
         self.assertNotIn("manufacturer", _short(built["extensions"]))
 
+    def test_a_numeric_catalog_vendor_code_is_sent_as_manufacturer(self):
+        built = hierarchy.build(
+            unit=UNIT, component={**COMPONENT, "manufacture": "10"},
+            item=ITEM, level="item",
+        )
+        self.assertEqual(_short(built["extensions"])["manufacturer"], 10)
+
     def test_conversation_triggers_stay_on_the_v11_closed_list(self):
         """`misconception` was replaced by `student-error`; anything off-list
         is reported as `other`, never as an invented enum value."""
@@ -282,6 +289,16 @@ class HierarchyTests(unittest.TestCase):
                     _short(stmt["context"]["extensions"])["conversationTrigger"],
                     expected,
                 )
+
+    def test_student_reply_to_bot_initiative_uses_the_same_closed_trigger(self):
+        stmt = statements.conversation_interacted(
+            IDENTITY, SESSION, "conv-1",
+            speaker="student", conversation_trigger="idle-time",
+        )
+        self.assertEqual(
+            _short(stmt["context"]["extensions"])["conversationTrigger"],
+            "idle-time",
+        )
 
     def test_the_answer_key_never_leaves_with_the_questions_array(self):
         """`questions` describes what is asked. The catalog rows also carry the
@@ -414,25 +431,25 @@ class ContentStatementTests(unittest.TestCase):
         ext = _short(played["context"]["extensions"])
         self.assertEqual(ext["mediaPosition"], 0)
 
-    def test_selection_type_is_kebab_case(self):
+    def test_selection_type_uses_the_v11_enum(self):
         stmt = statements.selected(
             IDENTITY, SESSION, object_id="https://lomdot.education.gov.il/act/item",
             object_type="item", selection_type="practiceDecision", response="true",
         )
         self.assertEqual(_short(stmt["context"]["extensions"])["selectionType"],
-                         "practice-decision")
+                         "decision-practice")
 
-    def test_every_dictionary_value_survives_the_conversion(self):
-        for camel, kebab in (
-            ("learningType", "learning-type"),
-            ("practiceDecision", "practice-decision"),
-            ("isUnderstood", "is-understood"),
-            ("isRepeat", "is-repeat"),
-            ("externalLearning", "external-learning"),
+    def test_every_v11_selection_enum_value_is_mapped(self):
+        for supplied, wire_value in (
+            ("learningType", "type-learning"),
+            ("practiceDecision", "decision-practice"),
+            ("isUnderstood", "understood-is"),
+            ("isRepeat", "repeat-is"),
+            ("externalLearning", "learning-external"),
         ):
-            self.assertEqual(statements.kebab(camel), kebab)
-            self.assertIn(kebab, statements.SELECTION_TYPES)
-            self.assertEqual(statements.kebab(kebab), kebab)   # idempotent
+            self.assertEqual(statements.kebab(supplied), wire_value)
+            self.assertIn(wire_value, statements.SELECTION_TYPES)
+            self.assertEqual(statements.kebab(wire_value), wire_value)
 
     def test_a_relayed_statement_gains_the_ancestry_it_never_had(self):
         raw = {

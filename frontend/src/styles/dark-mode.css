@@ -41,6 +41,12 @@
 [data-theme='dark'] input,
 [data-theme='dark'] textarea,
 [data-theme='dark'] select {
+  background-color: #232141;
+  color: var(--sp-ink-700);
+}
+
+[data-theme='dark'] select option {
+  background-color: #232141;
   color: var(--sp-ink-700);
 }
 

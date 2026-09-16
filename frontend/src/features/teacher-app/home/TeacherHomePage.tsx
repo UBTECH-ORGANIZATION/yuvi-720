@@ -39,6 +39,7 @@ import {
   createSubgroup,
   getGapDiagnosis,
   getGroupEngagement, getGroupGaps, getGroupMoments, getGroupMood, getGroupSnapshot,
+  reportGroupDashboardViewed,
   type ClassMood, type Engagement, type GroupInsight, type LearningGap,
   type Moment,
 } from '../../../services/teacher'
@@ -125,6 +126,24 @@ export function TeacherHomePage() {
   const [praiseFor, setPraiseFor] = useState<StrengthItem | null>(null)
   const [subgroupBusy, setSubgroupBusy] = useState(false)
   const [subgroupError, setSubgroupError] = useState('')
+
+  useEffect(() => {
+    if (!groupId) return
+    const startedAt = performance.now()
+    let reported = false
+    const reportDuration = () => {
+      if (reported) return
+      const durationSeconds = (performance.now() - startedAt) / 1_000
+      if (durationSeconds < 1) return
+      reported = true
+      void reportGroupDashboardViewed(groupId, durationSeconds).catch(() => undefined)
+    }
+    window.addEventListener('pagehide', reportDuration)
+    return () => {
+      window.removeEventListener('pagehide', reportDuration)
+      reportDuration()
+    }
+  }, [groupId])
 
   useEffect(() => {
     if (!groupId) { setIsLoading(false); return }

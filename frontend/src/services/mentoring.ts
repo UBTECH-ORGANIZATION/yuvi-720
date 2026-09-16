@@ -1,8 +1,9 @@
 /* Mentoring (F5) + feedback (F7) clients. Required mentoring fields: date,
    teacher, learner, meeting stage, notes, next steps, deadline. */
 
-import { apiDelete, apiGet, apiPost } from './api'
+import { apiDelete, apiGet, apiPost, apiPut } from './api'
 import type { RewardGrant } from './rewards'
+import type { XpAwardReceipt } from './progression'
 
 export type GoalProgressStage = 'chosen' | 'started' | 'progressed' | 'summarized'
 
@@ -42,6 +43,7 @@ export interface MentoringConversation {
   created_at?: string
   /** Sparks granted by the action that returned this record (progress/help). */
   reward?: RewardGrant
+  xpReward?: XpAwardReceipt
 }
 
 /** One step of the ministry's ten-step mentoring ladder. */
@@ -88,6 +90,21 @@ export function requestGoalHelp(conversationId: string, goalId: string) {
 
 export function deleteConversation(conversationId: string) {
   return apiDelete<{ ok: true; id: string }>(`/api/mentoring/${conversationId}`)
+}
+
+export function updateConversation(
+  conversationId: string,
+  input: Pick<MentoringConversation, 'notes' | 'meeting_stage'>,
+) {
+  return apiPut<MentoringConversation>(`/api/mentoring/${conversationId}`, input)
+}
+
+export function updateGoal(
+  conversationId: string,
+  goalId: string,
+  input: Pick<MentoringGoal, 'title' | 'next_steps' | 'deadline'>,
+) {
+  return apiPut<MentoringConversation>(`/api/mentoring/${conversationId}/goals/${goalId}`, input)
 }
 
 export interface YuviQA { q: string; a: string }

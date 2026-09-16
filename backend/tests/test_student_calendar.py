@@ -23,7 +23,7 @@ NOW = datetime.fromisoformat("2026-08-17T12:00:00+03:00")
 
 
 class CalendarProjectionTest(unittest.IsolatedAsyncioTestCase):
-    async def _upcoming(self, tasks=None, goals=None, meetings=None, limit=3):
+    async def _upcoming(self, tasks=None, goals=None, meetings=None, lessons=None, limit=3):
         with patch.object(
             student_calendar.learner_tasks,
             "list_for_learner",
@@ -43,6 +43,10 @@ class CalendarProjectionTest(unittest.IsolatedAsyncioTestCase):
         ), patch.object(
             student_calendar.timetable,
             "list_for_learner",
+            AsyncMock(return_value=lessons or []),
+        ), patch.object(
+            student_calendar.timetable,
+            "holidays_for_learner",
             AsyncMock(return_value=[]),
         ):
             return await student_calendar.get_upcoming("kid-a", limit=limit, now=NOW)
@@ -87,6 +91,16 @@ class CalendarProjectionTest(unittest.IsolatedAsyncioTestCase):
         ], limit=30)
         self.assertEqual(len(result.items), 5)
         self.assertFalse(result.has_more)
+
+    async def test_upcoming_keeps_an_active_timed_lesson_for_its_countdown(self):
+        result = await self._upcoming(lessons=[{
+            "id": "slot-1:2026-08-17", "kind": "lesson", "title": "Science",
+            "start_at": "2026-08-17T08:30:00+00:00",
+            "end_at": "2026-08-17T10:00:00+00:00", "all_day": False,
+            "status": "upcoming",
+        }])
+        self.assertEqual([item.id for item in result.items], ["lesson:slot-1:2026-08-17"])
+        self.assertEqual(result.items[0].status, "upcoming")
 
     async def test_week_is_sunday_through_saturday_and_keeps_completed_history(self):
         with patch.object(

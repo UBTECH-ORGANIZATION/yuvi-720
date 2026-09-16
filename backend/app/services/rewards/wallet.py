@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named
-from app.services.rewards.catalog import price_of
+from app.services.events import count_distinct_completed_components
+from app.services.rewards.catalog import entry_for, price_of
 from app.services.rewards.pricing import (
     GOAL_VALUE_DEFAULT,
     GOAL_VALUE_MAX,
@@ -32,6 +33,7 @@ from app.services.rewards.pricing import (
 from learner_state import (  # type: ignore
     get_learner_state,
     grant_avatar_unlock,
+    grant_room_unlock,
     normalize_learner_id,
 )
 
@@ -388,6 +390,19 @@ async def grant_goal_stage(
     )
 
 
+async def grant_personal_path_started(learner_id: str) -> dict[str, Any]:
+    """Grant the one-time Spark reward for opening a completed personal path."""
+    lid = normalize_learner_id(learner_id)
+    return await _grant(
+        lid,
+        f"earn:{lid}:onboarding:personal_path_started",
+        50,
+        "onboarding.personal_path_started",
+        {"event": "personal_path_started"},
+        count_daily=False,
+    )
+
+
 def is_teacher_spark_amount(raw: Any) -> bool:
     """Whether ``raw`` is one of the amounts a teacher may attach to a good word."""
     try:
@@ -439,6 +454,21 @@ async def grant_help_request(learner_id: str, goal_id: str) -> dict[str, Any]:
     )
 
 
+async def grant_level_sparks(
+    learner_id: str, level: int, amount: int
+) -> dict[str, Any]:
+    """Grant the server-configured Sparks bonus for one reached XP level."""
+    lid = normalize_learner_id(learner_id)
+    return await _grant(
+        lid,
+        f"earn:{lid}:level:{int(level)}",
+        int(amount),
+        "xp.level",
+        {"level": int(level)},
+        count_daily=False,
+    )
+
+
 async def grant_unlock(learner_id: str, asset_id: str, key: str) -> dict[str, Any]:
     """Grant a cosmetic directly (milestone reward), bypassing the wallet."""
     lid = normalize_learner_id(learner_id)
@@ -465,10 +495,24 @@ async def purchase_asset(learner_id: str, asset_id: str) -> dict[str, Any]:
     if price is None:
         return {"ok": False, "reason": "not_for_sale"}
 
+    entry = entry_for(asset_id) or {}
+    unlock_field = "room_unlocks" if entry.get("unlock") == "room" else "avatar_unlocks"
     state = await get_learner_state(lid)
-    owned = state.get("avatar_unlocks") or []
+    owned = state.get(unlock_field) or []
     if asset_id in owned:
         return {"ok": False, "reason": "owned", "wallet": await get_wallet(lid)}
+
+    required_components = int(entry.get("completed_components") or 0)
+    if required_components:
+        completed_components = await count_distinct_completed_components(lid)
+        if completed_components < required_components:
+            return {
+                "ok": False,
+                "reason": "prerequisite",
+                "completedComponents": completed_components,
+                "requiredComponents": required_components,
+                "wallet": await get_wallet(lid),
+            }
 
     wallet = await _load_wallet(lid)
     balance = int(wallet.get("balance") or 0)
@@ -495,7 +539,10 @@ async def purchase_asset(learner_id: str, asset_id: str) -> dict[str, Any]:
         return {"ok": False, "reason": "owned", "wallet": _public(wallet)}
 
     try:
-        await grant_avatar_unlock(lid, asset_id)
+        if unlock_field == "room_unlocks":
+            await grant_room_unlock(lid, asset_id)
+        else:
+            await grant_avatar_unlock(lid, asset_id)
     except Exception as exc:  # keep the wallet honest if the unlock never landed
         print(f"⚠️ unlock write failed, rolling back purchase: {exc}")
         await _ledger_release(key)

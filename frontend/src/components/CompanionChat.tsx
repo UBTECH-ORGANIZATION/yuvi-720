@@ -47,7 +47,6 @@ const COACH_ACTION_PATHS: Readonly<Record<string, string>> = {
   open_calendar: '/student-dashboard/calendar',
   open_goals: '/mentoring',
   open_profile: '/results',
-  open_badges: '/badges',
 }
 
 function validatedActionPath(action: { action_id: string; path: string }): string | null {

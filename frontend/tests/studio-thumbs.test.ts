@@ -7,11 +7,16 @@
  * committed with the catalogue change (see `studioThumbs.ts`). A new item
  * without a file would render live on every school PC — the exact startup
  * burst the files exist to remove — and nothing else would notice. So this
- * reads the ids out of the two catalogue modules and requires a file for each,
- * and no file for an id that has left.
+ * reads the ids the render script saw (`manifest.json`, written from the live
+ * catalogue) and requires a file for each, and no file for an id that has left.
  *
  * Source-level on purpose: both catalogues import Three.js and build meshes at
- * module load, which needs a DOM this runner does not have.
+ * module load, which needs a DOM this runner does not have. The manifest is the
+ * id list because the room catalogue builds whole families of ids in loops —
+ * `prestige_room_object_${level}`, the sports artwork, the park rides — that a
+ * scan of the source cannot enumerate. A scan still runs: every id spelled out
+ * literally must be in the manifest, so a new item cannot ship without the
+ * script having been re-run.
  */
 
 import assert from 'node:assert/strict'
@@ -37,10 +42,14 @@ function avatarIds(): string[] {
   return [...block.matchAll(/\{ id: '([^']+)', slot:/g)].map((m) => m[1])
 }
 
-/** Ids of `ROOM_ITEMS` and `WEEKLY_SURPRISE_ITEMS`: `id: 'rug', category:`,
- *  plus the two surprise-box ids that are spelled as constants. */
+/** Literal ids of `ROOM_ITEMS` and `WEEKLY_SURPRISE_ITEMS`: `id: 'rug', category:`,
+ *  plus the two surprise-box ids that are spelled as constants. The portal
+ *  furniture (`PORTAL_FURNITURE_ITEMS`) is placed by the product, never sold
+ *  through the catalogue, so it has no card and no file. */
 function roomIds(): string[] {
-  const literal = [...roomCatalog.matchAll(/\bid: '([^']+)', category:/g)].map((m) => m[1])
+  const catalogue = roomCatalog.slice(0, roomCatalog.indexOf('export const PORTAL_FURNITURE_ITEMS'))
+    + roomCatalog.slice(roomCatalog.indexOf('export const WEEKLY_SURPRISE_ITEMS'))
+  const literal = [...catalogue.matchAll(/\bid: '([^']+)', category:/g)].map((m) => m[1])
   const constants = [...roomCatalog.matchAll(/\bid: (WEEKLY_SURPRISE_[A-Z]+), category:/g)].map((m) => {
     const value = roomCatalog.match(new RegExp(`const ${m[1]} = '([^']+)'`))
     assert.ok(value, `${m[1]} is not a string constant in RoomCatalog.ts`)
@@ -53,16 +62,26 @@ const files = (kind: string) =>
   readdirSync(join(THUMBS, kind)).filter((name) => name.endsWith('.webp')).map((name) => name.slice(0, -'.webp'.length))
 
 describe('pre-rendered studio thumbnails', () => {
-  const catalogues = { avatar: avatarIds(), room: roomIds() }
+  const literal = { avatar: avatarIds(), room: roomIds() }
+  const catalogues: Record<string, string[]> = JSON.parse(readFileSync(join(THUMBS, 'manifest.json'), 'utf8'))
 
   it('reads a plausible number of ids out of each catalogue', () => {
     // A regex that silently matches nothing would pass every check below.
-    assert.ok(catalogues.avatar.length >= 20, `only ${catalogues.avatar.length} avatar ids parsed`)
-    assert.ok(catalogues.room.length >= 40, `only ${catalogues.room.length} room ids parsed`)
+    assert.ok(literal.avatar.length >= 20, `only ${literal.avatar.length} avatar ids parsed`)
+    assert.ok(literal.room.length >= 40, `only ${literal.room.length} room ids parsed`)
     for (const [kind, ids] of Object.entries(catalogues)) {
       assert.equal(new Set(ids).size, ids.length, `${kind} ids are not unique`)
     }
   })
+
+  for (const [kind, ids] of Object.entries(literal)) {
+    it(`every ${kind} id spelled in the source was rendered`, () => {
+      // An item added by hand, with the script not re-run since.
+      const known = new Set(catalogues[kind])
+      const unrendered = ids.filter((id) => !known.has(id))
+      assert.deepEqual(unrendered, [], `not in the manifest for ${kind}: ${unrendered.join(', ')} — ${RERUN}`)
+    })
+  }
 
   for (const [kind, ids] of Object.entries(catalogues)) {
     it(`every ${kind} id has a file`, () => {
