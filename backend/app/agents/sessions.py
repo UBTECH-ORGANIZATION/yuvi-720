@@ -860,6 +860,47 @@ async def get_first_user_message(
     return str(documents[0].get("content") or "").strip() or None
 
 
+async def latest_proactive_trigger(
+    learner_id: str,
+    session_id: str,
+    role: str = "coach",
+) -> Optional[str]:
+    """Return the trigger for the last assistant turn, if it was proactive.
+
+    The student turn is reported before it is persisted, so the latest stored
+    assistant message is exactly the one the learner is answering.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    collection = _get_collection_named("agent_messages")
+    document: Optional[dict[str, Any]] = None
+    if collection is not None:
+        try:
+            document = await collection.find_one(
+                {
+                    "learner_id": safe_id,
+                    "conversation_id": safe_session,
+                    "agent_role": role,
+                    "message_role": "assistant",
+                },
+                sort=[("at", -1), ("_id", -1)],
+            )
+        except Exception as exc:
+            print(f"⚠️ proactive trigger read failed, using fallback: {exc}")
+    if document is None:
+        candidates = [
+            entry for entry in _read_history_fallback()["messages"].values()
+            if entry.get("learner_id") == safe_id
+            and entry.get("conversation_id") == safe_session
+            and entry.get("agent_role") == role
+            and entry.get("message_role") == "assistant"
+        ]
+        if candidates:
+            document = max(candidates, key=lambda entry: (entry.get("at", ""), entry.get("_id", "")))
+    value = ((document or {}).get("meta") or {}).get("proactive_trigger")
+    return str(value) if isinstance(value, str) else None
+
+
 async def soft_delete_conversation(
     learner_id: str,
     session_id: str,

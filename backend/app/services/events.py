@@ -921,6 +921,13 @@ async def ingest_statement(
                 f"⚠️ provider self-advanced outside the launch: "
                 f"{event.get('object_id')} reported on launch {event.get('launch')}"
             )
+            # The platform must not fold a self-routed sibling into this
+            # launch's progress, but it remains a real, auditable content
+            # event and must reach the MoE LRS through Yuvi's outbox.
+            try:
+                await _forward_to_moe_lrs(statement, launch, event["learner_id"], event)
+            except Exception as exc:
+                print(f"⚠️ MoE LRS forward skipped: {type(exc).__name__}")
             return {"stored": True, "folded": False, "reason": "foreign_component"}
         # Isolate the brain fold: a bug folding ONE event must not 500 the
         # request, because the provider would then retry, find the id already

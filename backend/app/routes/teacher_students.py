@@ -48,13 +48,15 @@ async def _guard_group(session: dict, group_id: str) -> bool:
     return await org.teacher_can_access_group(session["sub"], group_id)
 
 
-async def _report(session: dict, dashboard_type: str) -> None:
+async def _report(
+    session: dict, dashboard_type: str, duration_seconds: Optional[float] = None
+) -> None:
     """MoE 720 dashboard-viewed. Best-effort; never breaks the response."""
     if not session.get("sid"):
         return
     try:
         await lrs_reporter.report_dashboard_viewed(
-            session["sub"], session["sid"], dashboard_type, None
+            session["sub"], session["sid"], dashboard_type, None, duration_seconds
         )
     except Exception as exc:  # pragma: no cover - reporting is never critical
         print(f"⚠️ dashboard-viewed report skipped: {type(exc).__name__}")
@@ -102,8 +104,26 @@ async def group_snapshot(
         return _denied()
     view = await insights.group_insights(
         group_id, normalize_language(language), window_days=days)
-    await _report(session, "learning-group")
     return _ok(view)
+
+
+@router.post("/groups/{group_id}/dashboard-viewed")
+async def report_group_dashboard_viewed(
+    group_id: str,
+    data: dict,
+    session=Depends(require_teacher_session),
+):
+    """Record the real time a teacher spent on their group dashboard."""
+    if not await _guard_group(session, group_id):
+        return _denied()
+    try:
+        duration_seconds = float(data.get("duration_seconds"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    if not 0 < duration_seconds <= 28_800:
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    await _report(session, "learning-group", duration_seconds)
+    return _ok({"reported": True})
 
 
 @router.get("/groups/{group_id}/engagement")
@@ -342,8 +362,27 @@ async def student_overview(
     if safe_id is None:
         return _denied()
     view = await insights.student_insights(safe_id, normalize_language(language), subject)
-    await _report(session, "student-view")
     return _ok(view)
+
+
+@router.post("/students/{learner_id}/dashboard-viewed")
+async def report_student_dashboard_viewed(
+    learner_id: str,
+    data: dict,
+    session=Depends(require_teacher_session),
+):
+    """Record the real time a teacher spent on an authorized student dashboard."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        duration_seconds = float(data.get("duration_seconds"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    if not 0 < duration_seconds <= 28_800:
+        raise HTTPException(status_code=422, detail="invalid_duration")
+    await _report(session, "student-view", duration_seconds)
+    return _ok({"reported": True})
 
 
 @router.get("/students/{learner_id}/activity")
@@ -800,6 +839,10 @@ async def approve_student_goal(
     except goal_approval.ApprovalError as exc:
         status = 403 if exc.code == "not_authorized" else 404
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
+    if not result.get("already_approved"):
+        await lrs_reporter.report_teacher_student_goal(
+            safe_id, session["sub"], "completed", goal_id, "academic"
+        )
     return _ok(result)
 
 

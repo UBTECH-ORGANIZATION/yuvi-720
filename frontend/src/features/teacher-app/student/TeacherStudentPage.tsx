@@ -41,6 +41,7 @@ import {
   getStudentActivity,
   getStudentDetail,
   getStudentObjectives, getStudentScores, getStudentTrends,
+  reportStudentDashboardViewed,
   getTopicDigest,
   unpinNext,
   type RoadmapStep,
@@ -109,6 +110,23 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const [detailNonce, setDetailNonce] = useState(0)
   const live = useTeacherLive()
   const { nameOf } = useTeacherRoster()
+
+  useEffect(() => {
+    const startedAt = performance.now()
+    let reported = false
+    const reportDuration = () => {
+      if (reported) return
+      const durationSeconds = (performance.now() - startedAt) / 1_000
+      if (durationSeconds < 1) return
+      reported = true
+      void reportStudentDashboardViewed(learnerId, durationSeconds).catch(() => undefined)
+    }
+    window.addEventListener('pagehide', reportDuration)
+    return () => {
+      window.removeEventListener('pagehide', reportDuration)
+      reportDuration()
+    }
+  }, [learnerId])
 
   /* The learner read, fetched once for the whole page: the AI-analysis bar
      shows its subjects, and the recommendations panel leads with its

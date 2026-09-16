@@ -1786,6 +1786,7 @@ async def run_coach_stream(
                if tool_context.action_offers else {}),
             **({"pointer": tool_context.pointer_requests[0]}
                if tool_context.pointer_requests else {}),
+                **({"proactive_trigger": trigger} if trigger else {}),
         } or None),
     )
     coach_debug_trace.append(debug_trace, "persist_conversation_turn")

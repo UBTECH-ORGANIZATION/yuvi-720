@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from app.auth.dependencies import assert_can_read_learner, current_user
+from app.auth.dependencies import assert_can_read_learner, current_user, require_learner_session
 from app.brain.context_engine import build_coach_bundle, view_for, AgentScopeError
 from app.brain.repository import get_brain, apply_brain_updates
 from app.services import kata_catalog
@@ -141,14 +141,22 @@ async def update_goal_status(
 
 
 @router.get("/{learner_id}/dashboard")
-async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depends(current_user)):
+async def read_dashboard(
+    learner_id: str,
+    lang: str = "he",
+    session: dict = Depends(require_learner_session),
+):
     """Return the F4 dashboard DTO projected from the brain (real numbers).
 
     If mapping scores exist but the profile hasn't been derived yet (e.g. a
     learner migrated from legacy state), seed it via the Onboarding agent so
     competencies/strengths render (same behavior as POST /generate-dashboard).
     """
-    safe_id = await _authorized_id(actor, learner_id)
+    safe_id = await _authorized_id(session, learner_id)
+    from app.services.lrs import reporter as lrs_reporter
+    await lrs_reporter.report_dashboard_viewed(
+        safe_id, session["sid"], "student-personal", None
+    )
     await kata_catalog.ensure_loaded()
     brain = await get_brain(safe_id)
     scores = (brain.get("profile") or {}).get("mapping_scores")

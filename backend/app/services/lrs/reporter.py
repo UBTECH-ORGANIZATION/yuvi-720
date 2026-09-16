@@ -322,6 +322,37 @@ async def report_student_goal(
     )
 
 
+async def report_teacher_student_goal(
+    learner_id: str,
+    teacher_id: str,
+    action: str,
+    goal_id: str,
+    goal_type: str,
+) -> None:
+    """Report a teacher's action on a learner goal with two distinct identities."""
+    try:
+        learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
+        teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
+    except Exception:
+        return
+    if (
+        learner_identity is None
+        or teacher_identity is None
+        or learner_identity["exidentifier"] == teacher_identity["exidentifier"]
+    ):
+        return
+    # The action belongs to the learner's goal; a teacher session would put that
+    # learner event in the wrong session grouping.
+    await report_student_goal(
+        learner_id,
+        None,
+        action,
+        goal_id,
+        goal_type,
+        instructor_exid=teacher_identity["exidentifier"],
+    )
+
+
 async def report_mentoring_record(
     record: dict[str, Any],
     *,
@@ -359,23 +390,40 @@ async def report_mentoring_record(
     learner_id = record.get("learner_id")
     if not learner_id:
         return
+    teacher_identity = None
+    learner_identity = None
     if record.get("author") == "teacher":
         session_id = None
+        teacher_id = str(record.get("teacher_id") or "")
+        if not teacher_id:
+            return
+        try:
+            learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
+            teacher_identity = await identity_mod.resolve_reporting_identity(teacher_id)
+        except Exception:
+            return
+        if (
+            learner_identity is None
+            or teacher_identity is None
+            or learner_identity["exidentifier"] == teacher_identity["exidentifier"]
+        ):
+            return
     elif not session_id:
         return
-    stub_exid = config.test_exidentifier()
+    student_exid = (learner_identity or {}).get("exidentifier") or config.test_exidentifier()
+    mentor_exid = (teacher_identity or {}).get("exidentifier") or config.test_exidentifier()
     await report_mentor_meeting_completed(
         learner_id,
         session_id,
         record["id"],
-        mentor_exid=stub_exid,
-        student_exid=stub_exid,
+        mentor_exid=mentor_exid,
+        student_exid=student_exid,
         meeting_date=record.get("date") or "",
         mentoring_phase=record.get("meeting_stage") or None,
     )
     if record.get("visibility") != "shared":
         return
-    instructor = stub_exid if record.get("author") == "teacher" else None
+    instructor = mentor_exid if record.get("author") == "teacher" else None
     for goal in record.get("goals") or []:
         await report_student_goal(
             learner_id,

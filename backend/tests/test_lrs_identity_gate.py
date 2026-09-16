@@ -97,6 +97,58 @@ class PlaceholderIdentityGate(unittest.IsolatedAsyncioTestCase):
         ):
             await reporter.report_session_enter("learner-1", "sess-1")  # no raise
 
+    async def test_teacher_authored_goal_has_distinct_learner_and_instructor(self):
+        identities = {
+            "learner-1": {"exidentifier": "1111111111", "school": "123456", "nmm": None},
+            "teacher-1": {"exidentifier": "2222222222", "school": "123456", "nmm": None},
+        }
+        record = {
+            "id": "ment-1", "learner_id": "learner-1", "teacher_id": "teacher-1",
+            "author": "teacher", "visibility": "shared", "date": "2026-09-16",
+            "goals": [{"id": "goal-1"}],
+        }
+        with mock.patch.dict(os.environ, GOOD, clear=False), \
+             mock.patch.object(
+                 reporter.identity_mod, "resolve_reporting_identity",
+                 new=mock.AsyncMock(side_effect=lambda user_id: identities.get(user_id)),
+             ), mock.patch.object(reporter.outbox, "enqueue", new_callable=mock.AsyncMock) as enqueue:
+            await reporter.report_mentoring_record(record, session_id="teacher-session")
+        goal_statement = enqueue.await_args_list[1].args[0]
+        self.assertEqual(goal_statement["actor"]["account"]["name"], "1111111111")
+        self.assertEqual(goal_statement["context"]["instructor"]["account"]["name"], "2222222222")
+
+    async def test_teacher_authored_goal_with_duplicate_identity_is_not_reported(self):
+        identity = {"exidentifier": "1012345678", "school": "123456", "nmm": None}
+        record = {
+            "id": "ment-1", "learner_id": "learner-1", "teacher_id": "teacher-1",
+            "author": "teacher", "visibility": "shared", "goals": [{"id": "goal-1"}],
+        }
+        with mock.patch.dict(os.environ, GOOD, clear=False), \
+             mock.patch.object(
+                 reporter.identity_mod, "resolve_reporting_identity",
+                 new=mock.AsyncMock(return_value=identity),
+             ), mock.patch.object(reporter.outbox, "enqueue", new_callable=mock.AsyncMock) as enqueue:
+            await reporter.report_mentoring_record(record, session_id="teacher-session")
+        enqueue.assert_not_awaited()
+
+    async def test_teacher_goal_completion_identifies_the_teacher_as_instructor(self):
+        identities = {
+            "learner-1": {"exidentifier": "1111111111", "school": "123456", "nmm": None},
+            "teacher-1": {"exidentifier": "2222222222", "school": "123456", "nmm": None},
+        }
+        with mock.patch.dict(os.environ, GOOD, clear=False), \
+             mock.patch.object(
+                 reporter.identity_mod, "resolve_reporting_identity",
+                 new=mock.AsyncMock(side_effect=lambda user_id: identities.get(user_id)),
+             ), mock.patch.object(reporter.outbox, "enqueue", new_callable=mock.AsyncMock) as enqueue:
+            await reporter.report_teacher_student_goal(
+                "learner-1", "teacher-1", "completed", "goal-1", "academic"
+            )
+        statement = enqueue.await_args.args[0]
+        self.assertTrue(statement["verb"]["id"].endswith("/completed"))
+        self.assertEqual(statement["actor"]["account"]["name"], "1111111111")
+        self.assertEqual(statement["context"]["instructor"]["account"]["name"], "2222222222")
+
 
 if __name__ == "__main__":
     unittest.main()

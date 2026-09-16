@@ -725,6 +725,11 @@ export function LearnerMappingPage() {
     const nextIndex = currentIndex + 1
     const answersSnapshot = { ...answers }
 
+    void apiPost('/api/questionnaire/answer', {
+      question_number: currentQuestion.id,
+      option_index: answers[currentQuestion.id],
+    }).catch(() => {})
+
     if (nextIndex >= totalQuestions) {
       void showSectionSummary(currentPart, true, answersSnapshot, currentIndex)
       return

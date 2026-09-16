@@ -42,6 +42,7 @@ async def create_launch(data: LaunchRequest, learner_id: str = Depends(require_l
     )
 
 
+@router.post("/{launch}/")
 @router.post("/{launch}/statements")
 async def post_statements(launch: str, request: Request):
     """LRS endpoint: accept one statement or an array (content appends `statements`).

@@ -30,7 +30,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.services.lrs import config, context  # noqa: E402
+from app.services.lrs import config, context, hierarchy  # noqa: E402
 
 
 class SupplierIdTests(unittest.TestCase):
@@ -78,6 +78,21 @@ class SupplierIdTests(unittest.TestCase):
         can still refuse to report when nothing is configured."""
         with mock.patch.dict(os.environ, {"LRS_CONTENT_VENDORS": "{}"}):
             self.assertEqual(config.content_vendor_id("מתודיקה"), "")
+
+
+class CatalogVendorLookupTests(unittest.IsolatedAsyncioTestCase):
+    async def test_a_numeric_catalog_vendor_id_is_reported(self):
+        component_id = "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001"
+        unit_id = "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE"
+        component = {"id": component_id, "unit_id": unit_id, "manufacture": "10"}
+        unit = {"id": unit_id, "subject": "math"}
+        with (
+            mock.patch("app.services.kata_catalog.ensure_loaded", new=mock.AsyncMock()),
+            mock.patch("app.services.kata_catalog.get_component", return_value=component),
+            mock.patch("app.services.kata_catalog.get_unit", return_value=unit),
+        ):
+            vendor = await hierarchy.ecat_item_for(component_id, unit_id=unit_id)
+        self.assertEqual(vendor, f"{context.CONTENT_VENDOR_BASE}/10")
 
 
 class GroupingTests(unittest.TestCase):

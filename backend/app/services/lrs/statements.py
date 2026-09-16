@@ -1047,22 +1047,41 @@ def help_requested(
 
 
 # ── Non-learning selection ───────────────────────────────────────────────────
-SELECTION_TYPES = {"learning-type", "practice-decision", "is-understood", "is-repeat", "external-learning"}
+# 720 LRS v1.1 uses these exact wire values. Accept the existing normalized
+# names at the boundary so content providers and platform call sites can migrate
+# without emitting a non-compliant statement.
+SELECTION_TYPES = {
+    "type-learning",
+    "decision-practice",
+    "understood-is",
+    "repeat-is",
+    "learning-external",
+}
+
+_SELECTION_TYPE_ALIASES = {
+    "learning-type": "type-learning",
+    "practice-decision": "decision-practice",
+    "is-understood": "understood-is",
+    "is-repeat": "repeat-is",
+    "external-learning": "learning-external",
+}
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 
 
 def kebab(value: str) -> str:
-    """`practiceDecision` → `practice-decision`.
+    """Normalize legacy and camelCase names to the v1.1 selection enum.
 
-    The MoE review rejected the camelCase value we sent for `selectionType`; the
-    720 selection dictionary is kebab-case. Callers may pass either spelling —
-    the wire format is decided here, once.
+    The 720 PDF v1.1 enum is not a mechanical kebab-case conversion: for
+    example, `practiceDecision` becomes `decision-practice`. Callers may pass
+    the established camelCase or legacy normalized names; the wire format is
+    decided here once.
     """
     text = str(value or "").strip()
     if not text:
         return text
-    return _CAMEL_BOUNDARY.sub("-", text).replace("_", "-").replace(" ", "-").lower()
+    normalized = _CAMEL_BOUNDARY.sub("-", text).replace("_", "-").replace(" ", "-").lower()
+    return _SELECTION_TYPE_ALIASES.get(normalized, normalized)
 
 
 def selected(

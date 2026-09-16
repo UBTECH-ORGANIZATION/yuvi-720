@@ -23,9 +23,10 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.auth.dependencies import require_teacher
+from app.auth.dependencies import require_teacher, require_teacher_session
 from app.brain import org
 from app.services import presence, realtime, teacher_alerts
+from app.services.lrs import reporter as lrs_reporter
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher-live"])
 
@@ -70,6 +71,23 @@ async def read_live(
     so the cheapest possible smoke test of this lane needs no stream client.
     """
     return JSONResponse(content=await _snapshot(teacher_id, group_id), headers=_NO_STORE)
+
+
+@router.post("/live/viewed")
+async def report_live_dashboard_viewed(
+    data: dict,
+    session: dict = Depends(require_teacher_session),
+):
+    """Record an authorized teacher opening the real-time group dashboard."""
+    group_id = str(data.get("group_id") or "")
+    groups = await org.groups_for_teacher(session["sub"])
+    if not group_id or group_id not in {str(group.get("id")) for group in groups}:
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    if session.get("sid"):
+        await lrs_reporter.report_dashboard_viewed(
+            session["sub"], session["sid"], "realtime-dashboard", None
+        )
+    return JSONResponse(content={"reported": True}, headers=_NO_STORE)
 
 
 @router.get("/stream")
