@@ -5,7 +5,7 @@
   "objective_title_he": "קנה מידה",
   "lomdot": [
     {
-      "component_id": "methodica-math-scale-01-01",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['process-thinking']",
       "provider": "",
@@ -20,16 +20,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה נכיר את **קנה המידה** ונראה איך הוא עוזר לקשר בין שרטוטים, תמונות ומציאות, וגם למה חשוב להשתמש ביחידות מידה אחידות.",
+          "he": "בשיעור הזה לומדים מהו **קנה מידה** ואיך משתמשים בו כדי להבין קשר בין ייצוג לבין המציאות. זה יעזור לקרוא שרטוטים, מפות ומצבים דומים.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "ea38be8bacf1bbfb",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-math-scale-01-01-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-001/",
           "title": "הוק — יחס רחפן והמציאות",
           "content_type": "motivational",
           "media_format": "interactive-content",
@@ -39,17 +39,17 @@
           "information_to_bot": "מטרת הפריט: יצירת עניין ראשוני וחיבור הלומד למושג קנה מידה דרך תרחיש צילום רחפן של משחק כדורגל. מה התלמיד אמור להבין: שיחס מספרי (כגון 10:1, 100:1, 1,000:1) קובע כמה פרטים ניתן לזהות לעומת כמה שטח כולל נראה — הגדלת המספר הימני ביחס מאפשרת לכווץ יותר מהמציאות אל תוך התצוגה. כיווני חשיבה ואסטרטגיות: הלומד בוחר דמות מלווה ואז בודק אינטראקטיבית מה קורה בכל אחד מהיחסים (10:1, 100:1, 1,000:1) — האם ניתן לזהות את מספר החולצה של השחקן או לראות את המגרש כולו. טעויות נפוצות: אין הערכה בפריט זה — זהו פתיח מוטיבציוני חקרני. מידע נוסף: מסך בחירת דמות מלווה בתחילת הפריט; בסיום מוצגת דוגמה נוספת מעולם התכנון האדריכלי (שרטוט בית על מסך מחשב) כהכנה למעבר להקנייה. צילום מסך: לא צורף.",
           "texts": {
             "lesson_step_intro": {
-              "he": "מתחילים עם רעיון שמחבר בין התמונה למה שקורה במציאות.",
+              "he": "מתחילים עם רעיון שמעורר סקרנות ומחבר בין תצוגה לבין המציאות.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "abc0ec9800a2f630",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             }
           },
           "questions": []
         },
         {
-          "item_id": "methodica-math-scale-01-01-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-002/",
           "title": "הקנייה: מהו קנה מידה + המרת יחידות",
           "content_type": "instruction",
           "media_format": "video",
@@ -59,17 +59,17 @@
           "information_to_bot": "מטרת הפריט: הקניית מושג קנה מידה והצורך באחידות יחידות מידה לפני בניית יחס. מה התלמיד אמור להבין: שקנה מידה הוא היחס בין אורך בתמונה/שרטוט לאורך המתאים במציאות, שהמספר הימני ביחס מייצג את המציאות והשמאלי את התמונה, ושאי אפשר לבנות יחס בין יחידות מידה שונות בלי המרה קודמת. כיווני חשיבה ואסטרטגיות: הלומד בוחר בין צפייה בסרטון קצר לבין הפיכת קלפים אינטראקטיביים, לומד את ההגדרה דרך שלוש דוגמאות יחס (10:1, 1:100, 1:1,000), עונה על שאלת בדיקת הבנה, ולבסוף מתרגל המרת יחידות (ק\"מ↔מטרים, מטרים↔ס\"מ, ס\"מ↔מ\"מ). טעויות נפוצות: בלבול בין הצד הימני לשמאלי של היחס, טעויות כפל/חילוק ב-10 במקום ב-100 או ב-1,000 בהמרת יחידות. מידע נוסף: כולל שתי מתודות למידה חלופיות (סרטון/קלפים) ושתי שאלות נפרדות (בדיקת הבנה + תרגול המרת יחידות). צילום מסך: לא צורף.",
           "texts": {
             "lesson_step_intro": {
-              "he": "כאן נכנסים אל מושג הקנה מידה ואל הדרך לעבוד עם יחידות מידה בצורה מסודרת.",
+              "he": "כאן נכנסים אל ההגדרה והדוגמאות של קנה מידה, ואז ממשיכים לתרגול של יחידות מידה.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "5298c6af4d1ebdb7",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             },
             "video_summary": {
-              "he": "הסרטון מציג את הרעיון שקנה מידה הוא יחס בין אורך בתמונה או בשרטוט לבין האורך המתאים במציאות, ומדגיש את חשיבות **אחידות יחידות המידה** לפני בניית יחס.",
+              "he": "הסרטון מציג את ההגדרה של קנה מידה ומדגים איך להבין את הקשר בין התמונה או השרטוט לבין המציאות. בנוסף הוא מדגיש את הצורך בהמרת יחידות לפני בניית יחס.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "5298c6af4d1ebdb7",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             }
           },
@@ -85,24 +85,24 @@
               "fingerprint": "159937b5d146db35",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על קנה מידה ועל משמעות המספרים ביחס. כדאי להיעזר במה שנלמד ולחשוב על הקשר בין השרטוט למציאות.",
+                  "he": "זו שאלה על פירוש של קנה מידה, והיא מזמינה לחשוב איזה צד של היחס שייך למציאות. נסו לזהות את המשמעות של המספר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "159937b5d146db35",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "אפשר להיזכר בהגדרה של קנה מידה ולבדוק לאיזה חלק ביחס כל מספר מתייחס.",
+                  "he": "כדאי לבדוק לאיזה חלק בקשר בין התמונה למציאות המספר מתייחס.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "159937b5d146db35",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו בודקים הבנה של המשמעות של כל מספר בקנה מידה, כלומר איך לקרוא יחס שבו צד אחד מייצג את התמונה והצד האחר את המציאות.",
+                  "he": "כאן בודקים הבנה של **קנה מידה** ושל המרת יחידות לפני שמבנים יחס. צריך לשים לב לאיזה מספר מייצג את התמונה ולאיזה מספר מייצג את המציאות, ולוודא שכל היחידות זהות לפני שממשיכים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "159937b5d146db35",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -117,10 +117,24 @@
               "fingerprint": "d1d7ec016fd4c68e",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים המרת יחידות לצד הבנה של מספרים ביחס. נסו לעבוד מסודר ולחשוב על כל יחידת מידה בנפרד.",
+                  "he": "זו הזדמנות לתרגל המרת יחידות ולבדוק את החשיבה על מספרים גדולים וקטנים. נסו להתאים כל ערך ליחידה הנכונה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "d1d7ec016fd4c68e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק בכל מקרה לאיזו יחידה צריך להמיר, ואז לחשוב על הקשר בין קילומטרים, מטרים, סנטימטרים ומילימטרים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d1d7ec016fd4c68e",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים המרת יחידות בין קילומטרים, מטרים, סנטימטרים ומילימטרים. חשוב לבחור את היחידה המתאימה בכל תרגיל ולהימנע מטעויות של כפל או חילוק בגודל לא נכון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d1d7ec016fd4c68e",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -128,7 +142,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-003/",
           "title": "תרגול מונחה: סקייטבורד",
           "content_type": "solved-exercise",
           "media_format": "interactive-content",
@@ -136,11 +150,19 @@
           "position": 3,
           "fingerprint": "ca6edd0196fd6f52",
           "information_to_bot": "מטרת הפריט: תרגול מונחה — הלומד פותר יחד עם הדמות המלווה, שלב אחר שלב, תרגיל מורכב של בניית קנה מידה מנתונים ביחידות שונות. מה התלמיד אמור להבין: שכאשר היחידות שונות (ס\"מ ומטרים) חובה להמיר לאותה יחידה לפני בניית היחס, ושקנה מידה מתאר כמה יחידות במציאות מיוצגות בכל יחידה אחת בתמונה. כיווני חשיבה ואסטרטגיות: זיהוי ראשוני שהיחידות אינן זהות, המרה ליחידה משותפת (ס\"מ), בניית היחס וצמצומו, ולבסוף הבנת המשמעות המספרית של קנה המידה שהתקבל. טעויות נפוצות: ניסיון לבנות יחס ישירות בלי המרת יחידות (10:5 במקום 1,000:5), חוסר הבנה של מה קנה מידה 200:1 אומר בפועל. מידע נוסף: התרגול כולל הדגמה מודרכת שלב-שלב (זיהוי יחידות שונות → המרה → בניית יחס) ולאחריה שאלת סיכום קצרה על משמעות התוצאה. צילום מסך: לא צורף.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "עכשיו נכנסים לתרגול מונחה על קנה מידה, צעד אחר צעד.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "ca6edd0196fd6f52",
+              "generated_at": "2026-09-16T01:41:27Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
-          "item_id": "methodica-math-scale-01-01-004",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-004/",
           "title": "חימום: נכון/לא נכון על קנה מידה 1:100",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -159,12 +181,34 @@
                 "false"
               ],
               "fingerprint": "27789a8db9bcfba4",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להפעיל כאן חשיבה על המשמעות של **קנה מידה** ועל האופן שבו קוראים אותו. נסו לבדוק את הקשר בין הסרטוט למציאות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "27789a8db9bcfba4",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לסדר שבו נכתב קנה המידה, ואיך כל צד מייצג גודל אחר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "27789a8db9bcfba4",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הבנה של המשמעות של קנה מידה ושל הסדר שבו קוראים אותו. צריך לחשוב על הקשר בין הגודל בסרטוט לבין הגודל המתאים במציאות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "27789a8db9bcfba4",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-005",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-005/",
           "title": "מדידת אורך נעל עם סרגל",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -180,12 +224,34 @@
               "question_text": "לפניכם תמונה של נעל כדורסל. קנה המידה של התמונה הוא 6 : 1. הזיזו את הסרגל אל הנעל ומדדו את אורכה. מהו האורך של הנעל במציאות בס\"מ?",
               "answers": [],
               "fingerprint": "ad21feeaef9a73dc",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן משלבים מדידה עם חשיבה על קנה מידה. נסו להיעזר במדידה מדויקת כדי להמשיך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ad21feeaef9a73dc",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי למדוד קודם את האורך בתמונה בעזרת הסרגל, ורק אחר כך לחשוב על הקשר לקנה המידה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ad21feeaef9a73dc",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך משתמשים במדידה של אובייקט בתמונה יחד עם קנה המידה כדי להבין מה אורכו במציאות. חשוב לשלב בין המדידה לבין המשמעות של היחס הנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ad21feeaef9a73dc",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-006",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-006/",
           "title": "חדר ילדים — קנה מידה ומידות שטיח",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -201,7 +267,29 @@
               "question_text": "לפניכם תרשים של חדר ילדים. אורך שולחן הכתיבה בתרשים הוא 7 ס\"מ. אורך השולחן במציאות הוא 1.4 מטרים. א. מהו קנה המידה של התרשים? (__ : 1)",
               "answers": [],
               "fingerprint": "eeaa1b61ccc13996",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה שמשלבת בניית קנה מידה ושימוש בו בהמשך. נסו להסתכל על הנתונים ולחשוב איך לגשת אליהם צעד אחר צעד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "eeaa1b61ccc13996",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהמרת היחידות, ואז להשוות בין האורך בתרשים לבין האורך במציאות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "eeaa1b61ccc13996",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו בודקים איך בונים **קנה מידה**: קודם מביאים את שתי המידות לאותה יחידה, ואז מצמצמים את היחס ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "eeaa1b61ccc13996",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "q2",
@@ -216,24 +304,24 @@
               "fingerprint": "1bfd98e1d37c523c",
               "texts": {
                 "question_intro": {
-                  "he": "כאן עובדים עם קנה מידה ומעבר בין מציאות לתרשים. נסו לחשב צעד אחרי צעד ולהשתמש ביחידות הנכונות.",
+                  "he": "כאן מתרגלים מעבר מהמציאות לתרשים. נסו לבדוק איך שינוי יחידות משפיע על החישוב.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "1bfd98e1d37c523c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהמרת המידות לאותה יחידה, ואז לחשוב איך הקנה מידה משפיע על אורך בתרשים.",
+                  "he": "שווה להתחיל מהמרת המידות של השטיח לאותה יחידה, ואז לחשוב איך משתמשים בקנה המידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "1bfd98e1d37c523c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלות כאלה חשוב קודם לעבוד באותה יחידת מידה, ואז להשתמש בקנה המידה כדי לעבור מהמציאות לתרשים. שימו לב אם צריך לחלק או לכפול, לפי הכיוון של המעבר.",
+                  "he": "השאלה בודקת הקטנה בתרשים: אחרי שממירים את המידות לאותה יחידה, משתמשים בקנה המידה כדי למצוא את המידות בתרשים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "1bfd98e1d37c523c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -241,7 +329,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-007",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-007/",
           "title": "מפת אפליקציית ניווט",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -259,24 +347,24 @@
               "fingerprint": "db522d9f5da5c116",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על קנה מידה והמרת יחידות. נסו לזהות את הקשר בין המפה למציאות ולבנות ממנו יחס מתאים.",
+                  "he": "זו שאלה על קנה מידה במפה. כדאי לחשוב על המרת יחידות ועל בניית יחס מתאים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "db522d9f5da5c116",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להמיר קודם את המידה מהמציאות לס״מ, ורק אחר כך להשוות לאורך שמופיע במפה.",
+                  "he": "כדאי קודם להפוך את המרחק שבמציאות לאותה יחידה של המפה, ואז להשוות בין שני המספרים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "db522d9f5da5c116",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי למצוא קנה מידה, משווים בין אורך במפה לאורך במציאות אחרי שמביאים את שתי המידות לאותה יחידה. לאחר מכן מצמצמים את היחס.",
+                  "he": "השאלה בודקת איך מוצאים **קנה מידה** כשנתונים אורך במפה ואורך במציאות ביחידות שונות. צריך להביא הכול לאותה יחידה ואז לצמצם את היחס.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "db522d9f5da5c116",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -284,7 +372,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-008",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-008/",
           "title": "קו טיסה ישראל–תאילנד",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -307,24 +395,24 @@
               "fingerprint": "b4e55155768d0cfe",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מפעילים קנה מידה גדול כדי לעבור ממפה למציאות. נסו לחשב את המרחק האמיתי לפי הנתון שמופיע על המפה.",
+                  "he": "כאן מתרגלים מציאת מרחק במציאות מתוך מפה וקנה מידה. נסו לזהות אילו יחידות צריך להשוות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "b4e55155768d0cfe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "אפשר להתחיל מהקשר שבין ס״מ במפה לבין ק״מ במציאות, ואז להרחיב לפי אורך הקו על המפה.",
+                  "he": "כדאי להתחיל מהקשר בין הסנטימטרים במפה לבין המרחק במציאות, ואז לעבור לאותה יחידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "b4e55155768d0cfe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו משתמשים בקנה המידה כדי להמיר אורך מהמפָה למרחק במציאות. חשוב לשים לב להמרת היחידות עד הסוף, כדי לקבל תשובה באותה מידה שמתבקשת.",
+                  "he": "השאלה בודקת איך משתמשים בקנה מידה כדי לעבור מאורך במפה לאורך במציאות, ובסוף להמיר את התוצאה ליחידת מרחק מתאימה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "b4e55155768d0cfe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -332,7 +420,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-01-009",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-009/",
           "title": "שני רחפנים — אותו מסלול",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -354,24 +442,24 @@
               "fingerprint": "0572f53a5f26a377",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה של הסקה על קנה מידה. נסו לבדוק מה קורה כשאותו מסלול מופיע באורכים שונים במפות שונות.",
+                  "he": "זו שאלה של חשיבה על קנה מידה ועל המשמעות של שינוי באורך במפה. נסו לבדוק מה חייב להישאר קבוע ומה לא.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0572f53a5f26a377",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "חשבו על מה קובע את קנה המידה: הקשר בין אורך במפה לבין אורך במציאות.",
+                  "he": "שימו לב למה שנשאר **קבוע** בשתי המפות, ומה משתנה בהן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0572f53a5f26a377",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כשבודקים קנה מידה, חשוב לזכור שהוא מתאר יחס בין מידה במפה למידה במציאות. אם האורך במפה משתנה, צריך לבדוק מחדש את היחס.",
+                  "he": "כדי לבדוק קנה מידה, משווים בין האורך במפה לבין האורך המתאים במציאות. כאן המסלול במציאות זהה, אבל אורכו במפה שונה, ולכן היחסים בין המפה למציאות אינם זהים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0572f53a5f26a377",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -381,7 +469,7 @@
       ]
     },
     {
-      "component_id": "methodica-math-scale-01-02",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/",
       "title": "זמן תרגול #2",
       "cognitive_level": "['algorithmic-thinking']",
       "provider": "",
@@ -396,16 +484,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה מתרגלים **קנה מידה**: איך עוברים בין מה שרואים בתמונה או בתכנית לבין מה שקורה במציאות. זה עוזר לפתור שאלות על מרחקים ואורכים בצורה מדויקת.",
+          "he": "בשיעור הזה מתרגלים עבודה עם **קנה מידה** במצבים שונים: מעבר ממפה למציאות, המרות בין סנטימטרים למטרים ובדיקת טענות. כל תרגיל מחזק דרך חשיבה אחרת על אותו רעיון.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "9435625bd65f7e31",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-math-scale-01-02-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-001/",
           "title": "אורך שביל לפי קנה מידה 1,000:1",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -425,24 +513,24 @@
               "fingerprint": "e39e71c874e859fa",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים עבודה עם קנה מידה וחישוב אורך במציאות. נסו לבחור דרך חשיבה מתאימה ולהשלים את המשוואה.",
+                  "he": "כאן עובדים עם קנה מידה ומשלימים חישוב. כדאי להתחיל מזיהוי הנתונים ואז לבדוק איך הם מתחברים לתרגיל.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e39e71c874e859fa",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב לקשר בין האורך במפה לבין קנה המידה, ולפעולת החשבון שמתאימה לו.",
+                  "he": "חשבו קודם על הקשר בין האורך במפה לבין האורך במציאות, ואז התאימו את המספרים לתיבות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e39e71c874e859fa",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בקנה מידה כזה, האורך במציאות מתקבל כשמכפילים את האורך שבמפה במספר של קנה המידה. אחר כך אפשר להציב את התוצאה במשוואה.",
+                  "he": "בקנה מידה כזה משתמשים באורך שבמפה כדי למצוא את האורך במציאות בעזרת פעולה מתאימה. אחר כך אפשר להשלים את התרגיל לפי התפקיד של כל מספר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e39e71c874e859fa",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -450,7 +538,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-002/",
           "title": "לונה פארק — מרחק בין רכבות ההרים",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -470,24 +558,24 @@
               "fingerprint": "2a9512017be3be16",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על חישוב במציאות מתוך צילום וקנה מידה, וגם על המרה בין יחידות. כדאי לחשוב על סדר הפעולות ולנסות.",
+                  "he": "זהו תרגיל של חישוב בשני שלבים: קודם לפי קנה המידה, ואז לפי יחידות המידה. נסו לעקוב אחרי הסדר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2a9512017be3be16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהמרחק שבתמונה ומהקנה המידה, ורק אחר כך לעבור להמרת היחידות.",
+                  "he": "בדקו מה צריך לקרות קודם: להפוך את הנתון מהצילום לערך במציאות, ורק אחר כך לעבור ליחידות אחרות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2a9512017be3be16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלות כאלה עובדים בשני שלבים: קודם מחשבים את המרחק במציאות לפי קנה המידה, ואז ממירים את התוצאה ליחידות המתאימות.",
+                  "he": "בשאלות כאלה חשוב לשמור על סדר הפעולות: מתחילים מהמרחק שבתמונה ומחברים אליו את קנה המידה, ואז עוברים ליחידות שמתאימות לתשובה המבוקשת.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2a9512017be3be16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -495,7 +583,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-003/",
           "title": "חצר מתקן כושר בקנה מידה 50:1",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -518,24 +606,24 @@
               "fingerprint": "542aa52a745c7bc7",
               "texts": {
                 "question_intro": {
-                  "he": "כאן בודקים כמה משפטים על אותו קנה מידה, ולכן חשוב להשוות כל טענה בנפרד. שימו לב גם ליחידות המידה.",
+                  "he": "כאן בודקים כמה טענות לפי אותו קנה מידה. כדאי להשוות כל משפט בנפרד ולשים לב ליחידות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "542aa52a745c7bc7",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לבדוק כל משפט מול קנה המידה הנתון, ולשים לב במיוחד ליחידות שמופיעות בו.",
+                  "he": "אפשר לבדוק כל משפט על ידי חישוב מה מייצג סנטימטר אחד בתרשים, ואז להשוות לטענה עצמה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "542aa52a745c7bc7",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לבדוק טענות כאלה, משתמשים בקנה המידה כדי להשוות בין מה שמופיע בתרשים לבין מה שאמור להיות במציאות, ובודקים גם אם היחידות מתאימות.",
+                  "he": "כשבודקים קנה מידה, חשוב להפעיל אותו על כל נתון ולבחון אם היחידות מתאימות. כך אפשר לזהות אילו משפטים מתארים נכון את התרשים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "542aa52a745c7bc7",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -543,7 +631,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-004",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-004/",
           "title": "תכנית סלון בקנה מידה 200:1",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -561,24 +649,24 @@
               "fingerprint": "008f177030937ffe",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על מעבר מתכנית למציאות, וגם על המרת יחידות בסוף התהליך. נסו לחשוב על החישוב בשלבים.",
+                  "he": "נבחן כאן מעבר בין תכנית למציאות בקנה מידה. נסו לחשוב על הדרך הנכונה לגשת לחישוב.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "008f177030937ffe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהאורך שבתכנית, להשתמש בקנה המידה, ואז להמיר את התוצאה ליחידות המתאימות.",
+                  "he": "כדאי להתחיל מהקשר בין האורך בתכנית לבין האורך במציאות, ורק אחר כך לבצע את החישוב.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "008f177030937ffe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מתרגלים מעבר מתכנית מוקטנת למציאות: משתמשים ב**קנה המידה** כדי למצוא את האורך האמיתי, ואז ממירים את התוצאה ליחידת התשובה המבוקשת.",
+                  "he": "במעבר מתכנית מוקטנת למציאות משתמשים בקנה המידה כדי לחשב את האורך האמיתי, ואז ממירים את היחידות לפי הצורך.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "008f177030937ffe",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -586,7 +674,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-005",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-005/",
           "title": "מרפסת — מעבר מהמציאות לתכנית",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -606,24 +694,24 @@
               "fingerprint": "44a6303a6672c524",
               "texts": {
                 "question_intro": {
-                  "he": "זהו תרגיל על מעבר בין מציאות לתכנית ועל בחירת הפעולה המתאימה. נסו לעקוב אחרי השלבים ולבדוק כל שלב בנפרד.",
+                  "he": "כאן מתרגלים מעבר מהמציאות אל התכנית, עם כמה שלבי חשיבה. נסו לעבוד צעד אחר צעד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "44a6303a6672c524",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהמרת האורך ליחידה אחידה, ורק אחר כך לחשוב איזו פעולה מתאימה לקנה המידה.",
+                  "he": "שימו לב מאיזה כיוון עוברים בין המציאות לבין השרטוט, ואיזו פעולה מתאימה לזה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "44a6303a6672c524",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מתרגלים מעבר מאורך במציאות לאורך בתכנית מוקטנת. חשוב לשים לב ליחידות, לבחור את הפעולה שמתאימה לכיוון המעבר, ואז לחשב לפי קנה המידה.",
+                  "he": "כשעוברים מגודל במציאות לגודל בתכנית, חשוב להמיר יחידות אם צריך ולבחור בפעולה שמתאימה להקטנה לפי קנה המידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "44a6303a6672c524",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -631,7 +719,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-006",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-006/",
           "title": "הדפסת דגם מכונית בקנה מידה 1:18",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -649,24 +737,24 @@
               "fingerprint": "f0d908caab64c88b",
               "texts": {
                 "question_intro": {
-                  "he": "זהו תרגיל על חישוב אורך של דגם מוקטן מתוך אורך במציאות. נסו לעבור מסדר נכון של שלבים: יחידות, ואז חישוב.",
+                  "he": "זהו תרגול בקנה מידה שבו צריך לשלב המרת יחידות וחישוב. נסו למצוא את הדרך המתאימה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "f0d908caab64c88b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לבדוק קודם אם צריך להמיר את האורך ליחידה אחרת לפני החישוב.",
+                  "he": "לפני שמחשבים לפי קנה המידה, כדאי לוודא שהיחידות כתובות באותה מידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "f0d908caab64c88b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מתרגלים חישוב של דגם מוקטן מתוך אורך במציאות וקנה מידה. מתחילים מהמרת יחידות כשצריך, ואז משתמשים בקנה המידה כדי למצוא את אורך הדגם.",
+                  "he": "כדי לחשב אורך של דגם מוקטן, ממירים קודם את האורך במציאות ליחידות מתאימות, ואז משתמשים בקנה המידה כדי למצוא את האורך בדגם.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "f0d908caab64c88b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -674,7 +762,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-02-007",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-007/",
           "title": "קנה מידה של תוכנית בריכת שחייה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -697,24 +785,24 @@
               "fingerprint": "a106dff106663f16",
               "texts": {
                 "question_intro": {
-                  "he": "זהו תרגיל על קנה מידה מתוך נתונים של מציאות ותכנית. נסו לבנות את היחס בין שני האורכים ולבדוק איך אפשר לצמצם אותו.",
+                  "he": "כאן עוסקים בקנה מידה של תכנית, ומשווים בין המציאות לבין השרטוט. נסו לחשוב איך בונים את היחס הנכון.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a106dff106663f16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהמרת האורך במציאות לאותה יחידה שמופיעה בתכנית.",
+                  "he": "כדאי להקפיד על סדר נכון בין הגודל במציאות לבין הגודל בתכנית, ואז לצמצם את היחס.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a106dff106663f16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מתרגלים חישוב קנה מידה מנתוני אורך במציאות ובתכנית. חשוב לעבוד עם אותן יחידות, ליצור יחס בין האורכים, ואז לצמצם אותו לצורה פשוטה.",
+                  "he": "כדי למצוא קנה מידה, ממירים את הגדלים לאותן יחידות, יוצרים יחס בין המציאות לתכנית, ואז מצמצמים אותו.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a106dff106663f16",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -724,7 +812,7 @@
       ]
     },
     {
-      "component_id": "methodica-math-scale-01-03",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-03/",
       "title": "משימת כיתה",
       "cognitive_level": "['process-thinking']",
       "provider": "",
@@ -739,16 +827,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה נלמד איך **קנה מידה** עוזר לתאר מרחקים ואורכים מהעולם האמיתי בצורה שמתאימה לשרטוט. זה שילוב של מדידה, חשיבה ודיוק.",
+          "he": "בשיעור הזה מתרגלים **קנה מידה** דרך משימה מעשית. נלמד למדוד, לחשב ולבחור קנה מידה שמתאים לשרטוט על דף.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "5f5a73abb1f941dd",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-math-scale-01-03-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-03/methodica-math-scale-01-03-001/",
           "title": "משימת כיתה — חישוב קנה מידה של מסלול צעדים",
           "content_type": "project-or-inquiry-task",
           "media_format": "text",
@@ -758,10 +846,10 @@
           "information_to_bot": "מטרת הפריט: יישום מציאותי של קנה מידה — מדידת אורך צעד, ביצוע מסלול אמיתי בשטח, וחישוב קנה המידה המתאים לשרטוט המסלול על דף A4. מה התלמיד אמור להבין/לתרגל: מדידת אורך צעד בסרגל, ספירת צעדים במסלול (לפחות 100), הכפלת מספר הצעדים באורך הצעד לקבלת אורך המסלול במציאות, ובחירת קנה מידה שמאפשר לשרטט את המסלול במלואו על דף A4. כיווני חשיבה ואסטרטגיות: עבודה שלב-אחר-שלב לפי ההוראות (מדידה → הליכה ומדידת מסלול → חישוב אורך במציאות → בחירת קנה מידה מתאים → שרטוט המסלול ורישום קנה המידה). טעויות נפוצות: אין הערכה אוטומטית של תשובה מספרית ספציפית — המשימה תלויה בביצוע פיזי של כל תלמיד/קבוצה בנפרד. מידע נוסף: משימת חקר פיזית בשטח/כיתה, ללא מחשב, עם עזרים נדרשים (סרגל, דף A4, כלי כתיבה). מתבצעת בזוגות או לבד. השדה בסיום (\"הקלידו את קנה המידה שלכם כאן\") הוא הזנה חופשית לצורך רפלקציה בלבד ואינו נאסף כתשובה מוערכת. צילום מסך: לא צורף.",
           "texts": {
             "lesson_step_intro": {
-              "he": "כאן נכנסים למשימה מעשית שמתחילה במדידה וממשיכה לתכנון. קחו רגע להתמקד בשלבים ולבדוק איך הם מתחברים.",
+              "he": "מתחילים במשימה שמחברת בין מדידה אמיתית לשרטוט. כדאי להיכנס צעד אחר צעד ולהתמקד במה שנמדד ובמה שמחושב.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "087a615da992e29e",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             }
           },
@@ -770,7 +858,7 @@
       ]
     },
     {
-      "component_id": "methodica-math-scale-01-04",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['interpretation-and-reasoning']",
       "provider": "",
@@ -785,16 +873,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה נאתגר את עצמנו עם **קנה מידה** ונראה איך הוא משפיע על שרטוטים, זום, מרחקים ושטחים. זה מעניין כי צריך לחשוב לא רק על יחס, אלא גם על התאמה לגודל הדף ולמה שרואים על המסך.",
+          "he": "בשיעור הזה מאתגרים את החשיבה עם שאלות על **קנה מידה** במצבים שונים. צריך להשוות, לחשב ולבדוק התאמה בין הנתונים לבין הדף או המסך.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "f92243be061c258a",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-math-scale-01-04-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/methodica-math-scale-01-04-001/",
           "title": "בורג' ח'ליפה — קנה מידה מרבי לשרטוט",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -817,24 +905,24 @@
               "fingerprint": "3f7117ab7ddc3a38",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים קנה מידה דרך השוואה בין אפשרויות ובדיקה של אילוץ גודל. נסו לחשב ולבדוק מה מתאים.",
+                  "he": "זו שאלה שמבקשת לחשב ולבדוק התאמה של קנה מידה. שווה לעבוד מסודר ולנסות כל אפשרות לפי הנתון שמגביל את השרטוט.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "3f7117ab7ddc3a38",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להתחיל מהמרת היחידות, ואז לבדוק כל אפשרות מול האורך המותר בדף.",
+                  "he": "כדאי להתחיל מהמרת היחידות, ואז להשוות בין האפשרויות לפי מה שנכנס לדף.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "3f7117ab7ddc3a38",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלות כאלה חשוב להמיר את המידה ליחידות מתאימות, ואז לבדוק אם כל קנה מידה יוצר שרטוט שנכנס בתוך האילוץ הנתון. לא תמיד בוחרים את היחס שנראה הכי מדויק — צריך לוודא גם התאמה לגודל הפיזי.",
+                  "he": "השאלה בודקת איך **קנה מידה** קשור לגודל השרטוט בפועל. צריך להמיר יחידות ולבדוק איזו אפשרות מתאימה למגבלת המקום על הדף.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "3f7117ab7ddc3a38",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -842,7 +930,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-04-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/methodica-math-scale-01-04-002/",
           "title": "חללית — השפעת זום על קנה מידה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -865,24 +953,24 @@
               "fingerprint": "e9a79421a44dbe51",
               "texts": {
                 "question_intro": {
-                  "he": "כאן בודקים איך זום עוקב משנה **קנה מידה**. צריך לחשב צעד אחר צעד ולנסות לזהות את ההשפעה של כל פעולה.",
+                  "he": "זו שאלה על השפעת זום על **קנה מידה**. כדאי לחשוב על הקשר בין פעולות הזום לבין השינוי בייצוג שעל המסך.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e9a79421a44dbe51",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לעקוב אחרי גורמי הזום בזה אחר זה ולראות איך הם משפיעים יחד על המספר בקנה המידה.",
+                  "he": "כדאי לבדוק איך כמה פעולות זום משפיעות יחד על היחס שבין המציאות לבין התמונה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e9a79421a44dbe51",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלות על זום עוקב, כל הגדלה משפיעה על הקנה המידה, ולכן צריך לחשוב על ההשפעה המצטברת של כל הפעולות. אחר כך משתמשים בקנה המידה המתאים כדי למצוא מידות בתמונה לפי הנתונים של כל צלם.",
+                  "he": "השאלה בודקת איך פעולות זום עוקבות משנות את **קנה המידה** של תמונה, ואיך זה משפיע על הקריאה של היחס החדש.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e9a79421a44dbe51",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -897,24 +985,24 @@
               "fingerprint": "e19aa60a877d96ce",
               "texts": {
                 "question_intro": {
-                  "he": "כאן ממשיכים עם חישוב מידות בתמונה לפי קני מידה שונים. כדאי להשוות בין הנתונים של כל צילום ולבדוק כל אחד בנפרד.",
+                  "he": "כאן עובדים עם קנה מידה וחישוב מידות בתמונה. כדאי להשוות בין שני המצבים ולבדוק כל אחד בנפרד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e19aa60a877d96ce",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב שיש כאן יותר מתמונה אחת, ולכן כדאי להתאים כל מידה לקנה המידה של הצלם המתאים.",
+                  "he": "אפשר להתחיל ממציאת הגודל במציאות, ואז להתאים אותו לקנה המידה של כל תמונה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e19aa60a877d96ce",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לפתור, משתמשים במידות במציאות ומחלקים אותן לפי קנה המידה של כל תמונה בנפרד. כך אפשר להשוות בין התמונות ולמצוא אילו מידות יופיעו אצל כל צלם.",
+                  "he": "השאלה בודקת חישוב של מידות בתמונה לפי **קנה מידה** שונה בכל מצב. חשוב להתאים כל מידה לקנה המידה המתאים לה ולא לערבב ביניהם.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e19aa60a877d96ce",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -922,7 +1010,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-04-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/methodica-math-scale-01-04-003/",
           "title": "פסטיבל גיימינג — מרחק ושטח לפי קנה מידה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -940,24 +1028,24 @@
               "fingerprint": "828273a91b596806",
               "texts": {
                 "question_intro": {
-                  "he": "כאן משלבים בין מרחק יחסי לבין שטח, ולכן צריך לחשוב איך **קנה מידה** משפיע בכל מקרה. נסו לבחור את דרך החישוב המתאימה לכל סעיף.",
+                  "he": "כאן מתרגלים חשיבה על **קנה מידה** ועל חלק מתוך מרחק. נסו להתקדם צעד־צעד ולבדוק את הקשר בין התמונה למציאות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "828273a91b596806",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "בסעיף אחד מחפשים מרחק מתוך אורך נתון, ובסעיף השני כדאי לזכור שקודם צריך למצוא אורך במציאות ורק אחר כך לחשב שטח.",
+                  "he": "כדאי להתחיל מהמרת האורך הנתון בתמונה למרחק במציאות, ורק אחר כך לחשב את החלק המבוקש.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "828273a91b596806",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן בודקים איך משתמשים ב**קנה מידה** כדי להפוך אורך בתמונה למרחק במציאות, ואיך מחשבים גם חלק מהדרך.",
+                  "he": "בשאלה כזו משתמשים בקנה מידה כדי לעבור מהתמונה למציאות, ואז בודקים מהו **חלק** מהמרחק. חשוב לעבוד לפי הסדר הזה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "828273a91b596806",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -975,24 +1063,24 @@
               "fingerprint": "4d1690ce56e9c3c2",
               "texts": {
                 "question_intro": {
-                  "he": "נסו לחשוב איך קנה מידה עובד כשעוברים מאורך בתמונה לשטח במציאות.",
+                  "he": "כאן עובדים עם **שטח** לפי קנה מידה. נסו לחשוב איך עוברים מהמידה בתמונה לחישוב במציאות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "4d1690ce56e9c3c2",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי קודם להתמקד באורך של הצלע, ורק אחר כך לחשוב על השטח.",
+                  "he": "כדאי לבדוק קודם את האורך במציאות, ורק אחר כך לחשב את השטח.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "4d1690ce56e9c3c2",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת הבנה ש**קנה מידה** מתאים לאורך, ולכן בחישוב שטח מתחילים מהמרה של הצלע ורק אז עוברים לשטח.",
+                  "he": "בשאלות על שטח לפי קנה מידה, מתחילים מהמרת **האורך** במציאות ורק אחר כך מחשבים את השטח. קנה המידה עצמו מתייחס לאורך, לא לשטח ישירות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "4d1690ce56e9c3c2",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -1000,7 +1088,7 @@
           ]
         },
         {
-          "item_id": "methodica-math-scale-01-04-005",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/methodica-math-scale-01-04-005/",
           "title": "מסך חיזוק לאחר ניסיון לא מוצלח",
           "content_type": "motivational",
           "media_format": "interactive-content",
@@ -1010,10 +1098,10 @@
           "information_to_bot": "מטרת הפריט: מסך סיום מעודד עבור לומד שלא הצליח לענות נכון על מספיק סעיפים בשאלת השיא (רכיב 01-05). מה התלמיד אמור להבין: שניסיון והשקעה חשובים גם כשהתוצאה אינה מושלמת. כיווני חשיבה ואסטרטגיות: אין תוכן לימודי נוסף בפריט זה — הוא מסך חיזוק רגשי בלבד. טעויות נפוצות: אין הערכה בפריט. מידע נוסף: כולל דמות מונפשת (גיף) בתנועה (\"פושט שתי ידיים לצדדים\") וכפתור \"סיימתי\" לסיום היחידה. שים לב: מספור הפריט (\"005\") אינו רציף עם שאר פריטי הרכיב (001-003) — כך תויג בפועל בתסריט, כנראה שריד ממבנה קודם שבו שאלת השיא הייתה פריט 004 באותו רכיב. צילום מסך: לא צורף.",
           "texts": {
             "lesson_step_intro": {
-              "he": "זהו מסך שמזכיר שלמידה היא גם דרך של ניסיון והתמדה.",
+              "he": "זהו מסך חיזוק שמזמין לעצור רגע ולהמשיך הלאה עם ניסיון טוב יותר.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "a208deb988a4a9ec",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             }
           },
@@ -1022,7 +1110,7 @@
       ]
     },
     {
-      "component_id": "methodica-math-scale-01-05",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-05/",
       "title": "שאלת שיא",
       "cognitive_level": "['interpretation-and-reasoning']",
       "provider": "",
@@ -1037,16 +1125,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה מתרגלים קנה מידה דרך תרחיש אחד רציף שמחבר בין כמה סוגי חשיבה.",
+          "he": "בשיעור הזה מתרגלים **קנה מידה** דרך שאלת שיא מאתגרת, ומשלבים כמה סוגי חשיבה באותו תרחיש.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "9e20968402929b00",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-math-scale-01-05-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-05/methodica-math-scale-01-05-001/",
           "title": "שאלת שיא: חילוץ מטיילים (4 סעיפים)",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -1064,24 +1152,24 @@
               "fingerprint": "338fdba3c03b460b",
               "texts": {
                 "question_intro": {
-                  "he": "כאן צריך לשלב חישוב, השוואה ובדיקה של יחסים. בואו ננסה צעד אחר צעד.",
+                  "he": "כאן נדרש חישוב של קנה מידה מתוך נתונים. נסו לפרק את המידע ולבנות את היחס המתאים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "338fdba3c03b460b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב ליחס בין המרחק במציאות לאורך על המפה, ואז בדקו איך הוא נכתב.",
+                  "he": "כדאי להשוות בין המרחק במציאות לבין האורך על המפה באותן יחידות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "338fdba3c03b460b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת איך בונים **קנה מידה** מתוך מרחק במציאות ומרחק על המפה, כחלק מתרחיש חילוץ ארוך.",
+                  "he": "כדי למצוא קנה מידה, משווים בין האורך במפה לבין המרחק במציאות ומנסחים את היחס בצורה מתאימה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "338fdba3c03b460b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -1099,24 +1187,24 @@
               "fingerprint": "bb57cb87eba1a21c",
               "texts": {
                 "question_intro": {
-                  "he": "כאן צריך להשוות בין נתונים שונים ולבדוק התאמה לתנאי המשימה. נסו לפרק את המצב לחלקים.",
+                  "he": "כאן בודקים כמה אפשרויות ומתמקדים ב**השוואה** בין נתונים. נסו לבדוק כל אפשרות מול המידע הנתון.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "bb57cb87eba1a21c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לבדוק גם את אורך הכבלים וגם את המרחק בין הנקודות, באותה שפה של יחידות.",
+                  "he": "כדאי להתחיל מלהמיר את המרחקים לאותה יחידה, ואז לבדוק מה המפה מראה ביחס למרחק במציאות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "bb57cb87eba1a21c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת חיבור בין נתונים, המרת יחידות ובדיקה אם הכמות הנתונה מספיקה לתנאי המשימה.",
+                  "he": "כאן בודקים איך משלבים בין **קנה מידה**, מרחק במציאות ואורך על מפה או במסך. לפעמים צריך גם לבדוק אם כמות נתונה מספיקה, ולא רק לחשב.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "bb57cb87eba1a21c",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -1133,24 +1221,24 @@
               "fingerprint": "e466f24b3bea03fc",
               "texts": {
                 "question_intro": {
-                  "he": "כאן בודקים איך שינוי בתצוגה משפיע על **קנה המידה**. נסו לחשב ולהשוות בין האפשרויות.",
+                  "he": "זו שאלה על **קנה מידה** ושינוי שלו אחרי זום. כדאי לקרוא את האפשרויות בעיון ולחשוב מה קורה למספר כשמגדילים את התמונה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e466f24b3bea03fc",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לחשוב על הקשר בין ההגדלה שעל המסך לבין המספרים בקנה המידה.",
+                  "he": "שווה לשים לב לקשר בין ההגדלה שעל המסך לבין הערך של קנה המידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e466f24b3bea03fc",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו צריך להבין איך **זום** משנה את קנה המידה, ולא רק לקרוא את המספרים כמו שהם.",
+                  "he": "השאלה בודקת הבנה של הקשר בין **זום** לבין המספר בקנה המידה. צריך לחשוב איך שינוי התצוגה משפיע על הערך של קנה המידה, ולא רק על מה שרואים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "e466f24b3bea03fc",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -1168,24 +1256,24 @@
               "fingerprint": "451718c5a6f8d237",
               "texts": {
                 "question_intro": {
-                  "he": "כאן משווים בין שני קני מידה ובודקים התאמה לדרישת אורך. כדאי לפרק את המידע ולבדוק כל אפשרות בנפרד.",
+                  "he": "זו שאלה שמשלבת **השוואה** ובדיקה מול דרישה נתונה. כדאי להיעזר בנתונים ולחשוב איזו אפשרות מתאימה לתנאי שמופיע בשאלה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "451718c5a6f8d237",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב גם לקנה המידה וגם לאורך שמתקבל במציאות מכל צילום.",
+                  "he": "אפשר לבדוק כל אפשרות בנפרד מול הדרישה במציאות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "451718c5a6f8d237",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן בודקים אם אורך במציאות עומד בדרישה, תוך שימוש נכון בקנה מידה ובהשוואה בין הצילומים.",
+                  "he": "כאן צריך להשוות בין כמה **קני מידה** שונים ולבדוק אם כל קרחת יער עומדת בדרישת האורך במציאות. חשוב לא להתבלבל בין הנתונים של כל רחפן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "451718c5a6f8d237",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }

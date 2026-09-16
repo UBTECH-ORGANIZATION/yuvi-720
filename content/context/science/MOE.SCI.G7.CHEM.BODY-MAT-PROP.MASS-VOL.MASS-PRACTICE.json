@@ -5,7 +5,7 @@
   "objective_title_he": "מסה",
   "lomdot": [
     {
-      "component_id": "methodica-science-mass-measure-01-01",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['applying-a-model-or-procedure']",
       "provider": "",
@@ -20,16 +20,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה נכיר את מושג **המסה** ונראה איך מודדים אותה. נלמד בעזרת דוגמאות יומיומיות וכלים שונים, כדי להבין למה מדידה מדויקת חשובה כל כך.",
+          "he": "בשיעור הזה נלמד מהי מסה ואיך מודדים אותה נכון. נגלה למה מדידה מדויקת חשובה גם בחיי היום־יום וגם במדע.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "2176ce262115f424",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-science-mass-measure-01-01-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-001",
           "title": "הוק: בחירת דמות + שאלת שני בלונים",
           "content_type": "motivational",
           "media_format": "interactive-content",
@@ -52,10 +52,24 @@
               "fingerprint": "99bd764159225670",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה של הסבר והסקה מתוך מקרה יומיומי. קראו את המצב ונסו לחשוב מה יכול להסביר את ההבדל.",
+                  "he": "כאן חושבים על תופעה יומיומית ומנסים להסביר אותה בעזרת מושגי מסה. נסו להציע הסבר שמתבסס על מה שיש בתוך הבלון.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "99bd764159225670",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו מה משתנה בין שני הבלונים, לא רק איך הם נראים מבחוץ.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "99bd764159225670",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן חושבים על הקשר בין מה שנמצא בתוך בלון לבין **המסה** שלו, ואיך זה משפיע על ההבדל בין שני הבלונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "99bd764159225670",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -63,7 +77,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-002",
           "title": "הקנייה: סוגי מאזניים למדידת מסה",
           "content_type": "instruction",
           "media_format": "interactive-content",
@@ -83,10 +97,24 @@
               "fingerprint": "55e38b0f00a4ca09",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה של התאמה בין מושגים לתמונות. הסתכלו על השמות ועל המראה של כל סוג מאזניים, ונסו להתאים ביניהם.",
+                  "he": "זהו תרגיל של זיהוי והשוואה בין סוגי מאזניים. נסו להתבונן בפרטים ולבחור את ההתאמה הנכונה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "55e38b0f00a4ca09",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להיעזר במה שרואים בתמונה ולחשוב איזה שם מתאים לכל מכשיר לפי הצורה שלו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55e38b0f00a4ca09",
+                  "generated_at": "2026-09-16T01:41:27Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מזהים שני סוגים עיקריים של מאזניים שמשמשים למדידת מסה, ומתאימים כל שם לתמונה המתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55e38b0f00a4ca09",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -94,7 +122,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-003",
           "title": "הקנייה: איך מודדים נכון (פלייליסט - סרטון/קלפים)",
           "content_type": "instruction",
           "media_format": "video",
@@ -104,17 +132,17 @@
           "information_to_bot": "מטרת הפריט: הקניית עקרונות המדידה הנכונה במעבדה - איפוס, חזרות, בדיקת חריגות, יחידות מדידה. מה התלמיד אמור להבין: 4 עקרונות בסיס - (1) איפוס לפני מדידה, (2) ביצוע חזרות (לפחות 3), (3) בדיקת תוצאות חריגות, (4) חשיבות ציון יחידה (גרם/קילוגרם/מיליגרם). כיווני חשיבה ואסטרטגיות: הלומד בוחר בין שתי מתודות למידה - צפייה בסרטון של דר' אושרית ואביתר, או הפיכת קלפי מידע. באמצע יש שאלה שמוודאת הבנה - למה חשוב לכתוב יחידה ליד המספר. טעויות נפוצות: בלבול בין מטרת היחידה לבין מטרות אחרות (זיהוי חריגות, איפוס, חישוב ממוצע). מידע נוסף: פריט הקנייה מכיל פלייליסט לבחירת מתודה + שאלת הבנה. צילום מסך: לא צורף.",
           "texts": {
             "lesson_step_intro": {
-              "he": "בואו ניכנס יחד לנושא של מדידה נכונה במעבדה.",
+              "he": "כאן נכנסים לעקרונות של מדידה נכונה במעבדה, דרך סרטון או קלפי מידע.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "0f9f7d32c981eabe",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             },
             "video_summary": {
-              "he": "הסרטון מציג עקרונות למדידה נכונה במעבדה: איפוס, חזרות, בדיקת חריגות וציון יחידות מדידה.",
+              "he": "הסרטון עוסק בארבעה עקרונות למדידה נכונה במעבדה: איפוס, חזרות, בדיקת תוצאות חריגות, וציון יחידת המדידה.",
               "prompt_version": "cp-v2",
               "source_fingerprint": "0f9f7d32c981eabe",
-              "generated_at": "2026-09-15T01:57:53Z",
+              "generated_at": "2026-09-16T01:41:27Z",
               "model": "mini"
             }
           },
@@ -132,24 +160,24 @@
               "fingerprint": "ba9f77917645c915",
               "texts": {
                 "question_intro": {
-                  "he": "כדאי לחשוב על המשמעות של יחידות מדידה ועל האופן שבו רושמים תוצאה מדעית. נסו לענות לפי מה שראיתם.",
+                  "he": "זו שאלה על **יחידות מדידה** ועל חשיבה על המשמעות של מספר בלי יחידה. נסו לבחור את ההסבר המתאים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ba9f77917645c915",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב למה שקורה כשמספר מופיע בלי סימון של מה הוא מייצג.",
+                  "he": "חשבו על מה קורה כשכותבים מדידה רק עם מספר, בלי לציין מה היחידה שלה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ba9f77917645c915",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו בודקים למה חשוב לכתוב יחידה ליד מספר במדידה, כדי שהתוצאה תהיה ברורה ומובנת מבחינה מדעית.",
+                  "he": "כאן בודקים למה חשוב לצרף יחידה לכל מדידה, כדי שהמידע יהיה מדויק וברור מבחינה מדעית.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ba9f77917645c915",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -157,7 +185,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-004",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-004",
           "title": "חימום: יחידות מידה של מסה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -177,24 +205,24 @@
               "fingerprint": "919233558ca7da7b",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים זיהוי של יחידות מסה נפוצות במעבדה. נסו להשלים לפי הסימונים ולפי המשמעות.",
+                  "he": "זו שאלה של השלמת יחידות מידה, עם חשיבה על התאמה בין סימון למילה. אפשר להיעזר ברמז ולנסות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "919233558ca7da7b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להיעזר בסימונים g, kg ובמשמעות של אלפית הגרם.",
+                  "he": "שימו לב לסימונים שמופיעים בסוגריים ולמשמעות שלהם ביחידות מדידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "919233558ca7da7b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה עוסקת בהתאמה בין יחידות מסה לבין הסימונים שלהן, ובזיהוי היחידה שמתאימה לכמויות קטנות ומדויקות.",
+                  "he": "כאן מתרגלים זיהוי של יחידות מסה נפוצות במעבדה והתאמה ביניהן לבין הסימונים שלהן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "919233558ca7da7b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -202,7 +230,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-005",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-005",
           "title": "חימום 2: איפוס מאזניים למדידת נוזל",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -225,24 +253,24 @@
               "fingerprint": "2da6a09d0bc02463",
               "texts": {
                 "question_intro": {
-                  "he": "כאן בודקים הבנה של פעולת האיפוס במאזניים. נסו לחשוב מה משתנה אחרי האיפוס.",
+                  "he": "בואו לחשוב על מה שקורה למכשיר כשמאפסים אותו לפני המדידה. נסו לזהות את עקרון הפעולה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2da6a09d0bc02463",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "חשבו מה המאזניים כבר לא כוללים אחרי שלוחצים על כפתור האיפוס.",
+                  "he": "שימו לב למה השתנה אחרי פעולת האיפוס, ומה כבר לא נספר במדידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2da6a09d0bc02463",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת הבנה שאיפוס מאזניים מאפשר למדוד רק את מה שנוסף אחרי הנחת הכלי.",
+                  "he": "איפוס המאזניים משנה את נקודת ההתחלה של המדידה, כך שניתן להתמקד במה שנוסף אחרי האיפוס.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2da6a09d0bc02463",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -250,7 +278,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-006",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-006",
           "title": "תרגול 1: סידור שלבי פרוטוקול מדידה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -273,24 +301,24 @@
               "fingerprint": "2222fc6a133e6e2b",
               "texts": {
                 "question_intro": {
-                  "he": "כאן עובדים על סדר פעולות במדידת מסה במעבדה. נסו לסדר את השלבים לפי רצף הגיוני.",
+                  "he": "כדאי לחשוב על סדר פעולות מסודר במעבדה. נסו לסדר את השלבים לפי ההיגיון של המדידה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2222fc6a133e6e2b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "חשבו על סדר פעולות הגיוני במעבדה: קודם מכינים, אחר כך מודדים, ורק בסוף מתעדים ומבצעים שוב.",
+                  "he": "אפשר להתמקד קודם בהכנה, אחר כך במדידה עצמה, ולבסוף בתיעוד ובחזרות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2222fc6a133e6e2b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת סדר עבודה מסודר במדידה במעבדה. כדאי לחשוב על רצף של הכנה, מדידה, תיעוד, ואז בדיקה חוזרת.",
+                  "he": "בפרוטוקול מדידה חשוב לפעול לפי סדר קבוע: קודם הכנה, אחר כך מדידה, ואז רישום, ולבסוף חזרות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2222fc6a133e6e2b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -298,7 +326,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-007",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-007",
           "title": "תרגול 2: יושרה מדעית - בדיקת חריגות לפני ממוצע",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -320,24 +348,24 @@
               "fingerprint": "eb9572293a1216be",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על **יושרה מדעית** ועל השוואה בין מדידות. נסו לבחון מה חשוב לעשות לפני שמסיקים מסקנה מהנתונים.",
+                  "he": "זו שאלה על בדיקת נתונים לפני שמסיקים מסקנות. נסו לחשוב מי בוחן את המדידות בצורה זהירה יותר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "eb9572293a1216be",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי להסתכל לא רק על המספרים עצמם, אלא גם על ההשפעה האפשרית של ההבדל ביניהם על איכות הנתונים.",
+                  "he": "כדאי לבדוק אם אחת התוצאות שונה מהאחרות, ואיך זה משפיע על איכות הנתונים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "eb9572293a1216be",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן בודקים איך מתייחסים לנתונים כשאחת המדידות שונה יותר מהאחרות. הרעיון הוא לא למהר להסיק, אלא לבדוק אם יש משהו שיכול להשפיע על איכות המסקנה.",
+                  "he": "לפני שמחשבים ממוצע, בודקים אם יש תוצאה חריגה או שינוי שיכול להשפיע על הנתונים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "eb9572293a1216be",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -345,7 +373,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-008",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-008",
           "title": "תרגול 3: יישומון שקילה + דיוק ומהימנות",
           "content_type": "simulation",
           "media_format": "interactive-content",
@@ -365,24 +393,24 @@
               "fingerprint": "144e9656803f12c1",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על **דיוק** ו**מהימנות**. נסו להתאים בין תיאור של תוצאות לבין המשמעות של כל מושג.",
+                  "he": "כאן עובדים על מושגים של תוצאות מדידה וקליעה למטרה. נסו להתבונן בדוגמאות ולהשוות ביניהן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "144e9656803f12c1",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב לשני דברים: איפה החיצים נמצאים ביחס למרכז, והאם הם קרובים זה לזה.",
+                  "he": "שימו לב לשני דברים שונים: קרבה למרכז וחזרה על דפוס דומה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "144e9656803f12c1",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לענות, בודקים שני מאפיינים: קרבה בין התוצאות זו לזו וקרבה למרכז. שני הבדיקות האלה עוזרות להבחין בין דיוק למהימנות.",
+                  "he": "במשימות כאלה משווים בין מיקום הפגיעות לבין מידת החזרה שלהן, וכך מבדילים בין שני מושגים קרובים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "144e9656803f12c1",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -390,7 +418,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-009",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-009",
           "title": "תרגול 4: יישומון שקילה שני - סיווג מדידות",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -413,24 +441,24 @@
               "fingerprint": "ea3b0057e174d04b",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על סיווג תוצאות לפי **דיוק** ו**מהימנות**. נסו להשוות בין המדידות לבין הערך האמיתי.",
+                  "he": "כאן מתמקדים ב**מדידות** ובהשוואה ביניהן. נסו לבדוק מה אפשר להסיק מהערכים שמופיעים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ea3b0057e174d04b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "בדקו אם התוצאות קרובות זו לזו, ואז בדקו עד כמה הן קרובות לערך האמיתי.",
+                  "he": "כדאי להסתכל על שתי תכונות שונות של סדרת המדידות ולבדוק אותן בנפרד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ea3b0057e174d04b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מסתכלים על שני מדדים יחד: האם המדידות דומות אחת לשנייה, והאם הן מתקרבות לערך האמיתי. השילוב בין שני אלה קובע את התיאור המתאים.",
+                  "he": "כשבודקים סדרת מדידות, אפשר להשוות בין התוצאות עצמן וגם להשוות לערך האמיתי. כך אפשר להבין מה עולה מהנתונים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "ea3b0057e174d04b",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -438,7 +466,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-01-010",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01/methodica-science-mass-measure-01-01-010",
           "title": "תרגול 5: ממוצע מדידות (2 סעיפים)",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -461,24 +489,24 @@
               "fingerprint": "309510ab9d402f6f",
               "texts": {
                 "question_intro": {
-                  "he": "זו שאלה על חישוב ממוצע ועל הסקת מסקנה מהנתונים. נסו לעבוד צעד־צעד עם המספרים.",
+                  "he": "כאן עוסקים ב**ממוצע** של מדידות ובמה שאפשר להסיק ממנו. נסו לחשב ואז לחשוב מה הנתונים אומרים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "309510ab9d402f6f",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "נסו לחשב את הממוצע בעזרת **כל** המדידות יחד, לא רק אחת מהן.",
+                  "he": "אפשר להתחיל בחיבור כל המדידות, ואז לחלק במספר המדידות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "309510ab9d402f6f",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לענות, בודקים את כל המדידות יחד ומחשבים ממוצע. אחר כך אפשר להשוות בין התוצאות ולראות אם הן קרובות גם זו לזו וגם לערך האמיתי.",
+                  "he": "ממוצע עוזר לסכם כמה מדידות למספר אחד, ואחר כך אפשר לבדוק מה אפשר להסיק מהקרבה בין התוצאות ובין הערך האמיתי.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "309510ab9d402f6f",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -496,24 +524,24 @@
               "fingerprint": "11dcf6a2d4ad4bc6",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתמקדים ב**השוואה** בין נתונים ובמסקנה שנובעת מהקרבה ביניהם. נסו לחשוב מה זה אומר על המדידות.",
+                  "he": "כאן בודקים מה אפשר להסיק מתוך **קרבה בין תוצאות**. נסו לחשוב מה המשמעות של זה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "11dcf6a2d4ad4bc6",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "בדקו אם יש קשר בין הקרבה בין התוצאות לבין האמינות של המדידות.",
+                  "he": "שימו לב לקשר בין דמיון בין המדידות לבין מה שאפשר להגיד עליהן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "11dcf6a2d4ad4bc6",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כשכמה תוצאות דומות זו לזו, אפשר להסיק משהו על **מהימנות** ודיוק של המדידות. כאן צריך להסתכל על הדמיון בין הערכים ועל הקשר שלהם לערך האמיתי.",
+                  "he": "כשכמה קבוצות מקבלות תוצאות קרובות מאוד זו לזו, אפשר להסיק משהו על האופן שבו המדידות בוצעו ועל הקשר ביניהן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "11dcf6a2d4ad4bc6",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -523,7 +551,7 @@
       ]
     },
     {
-      "component_id": "methodica-science-mass-measure-01-02",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-02",
       "title": "זמן תרגול",
       "cognitive_level": "['applying-a-model-or-procedure']",
       "provider": "",
@@ -538,16 +566,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה מתרגלים זיהוי תוצאה חריגה, התאמה בין דיוק למהימנות, וגם שחזור מדידה חסרה מתוך ממוצע. כך אפשר להבין טוב יותר איך קוראים נתוני מדידה.",
+          "he": "בשיעור הזה מתרגלים איך לזהות **תוצאה חריגה**, איך להשוות בין סדרות מדידה, ואיך להיעזר בממוצע כדי לשחזר מדידה חסרה.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "7cc811eab75b1f8e",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-science-mass-measure-01-02-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-02/methodica-science-mass-measure-01-02-001",
           "title": "זיהוי תוצאה חריגה ",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -570,24 +598,24 @@
               "fingerprint": "d68d1a7c7c2b26bf",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים **השוואה** בין תוצאות ומחפשים חריגה מתוך סדרת מדידות. כדאי לבדוק איך הערכים נראים ביחס זה לזה.",
+                  "he": "כאן מתמקדים בזיהוי **תוצאה חריגה** בתוך סדרת מדידות. נסו להשוות בין הערכים ולבדוק מה בולט במיוחד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "d68d1a7c7c2b26bf",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "השוו את הערכים ובדקו אם אחד מהם שונה מהם באופן בולט.",
+                  "he": "כדאי להשוות את כל הערכים זה לזה ולחפש את זה ששונה מהם בצורה ברורה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "d68d1a7c7c2b26bf",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לזהות תוצאה חריגה, משווים בין כל הערכים ומחפשים מדידה ששונה מאוד מהאחרות. לאחר מכן בודקים אם צריך לבצע מדידה נוספת.",
+                  "he": "כדאי להשוות בין תוצאות המדידה ולשים לב אם אחת מהן שונה באופן משמעותי מהאחרות. אחר כך חושבים מה מקובל לעשות כשמופיעה תוצאה חריגה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "d68d1a7c7c2b26bf",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -605,24 +633,24 @@
               "fingerprint": "2d76c572d047ac8e",
               "texts": {
                 "question_intro": {
-                  "he": "כאן נדרשת מסקנה על **מדידה חוזרת** מתוך סדרת תוצאות. חשבו מה עושים כשיש חריגה.",
+                  "he": "השאלה עוסקת בהשוואת תוצאות מדידה ובבדיקה אם יש צורך במדידה חוזרת. נסו לחשוב לפי ההבדלים בין הערכים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2d76c572d047ac8e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "אם אחת התוצאות בולטת מאוד, כדאי לחשוב על בדיקה נוספת.",
+                  "he": "אפשר להתחיל מהשוואה בין כל הערכים ולבדוק אם אחד מהם רחוק מאוד מהאחרים.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2d76c572d047ac8e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כשיש תוצאה חריגה, בודקים שוב כדי לוודא שלא הייתה טעות. זה חלק חשוב בעבודה עם סדרות מדידה.",
+                  "he": "כדאי לזהות תוצאה חריגה על פי ההבדל בינה לבין שאר המדידות, ואז לחשוב מה עושים כשיש מדידה שנראית לא מתאימה לשאר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2d76c572d047ac8e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -630,7 +658,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-02-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-02/methodica-science-mass-measure-01-02-002",
           "title": "התאמת דיוק ומהימנות ל-4 סדרות מדידה",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -650,24 +678,24 @@
               "fingerprint": "fe562ef36b82139e",
               "texts": {
                 "question_intro": {
-                  "he": "כאן נבדקת היכולת להשוות בין תוצאות מדידה ולהסיק מהן על דיוק ומהימנות. נסו לגשת לכל סדרה בנפרד ולבדוק את הדפוס שלה.",
+                  "he": "כאן בודקים התאמה בין סדרת מדידות לבין תיאור שמתייחס לדיוק ולמהימנות. אפשר להיעזר בהשוואה בין הערכים ובמרחק שלהם מהערך האמיתי.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "fe562ef36b82139e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לבדוק כל סדרה בשני כיוונים: עד כמה הערכים קרובים זה לזה, ועד כמה הם קרובים לערך האמיתי.",
+                  "he": "כדאי לבדוק שני דברים בכל סדרה: עד כמה הערכים קרובים זה לזה, ועד כמה הם קרובים לערך האמיתי.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "fe562ef36b82139e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו מתרגלים התאמה בין תוצאות מדידה לבין מושגי **דיוק** ו**מהימנות**. אפשר להיעזר בשני בדיקות: קרבה בין המדידות זו לזו, וקרבה לערך האמיתי.",
+                  "he": "השאלה מתמקדת בשילוב בין **דיוק** ל**מהימנות**. כדי לפתור אותה, משווים בכל סדרה גם את הקרבה לערך האמיתי וגם את הקרבה בין המדידות עצמן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "fe562ef36b82139e",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -675,7 +703,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-02-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-02/methodica-science-mass-measure-01-02-003",
           "title": "שחזור מדידה חסרה מממוצע",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -693,24 +721,24 @@
               "fingerprint": "a5dc3112dc3575b9",
               "texts": {
                 "question_intro": {
-                  "he": "כאן צריך להשתמש בקשר בין ממוצע, סכום וחלקים חסרים. נסו לפרק את המידע הנתון ולבנות ממנו את המדידה החסרה.",
+                  "he": "זו שאלה של חישוב ממוצע ושחזור ערך חסר. נסו לעבוד מהסכום הכולל אל המדידה החסרה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a5dc3112dc3575b9",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "אפשר להתחיל מהסכום הכולל שמתקבל מהממוצע, ואז להשוות למה שכבר ידוע.",
+                  "he": "אפשר להתחיל מהקשר בין ממוצע, מספר המדידות והסכום הכולל.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a5dc3112dc3575b9",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כדי לשחזר מדידה חסרה, עובדים מהקשר בין ממוצע לסכום: קודם מוצאים את הסכום הכולל של כל המדידות, ואז מחסרים את המדידות שכבר נתונות.",
+                  "he": "כדי למצוא מדידה חסרה, משתמשים בממוצע כדי לחשב את הסכום הכולל של כל המדידות, ואז מפחיתים את המדידות שכבר ידועות.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "a5dc3112dc3575b9",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -720,7 +748,7 @@
       ]
     },
     {
-      "component_id": "methodica-science-mass-measure-01-04",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['analyzing']",
       "provider": "",
@@ -735,16 +763,16 @@
       },
       "texts": {
         "lesson_welcome": {
-          "he": "בשיעור הזה מתרגלים מדידה וחישוב מסה בדרכים עקיפות, ובודקים איך מסקנות נבנות מתוך מדידות שונות. זה מעניין כי לפעמים מה שרוצים לדעת לא נמדד ישירות, אלא מחושב מתוך מה שכן נמדד.",
+          "he": "בשיעור הזה מתרגלים דרכים למדוד מסה ולחשוב על מדידה בצורה מדויקת יותר. דרך השאלות תבדקו חישובים, השוואות והסקת מסקנות מתוך תוצאות מדידה.",
           "prompt_version": "cp-v2",
           "source_fingerprint": "d431389f7ac1d5fc",
-          "generated_at": "2026-09-15T01:57:53Z",
+          "generated_at": "2026-09-16T01:41:27Z",
           "model": "mini"
         }
       },
       "slides": [
         {
-          "item_id": "methodica-science-mass-measure-01-04-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-001",
           "title": "חישוב מסה עקיפה של נוזל",
           "content_type": "simulation",
           "media_format": "interactive-content",
@@ -767,24 +795,24 @@
               "fingerprint": "579de0cfa4a0ed41",
               "texts": {
                 "question_intro": {
-                  "he": "כאן צריך לחשב מסה מתוך שתי מדידות שונות ולבחור את דרך החשיבה המתאימה. כדאי לעקוב אחרי מה נמדד בכל פעם.",
+                  "he": "זו שאלה של חישוב מתוך נתוני מדידה. נסו להיעזר בהשוואה בין מה שנמדד לבין מה שנוסף אליו.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "579de0cfa4a0ed41",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "חשבו מה המאזניים מודדים בכל מצב, ואז בדקו איך מגיעים אל מה שרוצים לדעת בלבד.",
+                  "he": "חשבו על מה שהמאזניים מודדים בכל פעם, ואז בדקו איך אפשר להגיע רק למה שנוסף לנוזל.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "579de0cfa4a0ed41",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בשאלה הזו מתרגלים **מדידה עקיפה**: מסתכלים על שתי מדידות, אחת של הכלי הריק ואחת של הכלי עם התוכן, ומשווים ביניהן כדי למצוא את מה שמעניין אותנו.",
+                  "he": "כאן בודקים הבנה של **מדידה עקיפה**: המאזניים מראים את המסה של הכוס יחד עם הנוזל, ולכן צריך להפריד בין מה ששוקלים לבין מה שרוצים לדעת עליו.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "579de0cfa4a0ed41",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -792,7 +820,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-04-002",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-002",
           "title": "תרגול לקראת מדידת מסה של אוויר",
           "content_type": "simulation",
           "media_format": "interactive-content",
@@ -810,24 +838,24 @@
               "fingerprint": "96761b6afd853e26",
               "texts": {
                 "question_intro": {
-                  "he": "כאן עובדים עם כמה מדידות חוזרות ומסיקים מהן על תוצאה מייצגת. נסו להתמקד בחישוב הממוצע.",
+                  "he": "כאן מתרגלים **חישוב** מתוך כמה מדידות. אפשר להתקדם צעד־צעד ולבדוק את הנתונים לפני שמזינים תשובה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "96761b6afd853e26",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "כדאי לאסוף קודם את שלוש המדידות, ואז לחשב מה מייצג אותן יחד.",
+                  "he": "כדאי להסתכל על שלוש המדידות יחד, ולחשוב איך מוצאים ערך שמייצג אותן.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "96761b6afd853e26",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "כאן מתרגלים **חישוב ממוצע** של כמה מדידות של בלון, כדי להתכונן להסקת מסקנה מהנתונים.",
+                  "he": "השאלה בודקת איך מחשבים **ממוצע** של מדידות חוזרות, כדי לקבל ערך מייצג לבלון הריק או לבלון המנופח.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "96761b6afd853e26",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -840,24 +868,24 @@
               "fingerprint": "12095e9ac7a68c56",
               "texts": {
                 "question_intro": {
-                  "he": "עוסקים ב**חישוב ממוצע** מתוך מדידות חוזרות. כדאי לקרוא את הנתונים ולנסות לחשב.",
+                  "he": "כאן מתרגלים **חישוב** נוסף באותו סוג נתונים. שווה לבדוק היטב את שלוש המדידות לפני שמזינים תשובה.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "12095e9ac7a68c56",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "שימו לב לכל המדידות יחד, ואז חשבו את הערך הממוצע שלהן.",
+                  "he": "נסו לאתר את המספר שמסכם בצורה טובה את שלוש המדידות יחד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "12095e9ac7a68c56",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "בתרגיל הזה מתמקדים במדידות חוזרות ובחישוב ממוצע שלהן, כחלק מההכנה לשאלת המסקנה.",
+                  "he": "כאן מתרגלים חישוב של **ממוצע** מתוך שלוש מדידות, כדי להשוות בין המצב של הבלון הריק למצב של הבלון המנופח.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "12095e9ac7a68c56",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -865,7 +893,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-04-003",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-003",
           "title": "מסקנות על מסת האוויר",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -888,24 +916,24 @@
               "fingerprint": "0b45b140d6e931a0",
               "texts": {
                 "question_intro": {
-                  "he": "כאן מתרגלים **השוואה** בין שני מצבים והסקת מסקנה מתוך נתונים. נסו לבדוק מה הנתונים מראים.",
+                  "he": "כאן משווים בין נתונים ומסיקים **מסקנה** מדעית. קראו את המדידות וחשבו איזו טענה מתאימה להן ביותר.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0b45b140d6e931a0",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "hint_l1": {
-                  "he": "השוו בין ממוצעי המדידות של שני המצבים, וחשבו מה אפשר להסיק מההבדל.",
+                  "he": "בדקו מה אפשר להבין מהשוואה בין שני המצבים, בלי להסתפק רק במספרים עצמם.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0b45b140d6e931a0",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 },
                 "explanation": {
-                  "he": "השאלה בודקת אם אפשר להסיק מסקנה מהשוואה בין ממוצעי המדידות של הבלון הריק והבלון המנופח.",
+                  "he": "השאלה בודקת אם אפשר להסיק מן הנתונים על הקשר בין המדידות לבין **מסת האוויר**, תוך השוואה בין הבלון הריק לבלון המנופח.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "0b45b140d6e931a0",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -913,7 +941,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-04-004",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-004",
           "title": "האם מדידה אחת מספיקה?",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -934,24 +962,10 @@
               "fingerprint": "1f4fc5c1ab73a6c4",
               "texts": {
                 "question_intro": {
-                  "he": "עוסקים ב**בדיקה חוזרת** של מדידה. נסו לחשוב אם מספיק להסתמך על תוצאה אחת בלבד.",
+                  "he": "כאן בודקים הבנה של **מדידות חוזרות**. חשבו אם אפשר להסתמך על תוצאה אחת בלבד.",
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "1f4fc5c1ab73a6c4",
-                  "generated_at": "2026-09-15T01:57:53Z",
-                  "model": "mini"
-                },
-                "hint_l1": {
-                  "he": "בדקו אם יש צורך באימות נוסף, גם כשנראה שהתוצאה כבר מתאימה.",
-                  "prompt_version": "cp-v2",
-                  "source_fingerprint": "1f4fc5c1ab73a6c4",
-                  "generated_at": "2026-09-15T01:57:53Z",
-                  "model": "mini"
-                },
-                "explanation": {
-                  "he": "השאלה בודקת את הצורך במדידות חוזרות, גם כשנראה שכבר התקבלה תוצאה מתאימה.",
-                  "prompt_version": "cp-v2",
-                  "source_fingerprint": "1f4fc5c1ab73a6c4",
-                  "generated_at": "2026-09-15T01:57:53Z",
+                  "generated_at": "2026-09-16T01:41:27Z",
                   "model": "mini"
                 }
               }
@@ -959,7 +973,7 @@
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-04-005",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-005",
           "title": "בניית פרוטוקול מדידה של נוזל",
           "content_type": "practice",
           "media_format": "interactive-content",
@@ -981,27 +995,12 @@
                 "לחזור על המדידה 3 פעמים לפחות, ולהשוות בין התוצאות"
               ],
               "fingerprint": "2a17542e6e4adb80",
-              "texts": {
-                "question_intro": {
-                  "he": "כאן מתרגלים **סידור שלבים** בפרוטוקול מדידה. נסו לבחור רק את השלבים המתאימים ולסדר אותם נכון.",
-                  "prompt_version": "cp-v2",
-                  "source_fingerprint": "2a17542e6e4adb80",
-                  "generated_at": "2026-09-15T01:57:53Z",
-                  "model": "mini"
-                },
-                "hint_l1": {
-                  "he": "חשבו על סדר העבודה הנכון עם מאזניים וכוס מדידה, ומה צריך לעשות לפני שמתחילים למדוד.",
-                  "prompt_version": "cp-v2",
-                  "source_fingerprint": "2a17542e6e4adb80",
-                  "generated_at": "2026-09-15T01:57:53Z",
-                  "model": "mini"
-                }
-              }
+              "texts": {}
             }
           ]
         },
         {
-          "item_id": "methodica-science-mass-measure-01-04-006",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04/methodica-science-mass-measure-01-04-006",
           "title": "הקשר בין מדידה מדויקת וצדק",
           "content_type": "motivational",
           "media_format": "video",
@@ -1015,7 +1014,7 @@
       ]
     },
     {
-      "component_id": "methodica-science-mass-measure-01-05",
+      "component_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-05",
       "title": "שאלת שיא",
       "cognitive_level": "['evaluating-and-justifying']",
       "provider": "",
@@ -1031,7 +1030,7 @@
       "texts": {},
       "slides": [
         {
-          "item_id": "methodica-science-mass-measure-01-05-001",
+          "item_id": "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-05/methodica-science-mass-measure-01-05-001",
           "title": "שאלת שיא: מדידת מסת גז ממשקה תוסס (4 סעיפים)",
           "content_type": "practice",
           "media_format": "interactive-content",
