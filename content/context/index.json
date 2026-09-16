@@ -1,25 +1,13 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-15T02:01:49Z",
+  "generated_at": "2026-09-16T01:47:51Z",
   "shards": [
-    {
-      "subject": "math",
-      "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL",
-      "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL.json",
-      "lomdot": 9
-    },
-    {
-      "subject": "math",
-      "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT",
-      "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT.json",
-      "lomdot": 8
-    },
     {
       "subject": "math",
       "objective_id": "MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE",
       "path": "math/MOE.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE.json",
-      "lomdot": 9
+      "lomdot": 8
     },
     {
       "subject": "math",
@@ -66,13 +54,74 @@
   ],
   "backlog": {
     "browse": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00001",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00005",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00002",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00003",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00004",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00005",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00006",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00007",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00009",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-01/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-02/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-03/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-04/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-05/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/01/methodica-math-ratio-01-06/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/02/methodica-math-ratio-02-01/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/02/methodica-math-ratio-02-02/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/02/methodica-math-ratio-02-03/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/02/methodica-math-ratio-02-04/",
+      "https://lomdot.education.gov.il/metodica/720active/math/ratio/02/methodica-math-ratio-02-05/",
+      "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/",
+      "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/",
+      "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-03/",
+      "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/",
+      "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-05/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-01",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-02",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-04",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/methodica-science-mass-measure-01-05",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-01/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-02/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-03/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-04/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-05/",
+      "https://lomdot.education.gov.il/metodica/720active/science/mass-measure/02/methodica-science-mass-measure-02-06/"
+    ]
+  },
+  "stats": {
+    "lomdot": 36,
+    "slides": 148,
+    "questions": 202,
+    "texts_generated": 469,
+    "texts_pending": 58,
+    "removed": [
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00004",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00005",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00006",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00007",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00008",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00010",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00011",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00001",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00004",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00005",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00006",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00007",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00008",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00009",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00010",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00008",
+      "methodica-math-ratio-01-01",
+      "methodica-math-ratio-01-02",
       "methodica-math-ratio-01-03",
       "methodica-math-ratio-01-04",
       "methodica-math-ratio-01-05",
       "methodica-math-ratio-01-06",
+      "methodica-math-ratio-02-01",
       "methodica-math-ratio-02-02",
       "methodica-math-ratio-02-03",
       "methodica-math-ratio-02-04",
@@ -85,28 +134,13 @@
       "methodica-science-mass-measure-01-01",
       "methodica-science-mass-measure-01-02",
       "methodica-science-mass-measure-01-04",
-      "methodica-science-mass-measure-01-05"
-    ]
-  },
-  "stats": {
-    "lomdot": 54,
-    "slides": 205,
-    "questions": 313,
-    "texts_generated": 422,
-    "texts_pending": 101,
-    "removed": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00001",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00002",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00003",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00001",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00002",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00003",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00005",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00006",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00007",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00008",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00009"
+      "methodica-science-mass-measure-01-05",
+      "methodica-science-mass-measure-02-01",
+      "methodica-science-mass-measure-02-02",
+      "methodica-science-mass-measure-02-03",
+      "methodica-science-mass-measure-02-04",
+      "methodica-science-mass-measure-02-05",
+      "methodica-science-mass-measure-02-06"
     ]
   }
 }
