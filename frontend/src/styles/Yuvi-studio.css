@@ -470,9 +470,6 @@
   transition: opacity .32s ease-out, transform .38s cubic-bezier(.2, .72, .24, 1);
 }
 .ys-world-projection.is-open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-.ys-world-projection__canvas { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.ys-world-projection__canvas, .ys-world-projection__canvas canvas { inline-size: 100%; block-size: 100%; }
-.ys-world-projection__canvas canvas { display: block; pointer-events: none; }
 .ys-world-projection__targets {
   position: absolute; inset: 0; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center;
   direction: ltr; pointer-events: none;
@@ -497,9 +494,52 @@
   box-shadow: 0 4px 12px rgba(35, 38, 74, .08), inset 0 0 0 1px rgba(255, 255, 255, .5);
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background-color .18s ease;
 }
+/* The projection: a baked sprite strip of one full turn (worldHologramStrips.ts),
+   stepped through in CSS. `--ys-frames` is set by the picker from the strip
+   module; the frame box's aspect ratio comes from the same place, so
+   `background-size: 100% auto` lays exactly one frame per box height.
+   Two copies one frame apart cross-fade over each step (the second runs a
+   frame ahead), which turns 7.5° steps into a smooth-looking slow spin. */
 .ys-world-card__hologram {
-  position: absolute; inset-block-start: 23px; inset-inline: 3px; block-size: 104px; overflow: hidden; border-radius: 6px; pointer-events: none;
+  --ys-frame-h: 104px; --ys-turn: 12s;
+  position: absolute; inset-block-start: 23px; inset-inline: 3px; block-size: var(--ys-frame-h); overflow: hidden; border-radius: 6px; pointer-events: none;
+  animation: ys-world-rise .5s cubic-bezier(.2, .72, .24, 1) both; animation-delay: calc(var(--ys-world-index, 0) * .12s);
 }
+.ys-world-card__frame {
+  position: absolute; inset-block: 0; inset-inline-start: 50%; translate: -50% 0; block-size: 100%;
+  transition: scale .18s ease; animation: ys-world-glow 1.6s ease-in-out infinite alternate;
+}
+.ys-world-card__strip {
+  position: absolute; inset: 0; background-repeat: repeat-y; background-position: 0 0; background-size: 100% auto;
+  animation:
+    ys-world-spin var(--ys-turn) steps(var(--ys-frames, 48)) infinite,
+    ys-world-fade-out calc(var(--ys-turn) / var(--ys-frames, 48)) linear infinite;
+}
+.ys-world-card__strip--next {
+  opacity: 0;
+  animation:
+    ys-world-spin var(--ys-turn) steps(var(--ys-frames, 48)) infinite,
+    ys-world-fade-in calc(var(--ys-turn) / var(--ys-frames, 48)) linear infinite;
+  animation-delay: calc(var(--ys-turn) / var(--ys-frames, 48) * -1), 0s;
+}
+.ys-world-card__pad { position: absolute; inset: 0; background: center / 100% auto no-repeat; }
+.ys-world-card__lock {
+  position: absolute; inset: 0; background: center / 100% auto no-repeat;
+  animation: ys-world-bob 2.4s ease-in-out infinite alternate;
+}
+@keyframes ys-world-spin { to { background-position-y: calc(var(--ys-frames, 48) * var(--ys-frame-h) * -1); } }
+@keyframes ys-world-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ys-world-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ys-world-glow { from { opacity: .8; } to { opacity: 1; } }
+@keyframes ys-world-bob { from { translate: 0 -2px; } to { translate: 0 2px; } }
+@keyframes ys-world-rise { from { opacity: 0; transform: translateY(40%) scale(.2); } to { opacity: 1; transform: none; } }
+@keyframes ys-world-pick { 50% { scale: 1.32; } }
+.ys-world-projection__targets button:hover .ys-world-card__hologram,
+.ys-world-projection__targets button:focus-visible .ys-world-card__hologram { --ys-turn: 4s; }
+.ys-world-projection__targets button:hover .ys-world-card__frame,
+.ys-world-projection__targets button:focus-visible .ys-world-card__frame { scale: 1.2; }
+.ys-world-projection__targets button.is-selected .ys-world-card__frame { animation: ys-world-pick .46s ease-out both; }
+.ys-world-projection__targets button.is-dimmed .ys-world-card__hologram { opacity: 0; transition: opacity .27s ease-out; }
 .ys-world-projection.is-compact .ys-world-projection__targets button:hover { border-color: rgba(81, 94, 226, .72); transform: translateY(-2px); box-shadow: 0 7px 18px rgba(51, 57, 127, .15); }
 .ys-world-projection.is-compact .ys-world-projection__targets button[aria-current="true"] { border-color: var(--ys-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ys-accent) 24%, transparent), 0 7px 18px rgba(71, 58, 175, .16); }
 .ys-world-projection.is-compact .ys-world-projection__targets button.is-selected { border-color: #4eeef0; background: linear-gradient(180deg, rgba(78, 238, 240, .12) 0 54%, rgba(239, 252, 255, .96) 72%, #eefcff 100%); box-shadow: 0 0 0 3px rgba(78, 238, 240, .28), 0 8px 22px rgba(29, 171, 187, .2); transform: translateY(-3px); }
@@ -516,6 +556,9 @@
 .ys-world-projection__targets button:focus-visible { outline: 3px solid #28cdd8; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ys-world-projection { transform: none; transition-duration: .14s; }
+  .ys-world-card__hologram, .ys-world-card__frame, .ys-world-card__strip, .ys-world-card__lock { animation: none; }
+  .ys-world-card__strip--next { display: none; }
+  .ys-world-projection__targets button.is-dimmed .ys-world-card__hologram { transition-duration: .1s; }
 }
 .ys-visiting-friend .ys-body { grid-template-columns: 1fr; }
 .ys-room-like { position: relative; z-index: 4; inline-size: 40px; block-size: 40px; }

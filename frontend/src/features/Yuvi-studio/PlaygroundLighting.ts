@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { MoodId } from './RoomDesign.ts'
+import type { RenderTier } from './renderTier.ts'
 
 const MOOD_LIGHTING: Record<MoodId, {
   background: number
@@ -20,27 +21,40 @@ const MOOD_LIGHTING: Record<MoodId, {
   aurora: { background: 0x0b3137, sky: 0x75f0c1, ground: 0x253b5a, hemisphere: 0.85, sun: 0xc4e3ff, sunlight: 1.7 },
 }
 
-export function createPlaygroundLighting(scene: THREE.Scene, renderer: THREE.WebGLRenderer, rich: boolean) {
+/* The park's sky and sun: the whole lighting rig of that world (the lab's
+   rig and key light leave the scene there, see `applyRigBudget`).
+
+   Per tier, the same rules as the lab: the environment probe, which every
+   Standard material samples per fragment, only from medium up; the sun's
+   shadow only in a room built at high (the map itself is the renderer's,
+   enabled by the tier); the distance fog is a tier setting, off on low.
+   The two lights stay on every tier — the park has nothing else. */
+export function createPlaygroundLighting(scene: THREE.Scene, renderer: THREE.WebGLRenderer, quality: RenderTier) {
   const previousEnvironment = scene.environment
   const previousEnvironmentIntensity = scene.environmentIntensity
   const previousBackground = scene.background
   const previousFog = scene.fog
-  const probeScene = new RoomEnvironment()
-  const generator = new THREE.PMREMGenerator(renderer)
-  const probe = generator.fromScene(probeScene, 0.04)
-  generator.dispose(); probeScene.dispose()
-  scene.environment = probe.texture
-  scene.environmentIntensity = 0.45
-  scene.background = new THREE.Color(0xcbd0c9)
-  scene.fog = new THREE.Fog(0xcbd0c9, 85, 175)
+  let probe: THREE.Texture | null = null
+  if (quality !== 'low') {
+    const probeScene = new RoomEnvironment()
+    const generator = new THREE.PMREMGenerator(renderer)
+    probe = generator.fromScene(probeScene, 0.04).texture
+    generator.dispose(); probeScene.dispose()
+    scene.environment = probe
+    scene.environmentIntensity = 0.45
+  }
+  let fogAllowed = quality !== 'low'
+  let background = 0xcbd0c9
+  const applyFog = () => { scene.fog = fogAllowed ? new THREE.Fog(background, 85, 175) : null }
+  scene.background = new THREE.Color(background)
+  applyFog()
   const hemisphere = new THREE.HemisphereLight(0xf1f3eb, 0x87927f, 0.65)
   const sun = new THREE.DirectionalLight(0xfff6e7, 1.5)
   sun.position.set(-10, 10.5, 15); sun.target.position.set(0, 0, -3)
-  sun.castShadow = rich
+  sun.castShadow = quality === 'high'
   sun.shadow.mapSize.set(2048, 2048)
   Object.assign(sun.shadow.camera, { left: -38, right: 38, top: 38, bottom: -38, near: 1, far: 100 })
   sun.shadow.camera.updateProjectionMatrix(); sun.shadow.normalBias = 0.04; sun.shadow.bias = -0.00015
-  renderer.shadowMap.enabled = rich; renderer.shadowMap.type = THREE.PCFSoftShadowMap
   scene.add(hemisphere, sun, sun.target)
   const setMood = (mood: MoodId) => {
     const lighting = MOOD_LIGHTING[mood] ?? MOOD_LIGHTING.studio
@@ -49,12 +63,19 @@ export function createPlaygroundLighting(scene: THREE.Scene, renderer: THREE.Web
     hemisphere.intensity = lighting.hemisphere
     sun.color.setHex(lighting.sun)
     sun.intensity = lighting.sunlight
-    scene.background = new THREE.Color(lighting.background)
-    scene.fog = new THREE.Fog(lighting.background, 85, 175)
+    background = lighting.background
+    scene.background = new THREE.Color(background)
+    applyFog()
   }
-  return { setMood, dispose: () => {
+  /** A governor tier change: only the fog moves at runtime (the probe and the
+   *  shadow map are build-time, like the lab's). */
+  const setQuality = (next: RenderTier) => {
+    fogAllowed = next !== 'low'
+    applyFog()
+  }
+  return { setMood, setQuality, dispose: () => {
     scene.remove(hemisphere, sun, sun.target)
-    probe.dispose(); sun.shadow.dispose()
+    probe?.dispose(); sun.shadow.dispose()
     scene.environment = previousEnvironment; scene.background = previousBackground; scene.fog = previousFog
     scene.environmentIntensity = previousEnvironmentIntensity
   } }

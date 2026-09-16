@@ -84,9 +84,12 @@ export interface RoomKit {
 /* ── shared kit ─────────────────────────────────────────────────────────────
    One kit per room instance. It owns every geometry/material it hands out and
    returns a disposer, so the room's own dispose() stays a one-liner. */
-export function createRoomKit(rich: boolean): { kit: RoomKit; ready: () => Promise<void>; dispose: () => void } {
+export function createRoomKit(
+  rich: boolean,
+  onModelAttached?: (holder: THREE.Object3D) => void,
+): { kit: RoomKit; ready: () => Promise<void>; dispose: () => void } {
   const disposables: Array<{ dispose: () => void }> = []
-  const models = createRoomModelCache(loadLoftModel)
+  const models = createRoomModelCache(loadLoftModel, onModelAttached)
   const fabrication = createLoftFabrication(rich)
   let playground: ReturnType<typeof createPlaygroundKit> | undefined
   const geoCache = new Map<string, THREE.BufferGeometry>()

@@ -49,3 +49,30 @@ test('failed downloads are handled and hologram previews do not hydrate in full 
   cache.dispose()
   failed.dispose()
 })
+test('a model that lands is handed to the renderer before a frame can need it', async () => {
+  const attached: THREE.Object3D[] = []
+  const cache = createRoomModelCache(async () => new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial()), (holder) => {
+    // Called once the model hangs under its holder: what the studio compiles.
+    assert.equal(holder.children.length, 1)
+    attached.push(holder)
+  })
+  const holder = cache.model('/prop.glb', [1, 1, 1])
+  await holder.userData.assetReady
+  assert.deepEqual(attached, [holder])
+  // A preview holder never gets the model, so nothing to compile either.
+  const preview = cache.model('/prop.glb', [1, 1, 1])
+  preview.userData.assetPreview = true
+  await preview.userData.assetReady
+  assert.equal(attached.length, 1)
+  cache.dispose()
+})
+
+test('the studio compiles a landed model against its renderer', async () => {
+  const { readFileSync } = await import('node:fs')
+  const avatar = readFileSync(new URL('../src/features/Yuvi-studio/YuviAvatar3D.tsx', import.meta.url), 'utf8')
+  const room = readFileSync(new URL('../src/features/Yuvi-studio/YuviLabRoom.ts', import.meta.url), 'utf8')
+  const catalog = readFileSync(new URL('../src/features/Yuvi-studio/RoomCatalog.ts', import.meta.url), 'utf8')
+  assert.match(avatar, /onModelAttached: \(holder\) => \{[\s\S]{0,120}renderer\.compile\(holder, camera, scene\)/)
+  assert.match(room, /createRoomKit\(rich, options\.onModelAttached\)/)
+  assert.match(catalog, /createRoomModelCache\(loadLoftModel, onModelAttached\)/)
+})

@@ -4,7 +4,15 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 /** Resolves a model key — a prop id or a URL, whatever the caller's loader reads — to its scene. */
 type ModelLoader = (key: string) => Promise<THREE.Object3D>
 
-export function createRoomModelCache(load: ModelLoader = async (url) => (await new GLTFLoader().loadAsync(url)).scene) {
+/** Every model is attached to its holder after the first frame, so the
+ *  renderer gets it here first — to compile its programs off the frame that
+ *  would otherwise stall on them (see `precompile` in YuviAvatar3D). */
+type ModelAttached = (holder: THREE.Object3D) => void
+
+export function createRoomModelCache(
+  load: ModelLoader = async (url) => (await new GLTFLoader().loadAsync(url)).scene,
+  onAttached: ModelAttached = () => undefined,
+) {
   const pending = new Map<string, Promise<THREE.Object3D>>()
   const resources = new Set<THREE.BufferGeometry | THREE.Material | THREE.Texture>()
   let disposed = false
@@ -55,6 +63,7 @@ export function createRoomModelCache(load: ModelLoader = async (url) => (await n
         model.position.add(new THREE.Vector3(-center.x, -bounds.min.y, -center.z).multiplyScalar(scale))
         holder.add(model)
         holder.userData.assetState = 'ready'
+        onAttached(holder)
       }).catch(() => { holder.userData.assetState = 'error' })
       return holder
     },

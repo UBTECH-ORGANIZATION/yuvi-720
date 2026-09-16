@@ -7,6 +7,7 @@ import { GAMING_ROOM_POSTERS } from './GamingRoomArtwork.ts'
 import { createSportsHallSurface } from './SportsHallSurfaces.ts'
 import { batchSportsMeshes } from './SportsMeshBatch.ts'
 import { createPlaygroundEnvironment } from './PlaygroundEnvironment.ts'
+import type { RenderTier } from './renderTier.ts'
 
 type StudentWorldId = Exclude<RoomLayoutId, 'lab'>
 
@@ -24,6 +25,9 @@ export interface StudentWorldEnvironment {
   interact?: (raycaster: THREE.Raycaster) => boolean
   setLabels: (translate: LoftTranslator) => void
   update: (elapsed: number) => void
+  /** The world's own lights follow the room's light budget (a governor tier
+   *  change mid-session included); a world without any is a no-op. */
+  setQuality?: (quality: RenderTier) => void
   dispose: () => void
 }
 
@@ -429,11 +433,13 @@ function createIndoorWorldEnvironment(options: EnvironmentOptions): StudentWorld
     for (const part of [shell, trainingZones, acousticWalls, lighting]) batchSportsMeshes(part, track)
   }
 
+  let setQuality: ((quality: RenderTier) => void) | undefined
   if (id === 'creatorLoft') {
     const graphics = track(createLoftFabrication(rich))
     setLabels = graphics.setLabels
     const lighting = track(createLoftLighting(floorY, rich))
     group.add(lighting.group)
+    setQuality = lighting.setQuality
     const surfaces = track(createLoftSurfaceMaterials(rich))
     surfaces.apply(floorMaterial)
     floor.receiveShadow = true
@@ -571,6 +577,7 @@ function createIndoorWorldEnvironment(options: EnvironmentOptions): StudentWorld
     },
     setLabels: (translate) => setLabels(translate),
     update: (elapsed) => { if (!reduceMotion) animated.forEach((animate) => animate(elapsed)) },
+    setQuality,
     dispose: () => {
       resources.forEach((resource) => resource.dispose())
       resources.clear()

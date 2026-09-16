@@ -23,7 +23,7 @@ export function createPlaygroundEnvironment(options: { floorY: number; rich: boo
     context.fillRect(grain * 73 % 512, grain * 137 % 509, 1, 1)
   }
   const paverMap = kit.own(new THREE.CanvasTexture(canvas)); paverMap.colorSpace = THREE.SRGBColorSpace
-  paverMap.wrapS = paverMap.wrapT = THREE.RepeatWrapping; paverMap.repeat.set(8, 10); paverMap.anisotropy = 4
+  paverMap.wrapS = paverMap.wrapT = THREE.RepeatWrapping; paverMap.repeat.set(8, 10); paverMap.anisotropy = options.rich ? 4 : 1
   paving.map = paverMap
   const bump = kit.own(paverMap.clone()); bump.colorSpace = THREE.NoColorSpace; paving.bumpMap = bump; paving.bumpScale = 0.035
   kit.box(group, [48.8, 0.1, 58.5], paving, [0, -0.05, 3.45], 0)

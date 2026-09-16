@@ -378,6 +378,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const roomBuiltHigh = stage && roomQuality === 'high'
     let room: LabRoom | null = null
     let roomFog: THREE.FogExp2 | null = null
+    // False once the renderer is gone or its context lost: a model that lands
+    // after that is not compiled against a dead context.
+    let stageLive = true
     if (stage) {
       renderer.shadowMap.enabled = settings.shadows && roomBuiltHigh
       renderer.shadowMap.type = THREE.PCFShadowMap
@@ -391,6 +394,15 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         deckY: -0.92,
         layoutId: roomLayoutId,
         accent: initialDesign.colors.glow,
+        // Shaders compile before the first visible frame (below); a glTF prop
+        // arriving later would compile its programs on the frame that first
+        // draws it — a visible stall on an integrated GPU — so it compiles
+        // here, on arrival, instead. Synchronous like the first-frame pass;
+        // the link is parallel where the driver offers it.
+        onModelAttached: (holder) => {
+          if (!stageLive) return
+          try { renderer.compile(holder, camera, scene) } catch { /* drawn on demand, as before */ }
+        },
       })
       // The room brings its own key light from the ceiling, so the free-floating
       // studio rig steps back to rims and fill — otherwise the bay reads flat.
@@ -413,13 +425,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         : new THREE.FogExp2(0x05071a, 0.023)
       scene.fog = settings.fog ? roomFog : null
     }
-    // The park is lit by its own sun and sky; the sun's shadow follows the
-    // same rule as the room's (only a room built at high has a shadow map).
-    // The lab rig and the room's key light leave the scene there — see
-    // `applyRigBudget`: a light at zero intensity still costs its slot in
-    // every program.
+    // The park is lit by its own sun and sky; its probe, fog and the sun's
+    // shadow follow the room's tier rules (only a room built at high has a
+    // shadow map). The lab rig and the room's key light leave the scene there
+    // — see `applyRigBudget`: a light at zero intensity still costs its slot
+    // in every program.
     const playgroundLighting = room && roomLayoutId === 'adventurePark'
-      ? createPlaygroundLighting(scene, renderer, roomBuiltHigh) : null
+      ? createPlaygroundLighting(scene, renderer, roomQuality) : null
     if (playgroundLighting && room) {
       room.keyLight.castShadow = false
       room.keyLight.intensity = 0
@@ -1699,9 +1711,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       applyRigBudget(next, room ? room.setQuality(next) : { boost: 0, tint: null })
       applyGlowBudget(next)
       if (room && roomFog) {
-        // The park owns its own (linear, mood-tinted) fog; only the lab haze
-        // is a tier setting.
-        if (!playgroundLighting) {
+        // The park owns its own (linear, mood-tinted) fog and applies the
+        // tier to it itself; the lab haze is set here.
+        if (playgroundLighting) playgroundLighting.setQuality(next)
+        else {
           scene.fog = settings.fog ? roomFog : null
           // The fog colour follows the room mood only while the fog is on the
           // scene, so re-apply the style when it comes back.
@@ -2405,12 +2418,14 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const onContextLost = (event: Event) => {
       event.preventDefault()
       contextAvailable = false
+      stageLive = false
       if (frame !== 0) cancelAnimationFrame(frame)
       frame = 0
       if (avatarRoot) avatarRoot.dataset.webglState = 'lost'
     }
     const onContextRestored = () => {
       contextAvailable = true
+      stageLive = true
       if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
       resize()
       requestFrame()
@@ -2491,6 +2506,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       playgroundLighting?.dispose()
       if (visitorHost) scene.remove(visitorHost)
       room?.dispose()
+      stageLive = false
       renderer.dispose()
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh

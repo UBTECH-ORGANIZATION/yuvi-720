@@ -38,6 +38,9 @@ export interface LabRoomOptions {
   deckY?: number
   /** Initial LED / hologram accent (usually the learner's glow colour). */
   accent?: THREE.ColorRepresentation
+  /** A prop's glTF model landed in the room after the build (the loft's
+   *  furniture): the caller compiles its programs before a frame needs them. */
+  onModelAttached?: (holder: THREE.Object3D) => void
 }
 
 export interface LabRoomBounds {
@@ -481,12 +484,14 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   let interactEnvironment: (raycaster: THREE.Raycaster) => boolean = () => false
   let setEnvironmentWallColor: ((color: number) => void) | null = null
+  let setEnvironmentQuality: ((quality: LabRoomQuality) => void) | null = null
   if (layoutId !== 'lab') {
     legacyShell.forEach((mesh) => { mesh.visible = false })
     const environment = createStudentWorldEnvironment({ id: layoutId, floorY: FLOOR_Y, rich, reduceMotion })
     group.add(environment.group)
     floorStyleMaterial = environment.floorMaterial
     setEnvironmentWallColor = environment.setWallColor
+    setEnvironmentQuality = environment.setQuality ?? null
     labelSetters.push(environment.setLabels)
     updaters.push((elapsed) => environment.update(elapsed))
     disposables.push(environment)
@@ -818,7 +823,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   let exploreShadow: THREE.Mesh | null = null
   let missionShadow: THREE.Mesh | null = null
   let gamelabShadow: THREE.Mesh | null = null
-  const { kit: itemKit, dispose: disposeItemKit } = createRoomKit(rich)
+  const { kit: itemKit, dispose: disposeItemKit } = createRoomKit(rich, options.onModelAttached)
   labelSetters.push(itemKit.setLabels)
   disposables.push({ dispose: disposeItemKit })
 
@@ -2792,21 +2797,28 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   //   medium — no window bounce, no screen or capsule bounce, no burst flash
   //   low    — key + the platform and bench points; the rim, the explore cool
   //            fill and the rest go dark and the caller lifts its hemisphere
+  // A world of its own (park, arena, loft) brings its own lighting and gets
+  // the same 6 / 10 / 16 with the rig: from the lab it keeps only the key
+  // light (the shadow caster) and the effect lights — the mood fills and the
+  // station glows were tuned for the lab shell, which is hidden there — and
+  // the world's lights take those slots (`setQuality` on the environment).
   const applyLightBudget = (q: LabRoomQuality) => {
     const high = q === 'high'
     const notLow = q !== 'low'
+    const lab = layoutId === 'lab'
     keyLight.visible = true
-    accentLight.visible = true
-    warmLight.visible = true
-    rimLight.visible = notLow
-    coolLight.visible = notLow
-    windowLight.visible = high
-    if (screenLight) screenLight.visible = high
+    accentLight.visible = lab
+    warmLight.visible = lab
+    rimLight.visible = lab && notLow
+    coolLight.visible = lab && notLow
+    windowLight.visible = lab && high
+    if (screenLight) screenLight.visible = lab && high
     // The World Capsule's glow is a station light like the desk's: the
     // additive rings and particles carry the portal on the cheaper tiers.
     if (missionPortalLight) missionPortalLight.visible = high
     burstLight.visible = high
     if (motes) motes.visible = notLow
+    setEnvironmentQuality?.(q)
   }
   const setQuality = (q: LabRoomQuality): LabRoomHemiHint => {
     applyLightBudget(q)

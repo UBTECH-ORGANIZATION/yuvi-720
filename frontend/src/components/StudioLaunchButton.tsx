@@ -17,10 +17,16 @@ export function StudioLaunchButton() {
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const [now, setNow] = useState(Date.now())
 
+  // The button sits on every learner page; it only ticks while it has a
+  // countdown to show (the studio is closed until `available_at`). The time
+  // left inside an open studio arrives from the studio itself.
+  const countingDown = transition?.studioTime?.allowed === false
   useEffect(() => {
+    if (!countingDown) return
+    setNow(Date.now())
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [countingDown])
 
   const secondsUntilAvailable = transition?.studioTime?.allowed === false
     ? Math.max(0, Math.ceil((new Date(transition.studioTime.available_at).getTime() - now) / 1000))
