@@ -64,6 +64,14 @@ class StructuralDiffTest(unittest.TestCase):
         self.assertIn("note", d)
         self.assertNotIn("lomdot_changed", d)
 
+    def test_file_flags_follow_the_shard_status(self):
+        self.assertEqual(prs.file_flag({"file": "added"}), "🟢")
+        self.assertEqual(prs.file_flag({"file": "removed"}), "🔴")
+        self.assertEqual(prs.file_flag({"lomdot_changed": {}}), "🟠")
+        body = prs.render_fallback({"files": {"math/gone.json": {"file": "removed", "objective_title_he": "יחס", "lomdot_removed": ["א"]}}, "index": {}})
+        self.assertIn("### 🔴 «יחס» — `math/gone.json`", body)
+        self.assertIn("- 🔴 הוסרה הלומדה «א»", body)
+
     def test_extraction_verdict_change_is_a_reason(self):
         old = _shard([_lomda("c1", "דוגמא 1", verdict="frame_blocked", mapped=0, seen=0)])
         new = _shard([_lomda("c1", "דוגמא 1")])
@@ -86,18 +94,39 @@ class RenderingTest(unittest.TestCase):
             "index": {"prompt_version": {"from": "cp-v1", "to": "cp-v2"}},
         }
         body = prs.render_fallback(summary)
-        self.assertIn("### `math/MOE.MATH.X.json` — יחס", body)
-        self.assertIn("Added lomda «חדש»", body)
+        self.assertTrue(body.startswith('<div dir="rtl">\n\n'), body[:40])
+        self.assertIn("### 🟠 «יחס» — `math/MOE.MATH.X.json`", body)
+        self.assertIn("- 🟢 נוספה הלומדה «חדש»", body)
+        self.assertIn(prs.LEGEND, body)
         self.assertIn("prompt_version: cp-v1 → cp-v2", body)
-        self.assertIn("manual promote", body)
+        self.assertIn("promote ידני", body)
+        self.assertNotIn("'", body.replace("«", "").replace("»", ""))  # no bare apostrophe in RTL copy
 
     def test_model_answer_is_used_and_the_tail_is_restored_if_dropped(self):
         summary = {"files": {"math/x.json": {"objective_title_he": "יחס", "lomdot_added": ["חדש"]}}, "index": {}, "run_report": ""}
-        with patch("app.services.llm.call_llm", new=AsyncMock(return_value="## Refresh\n\n" + "x" * 100)):
+        model_text = "## Refresh\n\nפסקת פתיחה.\n\n### 🟠 «יחס» — `math/x.json`\n- 🟢 " + "x" * 100
+        with patch("app.services.llm.call_llm", new=AsyncMock(return_value=model_text)):
             import asyncio
             body = asyncio.run(prs.render_with_model(summary))
-        self.assertTrue(body.startswith("## Refresh"))
-        self.assertIn("manual promote", body)
+        self.assertTrue(body.startswith('<div dir="rtl">\n\n## Refresh'), body[:40])
+        self.assertIn("promote ידני", body)
+        self.assertLess(body.index(prs.LEGEND), body.index("### 🟠"))  # legend sits between intro and sections
+        self.assertTrue(body.rstrip().endswith("</div>"))
+
+    def test_a_file_the_model_skipped_gets_its_deterministic_section(self):
+        """A cut-off answer (max_tokens) must not drop a shard from the PR silently."""
+        summary = {"files": {
+            "math/a.json": {"objective_title_he": "יחס", "lomdot_added": ["חדש"]},
+            "science/b.json": {"file": "removed", "objective_title_he": "מסה", "lomdot_removed": ["ישן"]},
+        }, "index": {}, "run_report": ""}
+        model_text = "פתיחה.\n\n### 🟠 «יחס» — `math/a.json`\n- 🟢 נוספה «חדש» — חדשה בקטלוג.\n\n" + prs.FIXED_TAIL
+        with patch("app.services.llm.call_llm", new=AsyncMock(return_value=model_text)):
+            import asyncio
+            body = asyncio.run(prs.render_with_model(summary))
+        self.assertIn("### 🔴 «מסה» — `science/b.json`", body)
+        self.assertIn("- 🔴 הוסרה הלומדה «ישן»", body)
+        self.assertLess(body.index("`science/b.json`"), body.index(prs.FIXED_TAIL))
+        self.assertEqual(body.count("`math/a.json`"), 1)
 
     def test_a_short_or_missing_model_answer_falls_back(self):
         summary = {"files": {"math/x.json": {"objective_title_he": "יחס", "lomdot_added": ["חדש"]}}, "index": {}, "run_report": ""}

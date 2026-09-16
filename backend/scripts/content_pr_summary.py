@@ -207,7 +207,7 @@ def diff_shard(old: Optional[dict[str, Any]], new: Optional[dict[str, Any]]) -> 
     if changed:
         out["lomdot_changed"] = changed
     if len(out) == 3:
-        out["note"] = "only serialisation or ordering changed; no content difference found"
+        out["note"] = "השתנו רק סריאליזציה או סדר; לא נמצא הבדל בתוכן"
     return out
 
 
@@ -258,54 +258,80 @@ def _fmt_change(label: str, value: Any) -> str:
     return f"{label}: {value}"
 
 
+ADDED, MODIFIED, REMOVED = "🟢", "🟠", "🔴"
+LEGEND = f"{ADDED} נוסף · {MODIFIED} שונה · {REMOVED} הוסר"
+
+
+def file_flag(d: dict[str, Any]) -> str:
+    """A whole-file flag: the shard itself was added/removed, otherwise it was modified."""
+    return {"added": ADDED, "removed": REMOVED}.get(d.get("file") or "", MODIFIED)
+
+
+def _rtl(markdown: str) -> str:
+    """GitHub renders Markdown inside an HTML block when a blank line follows the tag."""
+    return '<div dir="rtl">\n\n' + markdown.strip() + "\n\n</div>\n"
+
+
 def render_fallback(summary: dict[str, Any]) -> str:
-    """The structured diff as Markdown — what the PR shows when no model answered."""
-    lines = ["Automated refresh of `content/context/` from the live Kata catalog by the content-nightly pipeline.", ""]
+    """The structured diff as Hebrew Markdown — what the PR shows when no model answered.
+    File paths, objective ids and component ids stay verbatim (they are the keys a reader greps for)."""
+    lines = ["רענון אוטומטי של `content/context/` מקטלוג Kata החי, על ידי צינור content-nightly.", "", LEGEND, ""]
     index = summary.get("index") or {}
     if index:
-        lines.append("**Run:** " + "; ".join(_fmt_change(k, v) for k, v in index.items() if k != "generated_at"))
+        lines.append("**ריצה:** " + "; ".join(_fmt_change(k, v) for k, v in index.items() if k != "generated_at"))
         lines.append("")
     for path, d in (summary.get("files") or {}).items():
-        title = d.get("objective_title_he") or d.get("objective_id") or path
-        lines.append(f"### `{path}` — {title}")
-        if d.get("file") == "added":
-            lines.append(f"- New objective shard with {len(d.get('lomdot_added') or [])} lomdot.")
-        elif d.get("file") == "removed":
-            lines.append("- Objective removed from the catalog; shard deleted.")
-        for t in d.get("lomdot_added") or []:
-            lines.append(f"- Added lomda «{t}» — new in the catalog.")
-        for t in d.get("lomdot_removed") or []:
-            lines.append(f"- Removed lomda «{t}» — no longer in the catalog.")
-        for r in d.get("lomdot_id_changed") or []:
-            extra = [_fmt_change(k.replace("_", " "), v) for k, v in r.items() if k not in ("title", "from", "to")]
-            lines.append(f"- «{r.get('title')}» now has component id `{r.get('to')}` (was `{r.get('from')}`) — the catalogue re-identified it"
-                         + ("; " + "; ".join(extra) if extra else "") + ".")
-        for cid, c in (d.get("lomdot_changed") or {}).items():
-            bits = [_fmt_change(k.replace("_", " "), v) for k, v in c.items() if k != "title"]
-            lines.append(f"- «{c.get('title') or cid}»: " + "; ".join(bits))
-        if d.get("note"):
-            lines.append(f"- {d['note']}")
+        lines.extend(file_section(path, d))
         lines.append("")
-    lines.append("Merging ships it to the dev slot through the normal push→main deploy. Nothing reaches production without the manual promote.")
-    lines.append("")
-    lines.append("If this PR sits unmerged, the next nightly run updates it in place rather than opening another.")
-    return "\n".join(lines) + "\n"
+    lines.append(FIXED_TAIL)
+    return _rtl("\n".join(lines))
+
+
+def file_section(path: str, d: dict[str, Any]) -> list[str]:
+    """One `###` block for a shard, from the structured diff alone."""
+    lines: list[str] = []
+    title = d.get("objective_title_he") or d.get("objective_id") or path
+    lines.append(f"### {file_flag(d)} «{title}» — `{path}`")
+    if d.get("file") == "added":
+        lines.append(f"- {ADDED} קובץ יעד חדש עם {len(d.get('lomdot_added') or [])} לומדות.")
+    elif d.get("file") == "removed":
+        lines.append(f"- {REMOVED} היעד הוסר מהקטלוג; הקובץ נמחק.")
+    for t in d.get("lomdot_added") or []:
+        lines.append(f"- {ADDED} נוספה הלומדה «{t}» — חדשה בקטלוג.")
+    for t in d.get("lomdot_removed") or []:
+        lines.append(f"- {REMOVED} הוסרה הלומדה «{t}» — כבר לא בקטלוג.")
+    for r in d.get("lomdot_id_changed") or []:
+        extra = [_fmt_change(k.replace("_", " "), v) for k, v in r.items() if k not in ("title", "from", "to")]
+        lines.append(f"- {MODIFIED} «{r.get('title')}» מזוהה עכשיו במזהה `{r.get('to')}` (במקום `{r.get('from')}`) — הקטלוג זיהה את אותה לומדה מחדש"
+                     + ("; " + "; ".join(extra) if extra else "") + ".")
+    for cid, c in (d.get("lomdot_changed") or {}).items():
+        bits = [_fmt_change(k.replace("_", " "), v) for k, v in c.items() if k != "title"]
+        lines.append(f"- {MODIFIED} «{c.get('title') or cid}»: " + "; ".join(bits))
+    if d.get("note"):
+        lines.append(f"- {MODIFIED} {d['note']}")
+    return lines
 
 
 SYSTEM_PROMPT = """You write the description of an automated pull request for a learning-content pipeline.
 The pipeline mirrors a catalogue of Hebrew learning units ("lomdot") into JSON shards, one per learning objective, and pre-generates Yuvi's coaching texts for them.
 You receive a STRUCTURED DIFF computed from the files (never the raw JSON). Describe exactly what it says, nothing more.
 
-Write GitHub Markdown, in English, keeping Hebrew titles verbatim inside «»:
+Write GitHub Markdown in HEBREW (the page is rendered right-to-left; do not add any HTML or direction marks yourself):
 1. One short paragraph: what this refresh did overall and why (catalog updates, new/removed units, regenerated texts, graphics described, extraction changes).
-2. One `###` section per changed file, headed by the file path in backticks and the objective's Hebrew title. Under it, 2–5 bullets, each "what changed — why". Reasons come from the diff: a newer `kata_updated_at` means the catalogue updated the unit; a changed fingerprint means its content changed; regenerated texts follow a content or prompt-version change; described graphics come from the browser pass; extraction verdicts come from probing the player; `lomdot_id_changed` means the catalogue re-identified the same unit under a new component id (say that, not "added and removed").
+2. One `###` section per changed file, headed as: <flag> «<Hebrew objective title>» — `<file path>`. Under it, 2–5 bullets, each "<flag> מה השתנה — למה".
+   Flags: 🟢 for something added (a new shard, a new lomda), 🔴 for something removed (a deleted shard, a lomda gone from the catalogue), 🟠 for anything modified (re-identified ids, changed content, regenerated texts, extraction or graphics changes). A file's own flag is 🟢 when `file` is "added", 🔴 when "removed", else 🟠. Every heading and every bullet starts with exactly one flag. Do not write a legend; it is added for you. Reasons come from the diff: a newer `kata_updated_at` means the catalogue updated the unit; a changed fingerprint means its content changed; regenerated texts follow a content or prompt-version change; described graphics come from the browser pass; extraction verdicts come from probing the player; `lomdot_id_changed` means the catalogue re-identified the same unit under a new component id (say that, not "added and removed").
 3. If a file's only change is serialisation/ordering, say so in one bullet.
-4. End with the two fixed lines given to you verbatim.
+4. End with the fixed lines given to you, verbatim.
+
+Keep it short: a bullet is one sentence. When several lomdot had the same change, write one bullet with the count (e.g. "שש לומדות") instead of listing them; name a lomda only when it is the only one, or when it was added or removed. Do not repeat the objective id inside bullets (the heading carries the file). For `lomdot_id_changed`, say how many were re-identified and show the from→to ids for one of them only. Call a file "הקובץ", never a transliteration of "shard".
+Identifiers stay exactly as they are, never translated or transliterated: file paths, objective ids (e.g. `MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG`), component ids, field names and verdict values (`frame_blocked`, `not_attempted`) — all inside backticks. Lomda titles stay verbatim inside «».
+Hebrew style: neutral, impersonal phrasing (no gendered address); use the Hebrew geresh ׳ and gershayim ״, never a plain apostrophe or double quote inside Hebrew words; the product name is יובי.
+Fixed terms: "re-identified" is always "זוהתה מחדש" / "זוהו מחדש"; "fingerprint" stays as `fingerprint` in backticks; "extraction" is "חילוץ"; "regenerated" is "נוצרו מחדש". Never transliterate an English word into Hebrew letters.
 Do not invent numbers, do not mention answers to questions, do not add headings beyond the ones described."""
 
 FIXED_TAIL = (
-    "Merging ships it to the dev slot through the normal push→main deploy. Nothing reaches production without the manual promote.\n\n"
-    "If this PR sits unmerged, the next nightly run updates it in place rather than opening another."
+    "מיזוג פורס את השינוי לסלוט dev דרך הפריסה הרגילה של push→main. שום דבר לא מגיע לפרודקשן בלי promote ידני.\n\n"
+    "אם ה־PR נשאר לא ממוזג, הריצה הלילית הבאה מעדכנת אותו במקום לפתוח PR נוסף."
 )
 
 
@@ -327,20 +353,42 @@ async def render_with_model(summary: dict[str, Any]) -> Optional[str]:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"STRUCTURED DIFF:\n{payload}\n\nFIXED TAIL (copy verbatim at the end):\n{FIXED_TAIL}"},
         ],
-        usage_context=usage, max_tokens=1800, model_tier="mini", timeout=90,
+        usage_context=usage, max_tokens=4000, model_tier="mini", timeout=120,
     )
     if not isinstance(text, str) or len(text.strip()) < 80:
         return None
     body = text.strip()
-    if "manual promote" not in body:              # the model dropped the tail; restore it
+    if "promote ידני" not in body:                # the model dropped the tail; restore it
         body += "\n\n" + FIXED_TAIL
-    return body + "\n"
+    body = complete_missing_files(body, summary)
+    if LEGEND not in body:
+        # after the intro paragraph, before the first section
+        first = body.find("\n### ")
+        body = (body[:first] + "\n\n" + LEGEND + "\n" + body[first:]) if first > 0 else (LEGEND + "\n\n" + body)
+    return _rtl(body)
+
+
+def complete_missing_files(body: str, summary: dict[str, Any]) -> str:
+    """A cut-off or forgetful answer must not drop a file silently: any changed path the
+    model did not mention gets its deterministic section, inserted before the fixed tail."""
+    missing = [(path, d) for path, d in (summary.get("files") or {}).items() if f"`{path}`" not in body]
+    if not missing:
+        return body
+    sections: list[str] = []
+    for path, d in missing:
+        sections.extend(file_section(path, d))
+        sections.append("")
+    tail_at = body.find(FIXED_TAIL)
+    extra = "\n".join(sections)
+    if tail_at < 0:
+        return body.rstrip() + "\n\n" + extra
+    return body[:tail_at].rstrip() + "\n\n" + extra + "\n" + body[tail_at:]
 
 
 async def main_async(args: argparse.Namespace) -> int:
     summary = build_summary(args.base, args.head, args.staged)
     if not summary["files"] and not summary["index"]:
-        body = "Automated refresh of `content/context/` — no content difference found.\n\n" + FIXED_TAIL + "\n"
+        body = _rtl("רענון אוטומטי של `content/context/` — לא נמצא הבדל בתוכן.\n\n" + FIXED_TAIL)
     else:
         body = None if args.no_llm else await render_with_model(summary)
         if body is None:
