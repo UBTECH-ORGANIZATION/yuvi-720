@@ -43,6 +43,14 @@ class DatabaseConfigTests(unittest.TestCase):
             )
             self.assertNotIn("pw", database.describe_line())
 
+    def test_plaintext_cluster_is_not_handed_a_ca_bundle(self) -> None:
+        # PyMongo enables TLS as soon as tlsCAFile is passed, which breaks a
+        # throwaway local/CI Mongo before the first query.
+        self.assertTrue(database.uses_tls(DEV_URI))
+        self.assertTrue(database.uses_tls("mongodb://host:27017/?tls=true"))
+        self.assertFalse(database.uses_tls("mongodb://localhost:27017"))
+        self.assertFalse(database.uses_tls(""))
+
     def test_dev_host_is_not_production(self) -> None:
         with patch.dict(os.environ, _env(MONGODB_CONNECTION_STRING=DEV_URI), clear=True):
             self.assertFalse(database.is_production_host())

@@ -67,7 +67,7 @@ def _get_collection() -> Optional[Any]:
             "maxPoolSize": 20,
             "waitQueueTimeoutMS": 10000,
         }
-        if certifi is not None:
+        if certifi is not None and db_config.uses_tls(connection_string):
             kwargs["tlsCAFile"] = certifi.where()
         _mongo_client = AsyncIOMotorClient(connection_string, **kwargs)
     return _mongo_client[_database_name()]["learners"]
