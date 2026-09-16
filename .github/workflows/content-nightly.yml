@@ -123,6 +123,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: content/nightly
+          # The PR body is written by the model from a structured diff of the
+          # shards (backend/scripts/content_pr_summary.py); same gateway and
+          # Mongo-free settings as the pipeline step above.
+          APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
         run: |
           git config user.name "content-pipeline[bot]"
           git config user.email "content-pipeline@users.noreply.github.com"
@@ -135,22 +142,28 @@ jobs:
           fi
           echo "pushed=true" >> "$GITHUB_OUTPUT"
           stamp="$(date -u +%F)"
+          # What changed and why, per file — from the staged shards, before
+          # the commit so the index still holds both sides. Falls back to a
+          # plain rendering of the same diff if the model is unavailable.
+          python backend/scripts/content_pr_summary.py --staged \
+            --out backend/artifacts/content-pipeline/pr_body.md \
+            --summary-out backend/artifacts/content-pipeline/pr_summary.json
           git commit -m "content: nightly context refresh ${stamp}"
           # Force, on purpose: the branch is rebuilt from tonight's main every
           # run, so an unmerged PR simply moves forward to the newest refresh.
           git push --force origin "HEAD:refs/heads/${BRANCH}"
 
-          if [ -z "$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')" ]; then
+          existing="$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')"
+          if [ -z "$existing" ]; then
             gh pr create --base main --head "${BRANCH}" \
               --title "content: nightly context refresh ${stamp}" \
-              --body "$(cat <<EOF
-          Automated refresh of \`content/context/\` from the live Kata catalog by the content-nightly pipeline.
-
-          Merging ships it to the dev slot through the normal push→main deploy. Nothing reaches production without the manual promote.
-
-          If this PR sits unmerged, the next nightly run updates it in place rather than opening another.
-          EOF
-          )"
+              --body-file backend/artifacts/content-pipeline/pr_body.md
+          else
+            # The branch was rebuilt from tonight's main, so the old body no
+            # longer describes the diff: title and body follow the refresh.
+            gh pr edit "$existing" \
+              --title "content: nightly context refresh ${stamp}" \
+              --body-file backend/artifacts/content-pipeline/pr_body.md
           fi
 
   # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not fire
