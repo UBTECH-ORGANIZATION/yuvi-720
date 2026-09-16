@@ -35,3 +35,6 @@ frontend/scripts/.*.png
 # drawio writes these beside the diagram while it is open
 docs/**/.$*.drawio.bkp
 docs/**/.$*.drawio.dtmp
+
+# Assembled HTML the guide PDF is printed from; the PDF itself is committed.
+docs/guide/.build/

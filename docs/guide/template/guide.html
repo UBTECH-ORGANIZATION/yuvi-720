@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  :root {
+    --primary: #667eea;
+    --primary-dark: #5a67d8;
+    --secondary: #764ba2;
+    --text-dark: #2d3748;
+    --text-medium: #4a5568;
+    --text-light: #718096;
+    --rule: #e2e8f0;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Heebo", "Noto Sans Hebrew", "Arial Hebrew", "Segoe UI", system-ui, sans-serif;
+    font-size: 11.5pt;
+    line-height: 1.75;
+    color: var(--text-dark);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ---- cover ---- */
+  .cover {
+    height: 247mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    margin: -18mm -16mm 0 -16mm;
+    padding: 0 20mm;
+    break-after: page;
+  }
+  .cover h1 { font-size: 34pt; margin: 0 0 8mm; line-height: 1.25; }
+  .cover p { font-size: 14pt; margin: 0; opacity: .92; }
+  .cover .meta { margin-top: 14mm; font-size: 10.5pt; opacity: .8; }
+
+  /* ---- table of contents ---- */
+  .toc { break-after: page; }
+  .toc h2 { font-size: 20pt; margin: 0 0 8mm; color: var(--primary-dark); }
+  .toc ol { margin: 0; padding-inline-start: 6mm; }
+  .toc li { margin-bottom: 3mm; font-size: 12pt; }
+  .toc .lane {
+    font-size: 9pt;
+    color: var(--text-light);
+    margin-inline-start: 2mm;
+  }
+
+  /* ---- chapters ---- */
+  .chapter { break-before: page; }
+  .chapter-number {
+    font-size: 10pt;
+    letter-spacing: .08em;
+    color: var(--primary-dark);
+    font-weight: 700;
+    margin-bottom: 2mm;
+  }
+
+  h1 {
+    font-size: 22pt;
+    margin: 0 0 6mm;
+    color: var(--text-dark);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 3mm;
+  }
+  h2 {
+    font-size: 15pt;
+    margin: 9mm 0 3mm;
+    color: var(--primary-dark);
+    break-after: avoid;
+  }
+  h3 { font-size: 12.5pt; margin: 6mm 0 2mm; break-after: avoid; }
+
+  p { margin: 0 0 3.5mm; }
+  ul, ol { margin: 0 0 4mm; padding-inline-start: 7mm; }
+  li { margin-bottom: 1.5mm; }
+
+  strong { font-weight: 700; }
+
+  blockquote {
+    margin: 5mm 0;
+    padding: 3.5mm 5mm;
+    border-inline-start: 4px solid var(--primary);
+    background: #f4f3fb;
+    border-radius: 6px;
+    color: var(--text-medium);
+    break-inside: avoid;
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  figure {
+    margin: 6mm 0;
+    break-inside: avoid;
+    text-align: center;
+  }
+  figure img {
+    max-width: 100%;
+    max-height: 115mm;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+  }
+  figcaption {
+    margin-top: 2mm;
+    font-size: 9.5pt;
+    color: var(--text-light);
+  }
+</style>
+</head>
+<body>
+  <section class="cover">
+    <h1>{{TITLE}}</h1>
+    <p>{{SUBTITLE}}</p>
+    <div class="meta">{{DATE}}</div>
+  </section>
+
+  <nav class="toc">
+    <h2>תוכן העניינים</h2>
+    <ol>{{TOC}}</ol>
+  </nav>
+
+  {{BODY}}
+</body>
+</html>

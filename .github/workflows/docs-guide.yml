@@ -1,0 +1,262 @@
+# Instructor guide: keep docs/guide/ in step with the app.
+#
+# A push to main that changes a documented surface re-shoots ONLY the chapters
+# that surface belongs to (docs-map.json → watchPaths → plan.mjs), rebuilds the
+# PDF, and opens a pull request with the new images. A push that changes
+# something nobody documents does nothing at all.
+#
+# Why it runs the real app instead of mocking it: a screenshot of a mock is a
+# screenshot of a lie. The job boots a throwaway MongoDB, runs the normal dev
+# seeders against it, serves the built React bundle from FastAPI — the same
+# same-origin shape as production — and drives it with Playwright.
+#
+# A PR, not a push: `main` only accepts pull requests with the three CI checks
+# green (repository rule). The branch is rolling, so an unmerged guide PR is
+# updated in place rather than piling up. A GITHUB_TOKEN-made PR does not fire
+# `pull_request`, so CI is dispatched explicitly — same dance as
+# content-nightly.yml, and for the same reason.
+#
+# The prose is NOT regenerated. Only pixels are automated; the Hebrew text in
+# docs/guide/chapters/ stays human-written, and the PR body says so.
+name: Instructor guide
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/src/**"
+      - "frontend/scripts/docs/**"
+      - "backend/app/routes/**"
+      - "locales/**"
+      - "shared/theme.css"
+      - "docs/guide/**"
+  # A pull request that touches the pipeline itself captures everything and
+  # uploads the result as an artifact, proposing nothing. Screenshot drivers
+  # rot silently — this is the only way to find a dead selector before it
+  # reaches main.
+  pull_request:
+    paths:
+      - "docs/guide/**"
+      - "frontend/scripts/docs/**"
+      - ".github/workflows/docs-guide.yml"
+  workflow_dispatch:
+    inputs:
+      chapters:
+        description: "Chapter ids to capture (comma separated). Empty = let plan.mjs decide."
+        required: false
+        default: ""
+      force:
+        description: "Capture every chapter, ignoring what changed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-guide-${{ github.ref }}
+  # Superseding a main run would lose the capture; a PR re-push may cancel.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      chapters: ${{ steps.plan.outputs.chapters }}
+      rebuild_pdf: ${{ steps.plan.outputs.rebuild_pdf }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Decide which chapters changed
+        id: plan
+        working-directory: frontend
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ inputs.force }}" = "true" ]; then
+            node scripts/docs/plan.mjs --all
+          elif [ -n "${{ inputs.chapters }}" ]; then
+            echo "chapters=${{ inputs.chapters }}" >> "$GITHUB_OUTPUT"
+            echo "rebuild_pdf=true" >> "$GITHUB_OUTPUT"
+          else
+            # `github.event.before` is all-zeroes for a branch's first push.
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              range="${{ github.sha }}^..${{ github.sha }}"
+            else
+              range="${before}..${{ github.sha }}"
+            fi
+            git diff --name-only "$range" | node scripts/docs/plan.mjs
+          fi
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.rebuild_pdf == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      pushed: ${{ steps.propose.outputs.pushed }}
+      branch: ${{ steps.propose.outputs.branch }}
+
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+
+    env:
+      # A throwaway cluster on localhost. The database guard in
+      # app/core/database.py only refuses *production* hosts, so this is a
+      # deliberate, explicit dev store — never the real one.
+      MONGODB_CONNECTION_STRING: mongodb://localhost:27017
+      MONGODB_DATABASE: yuvi720_docs
+      SPARK_ENVIRONMENT: test
+      # Belt and braces: `test` already counts as local, so password login is
+      # allowed and the seeded fixtures can sign in.
+      PASSWORD_LOGIN_ENABLED: "1"
+      DAILY_CHECKIN_DISABLED: "1"
+      SECRET_KEY: docs-guide-ci-secret
+      BASE_URL: http://127.0.0.1:8721
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      # Manim (in backend/requirements.txt) builds against Cairo/Pango, and the
+      # Hebrew faces are what stop the PDF from rendering as a wall of tofu —
+      # the Dockerfile asserts the same fonts exist for the same reason.
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ffmpeg libcairo2-dev libpango1.0-dev pkg-config \
+            fonts-noto-core fonts-noto-color-emoji
+          fc-cache -f
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefix frontend
+          pip install -r backend/requirements.txt
+
+      - name: Install Playwright chromium
+        run: npx --prefix frontend playwright install --with-deps chromium
+
+      # The guide documents the deployed shape: FastAPI serving the built
+      # bundle same-origin. No Vite dev server anywhere in this job.
+      - name: Build the frontend bundle
+        run: npm run build --prefix frontend
+
+      - name: Seed the fixture data
+        working-directory: backend
+        run: python scripts/seed_dev.py
+
+      - name: Start the backend
+        working-directory: backend
+        run: |
+          nohup python -m uvicorn server:create_app --factory \
+            --host 127.0.0.1 --port 8721 > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://127.0.0.1:8721/; then
+              echo "backend up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "backend did not come up"; cat /tmp/backend.log; exit 1
+
+      - name: Capture screenshots
+        if: needs.plan.outputs.chapters != ''
+        working-directory: frontend
+        run: node scripts/docs/capture.mjs --chapters="${{ needs.plan.outputs.chapters }}"
+
+      - name: Build the PDF
+        working-directory: frontend
+        run: node scripts/docs/build-pdf.mjs
+
+      - name: Backend log
+        if: always()
+        run: tail -n 100 /tmp/backend.log || true
+
+      - name: Upload the guide
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instructor-guide
+          path: docs/guide/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Open (or update) the guide pull request
+        id: propose
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: docs/guide-auto
+          CHAPTERS: ${{ needs.plan.outputs.chapters }}
+        run: |
+          git config user.name "docs-guide[bot]"
+          git config user.email "docs-guide@users.noreply.github.com"
+          git add docs/guide/screenshots docs/guide/*.pdf
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          if git diff --cached --quiet; then
+            echo "guide unchanged — nothing to propose"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+          stamp="$(date -u +%F)"
+          git commit -m "docs: refresh instructor guide (${CHAPTERS:-pdf only}) ${stamp}"
+          # Force, on purpose: the branch is rebuilt from the newest main every
+          # run, so an unmerged PR moves forward instead of multiplying.
+          git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+          if [ -z "$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base main --head "${BRANCH}" \
+              --title "docs: refresh instructor guide ${stamp}" \
+              --body "$(cat <<EOF
+          Automated screenshot + PDF refresh of \`docs/guide/\`.
+
+          **Chapters re-captured:** ${CHAPTERS:-none (PDF rebuild only)}
+          **Triggered by:** ${{ github.sha }}
+
+          ### Before merging
+          - [ ] The new screenshots show the surface the chapter describes (not a loading state, an empty state, or a modal that failed to open).
+          - [ ] The Hebrew prose in \`docs/guide/chapters/\` still matches what the screenshots show. **This pipeline does not write prose** — if the UI changed enough to need new wording, edit the chapter on this branch.
+          - [ ] No learner data that should not be in a document appears in the images.
+
+          If this PR sits unmerged, the next run updates it in place rather than opening another.
+          EOF
+          )"
+          fi
+
+  # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not fire
+  # them, so ask for them on this exact branch — with a token that can do
+  # nothing else.
+  request-checks:
+    needs: build
+    if: needs.build.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch ci.yml on the guide branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref "${{ needs.build.outputs.branch }}"

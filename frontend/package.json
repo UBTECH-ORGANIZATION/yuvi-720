@@ -13,6 +13,10 @@
     "test:companion-orchestration:headed": "node scripts/test-companion-orchestration.mjs --headed",
     "test:studio-perf": "node scripts/studio-perf-check.mjs",
     "studio:thumbs": "node scripts/render-studio-thumbs.mjs",
+    "docs:capture": "node scripts/docs/capture.mjs",
+    "docs:pdf": "node scripts/docs/build-pdf.mjs",
+    "docs:plan": "node scripts/docs/plan.mjs",
+    "docs:build": "node scripts/docs/capture.mjs && node scripts/docs/build-pdf.mjs",
     "test": "node --test \"tests/**/*.test.ts\"",
     "test:path": "node --test \"tests/**/*.test.ts\""
   },
@@ -34,6 +38,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",
+    "markdown-it": "^14.3.2",
     "playwright": "^1.61.1"
   }
 }
