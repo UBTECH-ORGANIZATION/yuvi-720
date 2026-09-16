@@ -1,11 +1,12 @@
 import * as THREE from 'three'
+import { loftConcreteTextureUrl, type LoftConcreteMap } from './modelAssets.ts'
 
 export function createLoftSurfaceMaterials(rich: boolean) {
   const textures: THREE.Texture[] = []
   let disposed = false
   const loader = new THREE.TextureLoader()
-  const load = (name: string, color = false) => {
-    const texture = loader.load(`/models/creator-loft/concrete/${name}.jpg`, (loaded) => {
+  const load = (name: LoftConcreteMap, color = false) => {
+    const texture = loader.load(loftConcreteTextureUrl(name), (loaded) => {
       if (disposed) loaded.dispose()
     })
     texture.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace

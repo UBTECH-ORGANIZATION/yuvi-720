@@ -2,7 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
-const root = fileURLToPath(new URL('../public/models/playground/', import.meta.url))
+// Downloads land in the gitignored staging dir; what ships is written by
+// `optimize-model-assets.mjs` (1K WebP, hashed under src/assets/models/).
+const root = fileURLToPath(new URL('./.model-sources/playground/', import.meta.url))
 const assets = ['wood_planks', 'brown_mud_leaves_01', 'aerial_grass_rock']
 const manifest = { license: 'CC0-1.0', licenseUrl: 'https://polyhaven.com/license', assets: [] }
 await mkdir(root, { recursive: true })

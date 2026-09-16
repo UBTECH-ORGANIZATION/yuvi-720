@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-type ModelLoader = (url: string) => Promise<THREE.Object3D>
+/** Resolves a model key — a prop id or a URL, whatever the caller's loader reads — to its scene. */
+type ModelLoader = (key: string) => Promise<THREE.Object3D>
 
 export function createRoomModelCache(load: ModelLoader = async (url) => (await new GLTFLoader().loadAsync(url)).scene) {
   const pending = new Map<string, Promise<THREE.Object3D>>()

@@ -3,7 +3,9 @@ import { createHash } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = fileURLToPath(new URL('../public/models/creator-loft/', import.meta.url))
+// Downloads land in the gitignored staging dir; what ships is written by
+// `optimize-model-assets.mjs` (1K WebP, hashed under src/assets/models/).
+const root = fileURLToPath(new URL('./.model-sources/creator-loft/', import.meta.url))
 const headers = { 'User-Agent': 'YuvilabSparkAssetImport/1.0' }
 const assets = ['gamepad', 'gaming_console', 'rubber_duck_toy', 'digital_wrist_watch']
 const manifest = { license: 'CC0-1.0', licenseUrl: 'https://polyhaven.com/license', assets: [] }

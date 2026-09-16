@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { playgroundTextureUrl, type PlaygroundChannel } from './modelAssets.ts'
 
 export type Point3 = [number, number, number]
 export type Finish = 'steel' | 'paint' | 'wood' | 'rubber' | 'sand' | 'stone' | 'rope' | 'bark' | 'grass'
@@ -18,12 +19,12 @@ export function createPlaygroundKit(rich: boolean) {
     if (!geometries.has(key)) geometries.set(key, own(build()))
     return geometries.get(key)!
   }
-  const texture = (asset: string, channel: string, repeat: number) => {
+  const texture = (asset: string, channel: PlaygroundChannel, repeat: number) => {
     const key = `${asset}/${channel}/${repeat}`
     if (textures.has(key)) return textures.get(key)!
     let resolve!: () => void
     pending.push(new Promise<void>((done) => { resolve = done }))
-    const result = own(new THREE.TextureLoader().load(`/models/playground/${asset}-${channel}.jpg`, (loaded) => {
+    const result = own(new THREE.TextureLoader().load(playgroundTextureUrl(asset, channel), (loaded) => {
       if (disposed) loaded.dispose()
       resolve()
     }, undefined, () => { failures.push(key); resolve() }))

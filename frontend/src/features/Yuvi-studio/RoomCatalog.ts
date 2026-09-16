@@ -17,6 +17,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomModelCache } from './RoomModelCache'
+import { loadLoftModel } from './modelAssets.ts'
 import { createLoftFabrication, type LoftTranslator } from './LoftFabrication'
 import { buildLoftCabinet, LOFT_CABINET_BOUNDS } from './LoftCabinets'
 import { buildSportsEquipment } from './SportsEquipment'
@@ -85,7 +86,7 @@ export interface RoomKit {
    returns a disposer, so the room's own dispose() stays a one-liner. */
 export function createRoomKit(rich: boolean): { kit: RoomKit; ready: () => Promise<void>; dispose: () => void } {
   const disposables: Array<{ dispose: () => void }> = []
-  const models = createRoomModelCache()
+  const models = createRoomModelCache(loadLoftModel)
   const fabrication = createLoftFabrication(rich)
   let playground: ReturnType<typeof createPlaygroundKit> | undefined
   const geoCache = new Map<string, THREE.BufferGeometry>()
@@ -181,7 +182,7 @@ export function createRoomKit(rich: boolean): { kit: RoomKit; ready: () => Promi
       return prototype.clone(true)
     },
     setLabels: fabrication.setLabels,
-    model: (id, size) => models.model(`/models/creator-loft/${id}/${id}.gltf`, size),
+    model: (id, size) => models.model(id, size),
     mat,
     box: (w, h, d, material) => new THREE.Mesh(geo(`b${w}|${h}|${d}`, () => new THREE.BoxGeometry(w, h, d)), material),
     rbox: (w, h, d, r, material) => new THREE.Mesh(geo(`r${w}|${h}|${d}|${r}`, () => new RoundedBoxGeometry(w, h, d, rich ? 3 : 1, r)), material),

@@ -35,3 +35,4 @@ frontend/scripts/.*.png
 # drawio writes these beside the diagram while it is open
 docs/**/.$*.drawio.bkp
 docs/**/.$*.drawio.dtmp
+frontend/scripts/.model-sources/
