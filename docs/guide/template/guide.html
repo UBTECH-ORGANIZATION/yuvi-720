@@ -31,20 +31,23 @@
     print-color-adjust: exact;
   }
 
-  /* ---- cover ---- */
+  /* ---- cover ----
+     Chromium's print pipeline will not let content escape the page margin box
+     reliably, so the cover is a panel that fills that box exactly rather than a
+     full-bleed page that ends up with a ragged white band along one edge. */
   .cover {
-    height: 247mm;
+    height: 255mm;
     display: flex;
     flex-direction: column;
     justify-content: center;
     text-align: center;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff;
-    margin: -18mm -16mm 0 -16mm;
-    padding: 0 20mm;
+    border-radius: 3mm;
+    padding: 0 16mm;
     break-after: page;
   }
-  .cover h1 { font-size: 34pt; margin: 0 0 8mm; line-height: 1.25; }
+  .cover h1 { font-size: 34pt; margin: 0 0 8mm; line-height: 1.25; color: #fff; }
   .cover p { font-size: 14pt; margin: 0; opacity: .92; }
   .cover .meta { margin-top: 14mm; font-size: 10.5pt; opacity: .8; }
 
@@ -102,13 +105,16 @@
   blockquote p:last-child { margin-bottom: 0; }
 
   figure {
-    margin: 6mm 0;
+    margin: 5mm 0;
     break-inside: avoid;
     text-align: center;
   }
+  /* A figure cannot be split across pages, so a tall one strands half a page of
+     white. 92mm keeps a 16:10 capture about 147mm wide — still comfortably
+     readable on A4 — while letting two figures and a paragraph share a page. */
   figure img {
     max-width: 100%;
-    max-height: 115mm;
+    max-height: 92mm;
     border: 1px solid var(--rule);
     border-radius: 8px;
   }
