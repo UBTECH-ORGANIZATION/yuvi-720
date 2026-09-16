@@ -25,7 +25,8 @@ export default {
     // Signed in: the user menu lives in the learner app bar.
     await goto(page, base, '/student-dashboard')
     if (await waitFor(page, '.user-menu__trigger')) {
-      await page.locator('.user-menu__trigger').first().click()
+      await page.locator('.user-menu__trigger').first().click({ timeout: 10000 })
+        .catch((err) => console.warn(`   ⚠️ user menu did not open: ${err.message.split('\n')[0]}`))
       await waitFor(page, '.user-menu__pop', 5000)
     }
     await shoot(page, 'user-menu', { selector: ['.user-menu'] })

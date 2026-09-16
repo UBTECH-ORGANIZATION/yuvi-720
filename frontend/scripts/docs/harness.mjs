@@ -18,6 +18,10 @@ import { dismissTourIfOpen } from '../lib/tour.mjs'
 
 export const VIEWPORT = { width: 1440, height: 900 }
 
+// Must match TOUR_SLUGS in backend/app/auth/repository.py — unknown slugs are
+// dropped server-side, so a rename here fails silently as a re-opening tour.
+const TOUR_SLUGS = ['teacher', 'learner.v1', 'lesson.v1']
+
 /* Kills every source of a one-pixel diff that is not the UI itself. */
 const STILL_CSS = `
   *, *::before, *::after {
@@ -81,6 +85,12 @@ export async function openSession(browser, { base, account, language = 'he' }) {
     // through the same API the UI uses so the capture matches what a real user
     // with that preference sees.
     await context.request.patch(`${base}/api/learner-state`, { data: { language } }).catch(() => {})
+    /* The product tours auto-open on first arrival and their scrim swallows
+       every click underneath it. Dismissing them in the browser is a race we
+       lose; marking them seen server-side means they never open at all. */
+    await context.request.patch(`${base}/api/auth/preferences`, {
+      data: { tours_completed: TOUR_SLUGS }
+    }).catch(() => {})
     if (account.onboarded) {
       // Onboarding is gated on the learner's *saved* state (see
       // OnboardingProvider): an un-mapped learner is bounced to
@@ -115,6 +125,11 @@ export async function goto(page, base, path) {
 export async function settle(page, { patience = 500 } = {}) {
   await dismissCheckin(page).catch(() => {})
   await dismissTourIfOpen(page).catch(() => {})
+  // A tour can mount a frame after the dismissal ran; its scrim covers the
+  // whole viewport, so anything clicked next would time out on an intercepted
+  // pointer rather than on a missing element.
+  await page.locator('.sp-tour__overlay').first()
+    .waitFor({ state: 'detached', timeout: 4000 }).catch(() => {})
   await page.evaluate(() => document.fonts?.ready).catch(() => {})
   await page.waitForTimeout(patience)
 }
@@ -161,7 +176,19 @@ export function shooter(outDir) {
     }
     if (selector && !target) console.warn(`   ⚠️ ${slug}: no candidate selector matched, shooting the viewport`)
 
-    await (target ?? page).screenshot({ path, ...(target ? {} : { fullPage }) })
+    if (target) {
+      /* An element screenshot waits for the box to stop moving, and rAF-driven
+         motion survives the animation-killing stylesheet. Rather than lose the
+         chapter to it, crop wider. */
+      try {
+        await target.screenshot({ path, timeout: 10000 })
+      } catch (err) {
+        console.warn(`   ⚠️ ${slug}: element never settled (${err.message.split('\n')[0]}), shooting the viewport`)
+        await page.screenshot({ path })
+      }
+    } else {
+      await page.screenshot({ path, fullPage })
+    }
     console.log(`   📸 ${path.split('/docs/guide/')[1] ?? path}`)
     return path
   }

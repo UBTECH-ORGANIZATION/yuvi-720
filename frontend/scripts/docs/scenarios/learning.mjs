@@ -33,6 +33,6 @@ export default {
       await dock.click().catch(() => {})
       await page.waitForTimeout(1200)
     }
-    await shoot(page, 'companion', { selector: ['[class*="companion-chat"]'] })
+    await shoot(page, 'companion', { selector: ['.sp-companion', '.sp-companion-slot'] })
   }
 }

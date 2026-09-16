@@ -9,7 +9,7 @@ export default {
     await shoot(page, 'goals')
 
     await shoot(page, 'conversation', {
-      selector: ['[class*="journey-trail"]', '[class*="journey"]']
+      selector: ['.mt-duelist', '.mt-wrap']
     })
 
     await goto(page, base, '/badges')
