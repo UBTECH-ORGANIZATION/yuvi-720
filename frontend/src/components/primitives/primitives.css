@@ -1261,6 +1261,29 @@ a.user-menu__row {
   color: var(--sp-danger-600);
 }
 
+/* The door to the progress map: the one row that is a destination rather
+   than a setting, so it carries the brand gradient as a hairline. */
+.user-menu__row-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-menu__row--roadmap {
+  position: relative;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--sp-surface), var(--sp-surface)) padding-box,
+    var(--sp-gradient) border-box;
+  color: var(--sp-ink-900);
+}
+.user-menu__row--roadmap .user-menu__row-lead svg { color: var(--sp-primary-600); }
+.user-menu__row--roadmap:hover {
+  background:
+    linear-gradient(var(--sp-primary-050), var(--sp-primary-050)) padding-box,
+    var(--sp-gradient) border-box;
+  color: var(--sp-primary-700);
+}
+
 .user-menu__switch {
   position: relative;
   inline-size: 34px;

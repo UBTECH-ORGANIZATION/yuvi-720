@@ -7,6 +7,7 @@ import { useProgression } from '../providers/ProgressionProvider'
 import { useTour } from './tour/TourProvider'
 import { LEARNER_TOUR_ID, canTakeLearnerTour } from './tour/steps/learnerTour'
 import { XpAwardPopup } from './XpAwardPopup'
+import { Icon } from './primitives'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -151,6 +152,28 @@ export function UserMenu() {
 
       {open && (
         <div className="user-menu__pop" role="menu">
+          {/* The progress map: where the XP on the chip above leads. First
+              row because the chip is the reason a child opens this menu. */}
+          {showProgression ? (
+            <button
+              className="user-menu__row user-menu__row--link user-menu__row--roadmap"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                navigate('/roadmap')
+              }}
+            >
+              <span className="user-menu__row-lead">
+                <Icon name="map" size={16} />
+                {t('roadmap.menu')}
+              </span>
+              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : null}
+
           <div className="user-menu__group">
             <span className="user-menu__label">{t('language.switcherLabel')}</span>
             <div className="user-menu__choices">

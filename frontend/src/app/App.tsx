@@ -32,6 +32,10 @@ import { consumeLoginIntent, navigate, useRoute } from './router'
    learner's and teacher's first paint, for a route most sessions never open. */
 const YuviStudioPage = lazy(() =>
   import('../features/Yuvi-studio/YuviStudioPage').then((m) => ({ default: m.YuviStudioPage })))
+/* The progress map is the studio's sibling: a Three.js scene and the gsap
+   scroll plugins that a session opens from the profile menu, if at all. */
+const RoadmapPage = lazy(() =>
+  import('../features/roadmap/RoadmapPage').then((m) => ({ default: m.RoadmapPage })))
 const LearnerMappingPage = lazy(() =>
   import('../features/learner-mapping/LearnerMappingPage').then((m) => ({ default: m.LearnerMappingPage })))
 const ResultsPage = lazy(() =>
@@ -79,6 +83,7 @@ const PROTECTED_ROUTES = [
   '/learner-mapping',
   '/results',
   '/yuvi-studio',
+  '/roadmap',
   '/student-dashboard',
   '/mentoring',
   '/learning',
@@ -140,7 +145,7 @@ function isLandingRoute(pathname: string) {
  * (see `useRoute`), which is stripped before matching — `?compose=1` is not
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
-  '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
+  '/report', '/learner-mapping', '/results', '/yuvi-studio', '/roadmap', '/student-dashboard',
   '/tasks', '/mentoring', '/learning', '/games', '/support',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
@@ -178,6 +183,9 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
+  // Outside the learner shell on purpose, like the studio: the page owns the
+  // one WebGL context, so the companion dock's avatar must not mount beside it.
+  if (pathname.startsWith('/roadmap')) return <RoadmapPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   // Solve before list, or `/tasks/:id` resolves to the list — the same
   // ordering trap the teacher lane below documents.
