@@ -270,8 +270,16 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     # Content — component
     if tc == "TC-CMP-01":
         found = ev.find(actor=content, activity="component", verb="initialized")
-        valid = [e for e in found if not missing(e, COMPONENT_META) and has_parent(e)]
-        return ok("רכיב אותחל עם מטא-נתונים מלאים ו-parent של יחידת הלימוד.", valid[:1]) if valid else fail("initialized לרכיב חסר מטא-נתונים או parent.", found[:1])
+        # Every metadata key must be present; a vendor may legitimately leave a
+        # list empty (methodica publishes no `skills`) — that is the catalog's
+        # content, not a missing extension, and is noted rather than failed.
+        absent = lambda e: sorted(k for k in COMPONENT_META if k not in ext_of(e))
+        valid = [e for e in found if not absent(e) and has_parent(e)]
+        if not valid:
+            return fail("initialized לרכיב חסר מטא-נתונים או parent.", found[:1])
+        empty = sorted(k for k in COMPONENT_META if ext_of(valid[0]).get(k) in ([], "", None))
+        note = f" (ריק בקטלוג של ספק התוכן: {', '.join(empty)})" if empty else ""
+        return ok("רכיב אותחל עם מטא-נתונים מלאים ו-parent של יחידת הלימוד." + note, valid[:1])
     if tc == "TC-CMP-02":
         found = ev.find(actor=content, activity="component", verb="completed")
         valid = [e for e in found if isinstance(result_of(e).get("success"), bool)

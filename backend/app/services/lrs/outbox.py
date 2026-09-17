@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named
+from app.services.lrs.auth import LrsAuthError
 from app.services.lrs import client, config
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "lrs_outbox.json"
@@ -226,13 +227,17 @@ async def _attempt_send(statement_id: str) -> None:
             },
         )
     except Exception as exc:  # auth errors etc. — retry later, never raise
+        # The token client's message names the failing step and status only
+        # ("token endpoint returned 429"), never a credential — keeping it in
+        # the ledger is what tells a rate limit from an outage on the retry.
+        detail = f"{type(exc).__name__}: {exc}"[:120] if isinstance(exc, LrsAuthError) else type(exc).__name__
         await _update_row(
             statement_id,
             {
                 "status": "failed" if attempts >= 3 else "pending",
                 "attempts": attempts,
                 "next_attempt_at": _iso(_now() + _backoff(attempts)),
-                "last_error": type(exc).__name__,
+                "last_error": detail,
             },
         )
 

@@ -1,0 +1,110 @@
+﻿תפקיד,שם האירוע,תחום ,מזהה בדיקה,תרחיש בדיקה,Verb (פועל),Object (Type & IRI),"בדיקות, נתונים נדרשים והרחבות (Extensions / Result / Context)",הערות,תוצאות הבדיקה (עבר/לא עבר),פירוט תוצאות אם לא עבר
+תלמיד,תלמיד נכנס למערכת,Session,TC-SES-01,התחברות למערכת / תחילת סשן,enter,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Actor: exidentifier (ת""ז או מזהה תלמיד). Extensions: deviceType, platform, operatingSystem, osVersion, browser, browserVersion, applicationVersion. Context: שיוך LMS, קבוצה (NMM)/מוסד, ותכנית 720 ב-grouping.",,עבר,
+תלמיד,תלמיד יצא מטאב המערכת,Session,TC-SES-02,מעבר לכרטיסייה אחרת / איבוד פוקוס,suspend,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},Actor: המשתמש הנוכחי. וודא שאין הרחבות מיותרות.,,עבר,
+תלמיד,תלמיד חזר לטאב המערכת,Session,TC-SES-03,חזרה לכרטיסייה / חידוש פוקוס,resume,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},Actor: המשתמש הנוכחי.,,עבר,
+תלמיד,תלמיד יצא מהמערכת - יציאה יזומה,Session,TC-SES-04,התנתקות / יציאה מהמערכת,exit,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Result: משך זמן סשן ברוטו ב-result.duration (פורמט ISO-8601, למשל PT4M12S).",,עבר,
+תלמיד,תלמיד יצא מהמערכת - סגירת דפדפן,Session,TC-SES-05,התנתקות / יציאה מהמערכת,exit,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Result: משך זמן סשן ברוטו ב-result.duration (פורמט ISO-8601, למשל PT4M12S).",,עבר,
+תלמיד,תלמיד יצא מהמערכת - Timeout,Session,TC-SES-06,התנתקות / יציאה מהמערכת,exit,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Result: משך זמן סשן ברוטו ב-result.duration (פורמט ISO-8601, למשל PT4M12S).",,עבר,
+מורה,מורה נכנס למערכת,Session,TC-SES-07,התחברות למערכת / תחילת סשן,enter,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Actor: exidentifier (ת""ז מוצפנת בלבד). Extensions: deviceType, platform, operatingSystem, osVersion, browser, browserVersion, applicationVersion. Context: שיוך LMS, קבוצה (NMM)/מוסד, ותכנית 720 ב-grouping.",,עבר,
+מורה,מורה יצא מהמערכת - יציאה יזומה,Session,TC-SES-08,התנתקות / יציאה מהמערכת,exit,Type: .../activities/session | IRI: https://{supplier-domain}/session/{sessionId},"Result: משך זמן סשן ברוטו ב-result.duration (פורמט ISO-8601, למשל PT4M12S).",,עבר,
+תלמיד,תלמיד צפה בדשבורד אישי,Dashboard,TC-DSH-01,צפייה בדשבורד אישי של תלמיד,viewed,Type: .../activities/dashboard | IRI: .../dashboard/student-personal ,"Extensions: dashboardId (ת""ז/מזהה תלמיד). Result: מומלץ לדווח duration.",,עבר,
+מורה,מורה צפה בדשבורד קבוצתי,Dashboard,TC-DSH-02,צפייה בדשבורד קבוצתי,viewed,Type: .../activities/dashboard | IRI: .../dashboard/learning-group,Extensions: dashboardId (מזהה קבוצה NMM). Result: מומלץ לדווח duration.,,עבר,
+מורה,מורה צפה בדשבורד זמן אמת,Dashboard,TC-DSH-03,צפייה בדשבורד בזמן אמת,viewed,Type: .../activities/dashboard | IRI: .../dashboard/realtime-dashboard,Extensions: dashboardId (מזהה קבוצה NMM). Result: מומלץ לדווח duration.,,עבר,
+מורה,מורה צפה בדשבורד תלמיד,Dashboard,TC-DSH-04,צפייה בדשבורד אישי של תלמיד,viewed,Type: .../activities/dashboard | IRI: .../dashboard/student-view,"Extensions: dashboardId (ת""ז/מזהה תלמיד עבורו הציגו דשבורד). Result: מומלץ לדווח duration.
+
+",,עבר,
+תלמיד,תלמיד פתח את שאלון פעלנות,Questionnaire,TC-QST-01,פתיחת שאלון פעלנות Pre,initialized,Type: .../activities/questionnaire | IRI: .../agency/pre,וודא סיווג IRI נכון לפי pre (לפני למידה) או post (אחרי למידה).,,עבר,
+תלמיד,תלמיד ענה על שאלון פעלנות,Questionnaire,TC-QST-02,מענה על שאלה בשאלון פעלנות,answered,Type: .../activities/questionnaire | IRI: .../agency/pre,"Context: parent מצביע על שאלון הפעלנות. Result: ציון ב-result.score (min, max, raw) ומלל התשובה ב-result.response.",,עבר,
+תלמיד,תלמיד סיים לענות על שאלון פעלנות,Questionnaire,TC-QST-03,סיום והגשת שאלון פעלנות,completed,Type: .../activities/questionnaire | IRI: .../agency/pre,"Result: completion: true, וזמן מילוי ב-result.duration.",,עבר,
+מורה  ,תיעוד תאריך+שלב מפגש מנטור,Mentor Meeting,TC-MNT-01,מפגש מנטורינג (מורה/מנטור ותלמיד),completed,Type: .../activities/mentor-student-meeting | IRI: .../mentor-student-meeting/{meetingId},"Extensions: mentor, student, meetingDate, mentoringPhase. ",,עבר,
+תלמיד,תלמיד מגדיר יעד חדש,Student Goal,TC-GOL-01,הגדרת יעד חדש לתלמיד,initialized,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},"Object Extensions: goalType (academic, personal, social-emotional, motivational, behavioral, other). Context: ",,עבר,
+מורה,מורה מגדיר יעד חדש לתלמיד,Student Goal,TC-GOL-02,הגדרת יעד חדש לתלמיד,initialized,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},"Object Extensions: goalType (academic, personal, social-emotional, motivational, behavioral, other). Context: כיוון שהמורה הגדיר, יש לכלול פרטי מורה ב-context.instructor.",,עבר,
+תלמיד,עדכון יעד או מטרה,Student Goal,TC-GOL-03,עדכון יעד קיים,updated,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},Object Extensions: goalType.  ,,עבר,
+מורה,עדכון יעד או מטרה לתלמיד,Student Goal,TC-GOL-04,עדכון יעד קיים,updated,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},Object Extensions: goalType. Context: instructor (כיוון שהמורה ביצע/מעורב בעדכון).,,עבר,
+תלמיד,תלמיד מסמן שהשלים יעד שהוגדר,Student Goal,TC-GOL-05,הפיכת יעד להושלם/הושג,completed,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},Object Extensions: goalType.,האם יש אופציות נוספות במוצר לסימון ליעד? האם ניתן למחוק יעד?,עבר,
+מורה,מורה מסמן שתלמיד השלים יעד שהוגדר,Student Goal,TC-GOL-06,הפיכת יעד להושלם/הושג,completed,Type: .../activities/student-goal | IRI: .../student-goal/{goalId},Object Extensions: goalType.,,עבר,
+תלמיד,תלמיד התחיל רכיב תוכן,Component,TC-CMP-01,התחלת עבודה ברכיב תוכן (Component),initialized,Type: .../activities/component | IRI: .../component/{id},"Context Extensions (Metadata): skills, componentPurpose, isAssessment, manufacturer, recommendedAfterFail, isRequired, relativeDifficulty, masteryLevel, order, depthLevel, cognitiveLevels, languages, estimatedTimeInMinutes. Context: parent מצביע על ה-learning-unit.",,עבר,
+תלמיד,תלמיד התחיל פריט למידה,Content Items,TC-ITM-01,פתיחת שאלון פנימי בתוך רכיב,initialized,Type: .../activities/questionnaire,"Context Extensions: מטא-דאטה של הפריט:
+informationToBot
+contentType
+questions
+componentId
+Context: parent מצביע על ה-component.",,עבר,
+תלמיד,תלמיד ענה על פריט למידה,Content Items,TC-ITM-02,מענה על שאלת תרגול,answered,Type: .../activities/item או question | IRI: .../item/question/{id},"Context: parent מצביע על ה-questionnaire או ה-component. Extensions: questionId, questionType (multiple-choice, true-false, fill-in), attemptNumber. Result: response, success, score.scaled.",,עבר,
+תלמיד,תלמיד סיים רכיב תוכן,Component,TC-CMP-02,סיום עבודה ברכיב תוכן,completed,Type: .../activities/component | IRI: .../component/{id},"Result: success (true/false), score.scaled (ציון מנורמל 0-1), ו-duration בפורמט ISO-8601.",,עבר,
+תלמיד,תלמיד סיים משימה,Content Items,TC-ITM-04,דילוג על פריט תוכן / שאלה,skipped,"Type: בהתאם לסוג הפריט (questionnaire, video וכו')",Context: parent מצביע על ה-component.,,לא רלוונטי,ב-1.1 הדילוג הוא ברמת הרכיב (TC-ITM-12); אין דילוג ברמת פריט.
+תלמיד,תלמיד הפעיל מדיה,Content Items,TC-ITM-05,הפעלת סרטון / וידאו / שמע,played,Type: .../activities/video,"Extensions: mediaFormat=video, mediaPosition 
+(זמן התחלה בשניות=0), 
+. Context: parent מצביע על ה-component.",,עבר,
+תלמיד,תלמיד עצר מדיה,Content Items,TC-ITM-06,השהיית סרטון / עצירה זמנית,paused,"כנ""ל (video)","Extensions: mediaFormat, mediaPosition (זמן עצירה בשניות),  Result: duration .",,עבר,
+תלמיד,תלמיד סיים לצפות במדיה,Content Items,TC-ITM-07,סיום צפייה בסרטון (עד הסוף),completed,"כנ""ל (video)","Extensions: mediaFormat, mediaPosition. Result: duration.
+",,עבר,
+תלמיד,תלמיד ביקש עזרה - רמז בתוך יחידת התוכן בiframe,Content Items,TC-ITM-08,בקשת עזרה (רמז / הסבר) בתוך שאלה,requested,Type: ה-component או ה-item הרלוונטי,"Extensions: helpSource (content), helpType (hint/explanation).",לשים לב האם קיימים בכלל helptypes  שונים בתוכן זה ולציין מה קיים,עבר,
+תלמיד,תלמיד ביקש עזרה - רמז מהפלטפורמה (אם קיימת אופציה),Content Items,TC-ITM-09,בקשת עזרה (רמז / הסבר) מהפלטפורמה,requested,Type: ה-component או ה-item הרלוונטי,"Extensions: helpSource (platform), helpType (hint/explanation).",לשים לב האם קיימים בכלל helptypes  שונים במוצר זה ולציין מה קיים,עבר,
+תלמיד,תלמיד סיים לענות על ארוע/רכיב הערכה בהצלחה,Content Items,TC-ITM-10,הצלחה באירוע הערכה,completed,,"isAssessment=true
+Success=true",,לא נבדק,בריצה זו לא הושלם רכיב הערכה עם success=true.
+תלמיד,תלמיד סיים לענות על ארוע/רכיב הערכה ונכשל,Content Items,TC-ITM-11,כשלון באירוע הערכה,completed,,"isAssessment=true
+Success=false",,לא נבדק,בריצה זו לא הושלם רכיב הערכה עם success=false.
+תלמיד,תלמיד יוזם אינטראקציה מול הבוט,Conversation,TC-CNV-01,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (student), conversationTrigger (student-request), helpType, componentId, itemId. (תוכן השיחה אינו נשלח).",,עבר,
+תלמיד,בוט יוזם אינטראקציה מול תלמיד  (לאחר כשלון),Conversation,TC-CNV-02,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (bot), conversationTrigger (error), helpType, componentId, itemId. (תוכן השיחה אינו נשלח).
+helpType אפשרויות:
+hint •
+explanation •
+alternative-content •
+other •
+bot-help-offer •
+motivation",,עבר,
+תלמיד,בוט יוזם אינטראקציה מול תלמיד  (זמן רב ללא תנועה),Conversation,TC-CNV-02,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (bot), conversationTrigger (idle-time), helpType, componentId, itemId. (תוכן השיחה אינו נשלח).
+helpType אפשרויות:
+hint •
+explanation •
+alternative-content •
+other •
+bot-help-offer •
+motivation",,עבר,
+תלמיד,בוט יוזם אינטראקציה מול תלמיד  (לציון מאמץ של התלמיד/מסיבה אחרת),Conversation,TC-CNV-02,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (bot), conversationTrigger ( success-effort, or other), helpType, componentId, itemId. (תוכן השיחה אינו נשלח).
+helpType אפשרויות:
+hint •
+explanation •
+alternative-content •
+other •
+bot-help-offer •
+motivation",,עבר,
+תלמיד,תלמיד עונה ליוזמת הבוט,Conversation,TC-CNV-03,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (student), conversationTrigger (student-request, success-effort, misconception, idle-time), helpType, componentId, itemId. (תוכן השיחה אינו נשלח).
+helpType אפשרויות:
+hint •
+explanation •
+alternative-content •
+other •
+bot-help-offer •
+motivation","converstion trigger נשאר כל הזמן המקורי כלומר אם הבוט יזם אז, גם בתשובת התלמיד נמשיך לציין שהבוט יזם converstion trigger",עבר,
+תלמיד,בוט עונה ליוזמת תלמיד,Conversation,TC-CNV-04,אינטראקציה (צ'אט) מול הבוט,interacted,Type: .../activities/conversation | IRI: .../conversation/{conversationId},"Actor: תלמיד. Extensions: speaker (student/bot), conversationTrigger (student-request, success-effort, misconception, idle-time), helpType, componentId, itemId. (תוכן השיחה אינו נשלח). 
+helpType אפשרויות:
+hint •
+explanation •
+alternative-content •
+other •
+bot-help-offer •
+motivation","converstion trigger נשאר כל הזמן המקורי כלומר אם הבוט יזם אז, גם בתשובת התלמיד נמשיך לציין שהבוט יזם converstion trigger",עבר,
+,,,,,,,,,לא רלוונטי,שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.
+לא קיים בכל מערכת:,,,,,,,,,לא רלוונטי,שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.
+תלמיד,תלמיד דילג על רכיב תוכן,Content Items,TC-ITM-12,דילוג על רכיב תוכן,skipped,Type: .../activities/question | IRI: .../..../question/{id},Context: parent מצביע על יעד הלמידה.,"לא בכל מוצר יש אפשרות לדלג, נא לציין אם יש אפשרות והאם האירוע נשלח בהצלחה. האם ניתן לחזור לשאלה שהיה דילוג עליה?",לא רלוונטי,"לא נתמך: באפליקציה אין דילוג על רכיב (""אני כבר יודע/ת""), ולכן האירוע skipped ברמת רכיב אינו נשלח."
+תלמיד,תלמיד פתח את שאלון רפלקציה,Reflection,TC-REF-01,פתיחת שאלון רפלקציה,initialized,Type: .../activities/questionnaire | IRI: .../reflection/{questionnaireId},"Extensions: reflactionTrigger (end-of-learning-objective, end-of-learning-component, difficult-task, other).",,עבר,
+תלמיד,תלמיד ענה על שאלון רפלקציה,Reflection,TC-REF-02,מענה על שאלת רפלקציה (פתוחה / דירוג),answered,Type: .../activities/question | IRI: .../reflection/question/{id},"Context: parent מצביע על שאלון הרפלקציה. Result: אחד בלבד – או מלל ב-result.response או דירוג ב-result.score (raw, min, max).",,עבר,
+תלמיד,תלמיד דילג על שאלת רפלקציה,Reflection,TC-REF-03,דילוג על שאלת רפלקציה,skipped,Type: .../activities/question | IRI: .../reflection/question/{id},Context: parent מצביע על שאלון הרפלקציה.,,עבר,
+תלמיד,תלמיד סיים לענות על שאלון רפלקציה,Reflection,TC-REF-04,סיום שאלון רפלקציה,completed,Type: .../activities/questionnaire | IRI: .../reflection/{questionnaireId},"Result: completion: true, ומשך זמן ב-result.duration.",,עבר,
+תלמיד ,תיעוד תאריך+שלב מפגש מנטור,Mentor Meeting,TC-MNT-01,מפגש מנטורינג (מורה/מנטור ותלמיד),completed,Type: .../activities/mentor-student-meeting | IRI: .../mentor-student-meeting/{meetingId},"Extensions: mentor, student, meetingDate, mentoringPhase. ",,עבר,
+תלמיד,תלמיד ביצע בחירה לא לימודית,Content Items,TC-ITM-09,בחירה שאינה לימודית (משוב/החלטה),selected,Type: ה-component או ה-item הרלוונטי,"Extensions: selectionType (learning-type, practice-decision, is-understood, is-repeat, external-learning). Result: response (""true"", ""false"", ""practice"", ""instruction"" וכד').",,עבר,
+תלמיד,תלמיד דרג תשובת בוט,Conversation,TC-CNV-02,דירוג תשובת בוט (לייק/דיסלייק),rated,"כנ""ל (conversation)",Result: like או dislike ב-result.response. Extensions: conversationType.,,עבר,
+,,,,,,,,,לא רלוונטי,שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.
+תלמיד,"תלמיד סיים לענות על שאלון  - רק אם יש תוכן שהוא שאלון, כרגע כנראה אין",Content Items,TC-ITM-03,סיום שאלון פנימי ברכיב,completed,Type: .../activities/questionnaire,"Result: score (min, max, raw, scaled), ו-duration.",,עבר,
+,,,,,,,,,לא רלוונטי,שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.
+טסטים נוספים לוודא שרצף האירועים שהתקבל הוא נכון:,,,,,,,,,לא רלוונטי,שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.
+תלמיד,נטישה,Content Item,,תלמיד נטש משימה באמצע,Initiated + no Complete,,,,עבר,
+תלמיד,חזרה למשימה אחרי הפסקה,,,,Initialized+ יציאה מהמשימה + second Initialized,,,,עבר,
+תלמיד,ניסיון חוזר אחרי כישלון ולאחר מכן הצלחה,,,,Initialized + Answered + Completed + Success = False + initialized + Answered + Completed + Success = True,,,,עבר,
+תלמיד,ניסיון חוזר אחרי כישלון ולאחר מכן כישלון שוב,,,,Initialized + Answered + Completed + Success = False + initialized + Answered + Completed + Success = False,,,,עבר,
+תלמיד,נטישת משימה בsession 1 וחזרה לאותה משימה ב session אחר,,,,Sesssion 1 + Initialize+ no Complete + Logout + Login + Initialize,,,,עבר,
+תלמיד,יש לוודא שהtimestamp של משימות עוקבות הוא בתוך consecutive verbs באותה שאלה הן לפי timestamp עוקב והגיוני,,,,1. Login + action 1 + action 2 etc….   2. Initialized + answered + completed…,,,,עבר,
+תלמיד,בקשת עזרה באמצע משימה,,,,Initialized + requested + answered + completed ,,,,עבר,
+תלמיד,שאלון פעלנות - האם יש אפשרות לענות רק באופן חלקי?,,,,,,,,לא רלוונטי,שאלון הפעלנות דורש 31 תשובות; הגשה חלקית אינה אפשרית במוצר.

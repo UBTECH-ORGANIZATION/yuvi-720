@@ -28,7 +28,7 @@
  * Accounts: scripts/seed_lrs_test_accounts.py --fresh (backend). */
 
 import { chromium } from 'playwright'
-import { mkdir, writeFile, readFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, access } from 'node:fs/promises'
 import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import path from 'node:path'
@@ -73,9 +73,17 @@ const note = (phase, text, source = 'ui') => {
   log(`  · ${text}`)
 }
 const rl = createInterface({ input: stdin, output: stdout })
+let pauseCount = 0
 async function pause(phase, instruction) {
   if (!MANUAL) { note(phase, `skipped (no --manual): ${instruction}`, 'manual'); return false }
-  await rl.question(`\n⏸  ${instruction}\n   press Enter when done… `)
+  // Either Enter on this terminal, or a marker file (`continue-N` in the run
+  // directory) when the driver runs detached from the tester's keyboard.
+  const marker = path.join(OUT, `continue-${++pauseCount}`)
+  log(`\n⏸  ${instruction}\n   press Enter here — or create ${marker} — when done…`)
+  await Promise.race([
+    rl.question('').catch(() => new Promise(() => undefined)),
+    (async () => { while (!(await access(marker).then(() => true, () => false))) await sleep(2000) })(),
+  ])
   note(phase, instruction, 'manual')
   return true
 }

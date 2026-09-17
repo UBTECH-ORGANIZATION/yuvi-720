@@ -131,7 +131,7 @@ class OutboxTests(unittest.IsolatedAsyncioTestCase):
         await self._enqueue(_statement(), mock.AsyncMock(side_effect=auth.LrsAuthError("token endpoint returned 403")))
         row = self.rows()[_statement()["id"]]
         self.assertEqual(row["status"], "pending")
-        self.assertEqual(row["last_error"], "LrsAuthError")
+        self.assertEqual(row["last_error"], "LrsAuthError: token endpoint returned 403")
 
 
 class ClientTests(unittest.IsolatedAsyncioTestCase):
@@ -145,14 +145,14 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         auth.invalidate_token()
 
     def _transport(self, handler):
-        transport = httpx.MockTransport(handler)
-        real_client = httpx.AsyncClient
+        # The package sends everything through one pooled client; a test
+        # hands it a mock transport by resetting it and building it fresh.
+        from app.services.lrs import http as lrs_http
 
-        def make(*args, **kwargs):
-            kwargs["transport"] = transport
-            return real_client(*args, **kwargs)
-
-        return mock.patch("app.services.lrs.client.httpx.AsyncClient", side_effect=make)
+        lrs_http.reset_for_tests()
+        return mock.patch.object(
+            lrs_http, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        )
 
     async def test_headers_are_exactly_the_postman_set(self):
         seen = {}
@@ -213,14 +213,12 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         auth.invalidate_token()
 
     def _transport(self, handler):
-        transport = httpx.MockTransport(handler)
-        real_client = httpx.AsyncClient
+        from app.services.lrs import http as lrs_http
 
-        def make(*args, **kwargs):
-            kwargs["transport"] = transport
-            return real_client(*args, **kwargs)
-
-        return mock.patch("app.services.lrs.auth.httpx.AsyncClient", side_effect=make)
+        lrs_http.reset_for_tests()
+        return mock.patch.object(
+            lrs_http, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        )
 
     async def test_the_token_request_is_form_encoded_client_credentials(self):
         seen = {}
