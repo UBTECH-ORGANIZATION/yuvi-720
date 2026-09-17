@@ -40,8 +40,16 @@ def normalize_session_id(value: object) -> str:
 
 
 def normalize_activity_id(value: object) -> Optional[str]:
-    """Return one bounded provider identifier, never arbitrary URL/text data."""
+    """Return one bounded provider identifier, never arbitrary URL/text data.
+
+    A client still holding Kata's URL id for a component (a bookmark from
+    before the 09/2026 id change) is reduced to the slug the catalog is keyed
+    by — the thread must stay scoped to the lesson, not fall back to an
+    unscoped chat that is never superseded or closed.
+    """
     candidate = str(value or "").strip()
+    if "/" in candidate:
+        candidate = candidate.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
     return candidate if _ACTIVITY_ID.fullmatch(candidate) else None
 
 

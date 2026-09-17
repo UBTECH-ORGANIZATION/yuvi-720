@@ -60,7 +60,7 @@ def reset_units_cache_for_tests() -> None:
 
 class LearningSessionRequest(BaseModel):
     # No learner_id: the session is always minted for the session learner.
-    component_id: str = Field(min_length=1, max_length=160)
+    component_id: str = Field(min_length=1, max_length=200)
     unit_id: Optional[str] = Field(default=None, max_length=160)
     language: Literal["he", "ar", "en"] = "he"
     # 720 §6 explicit "redo the component" on re-entry after completion: a fresh
@@ -163,7 +163,7 @@ async def create_learning_session(
 
 
 class PathChoiceRequest(BaseModel):
-    component_id: str = Field(min_length=1, max_length=160)
+    component_id: str = Field(min_length=1, max_length=200)
     choice: Literal["more_practice"]
 
 
@@ -181,7 +181,7 @@ async def record_path_choice(
 
 
 class SkipComponentRequest(BaseModel):
-    component_id: str = Field(min_length=1, max_length=160)
+    component_id: str = Field(min_length=1, max_length=200)
 
 
 @router.post("/skip-component")
@@ -233,7 +233,14 @@ async def explain_unit_path(
     band, the EWMA, the failing event id — the evidence behind each decision, for
     a teacher who needs to understand or challenge the route.
     """
-    unit, _ = await content_provider.resolve_component(f"{unit_id}-01", unit_id)
+    # The unit itself is what gets projected; any of its components resolves
+    # it. Synthesising "<unit>-01" assumed a slug shape Kata no longer keeps.
+    try:
+        unit = await content_provider.get_unit(unit_id)
+    except content_provider.ContentProviderError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+    if not unit.get("components"):
+        raise HTTPException(status_code=404, detail="content_not_found")
     return await project_unit_roadmap(unit, learner, locale=lang, explain=True)
 
 

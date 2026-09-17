@@ -345,7 +345,8 @@ def resolve_item_question(
     if item:
         return item, question
     tail = _object_tail(object_id)
-    if component_id and tail and tail.startswith(f"{component_id}-"):
+    component_slug = _object_tail(component_id)
+    if component_slug and tail and tail.startswith(f"{component_slug}-"):
         return tail, None
     return None, None
 
@@ -394,7 +395,9 @@ def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
         return False
     if event.get("sub_item_id"):
         return False
-    component_id = str(event.get("launch") or "")
+    # The launch id is a slug; a row written while a URL id was in flight
+    # (Kata's 09/2026 id change) reduces to the same slug.
+    component_id = _object_tail(event.get("launch"))
     tail = _object_tail(event.get("object_id"))
     return bool(tail and component_id and tail != component_id)
 
@@ -483,7 +486,7 @@ def is_component_completion(event: dict[str, Any]) -> bool:
     """
     if event.get("verb") != "completed":
         return False
-    component_id = str(event.get("launch") or "")
+    component_id = _object_tail(event.get("launch"))
     if not component_id or event.get("sub_item_id"):
         return False
     object_id = event.get("object_id")
@@ -1647,7 +1650,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     same_component = (
         not prior_state.get("component_id")
         or not event.get("launch")
-        or prior_state.get("component_id") == event.get("launch")
+        or _object_tail(prior_state.get("component_id")) == _object_tail(event.get("launch"))
     )
     pointer_is_stale = bool(
         same_component and event_at and pointer_at and event_at < pointer_at

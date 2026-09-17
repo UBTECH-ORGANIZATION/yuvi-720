@@ -131,6 +131,15 @@ export function LessonPage() {
         if (active) {
           setSession(nextSession)
           setRoadmap(nextSession.roadmap)
+          // A bookmark may still carry Kata's URL id for the component; the
+          // server answers with the canonical slug. Rewrite the address bar
+          // quietly (no router event — a re-route here would relaunch) so a
+          // refresh or a shared link carries the id every other screen uses.
+          if (selection.componentId && selection.componentId !== nextSession.component.id) {
+            const params = new URLSearchParams(window.location.search)
+            params.set('component', nextSession.component.id)
+            window.history.replaceState({}, '', `${window.location.pathname}?${params}`)
+          }
           // A fresh launch is a fresh verdict on the frame: this component may
           // be hosted by a different player than the last one in the same unit.
           frameLoadsRef.current = []

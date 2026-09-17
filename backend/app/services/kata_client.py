@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 from typing import Any, Optional
@@ -82,7 +83,8 @@ def _safe_component_id(value: str) -> str:
         return candidate
     parsed = urlsplit(candidate)
     if (
-        len(candidate) > 160
+        len(candidate) > 200
+        or "|" in candidate  # the question-key separator (`component|item|q`)
         or parsed.scheme != "https"
         or not parsed.hostname
         or parsed.username is not None
@@ -158,10 +160,12 @@ def title_translations(row: dict[str, Any]) -> dict[str, str]:
 def _recommended_after_fail(component: dict[str, Any]) -> list[str]:
     recommended = component.get("recommendedAfterFail")
     if isinstance(recommended, str):
-        return [recommended] if recommended else []
-    if isinstance(recommended, list):
-        return [str(value) for value in recommended if value]
-    return []
+        recommended = [recommended] if recommended else []
+    if not isinstance(recommended, list):
+        return []
+    # Targets are component ids — the same id space as `id` (slugs), so a
+    # URL-shaped target still finds its node in the path engine.
+    return [content_slug(value) for value in recommended if value]
 
 
 def normalize_question_id(value: object) -> str:
@@ -183,6 +187,27 @@ def normalize_question_id(value: object) -> str:
     if not text:
         return ""
     return text.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1] or text
+
+
+def content_slug(value: object) -> str:
+    """Yuvi's id for a component or an item: the tail of Kata's id.
+
+    In 09/2026 Kata changed the catalog ids of components and items from slugs
+    (``methodica-science-mass-measure-01-01``) to the content's own URL
+    (``https://lomdot.education.gov.il/metodica/720active/science/mass-measure/01/
+    methodica-science-mass-measure-01-01``, sometimes with a trailing ``/``;
+    CET: ``https://learning.cet.ac.il/player/learning-activity/{oid}/CET.…-00001``).
+    Everything inside Yuvi — the brain's ``current_state``, ``learning_events``,
+    coach threads, content-intelligence shards, the IRIs already filed in the
+    ministry's LRS — is keyed by the slug, and the relay has always reduced the
+    content's object ids to the same tail (``events._object_tail``). So the
+    adapter absorbs the change here: the slug stays THE id, and Kata's own id
+    is kept beside it as ``launch_id`` for the one call that needs it (the
+    launcher). A slug passes through unchanged. Tails are unique across the
+    live catalog's components (56/56 on 17/09); item tails repeat only across
+    components, never inside one, and items are always scoped by component.
+    """
+    return normalize_question_id(value)
 
 
 def _question_row(question: dict[str, Any]) -> dict[str, Any]:
@@ -223,7 +248,7 @@ def _sub_content_bot_index(
         if not isinstance(item, dict):
             continue
         text = str(item.get("informationToBot") or "").strip()
-        item_id = str(item.get("id") or "").strip()
+        item_id = content_slug(item.get("id"))
         if text:
             if text not in parts:
                 parts.append(text)
@@ -260,7 +285,7 @@ def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
     for item in component.get("subContent") or []:
         if not isinstance(item, dict):
             continue
-        item_id = str(item.get("id") or "").strip()
+        item_id = content_slug(item.get("id"))
         if not item_id:
             continue
         questions = [
@@ -269,6 +294,8 @@ def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
         ]
         profiles.append({
             "id": item_id,
+            # Kata's own id (a URL since 09/2026), kept for provenance only.
+            "launch_id": str(item.get("id") or "").strip(),
             "title": str(item.get("title") or "")[:200],
             "content_type": str(item.get("contentType") or "").strip().lower(),
             "media_format": str(item.get("mediaFormat") or "").strip().lower(),
@@ -292,7 +319,9 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         _sub_content_bot_index(component)
     )
     return {
-        "id": str(component.get("id") or ""),
+        "id": content_slug(component.get("id")),
+        # Kata's own id, verbatim — what its launcher expects (`create_launch_context`).
+        "launch_id": str(component.get("id") or "").strip(),
         "unit_id": str(component.get("learningUnitId") or ""),
         "title": str(component.get("title") or ""),
         "purpose": component.get("componentPurpose"),
@@ -366,6 +395,14 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
     ]
     for component in components:
         component["manufacture"] = component["manufacture"] or manufacturer
+    slugs = [component["id"] for component in components]
+    if len(set(slugs)) != len(slugs):
+        # Two Kata URLs reducing to one slug would silently merge two
+        # components; it has never happened, and it must not pass unnoticed.
+        logging.getLogger(__name__).warning(
+            "kata unit %s has components sharing a slug: %s",
+            unit.get("id"), sorted({s for s in slugs if slugs.count(s) > 1}),
+        )
     locales = sorted({locale for component in components for locale in component["languages"]})
     unit_id = str(unit.get("id") or "")
     sub_topic = str(unit.get("subTopic") or "")
@@ -569,14 +606,16 @@ async def resolve_component(
     unit_id: Optional[str] = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Resolve and validate a component against its Kata-owned unit."""
-    safe_component_id = _safe_component_id(component_id)
+    # A bookmarked lesson URL may still carry Kata's URL id; the catalog is
+    # keyed by the slug, so both shapes resolve to the same component.
+    wanted = content_slug(_safe_component_id(component_id))
     if unit_id:
         units = [await get_unit(_safe_id(unit_id, "unit_id"))]
     else:
         units = await list_units()
     for unit in units:
         component = next(
-            (row for row in unit["components"] if row["id"] == safe_component_id),
+            (row for row in unit["components"] if row["id"] == wanted),
             None,
         )
         if component:

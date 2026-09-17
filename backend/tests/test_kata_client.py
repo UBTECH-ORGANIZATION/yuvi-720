@@ -99,6 +99,60 @@ class KataNormalizationTests(unittest.TestCase):
     def test_accepts_https_component_ids(self) -> None:
         component_id = "https://kata.cet.ac.il/content/methodica-math-angles-01-04"
         self.assertEqual(kata_client._safe_component_id(component_id), component_id)
+        with self.assertRaises(kata_client.KataError):
+            kata_client._safe_component_id("https://kata.cet.ac.il/a|b")
+
+    def test_content_slug_reduces_kata_urls_and_keeps_slugs(self) -> None:
+        # Kata's 09/2026 id shapes, with and without the trailing slash.
+        self.assertEqual(
+            kata_client.content_slug(
+                "https://lomdot.education.gov.il/metodica/720active/science/"
+                "mass-measure/01/methodica-science-mass-measure-01-01"
+            ),
+            "methodica-science-mass-measure-01-01",
+        )
+        self.assertEqual(
+            kata_client.content_slug("https://lomdot.education.gov.il/x/methodica-math-scale-01-02/"),
+            "methodica-math-scale-01-02",
+        )
+        self.assertEqual(
+            kata_client.content_slug("https://learning.cet.ac.il/metadata/6a5c/mriro31m3ib50cl4i"),
+            "mriro31m3ib50cl4i",
+        )
+        self.assertEqual(kata_client.content_slug("methodica-math-angles-01-04"), "methodica-math-angles-01-04")
+        self.assertEqual(kata_client.content_slug(None), "")
+
+    def test_url_ids_normalize_to_slugs_with_the_launch_id_kept(self) -> None:
+        base = "https://lomdot.education.gov.il/metodica/720active/math/angles/01"
+        raw = {
+            **UNIT,
+            "components": [{
+                **UNIT["components"][0],
+                "id": f"{base}/methodica-math-angles-01-04/",
+                "recommendedAfterFail": [f"{base}/methodica-math-angles-01-02"],
+                "subContent": [{
+                    **UNIT["components"][0]["subContent"][0],
+                    "id": f"{base}/methodica-math-angles-01-04/methodica-math-angles-01-04-001",
+                    "questions": [{
+                        **UNIT["components"][0]["subContent"][0]["questions"][0],
+                        "questionId": f"{base}/methodica-math-angles-01-04/methodica-math-angles-01-04-001/q1",
+                    }],
+                }],
+            }],
+        }
+        unit = kata_client.normalize_unit(raw)
+        component = unit["components"][0]
+        self.assertEqual(component["id"], "methodica-math-angles-01-04")
+        self.assertEqual(component["launch_id"], f"{base}/methodica-math-angles-01-04/")
+        self.assertEqual(component["recommended_after_fail"], ["methodica-math-angles-01-02"])
+        self.assertEqual(component["items"][0]["id"], "methodica-math-angles-01-04-001")
+        self.assertEqual(
+            component["items"][0]["launch_id"],
+            f"{base}/methodica-math-angles-01-04/methodica-math-angles-01-04-001",
+        )
+        self.assertEqual(list(component["questions_by_item"]), ["methodica-math-angles-01-04-001"])
+        self.assertIn("methodica-math-angles-01-04-001", component["information_by_item"])
+        self.assertEqual(component["question_ids"], ["q1"])
 
 
 class KataHttpTests(unittest.IsolatedAsyncioTestCase):
@@ -121,6 +175,18 @@ class KataHttpTests(unittest.IsolatedAsyncioTestCase):
                     await kata_client._get_json("/api/v1/catalog/content-units")
         self.assertEqual(raised.exception.code, "kata_unavailable")
         self.assertNotIn("secret upstream detail", str(raised.exception))
+
+    async def test_resolve_component_accepts_the_url_and_the_slug(self) -> None:
+        url = (
+            "https://lomdot.education.gov.il/metodica/720active/math/angles/01/"
+            "methodica-math-angles-01-04"
+        )
+        raw = {**UNIT, "components": [{**UNIT["components"][0], "id": url}]}
+        with patch("app.services.kata_client._get_json", new=AsyncMock(return_value=raw)):
+            _, by_url = await kata_client.resolve_component(url, UNIT["id"])
+            _, by_slug = await kata_client.resolve_component("methodica-math-angles-01-04", UNIT["id"])
+        self.assertEqual(by_url["id"], "methodica-math-angles-01-04")
+        self.assertEqual(by_slug["launch_id"], url)
 
     async def test_create_launch_context_returns_launch_url(self) -> None:
         component_id = "https://kata.cet.ac.il/content/methodica-math-angles-01-04"
