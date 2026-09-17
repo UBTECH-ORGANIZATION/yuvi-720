@@ -208,8 +208,10 @@ async def logout(response: Response, session=Depends(optional_user)) -> dict[str
 async def session_suspend(session=Depends(optional_user)) -> dict[str, Any]:
     """MoE 720 session `suspend` — the tab lost focus (frontend beacon)."""
     if session and session.get("sid"):
-        await session_registry.suspend(session["sid"])
-        await lrs_reporter.report_session_suspend(session["sub"], session["sid"])
+        # Reported on the transition only: a second beacon for the same pause
+        # (visibilitychange + pagehide, two tabs) is not a second suspend.
+        if await session_registry.suspend(session["sid"]):
+            await lrs_reporter.report_session_suspend(session["sub"], session["sid"])
     return {"ok": True}
 
 
@@ -225,8 +227,8 @@ async def session_resume(response: Response, session=Depends(optional_user)) -> 
     if session and session.get("sid"):
         if _session_moved(session):
             _reissue_cookie(response, session)
-        else:
-            await session_registry.resume(session["sid"])
+        elif await session_registry.resume(session["sid"]):
+            # Only a suspended session resumes — never a resume without its suspend.
             await lrs_reporter.report_session_resume(session["sub"], session["sid"])
     return {"ok": True}
 

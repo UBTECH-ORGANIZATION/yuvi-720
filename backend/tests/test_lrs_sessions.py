@@ -237,3 +237,23 @@ class SequencedTimestampTests(unittest.TestCase):
         b = statements.enriched_content_statement(IDENTITY, "s1", {**raw, "timestamp": "2026-09-17T10:00:00.900Z"})
         self.assertEqual(a["timestamp"], "2026-09-17T10:00:00Z")
         self.assertEqual(b["timestamp"], "2026-09-17T10:00:01Z")
+
+
+class SuspendResumePairsTests(RegistryTestCase):
+    async def test_suspend_and_resume_are_strict_transitions(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        self.assertTrue(await registry.suspend("s1", at=T0 + timedelta(minutes=1)))
+        self.assertFalse(await registry.suspend("s1", at=T0 + timedelta(minutes=1, seconds=1)))
+        self.assertTrue(await registry.resume("s1", at=T0 + timedelta(minutes=2)))
+        self.assertFalse(await registry.resume("s1", at=T0 + timedelta(minutes=2, seconds=1)))
+
+    async def test_a_resume_without_a_suspend_is_not_a_transition(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        self.assertFalse(await registry.resume("s1", at=T0 + timedelta(minutes=2)))
+        self.assertEqual((await registry.load("s1"))["last_seen_at"], (T0 + timedelta(minutes=2)).isoformat())
+
+    async def test_an_exited_session_neither_suspends_nor_resumes(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        await registry.close("s1", reason="logout", at=T0 + timedelta(minutes=1))
+        self.assertFalse(await registry.suspend("s1"))
+        self.assertFalse(await registry.resume("s1"))

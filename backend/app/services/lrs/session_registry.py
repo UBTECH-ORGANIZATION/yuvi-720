@@ -359,16 +359,33 @@ async def close_open_for_user(user_id: str, *, reason: str, at: Optional[datetim
     return closed
 
 
-async def suspend(sid: str, at: Optional[datetime] = None) -> None:
+async def suspend(sid: str, at: Optional[datetime] = None) -> bool:
+    """Mark the session suspended. True when this call made the transition —
+    a second `suspend` while already suspended is not a new event (the
+    ministry reads suspend/resume as strict pairs)."""
     now = at or _now()
-    await _update(sid, {"suspended_at": _iso(now), "last_seen_at": _iso(now)})
     _touched[sid] = time.monotonic()
+    claimed = await _claim(
+        sid, {"suspended_at": _iso(now), "last_seen_at": _iso(now)},
+        guard={"exited_at": None, "suspended_at": None},
+    )
+    return claimed is not None
 
 
-async def resume(sid: str, at: Optional[datetime] = None) -> None:
+async def resume(sid: str, at: Optional[datetime] = None) -> bool:
+    """Mark the session live again. True only when it WAS suspended — a
+    `resume` without a `suspend` before it is a sequence the LRS rejects."""
     now = at or _now()
-    await _update(sid, {"suspended_at": None, "resumed_at": _iso(now), "last_seen_at": _iso(now)})
     _touched[sid] = time.monotonic()
+    row = await load(sid)
+    if row is None or row.get("exited_at") is not None or not row.get("suspended_at"):
+        await _update(sid, {"last_seen_at": _iso(now)})
+        return False
+    claimed = await _claim(
+        sid, {"suspended_at": None, "resumed_at": _iso(now), "last_seen_at": _iso(now)},
+        guard={"exited_at": None, "suspended_at": row["suspended_at"]},
+    )
+    return claimed is not None
 
 
 _touched: dict[str, float] = {}
