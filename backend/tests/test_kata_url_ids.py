@@ -60,6 +60,41 @@ class LaunchCarriesTheSlugTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session["component"]["id"], SLUG)
         self.assertEqual(brain_updates.await_args.args[1]["current_state.component_id"], SLUG)
         self.assertEqual(verify_launch(session["launch"])["cmp"], SLUG)
+        # An ordinary launch resumes: Kata is not asked to reset anything.
+        self.assertFalse(launcher.await_args.kwargs["reset_state"])
+
+
+class RedoResetsTheContentTests(unittest.IsolatedAsyncioTestCase):
+    """Kata's `resetState` (18/09/2026): only the learner's explicit "start
+    again" asks the content to forget its saved progress."""
+
+    async def _launch(self, restart: bool) -> AsyncMock:
+        unit = {**UNIT, "components": [COMPONENT]}
+        launcher = AsyncMock(return_value={"launch_url": "https://lomdot.example/x", "registration_id": "r1"})
+        with (
+            patch("app.services.learning_sessions.kata_client.resolve_component", new=AsyncMock(return_value=(unit, COMPONENT))),
+            patch("app.services.learning_sessions.kata_client.create_launch_context", new=launcher),
+            patch("app.services.learning_sessions._assert_objective_reachable", new=AsyncMock()),
+            patch("app.services.learning_sessions._assert_component_reachable", new=AsyncMock()),
+            patch("app.services.learning_sessions.get_brain", new=AsyncMock(return_value={})),
+            patch("app.services.learning_sessions.apply_brain_updates", new=AsyncMock()),
+            patch("app.services.learning_sessions.project_unit_roadmap", new=AsyncMock(return_value={"components": []})),
+            patch("app.services.learning_sessions._lesson_header_title", return_value="מדידת מסה"),
+            patch.dict("os.environ", {"PUBLIC_APP_URL": "https://spark.example"}),
+        ):
+            await learning_sessions.create_provider_session(
+                "learner-1", SLUG, unit_id=UNIT["id"], language="he",
+                request_base_url="https://spark.example/", restart=restart,
+            )
+        return launcher
+
+    async def test_redo_asks_kata_to_reset_the_component(self) -> None:
+        launcher = await self._launch(restart=True)
+        self.assertTrue(launcher.await_args.kwargs["reset_state"])
+
+    async def test_a_relaunch_keeps_resuming(self) -> None:
+        launcher = await self._launch(restart=False)
+        self.assertFalse(launcher.await_args.kwargs["reset_state"])
 
 
 class ReadSideReducesUrlsTests(unittest.TestCase):

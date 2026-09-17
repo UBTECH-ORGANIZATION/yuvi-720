@@ -40,7 +40,6 @@
 ## אינדקס החוזה ללא ראיה
 - component:initialized
 - component:completed
-- component:skipped
 - conversation:interacted
 - conversation:rated
 - questionnaire (reflection):initialized
@@ -50,10 +49,7 @@
 - questionnaire:initialized
 - questionnaire:completed
 - question:answered
-- questionnaire:skipped
 - video / audio / animation (media):played
 - video / audio / animation (media):paused
 - video / audio / animation (media):completed
 - component / item:requested
-- item:selected
-- learning-unit:initialized

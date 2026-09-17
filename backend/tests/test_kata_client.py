@@ -204,6 +204,23 @@ class KataHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx["launch_url"], "https://lomdot.example/x")
         self.assertEqual(ctx["registration_id"], "reg-1")
         self.assertEqual(post_json.await_args.args[1]["componentId"], component_id)
+        # Kata resumes by default: the reset flag is absent, not `false`.
+        self.assertNotIn("resetState", post_json.await_args.args[1])
+
+    async def test_reset_state_is_sent_only_when_asked(self) -> None:
+        with patch(
+            "app.services.kata_client._post_json",
+            new=AsyncMock(return_value={"launchUrl": "https://lomdot.example/x", "registrationId": "reg-2"}),
+        ) as post_json:
+            await kata_client.create_launch_context(
+                component_id="methodica-math-angles-01-04",
+                student_id="learner-1",
+                platform_url="https://spark.example",
+                lrs_endpoint="https://spark.example/api/xapi/tok/",
+                lrs_auth="Basic tok",
+                reset_state=True,
+            )
+        self.assertIs(post_json.await_args.args[1]["resetState"], True)
 
 
 class ProviderXapiCompatibilityTests(unittest.TestCase):

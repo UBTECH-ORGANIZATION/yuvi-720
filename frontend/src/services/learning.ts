@@ -55,6 +55,9 @@ export interface LearningComponentDTO {
   stage_index: number | null
   outcome: 'passed' | 'failed' | null
   progress_state: LearningProgressState
+  /** Started and not settled: the learner left this one mid-way (refresh,
+   *  back button, another day). Re-entry asks "continue or start over". */
+  in_progress: boolean
   progress_reason: { code: LearningPathReason }
   progress_evidence: {
     kind: 'xapi_completed' | 'brain_current_state' | 'provider_order' | 'provider_alternative' | 'provider_recovery' | 'awaiting_prior_completion'

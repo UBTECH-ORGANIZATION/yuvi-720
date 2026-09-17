@@ -14,8 +14,8 @@ kill, the run window, per-phase notes). Outputs, in `--out-dir`:
 - `test-script-xapi-results-<date>-<env>.csv` — the ministry's own columns,
   results filled (עבר / לא עבר / לא נבדק / לא רלוונטי), the deliverable;
 - `tc-map.json` — TC → statement ids, timestamps, delivery, notes;
-- `lrs-contract-report-<date>-<env>.csv` — the three-column contract index
-  with a real statement id per (object type, verb);
+- `lrs-contract-report-<date>-<env>.csv` — the contract index with a real
+  statement id per (object type, verb) and a note where none is expected;
 - `summary.md`.
 
 Every row is classified from evidence only. Nothing is simulated; a row
@@ -521,13 +521,20 @@ def main() -> int:
     with CONTRACT_TEMPLATE.open(encoding="utf-8-sig", newline="") as handle:
         template = list(csv.DictReader(handle))
     with contract_csv.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["Object Type", "Verb", "Id"])
+        writer = csv.DictWriter(handle, fieldnames=["Object Type", "Verb", "Id", "Note"])
         writer.writeheader()
         for row in template:
             found = contract_evidence(ev, row["Object Type"], row["Verb"])
-            if not found:
+            # The template's Note explains a pair that is not expected to have
+            # evidence (not supported, vendor-only); only an unexplained blank
+            # is a gap worth listing.
+            note = (row.get("Note") or "").strip()
+            if not found and not note:
                 missing_contract.append(f"{row['Object Type']}:{row['Verb']}")
-            writer.writerow({"Object Type": row["Object Type"], "Verb": row["Verb"], "Id": found[-1]["id"] if found else ""})
+            writer.writerow({
+                "Object Type": row["Object Type"], "Verb": row["Verb"],
+                "Id": found[-1]["id"] if found else "", "Note": note,
+            })
 
     sent = sum(e.get("status") == "sent" for e in entries)
     not_sent = [e for e in entries if e.get("status") != "sent"]

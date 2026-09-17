@@ -348,5 +348,37 @@ class BrainPointerTests(unittest.TestCase):
         self.assertEqual(projected["next_component_id"], C2)
 
 
+def opened(component_id: str, verb: str = "initialized", sub_item: str | None = None) -> dict:
+    """Any content activity on a component that is not its completion."""
+    row = {"verb": verb, "launch": component_id, "object_id": sub_item or component_id, "unit_id": UNIT_ID}
+    if sub_item:
+        row["sub_item_id"] = sub_item
+    return row
+
+
+class InProgressTests(unittest.TestCase):
+    """A component the learner left mid-way is flagged so re-entry can offer
+    "continue or start over" (Kata resetState)."""
+
+    MIDDLE = {"score": 0.55, "confidence": 0.6, "attempts": 4}
+
+    def test_untouched_and_completed_components_are_not_in_progress(self) -> None:
+        projected = plan(self.MIDDLE, [completion(C1)])
+        self.assertFalse(node(projected, C1)["in_progress"])
+        self.assertFalse(node(projected, C2)["in_progress"])
+
+    def test_an_opened_unfinished_component_is_in_progress(self) -> None:
+        projected = plan(self.MIDDLE, [completion(C1), opened(C2), opened(C2, "answered", f"{C2}-002")])
+        self.assertTrue(node(projected, C2)["in_progress"])
+        self.assertEqual(node(projected, C2)["progress_state"], "current")
+
+    def test_a_completion_settles_the_activity_that_preceded_it(self) -> None:
+        projected = plan(self.MIDDLE, [opened(C1), opened(C1, "answered", f"{C1}-001"), completion(C1)])
+        self.assertFalse(node(projected, C1)["in_progress"])
+        # A failed completion leaves the node open but settled — not "mid-way".
+        failed = plan(self.MIDDLE, [opened(C1), completion(C1, success=False, scaled=0.2)])
+        self.assertFalse(node(failed, C1)["in_progress"])
+
+
 if __name__ == "__main__":
     unittest.main()
