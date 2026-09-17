@@ -284,13 +284,14 @@ async def _stream_visual_tail(
     yield f"data: {json.dumps({'can_visualize': can_visualize}, ensure_ascii=False)}\n\n"
 
 
-def _surface_component_iri(surface: "CoachSurfaceContext") -> str | None:
-    """Full component IRI for MoE conversation extensions, when known."""
-    if surface.component_id:
-        from app.services.lrs import config as lrs_config
-        return f"{lrs_config.supplier_domain()}/component/{surface.component_id}"
-    return None
-
+# The v1.1 `helpType` of a support reply: the hint ladder and the explanation
+# are what they say; a video summary explains; the visual is other content.
+_SUPPORT_HELP_TYPE = {
+    "hint": "hint",
+    "explanation": "explanation",
+    "video_summary": "explanation",
+    "video_visual": "alternative-content",
+}
 
 # MoE conversationTrigger enum ← our internal trigger names. Spec v1.1 closed
 # the list to student-request | success-effort | student-error | idle-time |
@@ -508,6 +509,10 @@ class CoachExplainerRequest(BaseModel):
 class CoachRateRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     rating: Literal["like", "dislike"]
+    # The lesson the reply was rated in, when the client knows it; the item
+    # comes from the brain, so the rating names the same per-item
+    # conversation the turns did.
+    component_id: str | None = Field(default=None, max_length=200)
 
 
 @router.post("/coach/rate")
@@ -521,7 +526,8 @@ async def coach_rate(request: CoachRateRequest, session=Depends(require_learner_
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     if session.get("sid"):
         await lrs_reporter.report_conversation_rated(
-            learner_id, session["sid"], conversation_id, request.rating
+            learner_id, session["sid"], conversation_id, request.rating,
+            component_id=request.component_id,
         )
     return JSONResponse(content={"ok": True})
 
@@ -804,11 +810,14 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     triggers.note_chat_activity(learner_id)
 
     # MoE 720: one `interacted` per chat turn — the student's message now, the
-    # bot's reply when the stream completes. Chat text is never sent.
+    # bot's reply when the stream completes. Chat text is never sent. A typed
+    # hint request is a turn too (`helpType=hint`), alongside the `requested`
+    # its reservation files. The reporter resolves the item from the brain and
+    # builds the ids; only the catalog's own component id travels from here.
     moe_sid = session.get("sid")
-    component_iri = _surface_component_iri(request.surface)
-    if moe_sid and not is_chat_hint:
-        proactive_trigger = await sessions.latest_proactive_trigger(
+    surface_component_id = request.surface.component_id
+    if moe_sid:
+        proactive_trigger = None if is_chat_hint else await sessions.latest_proactive_trigger(
             learner_id, conversation_id, role="lesson_coach"
             if request.surface.screen == "learning_lesson" else "general_companion",
         )
@@ -816,7 +825,8 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             learner_id, moe_sid, conversation_id,
             speaker="student",
             conversation_trigger=_MOE_TRIGGER.get(proactive_trigger or "", "student-request"),
-            component_id=component_iri,
+            help_type="hint" if is_chat_hint else None,
+            component_id=surface_component_id,
         )
 
     # Durable teacher-analytics: count each QUESTION-SCOPED chat turn (the learner
@@ -915,11 +925,12 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         await coach_debug_trace.record(exchange_id, debug_trace)
         yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
 
-        if moe_sid and not is_chat_hint:  # the bot's turn of this exchange
+        if moe_sid:  # the bot's turn of this exchange
             await lrs_reporter.report_conversation_interacted(
                 learner_id, moe_sid, conversation_id,
                 speaker="bot", conversation_trigger="student-request",
-                component_id=component_iri,
+                help_type="hint" if is_chat_hint else None,
+                component_id=surface_component_id,
             )
         # Re-stamp on completion: the silence worth nudging starts when Yuvi
         # stops talking, not when the learner pressed send.
@@ -1105,7 +1116,7 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
                     speaker="bot",
                     conversation_trigger=_MOE_TRIGGER.get(trigger, "other"),
                     help_type="bot-help-offer",
-                    component_id=_surface_component_iri(request.surface),
+                    component_id=request.surface.component_id,
                 )
             except Exception:
                 pass
@@ -1415,6 +1426,15 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
                 yield event
         await coach_debug_trace.record(exchange_id, debug_trace)
         yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
+        # MoE 720: the bot's reply to a support button is a conversation turn
+        # (the button press itself is the `requested` filed by the reservation).
+        if session.get("sid"):
+            await lrs_reporter.report_conversation_interacted(
+                learner_id, session["sid"], conversation_id,
+                speaker="bot", conversation_trigger="student-request",
+                help_type=_SUPPORT_HELP_TYPE.get(request.support, "other"),
+                component_id=request.surface.component_id,
+            )
         # Re-stamp on completion: a long answer can outlive the idle timer the
         # request reset, and the silence worth nudging starts when Yuvi stops
         # talking, not when he started.

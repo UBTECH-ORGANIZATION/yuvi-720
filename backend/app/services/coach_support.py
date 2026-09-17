@@ -64,19 +64,33 @@ async def reserve_support(
         pass
 
     if session_id:
-        component_id = surface_component_id
-        component_iri = (
-            f"{lrs_config.supplier_domain()}/component/{component_id}"
-            if component_id else None
+        # MoE `requested` from the platform: the object is the ITEM the learner
+        # is on when the brain knows it (help on a question nests under its
+        # screen), else the component, else the conversation itself.
+        from app.services.lrs import hierarchy as lrs_hierarchy
+
+        component_id = current_state.get("component_id") or surface_component_id
+        item_id = (
+            current_state.get("item_id")
+            if component_id and component_id == current_state.get("component_id") else None
         )
+        if item_id:
+            object_id, object_type = lrs_hierarchy.item_activity(item_id)["id"], "item"
+        elif component_id:
+            object_id, object_type = lrs_hierarchy.component_activity(component_id)["id"], "component"
+        else:
+            object_id = f"{lrs_config.supplier_domain()}/conversation/{conversation_id}"
+            object_type = "conversation"
         await lrs_reporter.report_help_requested(
             learner_id,
             session_id,
-            object_id=component_iri or f"{lrs_config.supplier_domain()}/conversation/{conversation_id}",
-            object_type="component" if component_iri else "conversation",
+            object_id=object_id,
+            object_type=object_type,
             help_source="platform",
             help_type=support,
-            component_id=component_id if component_iri else None,
+            component_id=component_id,
+            item_id=item_id,
+            question_id=current_state.get("question_id") if item_id else None,
         )
     from app.services import progression
 

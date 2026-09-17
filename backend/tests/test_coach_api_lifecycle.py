@@ -174,6 +174,55 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream_kwargs["hint_level"], 1)
         self.assertEqual(stream_kwargs["endpoint"], "/api/agent/coach/support")
 
+    async def test_a_typed_hint_is_two_hint_turns_of_the_conversation(self):
+        """v1.1: the chat request for a hint and the bot's hint are both
+        `interacted` turns with `helpType=hint` (the `requested` rides the
+        reservation); the raw component id travels, never an IRI."""
+        self.app.dependency_overrides[require_learner_session] = lambda: {
+            "sub": LEARNER_ID, "roles": ["learner"], "sid": "moe-session",
+        }
+        self.get_brain.return_value = {
+            "current_state": {"component_id": "hexagons", "item_id": "hexagons-001", "question_id": "q1"}
+        }
+        report = AsyncMock()
+        with (
+            patch.object(agent, "reserve_support", new=AsyncMock(return_value=SupportReservation("k", 1))),
+            patch.object(agent.lrs_reporter, "report_conversation_interacted", new=report),
+        ):
+            await _collect_sse(self.client, {
+                "conversation_id": "lesson-hint-chat",
+                "message": "תן לי רמז",
+                "language": "he",
+                "surface": {"screen": "learning_lesson", "unit_id": "math-unit", "component_id": "hexagons"},
+            })
+        speakers = [call.kwargs["speaker"] for call in report.await_args_list]
+        self.assertEqual(speakers, ["student", "bot"])
+        for call in report.await_args_list:
+            self.assertEqual(call.kwargs["help_type"], "hint")
+            self.assertEqual(call.kwargs["component_id"], "hexagons")
+            self.assertEqual(call.args[2], "lesson-hint-chat")
+
+    async def test_a_support_button_reply_is_a_bot_turn_with_its_help_type(self):
+        self.app.dependency_overrides[require_learner_session] = lambda: {
+            "sub": LEARNER_ID, "roles": ["learner"], "sid": "moe-session",
+        }
+        report = AsyncMock()
+        with (
+            patch.object(agent, "reserve_support", new=AsyncMock(return_value=SupportReservation("k", None))),
+            patch.object(agent.lrs_reporter, "report_conversation_interacted", new=report),
+        ):
+            response = await self.client.post("/api/agent/coach/support", json={
+                "conversation_id": "lesson-thread", "support": "explanation", "language": "he",
+                "surface": {"screen": "learning_lesson", "unit_id": "math-unit", "component_id": "hexagons"},
+            })
+            self.assertEqual(response.status_code, 200)
+            async for _ in response.aiter_text():
+                pass
+        report.assert_awaited_once()
+        self.assertEqual(report.await_args.kwargs["speaker"], "bot")
+        self.assertEqual(report.await_args.kwargs["help_type"], "explanation")
+        self.assertEqual(report.await_args.kwargs["component_id"], "hexagons")
+
     async def test_general_reply_reports_the_latest_proactive_trigger(self):
         self.app.dependency_overrides[require_learner_session] = lambda: {
             "sub": LEARNER_ID, "roles": ["learner"], "sid": "moe-session",

@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -70,16 +70,46 @@ async def list_mentoring(learner_id: str = Depends(require_learner)):
 
 @router.post("/mentoring/assist")
 async def mentoring_assist(data: dict, session=Depends(require_learner_session)):
-    """Yuvi (LLM) guided-writing helper: builds a draft + next question/options (F5)."""
+    """Yuvi (LLM) guided-writing helper: builds a draft + next question/options (F5).
+
+    A conversation with the bot is a conversation the ministry hears about:
+    one `interacted` for the answer the child just gave (when there is one)
+    and one for the question Yuvi asks back — no text, no lesson ancestry
+    (this happens outside any content). The composer mints the conversation
+    id once per write-up so every turn names the same conversation.
+    """
     from app.services import mentoring_assist as assist
+    qa = data.get("qa")
     result = await assist.guide_documentation(
         session["sub"],
         language=data.get("language", "he"),
-        qa=data.get("qa"),
+        qa=qa,
         notes=data.get("notes", ""),
         feeling=data.get("feeling", ""),
         more=bool(data.get("more")),
     )
+    if session.get("sid"):
+        from app.agents import sessions as agent_sessions
+        from app.services.lrs import reporter as lrs_reporter
+
+        conversation_id = agent_sessions.normalize_session_id(
+            data.get("conversation_id") or f"mentoring-assist-{date.today().isoformat()}"
+        )
+        try:
+            if isinstance(qa, list) and qa:
+                await lrs_reporter.report_conversation_interacted(
+                    session["sub"], session["sid"], conversation_id,
+                    speaker="student", conversation_trigger="student-request",
+                    help_type="other", content=False,
+                )
+            if str(result.get("question") or "").strip():
+                await lrs_reporter.report_conversation_interacted(
+                    session["sub"], session["sid"], conversation_id,
+                    speaker="bot", conversation_trigger="other",
+                    help_type="other", content=False,
+                )
+        except Exception as exc:  # report-and-forget
+            print(f"⚠️ mentoring assist report skipped ({type(exc).__name__})")
     return JSONResponse(content=result)
 
 

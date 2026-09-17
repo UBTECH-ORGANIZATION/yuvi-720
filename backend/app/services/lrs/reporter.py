@@ -239,6 +239,39 @@ async def report_agency_completed(
 
 
 # ── Conversation ─────────────────────────────────────────────────────────────
+def lrs_conversation_id(conversation_id: str, item_id: Optional[str] = None) -> str:
+    """The `conversationId` the ministry sees.
+
+    Spec v1.1: "יש ליצור conversationId חדש עבור שיחה חדשה או פריט שונה" — one
+    id per conversation AND per item. Our lesson thread spans a whole
+    component, so the item the learner is on is folded into the id; a chat
+    outside any item keeps the thread's own id. `rated` derives the same id
+    from the same inputs, so a like lands on the conversation it rates.
+    """
+    return f"{conversation_id}--{item_id}" if item_id else conversation_id
+
+
+async def _position(
+    learner_id: str, component_id: Optional[str], item_id: Optional[str]
+) -> tuple[Optional[str], Optional[str]]:
+    """Where the learner is, from the caller when it knows, else the brain."""
+    if component_id and item_id:
+        return component_id, item_id
+    try:
+        from app.brain.repository import get_brain
+
+        state = (await get_brain(learner_id)).get("current_state") or {}
+    except Exception:
+        return component_id, item_id
+    resolved_component = component_id or state.get("component_id")
+    # An item only makes sense inside the component the caller named (or the
+    # brain's own) — never the brain's item under a caller's other component.
+    resolved_item = item_id or (
+        state.get("item_id") if resolved_component == state.get("component_id") else None
+    )
+    return resolved_component, resolved_item
+
+
 async def report_conversation_interacted(
     learner_id: str,
     session_id: str,
@@ -248,27 +281,46 @@ async def report_conversation_interacted(
     help_type: Optional[str] = None,
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
+    *,
+    content: bool = True,
 ) -> None:
+    """`component_id` / `item_id` are the catalog's own (slug) ids — the IRIs
+    the extensions carry are built here, and the same ids resolve the content
+    ancestry. `content=False` for a conversation outside any lesson (the
+    mentoring wizard) — no ancestry, no vendor, no ids."""
+    from app.services.lrs import hierarchy as hierarchy_mod
+
+    if content:
+        component_id, item_id = await _position(learner_id, component_id, item_id)
+    else:
+        component_id, item_id = None, None
     await _report(
         statements.conversation_interacted,
         learner_id,
         session_id,
-        conversation_id,
+        lrs_conversation_id(conversation_id, item_id),
         speaker=speaker,
         conversation_trigger=conversation_trigger,
         help_type=help_type,
-        component_id=component_id,
-        item_id=item_id,
-        **await _content_context(learner_id, component_id, item_id),
+        component_id=hierarchy_mod.component_activity(component_id)["id"] if component_id else None,
+        item_id=hierarchy_mod.item_activity(item_id)["id"] if item_id else None,
+        **(await _content_context(learner_id, component_id, item_id) if content else {}),
     )
 
 
 async def report_conversation_rated(
-    learner_id: str, session_id: str, conversation_id: str, rating: str
+    learner_id: str,
+    session_id: str,
+    conversation_id: str,
+    rating: str,
+    component_id: Optional[str] = None,
+    item_id: Optional[str] = None,
 ) -> None:
+    component_id, item_id = await _position(learner_id, component_id, item_id)
     await _report(
-        statements.conversation_rated, learner_id, session_id, conversation_id, rating,
-        **await _content_context(learner_id),
+        statements.conversation_rated, learner_id, session_id,
+        lrs_conversation_id(conversation_id, item_id), rating,
+        **await _content_context(learner_id, component_id, item_id),
     )
 
 
@@ -520,6 +572,9 @@ async def report_help_requested(
     *,
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
+    question_id: Optional[str] = None,
+    question_type: Optional[str] = None,
+    attempt_number: Optional[int] = None,
 ) -> None:
     # `component_id`/`item_id` pin the ancestry to the SAME level as `object`.
     # Left unset, `_content_context` falls back to the brain's full current
@@ -527,7 +582,8 @@ async def report_help_requested(
     # component-level help request while the learner is already on a specific
     # item) — the review read that stray, unrelated item in `grouping` as the
     # object being wrong, when the real bug was including an ancestor the
-    # object never had.
+    # object never had. `question_id` & co. ride along when the help was asked
+    # on a question (the ministry's example names it).
     await _report(
         statements.help_requested,
         learner_id,
@@ -536,6 +592,9 @@ async def report_help_requested(
         object_type=object_type,
         help_source=help_source,
         help_type=help_type,
+        question_id=question_id,
+        question_type=question_type,
+        attempt_number=attempt_number,
         **await _content_context(learner_id, component_id, item_id),
     )
 

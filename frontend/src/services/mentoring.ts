@@ -117,6 +117,8 @@ export function assistMentoring(input: {
   notes?: string
   feeling?: string
   more?: boolean
+  /** One id per write-up: every turn of the helper is one MoE conversation. */
+  conversation_id?: string
 }) {
   return apiPost<{ draft: string; question: string; options: string[]; phase: 'asking' | 'ready'; ai?: boolean }>(
     '/api/mentoring/assist',
