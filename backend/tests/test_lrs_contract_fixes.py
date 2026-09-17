@@ -857,3 +857,44 @@ class SeptemberReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GroupDashboardIdTests(unittest.IsolatedAsyncioTestCase):
+    """A group board names the class by its NMM — never the school symbol,
+    never an empty string — and the viewer's own NMM is only a fallback."""
+
+    async def _viewed(self, group, identity, subject_group_id="g1"):
+        from unittest.mock import AsyncMock, patch
+        from app.services.lrs import reporter
+
+        captured = {}
+
+        async def enqueue(statement, **_kwargs):
+            captured["statement"] = statement
+
+        with patch.dict("os.environ", {
+            "LRS_ENABLED": "true", "LRS_TOKEN_URL": "https://x/t", "LRS_STATEMENTS_URL": "https://x/s",
+            "LRS_CLIENT_ID": "c", "LRS_CLIENT_SECRET": "s", "LRS_SUPPLIER_DOMAIN": "https://spark.yuvilab.co.il",
+            "LRS_KATA_ECAT_ID": "123456", "LRS_TEST_EXIDENTIFIER": "1012345678",
+        }), patch.object(reporter.outbox, "enqueue", side_effect=enqueue), \
+             patch.object(reporter.identity_mod, "resolve_reporting_identity", AsyncMock(return_value=identity)), \
+             patch("app.services.org_repository.get_group", AsyncMock(return_value=group)):
+            reporter._warned_identities.clear()
+            await reporter.report_dashboard_viewed(
+                "teacher-1", "sess", "learning-group", None, 42.0, subject_group_id=subject_group_id,
+            )
+        return _short(captured["statement"]["context"].get("extensions") or {})
+
+    async def test_the_groups_nmm_is_the_dashboard_id(self):
+        ext = await self._viewed({"_id": "g1", "nmm_id": "90635956"}, {"exidentifier": "1", "school": "111", "nmm": "222"})
+        self.assertEqual(ext["dashboardId"], "90635956")
+
+    async def test_a_ministry_provisioned_group_is_its_own_nmm(self):
+        ext = await self._viewed({"_id": "90635956"}, {"exidentifier": "1", "school": "111", "nmm": None}, subject_group_id="90635956")
+        self.assertEqual(ext["dashboardId"], "90635956")
+
+    async def test_a_local_group_without_an_nmm_falls_back_to_the_viewers_nmm_or_nothing(self):
+        ext = await self._viewed({"_id": "g1"}, {"exidentifier": "1", "school": "111", "nmm": "222"})
+        self.assertEqual(ext["dashboardId"], "222")
+        ext = await self._viewed({"_id": "g1"}, {"exidentifier": "1", "school": "111", "nmm": None})
+        self.assertNotIn("dashboardId", ext)

@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
+import { useViewedDuration } from '../../../hooks/useViewedDuration'
 import {
   Card, EmptyState, ErrorState, Icon, Skeleton, SkeletonCard, StatusPill,
 } from '../../../components/primitives'
@@ -33,7 +34,7 @@ import { PresenceDot, agoLabel } from '../live/LiveNow'
 import { LiveClassSkeleton, LiveClassView } from '../live/LiveClassView'
 import {
   createSubgroup, deleteSubgroup, getGroupFocus, getGroupSnapshot, updateSubgroup,
-  reportRealtimeDashboardViewed,
+  REALTIME_DASHBOARD_VIEWED_PATH,
   type GroupInsight, type LearnerFocus, type Subgroup,
 } from '../../../services/teacher'
 import { withFallback } from '../shared/EvidenceDisclosure'
@@ -109,7 +110,6 @@ export function TeacherStudentsPage() {
     { key: 'name', direction: 'asc' }
   )
   const [showMore, setShowMore] = useState(false)
-  const reportedLiveGroups = useRef(new Set<string>())
   /* One dialog for creating and for amending, and one for the confirmation.
      There is no longer a "picking mode" on the roster: choosing who is in a
      group used to turn the table into a checkbox grid, which took away the
@@ -136,11 +136,9 @@ export function TeacherStudentsPage() {
      page — its JSX is kept below, unreachable, until it finds a new home. */
   const mode = 'live' as 'live' | 'manage'
 
-  useEffect(() => {
-    if (!groupId || reportedLiveGroups.current.has(groupId)) return
-    reportedLiveGroups.current.add(groupId)
-    void reportRealtimeDashboardViewed(groupId).catch(() => undefined)
-  }, [groupId])
+  // MoE `dashboard/viewed` (realtime-dashboard), filed on leave with the
+  // visible time — once per group visit, not once per mount.
+  useViewedDuration(groupId ? REALTIME_DASHBOARD_VIEWED_PATH : null, groupId ? { group_id: groupId } : {})
 
   /* Where the planner points each child — the live rows' "מיקוד" line and the
      pulse card's subject gauges. Re-read when the focus panel changes a pin. */

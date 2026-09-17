@@ -235,6 +235,13 @@ export interface DashboardDTO {
   updatedAt: string | null
 }
 
+/** The on-leave `dashboard/viewed` endpoint (`student-personal` for the
+ *  learner's own board, `student-view` for a teacher's); `useViewedDuration`
+ *  POSTs `{duration_seconds}` to it once per visit. */
+export function dashboardViewedPath(learnerId: string) {
+  return `/api/brain/${encodeURIComponent(learnerId)}/dashboard-viewed`
+}
+
 export function getDashboard(learnerId: string, lang: string, signal?: AbortSignal) {
   return apiGet<DashboardDTO>(
     `/api/brain/${encodeURIComponent(learnerId)}/dashboard?lang=${lang}`,

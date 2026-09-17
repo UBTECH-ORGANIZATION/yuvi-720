@@ -81,7 +81,9 @@ async def seed(password: str) -> None:
     await org_repository.ensure_indexes()
     await org_repository.upsert_school(SCHOOL_ID, name="בית ספר בדיקות 720", city="נתניה")
     await org_repository.upsert_group(
-        GROUP_ID, school_id=SCHOOL_ID, name="כיתת בדיקות LRS", subject="math", grade="ז"
+        GROUP_ID, school_id=SCHOOL_ID, name="כיתת בדיקות LRS", subject="math", grade="ז",
+        # The class's ministry id — what a group dashboard names as dashboardId.
+        nmm_id=NMM_ID,
     )
     await org_repository.link_teacher(
         TEACHER_ID, GROUP_ID, school_id=SCHOOL_ID, link_role="homeroom"

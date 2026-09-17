@@ -22,13 +22,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
+import { useViewedDuration } from '../../../hooks/useViewedDuration'
 import {
   Card, EmptyState, ErrorState, Hint, Icon, Panel, SkeletonCard, StatusPill,
 } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  getGroupLearnings, type LearningRow, type LearningsView,
+  getGroupLearnings, groupDashboardViewedPath, type LearningRow, type LearningsView,
 } from '../../../services/teacher'
 import { StatDelta } from '../home/StatDelta'
 import { countKey } from '../shared/countLabel'
@@ -96,6 +97,9 @@ export function TeacherLearningsPage() {
   const [view, setView] = useState<LearningsView | null>(null)
   const [error, setError] = useState(false)
   const [query, setQuery] = useState('')
+
+  // MoE `dashboard/viewed` (learning-group), filed on leave with the visible time.
+  useViewedDuration(groupId ? groupDashboardViewedPath(groupId) : null)
   const [onlyStarted, setOnlyStarted] = useState(false)
   /* Which objective the teacher stepped into. The first glance is objective
      cards; opening one swaps the whole body for its lomdot, with the way back

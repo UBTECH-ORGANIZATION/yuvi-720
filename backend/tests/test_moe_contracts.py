@@ -390,14 +390,17 @@ if __name__ == "__main__":
 
 
 class LearnerDashboardRoute(unittest.IsolatedAsyncioTestCase):
-    """`GET /api/brain/{id}/dashboard` is the route the student's board calls
-    and the one that reports dashboard/viewed for a learner's own visit.
+    """`GET /api/brain/{id}/dashboard` is the route the student's board calls;
+    `POST /api/brain/{id}/dashboard-viewed` is what reports dashboard/viewed —
+    on leave, with the duration (spec v1.1: `result.duration` when the viewing
+    ends). The GET used to report on every fetch — mount, focus, tab switch —
+    which filed several duration-less views per visit.
 
-    It had no test of its own, so a merge that renamed its session parameter
-    while the body kept the old name reached main as a 500 on every dashboard.
-    The route is called here end to end with the projection and the reporter
-    patched — for the learner, and for a teacher, whose view must not be
-    turned away by a learner-only gate."""
+    The GET had no test of its own, so a merge that renamed its session
+    parameter while the body kept the old name reached main as a 500 on every
+    dashboard. Both routes are called here end to end with the projection and
+    the reporter patched — for the learner, and for a teacher, whose view must
+    not be turned away by a learner-only gate."""
 
     async def _call(self, actor, learner_id="kid-a", teacher_ok=True):
         from app.routes import brain
@@ -413,23 +416,54 @@ class LearnerDashboardRoute(unittest.IsolatedAsyncioTestCase):
             response = await brain.read_dashboard(learner_id=learner_id, lang="he", actor=actor)
         return response, reporter
 
+    async def _viewed(self, actor, learner_id="kid-a", teacher_ok=True, duration=12.5):
+        from app.routes import brain
+
+        reporter = AsyncMock()
+        with patch("app.brain.org.teacher_can_access_learner", AsyncMock(return_value=teacher_ok)), \
+             patch.object(brain.lrs_reporter, "report_dashboard_viewed", reporter):
+            response = await brain.report_dashboard_viewed(
+                learner_id=learner_id,
+                data=brain.DashboardViewedRequest(duration_seconds=duration),
+                actor=actor,
+            )
+        return response, reporter
+
     async def test_the_learner_opens_their_own_board(self):
         response, reporter = await self._call({"sub": "kid-a", "sid": "session-1", "roles": ["learner"]})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.body), {"ok": True, "for": "kid-a"})
+        reporter.assert_not_awaited()  # the fetch is not the viewing
+
+    async def test_the_learner_leaving_their_board_reports_student_personal_with_duration(self):
+        response, reporter = await self._viewed({"sub": "kid-a", "sid": "session-1", "roles": ["learner"]})
+        self.assertEqual(response.status_code, 200)
         reporter.assert_awaited_once()
-        self.assertEqual(reporter.await_args.args[:3], ("kid-a", "session-1", "student-personal"))
+        self.assertEqual(reporter.await_args.args, ("kid-a", "session-1", "student-personal", None, 12.5))
         self.assertEqual(reporter.await_args.kwargs.get("subject_learner_id"), "kid-a")
 
     async def test_a_teacher_of_the_learner_opens_it_as_a_student_view(self):
         response, reporter = await self._call({"sub": "teacher-a", "sid": "session-2", "roles": ["teacher"]})
         self.assertEqual(response.status_code, 200)
+        reporter.assert_not_awaited()
+        response, reporter = await self._viewed({"sub": "teacher-a", "sid": "session-2", "roles": ["teacher"]})
         self.assertEqual(reporter.await_args.args[:3], ("teacher-a", "session-2", "student-view"))
         self.assertEqual(reporter.await_args.kwargs.get("subject_learner_id"), "kid-a")
+
+    async def test_a_duration_outside_the_window_is_refused(self):
+        from pydantic import ValidationError
+        from app.routes import brain
+
+        for bad in (0, -1, 28_801):
+            with self.assertRaises(ValidationError):
+                brain.DashboardViewedRequest(duration_seconds=bad)
 
     async def test_without_a_moe_session_the_board_still_loads_unreported(self):
         response, reporter = await self._call({"sub": "kid-a", "roles": ["learner"]})
         self.assertEqual(response.status_code, 200)
+        reporter.assert_not_awaited()
+        response, reporter = await self._viewed({"sub": "kid-a", "roles": ["learner"]})
+        self.assertEqual(json.loads(response.body), {"reported": False})
         reporter.assert_not_awaited()
 
     async def test_an_outsider_is_refused(self):

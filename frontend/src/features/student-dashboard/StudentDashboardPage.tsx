@@ -3,7 +3,8 @@ import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
-import { getDashboard, updateGoalStatus, type DashboardDTO } from '../../services/brain'
+import { dashboardViewedPath, getDashboard, updateGoalStatus, type DashboardDTO } from '../../services/brain'
+import { useViewedDuration } from '../../hooks/useViewedDuration'
 import { getCalendarUpcoming, type CalendarItem } from '../../services/calendar'
 import {
   getLearningCatalog,
@@ -43,6 +44,11 @@ export function StudentDashboardPage() {
   // them. Read once per mount: the route key remounts this page per path.
   const isOverview = !window.location.pathname.endsWith('/calendar')
     && !window.location.pathname.endsWith('/chat')
+
+  // MoE `dashboard/viewed` (student-personal): filed when the learner leaves
+  // the board, with the time it was actually on screen. The data fetch below
+  // is not the viewing — it re-runs on every focus and brain update.
+  useViewedDuration(learnerId && isOverview ? dashboardViewedPath(learnerId) : null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMinimumLoadElapsed(true), 1600)

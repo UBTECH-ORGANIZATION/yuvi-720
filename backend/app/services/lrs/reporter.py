@@ -157,18 +157,21 @@ async def report_dashboard_viewed(
     duration_seconds: Optional[float] = None,
     *,
     subject_learner_id: Optional[str] = None,
+    subject_group_id: Optional[str] = None,
 ) -> None:
-    """`learner_id` is the *viewer* (the actor); `subject_learner_id` is whose
-    dashboard is on screen.
+    """`learner_id` is the *viewer* (the actor); `subject_learner_id` /
+    `subject_group_id` is whose dashboard is on screen.
 
     The spec wants `dashboardId` to name the thing being looked at, so a teacher
     opening one student's board must stamp that student's exidentifier — not
-    their own. Resolving it here keeps the exidentifier inside `lrs/`: callers
-    pass a plain learner id and never touch PII.
+    their own — and a group board the class's NMM id. Resolving it here keeps
+    the exidentifier inside `lrs/`: callers pass plain ids and never touch PII.
     """
     if dashboard_id is None and subject_learner_id and subject_learner_id != learner_id:
         subject = await identity_mod.resolve_reporting_identity(subject_learner_id)
         dashboard_id = subject["exidentifier"] if subject else None
+    if dashboard_id is None and subject_group_id:
+        dashboard_id = await _group_nmm(subject_group_id)
     await _report(
         statements.dashboard_viewed,
         learner_id,
@@ -177,6 +180,23 @@ async def report_dashboard_viewed(
         dashboard_id,
         duration_seconds=duration_seconds,
     )
+
+
+async def _group_nmm(group_id: str) -> Optional[str]:
+    """The ministry's id for a class: the group's own `nmm_id`, else its `_id`
+    when the ministry provisioned it (the NMM IS the id then). A local group
+    with neither has no `dashboardId` — nothing is invented."""
+    try:
+        from app.services import org_repository
+
+        group = await org_repository.get_group(group_id)
+    except Exception:
+        group = None
+    if group and group.get("nmm_id"):
+        return str(group["nmm_id"])
+    if group_id.isdigit():
+        return group_id
+    return None
 
 
 # ── Agency questionnaire (onboarding) ────────────────────────────────────────

@@ -78,14 +78,22 @@ async def report_live_dashboard_viewed(
     data: dict,
     session: dict = Depends(require_teacher_session),
 ):
-    """Record an authorized teacher opening the real-time group dashboard."""
+    """Record the real time an authorized teacher spent on the real-time group
+    dashboard — filed on leave, with the duration, like every other board."""
     group_id = str(data.get("group_id") or "")
     groups = await org.groups_for_teacher(session["sub"])
     if not group_id or group_id not in {str(group.get("id")) for group in groups}:
         return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    try:
+        duration_seconds = float(data.get("duration_seconds"))
+    except (TypeError, ValueError):
+        return JSONResponse(content={"error": "invalid_duration"}, status_code=422, headers=_NO_STORE)
+    if not 0 < duration_seconds <= 28_800:
+        return JSONResponse(content={"error": "invalid_duration"}, status_code=422, headers=_NO_STORE)
     if session.get("sid"):
         await lrs_reporter.report_dashboard_viewed(
-            session["sub"], session["sid"], "realtime-dashboard", None
+            session["sub"], session["sid"], "realtime-dashboard", None, duration_seconds,
+            subject_group_id=group_id,
         )
     return JSONResponse(content={"reported": True}, headers=_NO_STORE)
 

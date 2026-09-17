@@ -383,11 +383,11 @@ export function getGroupSnapshot(groupId: string, language: string, days?: numbe
   return apiGet<GroupInsight>(`/api/teacher/groups/${groupId}/snapshot?${params}`)
 }
 
-export function reportGroupDashboardViewed(groupId: string, durationSeconds: number) {
-  return apiPost<{ reported: boolean }>(
-    `/api/teacher/groups/${encodeURIComponent(groupId)}/dashboard-viewed`,
-    { duration_seconds: durationSeconds }
-  )
+/* The on-leave `dashboard/viewed` endpoints. Pages hand these to
+   `useViewedDuration`, which POSTs `{duration_seconds}` (or beacons it from a
+   closing tab) once per visit. */
+export function groupDashboardViewedPath(groupId: string) {
+  return `/api/teacher/groups/${encodeURIComponent(groupId)}/dashboard-viewed`
 }
 
 /* The subjects this class can be narrowed to — per class, from what it has
@@ -486,11 +486,8 @@ export function getStudentDetail(learnerId: string, language: string, subject?: 
   return apiGet<StudentDetail>(`/api/teacher/students/${learnerId}?${params}`)
 }
 
-export function reportStudentDashboardViewed(learnerId: string, durationSeconds: number) {
-  return apiPost<{ reported: boolean }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/dashboard-viewed`,
-    { duration_seconds: durationSeconds }
-  )
+export function studentDashboardViewedPath(learnerId: string) {
+  return `/api/teacher/students/${encodeURIComponent(learnerId)}/dashboard-viewed`
 }
 
 export function getStudentActivity(learnerId: string, subject?: string) {
@@ -868,9 +865,8 @@ export function getLive(groupId?: string) {
   return apiGet<LiveSnapshot>(`/api/teacher/live${query}`)
 }
 
-export function reportRealtimeDashboardViewed(groupId: string) {
-  return apiPost<{ reported: boolean }>('/api/teacher/live/viewed', { group_id: groupId })
-}
+/** Body: `{ group_id, duration_seconds }` — the hook adds the duration. */
+export const REALTIME_DASHBOARD_VIEWED_PATH = '/api/teacher/live/viewed'
 
 export function acknowledgeAlert(alertId: string) {
   return apiPost<TeacherAlert>(`/api/teacher/alerts/${encodeURIComponent(alertId)}/ack`, {})

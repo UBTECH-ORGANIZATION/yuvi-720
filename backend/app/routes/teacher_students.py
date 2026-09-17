@@ -50,19 +50,20 @@ async def _guard_group(session: dict, group_id: str) -> bool:
 
 async def _report(
     session: dict, dashboard_type: str, duration_seconds: Optional[float] = None,
-    *, subject_learner_id: Optional[str] = None,
+    *, subject_learner_id: Optional[str] = None, subject_group_id: Optional[str] = None,
 ) -> None:
     """MoE 720 dashboard-viewed. Best-effort; never breaks the response.
 
     `subject_learner_id` names whose board it was: a student view is stamped
-    with that student's exidentifier, never the teacher's.
+    with that student's exidentifier, never the teacher's; `subject_group_id`
+    names the class of a group board (its NMM becomes `dashboardId`).
     """
     if not session.get("sid"):
         return
     try:
         await lrs_reporter.report_dashboard_viewed(
             session["sub"], session["sid"], dashboard_type, None, duration_seconds,
-            subject_learner_id=subject_learner_id,
+            subject_learner_id=subject_learner_id, subject_group_id=subject_group_id,
         )
     except Exception as exc:  # pragma: no cover - reporting is never critical
         print(f"⚠️ dashboard-viewed report skipped: {type(exc).__name__}")
@@ -128,7 +129,7 @@ async def report_group_dashboard_viewed(
         raise HTTPException(status_code=422, detail="invalid_duration")
     if not 0 < duration_seconds <= 28_800:
         raise HTTPException(status_code=422, detail="invalid_duration")
-    await _report(session, "learning-group", duration_seconds)
+    await _report(session, "learning-group", duration_seconds, subject_group_id=group_id)
     return _ok({"reported": True})
 
 
@@ -322,7 +323,8 @@ async def group_learnings(
     view = await cache_store.remember(
         "grp", group_id, "learnings", f"{subject or ''}:{lang}", 600, _build,
     )
-    await _report(session, "learning-group")
+    # The MoE `viewed` for this screen is filed on leave, with its duration,
+    # through `POST /groups/{group_id}/dashboard-viewed` — not per fetch.
     return _ok(view)
 
 
@@ -365,7 +367,6 @@ async def group_learning_detail(
     view = await learning_analytics.learning_detail(
         group_id, component_id, language=normalize_language(language)
     )
-    await _report(session, "learning-group")
     return _ok(view)
 
 

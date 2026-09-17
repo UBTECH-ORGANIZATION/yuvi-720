@@ -278,12 +278,14 @@ def dashboard_viewed(
     duration_seconds: Optional[float] = None,
     name_he: Optional[str] = None,
 ) -> dict[str, Any]:
-    # dashboardId filter per the spec's split: student dashboards → the ת"ז
+    # dashboardId per the spec's split: student dashboards → the ת"ז
     # (exidentifier), group dashboards → the NMM id. Default from identity so
-    # callers never handle the exidentifier themselves (PII boundary).
+    # callers never handle the exidentifier themselves (PII boundary). A group
+    # board with no NMM anywhere carries no id — the school symbol is not an
+    # NMM and an empty string names nothing.
     if dashboard_id is None:
         if dashboard_type in {"learning-group", "realtime-dashboard"}:
-            dashboard_id = identity["nmm"] or identity["school"] or ""
+            dashboard_id = identity["nmm"] or None
         else:
             dashboard_id = identity["exidentifier"]
     obj = activity(
