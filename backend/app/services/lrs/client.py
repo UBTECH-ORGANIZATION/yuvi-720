@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 
-from app.services.lrs import auth, config
+from app.services.lrs import auth, config, http
 
 
 class LrsError(RuntimeError):
@@ -39,12 +39,9 @@ async def post_statement(statement: dict[str, Any]) -> dict[str, Any]:
             "X-Experience-API-Version": config.xapi_version(),
         }
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(config.timeout_seconds())
-            ) as client:
-                response = await client.post(
-                    config.statements_url(), json=statement, headers=headers
-                )
+            response = await http.shared_client().post(
+                config.statements_url(), json=statement, headers=headers
+            )
         except httpx.HTTPError as exc:
             raise LrsError(f"transport:{type(exc).__name__}") from exc
 

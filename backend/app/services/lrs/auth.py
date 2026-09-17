@@ -16,7 +16,7 @@ from typing import Optional
 
 import httpx
 
-from app.services.lrs import config
+from app.services.lrs import config, http
 
 _lock = asyncio.Lock()
 _token: Optional[str] = None
@@ -45,12 +45,9 @@ async def get_access_token(force_refresh: bool = False) -> str:
             "scope": config.scope(),
         }
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(config.timeout_seconds())
-            ) as client:
-                response = await client.post(config.token_url(), data=form)
-                response.raise_for_status()
-                payload = response.json()
+            response = await http.shared_client().post(config.token_url(), data=form)
+            response.raise_for_status()
+            payload = response.json()
         except httpx.HTTPStatusError as exc:
             raise LrsAuthError(
                 f"token endpoint returned {exc.response.status_code}"

@@ -249,6 +249,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if session_sweeper:
             session_sweeper.cancel()
         relay_probe.cancel()
+        from app.services.lrs import http as lrs_http
+
+        await lrs_http.close_shared_client()
         # Usage metering is written off the request path, so drain it here or a
         # restart loses the events for every in-flight AI call.
         from app.services import ai_usage
