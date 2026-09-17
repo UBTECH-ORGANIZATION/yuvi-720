@@ -1909,7 +1909,6 @@
   "companion.thread.part": "part {part}",
   "companion.thread.partLetters": "a,b,c,d,e,f,g,h",
   "learning.lesson.previous": "Previous activity",
-  "learning.lesson.skip": "I already know this — skip",
   "learning.lesson.reentry.next": "Continue to the next activity",
   "learning.track.leave.title": "Move to another activity?",
   "learning.track.leave.body": "We'll move to “{title}”. Anything you haven't finished in the activity that's open right now won't be saved.",

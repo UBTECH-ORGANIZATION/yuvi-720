@@ -134,9 +134,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // While the tab is visible a ping every few minutes is the sign of life the
   // server's idle timeout counts on — without it a browser that was killed
   // and a child quietly reading look the same.
+  //
+  // A full page load (refresh, typed URL, the login redirect) arrives after
+  // the previous document's `pagehide` already filed a `suspend`; the fresh
+  // document announces itself with a `resume` — the server files it only
+  // when the session really is suspended, so a login or a second tab never
+  // produces a resume without its suspend.
   useEffect(() => {
     if (!user) return
     let suspended = document.hidden
+    if (!suspended) apiBeacon('/api/auth/session/resume')
     const suspend = () => {
       if (suspended) return
       suspended = true

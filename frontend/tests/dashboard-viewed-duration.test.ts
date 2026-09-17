@@ -17,7 +17,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const read = (rel: string) => readFileSync(path.join(here, '../src', rel), 'utf8')
 
 const PAGES: Array<[string, RegExp]> = [
-  ['features/student-dashboard/StudentDashboardPage.tsx', /useViewedDuration\(learnerId && isOverview \? dashboardViewedPath\(learnerId\) : null\)/],
+  ['features/student-dashboard/StudentDashboardPage.tsx', /useViewedDuration\(learnerId && isOverview && dashboard \? dashboardViewedPath\(learnerId\) : null\)/],
   ['features/teacher-app/home/TeacherHomePage.tsx', /useViewedDuration\(groupId \? groupDashboardViewedPath\(groupId\) : null\)/],
   ['features/teacher-app/student/TeacherStudentPage.tsx', /useViewedDuration\(studentDashboardViewedPath\(learnerId\)\)/],
   ['features/teacher-app/learnings/TeacherLearningsPage.tsx', /useViewedDuration\(groupId \? groupDashboardViewedPath\(groupId\) : null\)/],

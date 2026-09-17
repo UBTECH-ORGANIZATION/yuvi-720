@@ -98,9 +98,16 @@ async function login(page, username, phase) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
   const result = await call(page, 'POST', '/api/auth/login', { username, password: PASSWORD })
   if (result.status !== 200) throw new Error(`login ${username} → ${result.status} ${JSON.stringify(result.data)}`)
+  // The shell learns about the cookie on its next load — without it the
+  // session beacons (suspend/resume/ping) and the viewed hooks never run.
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined)
   const me = await call(page, 'GET', '/api/auth/me')
   const sid = me.data?.session_id
   note(phase, `login ${username} → session ${sid}`, 'ui')
+  // Every session this run opened: the results are scoped to them, so a
+  // colleague using the same test account meanwhile cannot pollute a row.
+  manifest.sessions.all = [...(manifest.sessions.all || []), sid]
   return sid
 }
 

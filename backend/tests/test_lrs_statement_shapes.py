@@ -50,6 +50,19 @@ class EveryBuilderValidates(unittest.TestCase):
     def test_agency(self):
         self.assertValid(statements.agency_initialized(IDENTITY, SESSION, "pre"))
         self.assertValid(statements.agency_answered(IDENTITY, SESSION, 3, "4", score_raw=4))
+        official = statements.agency_answered(
+            IDENTITY, SESSION, 3, "מסכים", score_raw=4,
+            question_id="https://moe.gov.il/720-agency-mapping/questions/3",
+            answer_id="https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        )
+        self.assertValid(official)
+        # The object stays the platform's own agency question (spec example);
+        # the catalog ids are extensions, never the object id.
+        self.assertTrue(official["object"]["id"].endswith("/agency/question/3"))
+        ext = {k.rsplit("/", 1)[-1]: v for k, v in official["context"]["extensions"].items()}
+        self.assertEqual(ext["questionId"], "https://moe.gov.il/720-agency-mapping/questions/3")
+        self.assertEqual(ext["answerId"], "https://moe.gov.il/720-agency-mapping/answers/agree_4")
+        self.assertEqual(official["result"]["response"], "מסכים")
         self.assertValid(statements.agency_completed(IDENTITY, SESSION, 300, "pre"))
 
     def test_conversation(self):

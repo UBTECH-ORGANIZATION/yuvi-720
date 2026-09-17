@@ -24,7 +24,8 @@ Fixes applied after integration report 4 (spec v1.1):
   · unit metadata `targetSector` → `targetSectors` (plural, array)
   · component metadata `cognitiveLevel` → `cognitiveLevels` (plural, array)
   · component metadata `manufacture` → `manufacturer`
-  · the generic ITEM skip is retired; a COMPONENT-level `skipped` is sent
+  · the generic ITEM skip is retired; the COMPONENT-level `skipped` is not
+    supported by the platform (no component skip in the app)
     ("דילוג על פריט הוחלף בדילוג על רכיב")
 
 Fixes applied after integration report 3 (17/08), shaped to match the ministry's
@@ -162,14 +163,8 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         duration_seconds=1290, ecat_item_id=ecat,
         name_he="פתיחה, הקנייה ותרגול סטנדרטי א", hierarchy=component_level,
     ))
-    # Report 4 (spec v1.1): the ITEM skip is retired and the skip is reported at
-    # the COMPONENT level — "יש לשלוח הודעת רכיב - skipped".
-    add("component", "skipped", statements.content_skipped(
-        identity, session_id,
-        object_id=hierarchy.component_activity(COMPONENT_ID)["id"],
-        object_type="component", name_he="פתיחה, הקנייה ותרגול סטנדרטי א",
-        ecat_item_id=ecat, hierarchy=component_level,
-    ))
+    # Spec v1.1 moved `skipped` to the COMPONENT level; the platform offers no
+    # component skip (no "I already know this" button), so it is not reported.
 
     # ── Agency questionnaire (answered carries result.score) ──────────────────
     add("questionnaire (agency)", "initialized",

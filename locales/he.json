@@ -1909,7 +1909,6 @@
   "companion.thread.part": "סעיף {part}",
   "companion.thread.partLetters": "א,ב,ג,ד,ה,ו,ז,ח",
   "learning.lesson.previous": "לפעילות הקודמת",
-  "learning.lesson.skip": "אני כבר יודע/ת — לדלג",
   "learning.lesson.reentry.next": "להמשיך לפעילות הבאה",
   "learning.track.leave.title": "לעבור לפעילות אחרת?",
   "learning.track.leave.body": "נעבור אל «{title}». מה שלא סיימתם בפעילות הפתוחה כרגע לא יישמר.",

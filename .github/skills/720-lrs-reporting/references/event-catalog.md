@@ -30,7 +30,7 @@ Kata's ids are URLs since 09/2026 (`https://lomdot.education.gov.il/…/methodic
 
 | # | Family | Verbs |
 |---|---|---|
-| 10 | **Component** | `initialized`, `completed` (`result.success`, `score.scaled`, `duration`), `skipped` (component level — the platform's skip button, `/api/learning/skip-component`) |
+| 10 | **Component** | `initialized`, `completed` (`result.success`, `score.scaled`, `duration`). `skipped` (component level in v1.1) is **not supported** — the app has no component skip (the "I already know this" button was removed 17/09), so it is never reported |
 | 11 | **Item: questionnaire** | `initialized`, `completed` (score + duration) |
 | 12 | **Question** | `answered` (response/success/score; extensions questionId/questionType/attemptNumber; nested under its screen) |
 | 13 | **Help (content)** | `requested` — `helpSource=content`, `helpType` = the content's declared kind if on the list else `hint`; nested under its question when asked on one |

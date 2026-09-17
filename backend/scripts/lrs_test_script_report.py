@@ -98,8 +98,25 @@ def missing(entry: dict, required: set[str]) -> list[str]:
     return sorted(key for key in required if key not in values or values[key] in (None, "", []))
 
 
+def session_of(entry: dict) -> str:
+    grouping = ((stmt(entry).get("context") or {}).get("contextActivities") or {}).get("grouping") or []
+    for activity in grouping:
+        activity_id = str(activity.get("id") or "")
+        if "/session/" in activity_id:
+            return activity_id.rsplit("/", 1)[-1]
+    return ""
+
+
 class Evidence:
     def __init__(self, entries: list[dict], *, student: str, teacher: str, nmm: str, manifest: dict):
+        # Scoped to the sessions the driver opened (`manifest.sessions.all`):
+        # the test accounts are shared between localhost and dev, and a
+        # colleague's lesson on the same account must not pass or fail a row.
+        # Sessions the auth layer reopened after an idle exit carry the
+        # driver's session as predecessor and are listed by the driver too.
+        own = set(manifest.get("all") or [])
+        if own:
+            entries = [entry for entry in entries if session_of(entry) in own]
         self.entries = sorted(entries, key=when)
         self.student, self.teacher, self.nmm, self.manifest = student, teacher, nmm, manifest
 
@@ -286,8 +303,7 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     if tc == "TC-ITM-04":
         return na("ב-1.1 הדילוג הוא ברמת הרכיב (TC-ITM-12); אין דילוג ברמת פריט.")
     if tc == "TC-ITM-12":
-        found = ev.find(actor=content, activity="component", verb="skipped")
-        return ok("דילוג על רכיב נשלח עם parent.", found[-1:]) if found and has_parent(found[-1]) else fail("לא נמצא skipped ברמת רכיב.", found[-1:])
+        return na("לא נתמך: באפליקציה אין דילוג על רכיב (\"אני כבר יודע/ת\"), ולכן האירוע skipped ברמת רכיב אינו נשלח.")
     if tc in {"TC-ITM-05", "TC-ITM-06", "TC-ITM-07"}:
         wanted = {"TC-ITM-05": "played", "TC-ITM-06": "paused", "TC-ITM-07": "completed"}[tc]
         found = ev.find(actor=content, verb=wanted, where=lambda e: object_type(e) in MEDIA_TYPES or ext_of(e).get("mediaFormat") in MEDIA_TYPES)

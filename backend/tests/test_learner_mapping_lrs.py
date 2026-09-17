@@ -47,12 +47,16 @@ class LearnerMappingLrsTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"reported": True})
+        # Spec v1.1: the response is the answer as the learner saw it; the
+        # ministry's catalog ids ride along for the questionnaire mapping.
+        self.assertTrue(official["answer_he"])
         report.assert_awaited_once_with(
             "learner-1",
             "session-1",
             1,
-            official["answer_id"],
+            official["answer_he"],
             score_raw=float(official["value"]),
+            question_he=official["question_he"],
             question_id=official["question_id"],
             answer_id=official["answer_id"],
         )

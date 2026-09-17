@@ -165,6 +165,22 @@ class EffectiveSidTests(RegistryTestCase):
         self.assertEqual((await registry.load("s1"))["successor_sid"], first)
         self.assertEqual((await registry.load(first))["predecessor_sid"], "s1")
 
+    async def test_a_request_after_logout_does_not_open_a_session_nobody_is_in(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        await registry.close("s1", reason="logout", at=T0 + timedelta(minutes=5))
+        payload = {"sub": "u1", "sid": "s1", "roles": ["learner"]}
+        # The stray in-flight request (a beacon, a poll) stays on the exited id.
+        self.assertEqual(await registry.effective_sid(payload), "s1")
+        self.assertEqual(self.verbs(), ["enter", "exit"])
+
+    async def test_an_old_tab_after_a_relogin_follows_the_users_live_session(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        await registry.open("u1", "s2", roles=["learner"], at=T0 + timedelta(minutes=5))  # closes s1: relogin
+        payload = {"sub": "u1", "sid": "s1", "roles": ["learner"]}
+        self.assertEqual(await registry.effective_sid(payload), "s2")
+        # One session per user: no third session, no extra enter.
+        self.assertEqual(self.verbs(), ["enter", "exit", "enter"])
+
     async def test_a_cookie_the_registry_never_saw_is_adopted_from_its_own_start(self):
         payload = {"sub": "u1", "sid": "legacy", "roles": ["learner"], "iat": T0.timestamp()}
         self.assertEqual(await registry.effective_sid(payload), "legacy")

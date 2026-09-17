@@ -461,6 +461,23 @@ async def effective_sid(payload: dict[str, Any], *, device: Optional[dict[str, A
         await touch(sid)
         _effective[sid] = (time.monotonic(), sid)
         return sid
+    reason = row.get("exit_reason")
+    if reason == "logout":
+        # The user ended this session on purpose and the cookie is gone; the
+        # odd request still in flight (a beacon, a poll) is not a new visit.
+        # It stays on the exited id rather than opening a session nobody is in.
+        _effective[sid] = (time.monotonic(), sid)
+        return sid
+    if reason == "relogin":
+        # Signing in again (another tab, another device) moved the user to a
+        # newer session; a request from the old tab belongs to that one —
+        # one session per user, never two chasing each other.
+        live = sorted(await _open_rows_for_user(user_id), key=lambda r: str(r.get("started_at") or ""))
+        if live:
+            current = str(live[-1]["_id"])
+            await touch(current)
+            _effective[sid] = (time.monotonic(), current)
+            return current
     successor = row.get("successor_sid")
     if not successor:
         candidate = str(uuid.uuid4())

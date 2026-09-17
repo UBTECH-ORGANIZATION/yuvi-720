@@ -380,15 +380,25 @@ def agency_answered(
     question_id: Optional[str] = None,
     answer_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    # Prefer the official MoE question/answer URL ids so the statement is scored
-    # against the ministry catalog; fall back to the local activity id.
-    object_id = question_id or f"{_domain()}/agency/question/{question_number}"
-    obj = activity(object_id, "question", question_he or f"שאלה {question_number}")
-    # The official answer id (URL) is the canonical response; keep the numeric
-    # value (1–5) as the scaled score.
-    result: dict[str, Any] = {"response": answer_id or response}
+    # Spec v1.1 (agency example): the object is the platform's own question
+    # activity `{domain}/agency/question/{n}`, `result.response` the chosen
+    # answer as the learner saw it, the 1–5 value as the raw score. The
+    # ministry's catalog ids for the question and the answer
+    # (`https://moe.gov.il/720-agency-mapping/...`) ride as extensions so the
+    # statement still scores against the official questionnaire.
+    obj = activity(
+        f"{_domain()}/agency/question/{question_number}",
+        "question",
+        question_he or f"שאלה {question_number}",
+    )
+    result: dict[str, Any] = {"response": response}
     if score_raw is not None:
         result["score"] = {"min": score_min, "max": score_max, "raw": score_raw}
+    ext: dict[str, Any] = {}
+    if question_id:
+        ext["questionId"] = question_id
+    if answer_id:
+        ext["answerId"] = answer_id
     return _base(
         identity,
         "answered",
@@ -398,6 +408,7 @@ def agency_answered(
         # The full questionnaire activity, not a bare id — the ministry's
         # examples type every parent entry.
         parent=[_agency_object(phase)],
+        context_extra={"extensions": extensions(ext)} if ext else None,
     )
 
 

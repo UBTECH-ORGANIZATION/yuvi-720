@@ -5,7 +5,7 @@
 
 שינויי 1.1 שמופיעים בקריאות: שיוך לספק התוכן דרך `…/ecat/content-vendor/{vendorId}` (מטח 10 · קמפוס 521 · מתודיקה 310);
 מטא-נתונים של יחידה/רכיב/פריט כ-extensions בכל אירוע תוכן; `selectionType` כ-extension עם הערכים
-`learning-type / practice-decision / is-understood / is-repeat / external-learning`; `skipped` ברמת רכיב;
+`learning-type / practice-decision / is-understood / is-repeat / external-learning`; `skipped` ברמת רכיב (לא נתמך ב-720 — אין דילוג על רכיב באפליקציה);
 `mediaDuration` הוסר; `reflectionTrigger` (ולא `reflactionTrigger`); `targetSectors` ו-`cognitiveLevels` כמערכים.
 
 לצד המסמך יש שני קבצים מוכנים לייבוא ל-Postman:
@@ -142,7 +142,7 @@ grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_sec
 | 22 | תחילת שאלון | `initialized` | `questionnaire` | `parent` → רכיב · כל המטא-דאטה |
 | 23 | סיום שאלון | `completed` | `questionnaire` | `result.score`, `result.duration` |
 | 24 | מענה על שאלה | `answered` | `item`/`question` | `result.response/success/score` · `extensions`: questionId, questionType, attemptNumber |
-| 25 | דילוג על רכיב | `skipped` | `component` | ב-1.1 הדילוג הוא ברמת הרכיב; `parent` → יחידת הלימוד |
+| 25 | דילוג על רכיב | `skipped` | `component` | **לא נתמך** — באפליקציה אין דילוג על רכיב ("אני כבר יודע/ת"), האירוע אינו נשלח |
 
 ### 3.10 מדיה
 | # | אירוע | Verb | Object type | הערות |

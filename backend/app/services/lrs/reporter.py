@@ -221,6 +221,7 @@ async def report_agency_answered(
     score_raw: Optional[float] = None,
     phase: str = "pre",
     *,
+    question_he: Optional[str] = None,
     question_id: Optional[str] = None,
     answer_id: Optional[str] = None,
 ) -> None:
@@ -232,6 +233,7 @@ async def report_agency_answered(
         response,
         score_raw=score_raw,
         phase=phase,
+        question_he=question_he,
         question_id=question_id,
         answer_id=answer_id,
     )
@@ -662,31 +664,6 @@ async def report_component_completed(
     await _report(
         statements.component_completed, learner_id, session_id, component_id,
         source="kata", **kwargs,
-    )
-
-
-async def report_component_skipped(
-    learner_id: str, session_id: str, component_id: str,
-) -> None:
-    """The learner chose to move past a component without finishing it.
-
-    Spec v1.1 keeps `skipped` at the COMPONENT level ("דילוג על פריט הוחלף
-    בדילוג על רכיב"), and it is only reportable because the platform offers the
-    choice — a component the learner merely abandoned is not a skip.
-    """
-    context = await _content_context(learner_id, component_id)
-    object_id = ((context.get("hierarchy") or {}).get("self") or {}).get("id")
-    if not object_id:
-        # Without the catalog we cannot name the component in the ministry's own
-        # IRI space, and a skip pointing at an id they cannot resolve is noise.
-        return
-    await _report(
-        statements.content_skipped,
-        learner_id,
-        session_id,
-        object_id=object_id,
-        object_type="component",
-        **context,
     )
 
 

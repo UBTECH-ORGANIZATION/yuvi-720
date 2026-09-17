@@ -47,8 +47,11 @@ export function StudentDashboardPage() {
 
   // MoE `dashboard/viewed` (student-personal): filed when the learner leaves
   // the board, with the time it was actually on screen. The data fetch below
-  // is not the viewing — it re-runs on every focus and brain update.
-  useViewedDuration(learnerId && isOverview ? dashboardViewedPath(learnerId) : null)
+  // is not the viewing — it re-runs on every focus and brain update — and
+  // neither is the loading skeleton: a learner still in onboarding passes
+  // through this route for a few seconds before the stage guard moves them
+  // on, and that is not a dashboard viewing. The clock starts with the data.
+  useViewedDuration(learnerId && isOverview && dashboard ? dashboardViewedPath(learnerId) : null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMinimumLoadElapsed(true), 1600)
