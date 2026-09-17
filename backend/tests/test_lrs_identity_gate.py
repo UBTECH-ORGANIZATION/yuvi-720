@@ -80,6 +80,28 @@ class PlaceholderIdentityGate(unittest.IsolatedAsyncioTestCase):
             await self._enqueued_with(LRS_KATA_ECAT_ID="", LRS_CONTENT_VENDORS="{}"), 0
         )
 
+    async def test_an_empty_stub_no_longer_switches_production_off(self):
+        """Real users carry their own exidentifier from the ministry's SSO; the
+        staging stub is rightly empty there. It used to be a *problem*, which
+        silenced every statement of every user."""
+        self.assertEqual(await self._enqueued_with(LRS_TEST_EXIDENTIFIER=""), 1)
+
+    async def test_an_empty_stub_skips_only_users_without_an_identity(self):
+        with mock.patch.dict(os.environ, {**GOOD, "LRS_TEST_EXIDENTIFIER": ""}, clear=False):
+            with mock.patch.object(
+                reporter.outbox, "enqueue", new_callable=mock.AsyncMock
+            ) as enqueue, mock.patch.object(
+                reporter.identity_mod, "resolve_reporting_identity",
+                new_callable=mock.AsyncMock, return_value=None,
+            ), mock.patch("builtins.print") as printed:
+                for _ in range(3):
+                    await reporter.report_session_enter("learner-1", "sess-1")
+        self.assertEqual(enqueue.await_count, 0)
+        # Said once, as information — not as "reporting disabled".
+        self.assertEqual(printed.call_count, 1)
+        self.assertIn("LRS_TEST_EXIDENTIFIER is empty", printed.call_args.args[0])
+        self.assertNotIn("disabled", printed.call_args.args[0])
+
     async def test_the_warning_is_logged_once_not_per_statement(self):
         with mock.patch.dict(
             os.environ, {**GOOD, "LRS_KATA_ECAT_ID": "ECAT-720-contract"}, clear=False

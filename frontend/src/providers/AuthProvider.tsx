@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { apiGet, apiPatch, apiPost, UNAUTHORIZED_EVENT } from '../services/api'
+import { apiBeacon, apiGet, apiPatch, apiPost, UNAUTHORIZED_EVENT } from '../services/api'
 import { setTelemetryUser } from '../services/telemetry'
+
+/* The server closes a session after LRS_SESSION_IDLE_MINUTES (30) without a
+   sign of life; five minutes leaves plenty of margin for a slow network. */
+const SESSION_PING_MS = 5 * 60 * 1000
+// A fresh document's resume waits for the previous document's suspend to land.
+const RESUME_ON_LOAD_MS = 1500
 
 /* AuthProvider — the single source of "who is using the app".
 
@@ -123,24 +129,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // MoE 720 session suspend/resume: report focus loss/return while signed in.
   // sendBeacon so the suspend survives tab switches and page unloads; the
   // session itself rides the httpOnly cookie, so no payload is needed.
+  //
+  // One `suspend` per pause and one `resume` per return: `visibilitychange`
+  // and `pagehide` both fire when a tab closes (and `pageshow` on a
+  // back-forward restore), so the pair is tracked rather than the events.
+  // While the tab is visible a ping every few minutes is the sign of life the
+  // server's idle timeout counts on — without it a browser that was killed
+  // and a child quietly reading look the same.
+  //
+  // A full page load (refresh, typed URL, the login redirect) arrives after
+  // the previous document's `pagehide` already filed a `suspend`; the fresh
+  // document announces itself with a `resume` — the server files it only
+  // when the session really is suspended, so a login or a second tab never
+  // produces a resume without its suspend. It waits a moment: the previous
+  // document's suspend beacon settles behind the viewings it left with, and
+  // a resume that overtook it would be filed before it.
   useEffect(() => {
     if (!user) return
-    const beacon = (path: string) => {
-      try {
-        if (!navigator.sendBeacon(path)) void apiPost(path, {})
-      } catch {
-        void apiPost(path, {}).catch(() => undefined)
-      }
+    let suspended = document.hidden
+    const announce = window.setTimeout(() => {
+      if (!suspended && !document.hidden) apiBeacon('/api/auth/session/resume')
+    }, RESUME_ON_LOAD_MS)
+    const suspend = () => {
+      if (suspended) return
+      suspended = true
+      apiBeacon('/api/auth/session/suspend')
     }
-    const onVisibility = () => {
-      beacon(document.hidden ? '/api/auth/session/suspend' : '/api/auth/session/resume')
+    const resume = () => {
+      if (!suspended) return
+      suspended = false
+      apiBeacon('/api/auth/session/resume')
     }
-    const onPageHide = () => beacon('/api/auth/session/suspend')
+    const onVisibility = () => (document.hidden ? suspend() : resume())
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) resume()
+    }
+    const ping = () => {
+      if (!document.hidden) apiBeacon('/api/auth/session/ping')
+    }
     document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('pagehide', suspend)
+    window.addEventListener('pageshow', onPageShow)
+    const timer = window.setInterval(ping, SESSION_PING_MS)
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('pagehide', suspend)
+      window.removeEventListener('pageshow', onPageShow)
+      window.clearInterval(timer)
+      window.clearTimeout(announce)
     }
   }, [user])
 

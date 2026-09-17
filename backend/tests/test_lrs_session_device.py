@@ -38,26 +38,32 @@ CHROME_ANDROID = (
 
 
 class SessionDeviceExtensionTests(unittest.TestCase):
+    def test_the_os_version_is_never_a_bare_dotted_number(self):
+        """The ministry's spreadsheet turned "10.15.7" into 15/10/2007."""
+        device = _device_from_request(_Request(CHROME_MAC))
+        self.assertEqual(device["osVersion"], "macOS 10.15.7")
+        self.assertFalse(device["osVersion"][0].isdigit())
+
     def test_the_browser_and_os_versions_are_reported(self):
         for user_agent, expected in (
             (CHROME_MAC, {
                 "deviceType": "Desktop", "operatingSystem": "macOS",
-                "osVersion": "10.15.7", "browser": "Chrome",
+                "osVersion": "macOS 10.15.7", "browser": "Chrome",
                 "browserVersion": "128.0.6613.120",
             }),
             (EDGE_WINDOWS, {
                 "deviceType": "Desktop", "operatingSystem": "Windows",
-                "osVersion": "10.0", "browser": "Edge",
+                "osVersion": "Windows 10.0", "browser": "Edge",
                 "browserVersion": "127.0.2651.98",
             }),
             (SAFARI_IPHONE, {
                 "deviceType": "Mobile", "operatingSystem": "iOS",
-                "osVersion": "17.5.1", "browser": "Safari",
+                "osVersion": "iOS 17.5.1", "browser": "Safari",
                 "browserVersion": "17.5",
             }),
             (CHROME_ANDROID, {
                 "deviceType": "Mobile", "operatingSystem": "Android",
-                "osVersion": "14", "browser": "Chrome",
+                "osVersion": "Android 14", "browser": "Chrome",
                 "browserVersion": "126.0.0.0",
             }),
         ):
@@ -82,9 +88,18 @@ class SessionDeviceExtensionTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"APP_VERSION": "2026.08.27.1"}):
             device = _device_from_request(_Request(CHROME_MAC))
         self.assertEqual(device["applicationVersion"], "2026.08.27.1")
-        with mock.patch.dict(os.environ, {"APP_VERSION": ""}):
+        # The deploy workflow stamps SPARK_RELEASE (the commit sha), never
+        # APP_VERSION — the slot must still name its build.
+        with mock.patch.dict(os.environ, {"APP_VERSION": "", "SPARK_RELEASE": "0123456789abcdef0123"}):
             device = _device_from_request(_Request(CHROME_MAC))
-        self.assertNotIn("applicationVersion", device)
+        self.assertEqual(device["applicationVersion"], "0123456789ab")
+
+    def test_a_local_run_names_its_working_tree(self):
+        from app.routes import auth
+        with mock.patch.dict(os.environ, {"APP_VERSION": "", "SPARK_RELEASE": "", "IMAGE_TAG": "", "GIT_SHA": "", "GITHUB_SHA": ""}):
+            auth._git_version = None
+            device = _device_from_request(_Request(CHROME_MAC))
+        self.assertRegex(device.get("applicationVersion", ""), r"^[0-9a-f]{7,12}$")
 
 
 if __name__ == "__main__":

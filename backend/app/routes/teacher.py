@@ -12,7 +12,6 @@ from app.agents.teacher_insights import AccessDenied
 from app.auth.dependencies import require_teacher, require_teacher_session
 from app.brain import org
 from app.core.localization import normalize_language
-from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
 
@@ -28,22 +27,12 @@ async def agent_insights(data: dict, session=Depends(require_teacher_session)):
         if data.get("group_id"):
             view = await teacher_insights.group_view(
                 teacher_id, data["group_id"], language)
-            # MoE 720: teacher viewed group data → dashboard/learning-group.
-            # Reported only AFTER the access check passed (never on a 403).
-            if session.get("sid"):
-                await lrs_reporter.report_dashboard_viewed(
-                    teacher_id, session["sid"], "learning-group", None
-                )
+            # The MoE `viewed` for the screens that render this is filed by
+            # the page on leave, with its duration — never per data fetch.
             return JSONResponse(content=view)
         if data.get("learner_id"):
             view = await teacher_insights.student_view(
                 teacher_id, normalize_learner_id(data["learner_id"]), language)
-            # MoE 720: teacher viewed one student → dashboard/student-view.
-            if session.get("sid"):
-                await lrs_reporter.report_dashboard_viewed(
-                    teacher_id, session["sid"], "student-view", None,
-                    subject_learner_id=normalize_learner_id(data["learner_id"]),
-                )
             return JSONResponse(content=view)
     except AccessDenied as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=403)

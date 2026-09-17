@@ -17,6 +17,7 @@
 
 import { useEffect, useState } from 'react'
 import { navigate } from '../../../app/router'
+import { useViewedDuration } from '../../../hooks/useViewedDuration'
 import { BarSeries } from '../../../components/charts'
 import {
   Card, EmptyState, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard, StatusPill,
@@ -27,7 +28,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  createSubgroup, generateQuestionTopics, getLearningDetail,
+  createSubgroup, generateQuestionTopics, getLearningDetail, groupDashboardViewedPath,
   type DifficultyRow, type HardQuestion, type LearningDetail,
 } from '../../../services/teacher'
 import { DifficultiesCard, type DifficultyItem } from '../shared/DifficultiesCard'
@@ -59,6 +60,9 @@ export function LearningDetailPage({ groupId, componentId }: {
   const { t, language, direction } = useI18n()
   const [view, setView] = useState<LearningDetail | null>(null)
   const [error, setError] = useState(false)
+
+  // MoE `dashboard/viewed` (learning-group), filed on leave with the visible time.
+  useViewedDuration(groupDashboardViewedPath(groupId))
 
   /* Being here means the next visit to the learnings list is a RETURN — raise
      the flag its scroll-memory restores on (#513). On mount, not on the back

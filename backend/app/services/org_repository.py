@@ -241,10 +241,15 @@ async def upsert_group(
     grade: Optional[str] = None,
     year: Optional[str] = None,
     active: bool = True,
+    nmm_id: Optional[str] = None,
 ) -> dict[str, Any]:
+    # `nmm_id`: the ministry's own id for this class — what a group dashboard
+    # statement names as `dashboardId`. Ministry-provisioned groups use it as
+    # their `_id`; a locally created group may carry it explicitly.
     row = await _upsert(GROUPS, {
         "_id": group_id, "school_id": school_id, "name": name, "subject": subject,
         "grade": grade, "year": year, "active": active,
+        **({"nmm_id": nmm_id} if nmm_id else {}),
     })
     await _bumps().touch_group(group_id)
     return row

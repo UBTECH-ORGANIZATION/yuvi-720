@@ -169,6 +169,58 @@ async def _personalized_open_question(
     return fallback
 
 
+def derive_reflection_trigger(
+    *,
+    unit_state: Optional[str],
+    evidence: dict[str, Any],
+    events: list[dict[str, Any]],
+    support_used: Optional[dict[str, Any]] = None,
+) -> str:
+    """Why this reflection opened — the v1.1 `reflectionTrigger`.
+
+    The flow always opens at the end of a component, but that is the least
+    specific of the ministry's four reasons. When the component that just
+    finished also closes its learning objective, the reflection is about the
+    objective (`end-of-learning-objective`). When the lesson was a struggle —
+    repeated wrong answers, a named misconception, help asked of the content
+    or of Yuvi — the ministry's `difficult-task` names the moment better than
+    "the component ended". Otherwise it is what it looks like.
+    """
+    if unit_state == "completed":
+        return "end-of-learning-objective"
+    struggled = (
+        int(evidence.get("wrong_count") or 0) >= 2
+        or bool(evidence.get("misconceptions"))
+        or any(e.get("verb") == "requested" for e in events or [])
+        or any(
+            bool(value) for key, value in (support_used or {}).items()
+            if key in ("hint", "explanation", "video_summary", "video_visual", "hint_level")
+        )
+    )
+    return "difficult-task" if struggled else "end-of-learning-component"
+
+
+async def _unit_state_after(learner_id: str, component_id: Optional[str]) -> Optional[str]:
+    """The learner's state on the unit this component belongs to, projected
+    through the one path engine — `completed` when nothing on the path is
+    left. Best effort: no catalog, no answer."""
+    if not component_id:
+        return None
+    try:
+        from app.services import kata_catalog
+        from app.services.learning_progress import project_unit_roadmap
+
+        await kata_catalog.ensure_loaded()
+        component = kata_catalog.get_component(component_id) or {}
+        unit = kata_catalog.get_unit(component.get("unit_id") or "")
+        if not unit:
+            return None
+        projected = await project_unit_roadmap(unit, learner_id)
+        return projected.get("unit_state")
+    except Exception:
+        return None
+
+
 async def start_reflection(
     learner_id: str,
     *,
@@ -215,6 +267,13 @@ async def start_reflection(
         {"number": 3, "kind": "open", "text": _FORWARD_QUESTION[lang]},
     ]
 
+    trigger = derive_reflection_trigger(
+        unit_state=await _unit_state_after(learner_id, component_id),
+        evidence=evidence,
+        events=events,
+        support_used=(brain.get("current_state") or {}).get("support_used"),
+    )
+
     reflection_id = uuid4().hex
     flow = {
         "_id": reflection_id,
@@ -228,6 +287,7 @@ async def start_reflection(
         "skipped": [],
         "system_estimate": evidence.get("system_estimate"),
         "evidence": evidence,
+        "trigger": trigger,
         "status": "open",
         "started_at": _now().isoformat(),
     }
@@ -235,7 +295,7 @@ async def start_reflection(
 
     if moe_session_id:
         await lrs_reporter.report_reflection_initialized(
-            learner_id, moe_session_id, reflection_id, "end-of-learning-component"
+            learner_id, moe_session_id, reflection_id, trigger
         )
     return {
         "reflection_id": reflection_id,
@@ -315,6 +375,51 @@ async def skip_question(
             question_he=skipped_text,
         )
     return {"ok": True}
+
+
+async def dismiss_reflection(
+    learner_id: str, reflection_id: str
+) -> Optional[dict[str, Any]]:
+    """The learner closed the questionnaire without sending it (the ×, the
+    "continue" button, leaving the lesson).
+
+    A reflection that was `initialized` must not stay open forever in the
+    LRS: every question neither answered nor skipped is `skipped`, then the
+    flow is `completed` with `completion: false` — over, not finished —
+    carrying the real time it stayed open. Idempotent; a completed flow is
+    left alone.
+    """
+    flow = await _load_flow(reflection_id, learner_id)
+    if flow is None:
+        return None
+    if flow.get("status") != "open":
+        return {"ok": True, "already": True}
+
+    answered = {int(k) for k in (flow.get("answers") or {}).keys() if str(k).isdigit()}
+    skipped = set(flow.get("skipped") or [])
+    for question in flow.get("questions") or []:
+        number = question.get("number")
+        if number in answered or number in skipped:
+            continue
+        await skip_question(learner_id, reflection_id, number)
+
+    flow = await _load_flow(reflection_id, learner_id) or flow
+    flow["status"] = "dismissed"
+    flow["completed_at"] = _now().isoformat()
+    await _save_flow(flow)
+
+    if flow.get("moe_session_id"):
+        try:
+            duration = max(
+                0.0,
+                (_now() - datetime.fromisoformat(str(flow.get("started_at")))).total_seconds(),
+            )
+        except (TypeError, ValueError):
+            duration = 0.0
+        await lrs_reporter.report_reflection_completed(
+            learner_id, flow["moe_session_id"], reflection_id, duration, completion=False
+        )
+    return {"ok": True, "dismissed": True}
 
 
 async def complete_reflection(

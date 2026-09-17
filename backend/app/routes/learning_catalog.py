@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import require_learner, require_teacher
+from app.auth.dependencies import require_learner, require_learner_session, require_teacher
 from app.services import kata_client as content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
@@ -60,7 +60,7 @@ def reset_units_cache_for_tests() -> None:
 
 class LearningSessionRequest(BaseModel):
     # No learner_id: the session is always minted for the session learner.
-    component_id: str = Field(min_length=1, max_length=160)
+    component_id: str = Field(min_length=1, max_length=200)
     unit_id: Optional[str] = Field(default=None, max_length=160)
     language: Literal["he", "ar", "en"] = "he"
     # 720 §6 explicit "redo the component" on re-entry after completion: a fresh
@@ -163,60 +163,49 @@ async def create_learning_session(
 
 
 class PathChoiceRequest(BaseModel):
-    component_id: str = Field(min_length=1, max_length=160)
-    choice: Literal["more_practice"]
+    component_id: str = Field(min_length=1, max_length=200)
+    # `more_practice`: the learner took the extra the route had dropped;
+    # `continue`: they were offered it and moved on. Only a choice that was
+    # actually put to them is a decision worth recording.
+    choice: Literal["more_practice", "continue"]
 
 
 @router.post("/path-choice")
 async def record_path_choice(
-    data: PathChoiceRequest, learner_id: str = Depends(require_learner),
+    data: PathChoiceRequest, session: dict = Depends(require_learner_session),
 ) -> dict:
-    """The learner asking for work their route had dropped (720 §1 פעלנות)."""
-    from app.services import kata_catalog
-    from app.services.events import record_path_choice as store
-    await kata_catalog.ensure_loaded()
-    component = kata_catalog.get_component(data.component_id) or {}
-    await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
-    return {"ok": True}
+    """The learner deciding about work their route had dropped (720 §1 פעלנות).
 
-
-class SkipComponentRequest(BaseModel):
-    component_id: str = Field(min_length=1, max_length=160)
-
-
-@router.post("/skip-component")
-async def skip_component(
-    data: SkipComponentRequest, learner_id: str = Depends(require_learner),
-) -> dict:
-    """The learner chose to move past this component without finishing it.
-
-    720 §דילוג defines a `skipped` on a component, and it only exists as an
-    event because the platform gives the learner the choice — that is the
-    פעלנות side of the same principle `path-choice` serves. The decision is
-    stored as our own evidence (so the path engine and the teacher view can see
-    it) and reported to the ministry LRS as `skipped` on the component.
+    Stored as our own evidence for the path engine, and reported to the
+    ministry as the selection dictionary's `practice-decision` on the
+    component — `true` when they asked for more practice, `false` when they
+    declined the offer. The same choice the content itself can put to them
+    (`practiceDecision`), raised here by the platform.
     """
     from app.services import kata_catalog
     from app.services.events import record_path_choice as store
+    from app.services.lrs import hierarchy as lrs_hierarchy
+    from app.services.lrs import reporter as lrs_reporter
 
+    learner_id = session["sub"]
     await kata_catalog.ensure_loaded()
     component = kata_catalog.get_component(data.component_id) or {}
-    if not component:
-        raise HTTPException(status_code=404, detail="unknown_component")
-    await store(learner_id, data.component_id, component.get("unit_id"), "skip")
-    try:
-        from app.auth.repository import get_user_by_id
-        from app.services.lrs import reporter as lrs_reporter
-
-        user = await get_user_by_id(learner_id)
-        session_id = (user or {}).get("current_moe_session_id")
-        if session_id:
-            await lrs_reporter.report_component_skipped(
-                learner_id, session_id, data.component_id
+    if data.choice == "more_practice":
+        await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
+    if session.get("sid"):
+        try:
+            await lrs_reporter.report_selected(
+                learner_id,
+                session["sid"],
+                object_id=lrs_hierarchy.component_activity(data.component_id)["id"],
+                object_type="component",
+                selection_type="practice-decision",
+                response="true" if data.choice == "more_practice" else "false",
+                component_id=data.component_id,
             )
-    except Exception as exc:  # reporting never breaks the learner's flow
-        print(f"⚠️ component skip report skipped: {type(exc).__name__}")
-    return {"ok": True, "skipped": data.component_id}
+        except Exception as exc:  # reporting never breaks the learner's flow
+            print(f"⚠️ practice-decision report skipped: {type(exc).__name__}")
+    return {"ok": True}
 
 
 @router.get("/units/{unit_id}/path")
@@ -233,7 +222,14 @@ async def explain_unit_path(
     band, the EWMA, the failing event id — the evidence behind each decision, for
     a teacher who needs to understand or challenge the route.
     """
-    unit, _ = await content_provider.resolve_component(f"{unit_id}-01", unit_id)
+    # The unit itself is what gets projected; any of its components resolves
+    # it. Synthesising "<unit>-01" assumed a slug shape Kata no longer keeps.
+    try:
+        unit = await content_provider.get_unit(unit_id)
+    except content_provider.ContentProviderError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+    if not unit.get("components"):
+        raise HTTPException(status_code=404, detail="content_not_found")
     return await project_unit_roadmap(unit, learner, locale=lang, explain=True)
 
 

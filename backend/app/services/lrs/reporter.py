@@ -9,8 +9,10 @@ statement → enqueue (which persists + sends Near-Real-Time).
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Optional
 
+from app.services import goal_progress
 from app.services.lrs import config, identity as identity_mod, outbox, statements
 
 # Remember which identity we already complained about, so a misconfigured
@@ -32,6 +34,10 @@ def _identity_is_reportable() -> bool:
     """
     problems = config.identity_problems()
     if not problems:
+        for warning in config.identity_warnings():
+            if warning not in _warned_identities:
+                _warned_identities.add(warning)
+                print(f"ℹ️ LRS — {warning}")
         return True
     fingerprint = "|".join(problems)
     if fingerprint not in _warned_identities:
@@ -112,15 +118,56 @@ async def _report(build, learner_id: str, *args, source: str = "platform", **kwa
             return  # no reporting identity configured — skip, never guess
         statement = build(identity, *args, **kwargs)
         await outbox.enqueue(statement, learner_id=learner_id, source=source)
+        await _mark_session_alive(statement)
     except Exception as exc:  # report-and-forget: log class name only
         print(f"⚠️ LRS report skipped ({type(exc).__name__})")
 
 
+def _session_of(statement: dict[str, Any]) -> Optional[str]:
+    grouping = (((statement.get("context") or {}).get("contextActivities") or {}).get("grouping")) or []
+    for activity in grouping:
+        activity_id = str(activity.get("id") or "")
+        if "/session/" in activity_id:
+            return activity_id.rsplit("/", 1)[-1]
+    return None
+
+
+async def _mark_session_alive(statement: dict[str, Any]) -> None:
+    """A statement is the strongest sign of life a session gives.
+
+    Requests touch the registry throttled (once a minute per process), which
+    is fine for the idle timeout but not for the exit's place in the sequence:
+    a session closed at its "last sign of life" must be closed AFTER its last
+    statement, or the ministry sees a goal approved in an exited session. So
+    every statement moves the session's last-seen mark, unthrottled, unless it
+    is the exit itself.
+    """
+    verb = str((statement.get("verb") or {}).get("id") or "")
+    session_id = _session_of(statement)
+    if not session_id or verb.endswith("/exit"):
+        return
+    from app.services.lrs import session_registry
+
+    try:
+        # At the statement's own time, so the mark and the sequence agree.
+        stamped = statement.get("timestamp")
+        at = datetime.fromisoformat(str(stamped).replace("Z", "+00:00")) if stamped else None
+        await session_registry.touch(session_id, at=at, force=True)
+    except Exception as exc:
+        print(f"⚠️ session last-seen not moved ({type(exc).__name__})")
+
+
 # ── Session ──────────────────────────────────────────────────────────────────
 async def report_session_enter(
-    learner_id: str, session_id: str, device: Optional[dict[str, Any]] = None
+    learner_id: str,
+    session_id: str,
+    device: Optional[dict[str, Any]] = None,
+    *,
+    timestamp: Optional[str] = None,
 ) -> None:
-    await _report(statements.session_enter, learner_id, session_id, device=device)
+    await _report(
+        statements.session_enter, learner_id, session_id, device=device, timestamp=timestamp,
+    )
 
 
 async def report_session_suspend(learner_id: str, session_id: str) -> None:
@@ -132,9 +179,16 @@ async def report_session_resume(learner_id: str, session_id: str) -> None:
 
 
 async def report_session_exit(
-    learner_id: str, session_id: str, duration_seconds: float
+    learner_id: str,
+    session_id: str,
+    duration_seconds: float,
+    *,
+    timestamp: Optional[str] = None,
 ) -> None:
-    await _report(statements.session_exit, learner_id, session_id, duration_seconds)
+    await _report(
+        statements.session_exit, learner_id, session_id, duration_seconds,
+        timestamp=timestamp,
+    )
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
@@ -146,18 +200,21 @@ async def report_dashboard_viewed(
     duration_seconds: Optional[float] = None,
     *,
     subject_learner_id: Optional[str] = None,
+    subject_group_id: Optional[str] = None,
 ) -> None:
-    """`learner_id` is the *viewer* (the actor); `subject_learner_id` is whose
-    dashboard is on screen.
+    """`learner_id` is the *viewer* (the actor); `subject_learner_id` /
+    `subject_group_id` is whose dashboard is on screen.
 
     The spec wants `dashboardId` to name the thing being looked at, so a teacher
     opening one student's board must stamp that student's exidentifier — not
-    their own. Resolving it here keeps the exidentifier inside `lrs/`: callers
-    pass a plain learner id and never touch PII.
+    their own — and a group board the class's NMM id. Resolving it here keeps
+    the exidentifier inside `lrs/`: callers pass plain ids and never touch PII.
     """
     if dashboard_id is None and subject_learner_id and subject_learner_id != learner_id:
         subject = await identity_mod.resolve_reporting_identity(subject_learner_id)
         dashboard_id = subject["exidentifier"] if subject else None
+    if dashboard_id is None and subject_group_id:
+        dashboard_id = await _group_nmm(subject_group_id)
     await _report(
         statements.dashboard_viewed,
         learner_id,
@@ -166,6 +223,23 @@ async def report_dashboard_viewed(
         dashboard_id,
         duration_seconds=duration_seconds,
     )
+
+
+async def _group_nmm(group_id: str) -> Optional[str]:
+    """The ministry's id for a class: the group's own `nmm_id`, else its `_id`
+    when the ministry provisioned it (the NMM IS the id then). A local group
+    with neither has no `dashboardId` — nothing is invented."""
+    try:
+        from app.services import org_repository
+
+        group = await org_repository.get_group(group_id)
+    except Exception:
+        group = None
+    if group and group.get("nmm_id"):
+        return str(group["nmm_id"])
+    if group_id.isdigit():
+        return group_id
+    return None
 
 
 # ── Agency questionnaire (onboarding) ────────────────────────────────────────
@@ -183,6 +257,7 @@ async def report_agency_answered(
     score_raw: Optional[float] = None,
     phase: str = "pre",
     *,
+    question_he: Optional[str] = None,
     question_id: Optional[str] = None,
     answer_id: Optional[str] = None,
 ) -> None:
@@ -194,6 +269,7 @@ async def report_agency_answered(
         response,
         score_raw=score_raw,
         phase=phase,
+        question_he=question_he,
         question_id=question_id,
         answer_id=answer_id,
     )
@@ -208,6 +284,39 @@ async def report_agency_completed(
 
 
 # ── Conversation ─────────────────────────────────────────────────────────────
+def lrs_conversation_id(conversation_id: str, item_id: Optional[str] = None) -> str:
+    """The `conversationId` the ministry sees.
+
+    Spec v1.1: "יש ליצור conversationId חדש עבור שיחה חדשה או פריט שונה" — one
+    id per conversation AND per item. Our lesson thread spans a whole
+    component, so the item the learner is on is folded into the id; a chat
+    outside any item keeps the thread's own id. `rated` derives the same id
+    from the same inputs, so a like lands on the conversation it rates.
+    """
+    return f"{conversation_id}--{item_id}" if item_id else conversation_id
+
+
+async def _position(
+    learner_id: str, component_id: Optional[str], item_id: Optional[str]
+) -> tuple[Optional[str], Optional[str]]:
+    """Where the learner is, from the caller when it knows, else the brain."""
+    if component_id and item_id:
+        return component_id, item_id
+    try:
+        from app.brain.repository import get_brain
+
+        state = (await get_brain(learner_id)).get("current_state") or {}
+    except Exception:
+        return component_id, item_id
+    resolved_component = component_id or state.get("component_id")
+    # An item only makes sense inside the component the caller named (or the
+    # brain's own) — never the brain's item under a caller's other component.
+    resolved_item = item_id or (
+        state.get("item_id") if resolved_component == state.get("component_id") else None
+    )
+    return resolved_component, resolved_item
+
+
 async def report_conversation_interacted(
     learner_id: str,
     session_id: str,
@@ -217,27 +326,46 @@ async def report_conversation_interacted(
     help_type: Optional[str] = None,
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
+    *,
+    content: bool = True,
 ) -> None:
+    """`component_id` / `item_id` are the catalog's own (slug) ids — the IRIs
+    the extensions carry are built here, and the same ids resolve the content
+    ancestry. `content=False` for a conversation outside any lesson (the
+    mentoring wizard) — no ancestry, no vendor, no ids."""
+    from app.services.lrs import hierarchy as hierarchy_mod
+
+    if content:
+        component_id, item_id = await _position(learner_id, component_id, item_id)
+    else:
+        component_id, item_id = None, None
     await _report(
         statements.conversation_interacted,
         learner_id,
         session_id,
-        conversation_id,
+        lrs_conversation_id(conversation_id, item_id),
         speaker=speaker,
         conversation_trigger=conversation_trigger,
         help_type=help_type,
-        component_id=component_id,
-        item_id=item_id,
-        **await _content_context(learner_id, component_id, item_id),
+        component_id=hierarchy_mod.component_activity(component_id)["id"] if component_id else None,
+        item_id=hierarchy_mod.item_activity(item_id)["id"] if item_id else None,
+        **(await _content_context(learner_id, component_id, item_id) if content else {}),
     )
 
 
 async def report_conversation_rated(
-    learner_id: str, session_id: str, conversation_id: str, rating: str
+    learner_id: str,
+    session_id: str,
+    conversation_id: str,
+    rating: str,
+    component_id: Optional[str] = None,
+    item_id: Optional[str] = None,
 ) -> None:
+    component_id, item_id = await _position(learner_id, component_id, item_id)
     await _report(
-        statements.conversation_rated, learner_id, session_id, conversation_id, rating,
-        **await _content_context(learner_id),
+        statements.conversation_rated, learner_id, session_id,
+        lrs_conversation_id(conversation_id, item_id), rating,
+        **await _content_context(learner_id, component_id, item_id),
     )
 
 
@@ -296,7 +424,12 @@ async def report_reflection_skipped(
 
 
 async def report_reflection_completed(
-    learner_id: str, session_id: str, questionnaire_id: str, duration_seconds: float
+    learner_id: str,
+    session_id: str,
+    questionnaire_id: str,
+    duration_seconds: float,
+    *,
+    completion: bool = True,
 ) -> None:
     await _report(
         statements.reflection_completed,
@@ -304,6 +437,7 @@ async def report_reflection_completed(
         session_id,
         questionnaire_id,
         duration_seconds,
+        completion=completion,
         **await _content_context(learner_id),
     )
 
@@ -314,8 +448,8 @@ async def report_mentor_meeting_completed(
     # `None` when there is no session to name — see `report_mentoring_record`.
     session_id: Optional[str],
     meeting_id: str,
-    mentor_exid: str,
-    student_exid: str,
+    mentor_exid: Optional[str],
+    student_exid: Optional[str],
     meeting_date: str,
     mentoring_phase: Optional[str] = None,
 ) -> None:
@@ -352,7 +486,9 @@ async def report_student_goal(
     )
 
 
-async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, str]:
+async def _meeting_identities(
+    learner_id: str, teacher_id: str
+) -> tuple[Optional[str], Optional[str]]:
     """`(student_exid, mentor_exid)` for a teacher-authored event.
 
     Each side is the person's own reporting identity when one resolves (a real
@@ -360,8 +496,10 @@ async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, st
     value for both, which is what v1 staging reports everywhere. Reporting is
     never withheld over the identities: the session rule below is the only
     gate, and a stub-for-stub record on staging is the documented behaviour.
+    A side that resolves to nothing at all is `None` — the extension (or the
+    `instructor`) is then omitted, never sent as an empty string.
     """
-    stub = config.test_exidentifier()
+    stub = config.test_exidentifier() or None
     student_exid, mentor_exid = stub, stub
     try:
         learner_identity = await identity_mod.resolve_reporting_identity(learner_id)
@@ -446,30 +584,41 @@ async def report_mentoring_record(
         return
     # Both people by their own reporting identities when a teacher documented
     # the talk; the learner's own writing has no second person in it.
-    teacher_id = str(record.get("teacher_id") or "") if record.get("author") == "teacher" else ""
+    teacher_authored = record.get("author") == "teacher"
+    teacher_id = str(record.get("teacher_id") or "") if teacher_authored else ""
     student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
-    await report_mentor_meeting_completed(
-        learner_id,
-        session_id,
-        record["id"],
-        mentor_exid=mentor_exid,
-        student_exid=student_exid,
-        meeting_date=record.get("date") or "",
-        # The dedicated field when the form offered the ladder; the free stage
-        # text only as a fallback for records written before it existed. Either
-        # way an off-list value normalizes away rather than reaching the wire.
-        mentoring_phase=record.get("mentoring_phase") or record.get("meeting_stage") or None,
-    )
+    # A mentor–student meeting is reported only when the MENTOR recorded it
+    # (Gal, 17/09: the learner's own write-up is not supported for now — it
+    # has no mentoring phase, and a goal a teacher assigns from the roster is
+    # not a meeting that happened at all: `kind == "goal-assignment"`). The
+    # goals that came out of any shared record are still reported below.
+    if teacher_authored and record.get("kind") != "goal-assignment":
+        await report_mentor_meeting_completed(
+            learner_id,
+            session_id,
+            record["id"],
+            mentor_exid=mentor_exid,
+            student_exid=student_exid,
+            meeting_date=record.get("date") or "",
+            # The dedicated field when the form offered the ladder; the free
+            # stage text only as a fallback for records written before it
+            # existed. The ladder starts at phase1 for a record that carries
+            # none — the extension is required, and the first step is the one
+            # a talk with no stated phase is on.
+            mentoring_phase=(
+                record.get("mentoring_phase") or record.get("meeting_stage") or "phase1"
+            ),
+        )
     if record.get("visibility") != "shared":
         return
-    instructor = mentor_exid if record.get("author") == "teacher" else None
+    instructor = mentor_exid if teacher_authored else None
     for goal in record.get("goals") or []:
         await report_student_goal(
             learner_id,
             session_id,
             "initialized",
             goal["id"],
-            "academic",
+            goal_progress.goal_type_for(goal),
             instructor_exid=instructor,
         )
 
@@ -485,6 +634,9 @@ async def report_help_requested(
     *,
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
+    question_id: Optional[str] = None,
+    question_type: Optional[str] = None,
+    attempt_number: Optional[int] = None,
 ) -> None:
     # `component_id`/`item_id` pin the ancestry to the SAME level as `object`.
     # Left unset, `_content_context` falls back to the brain's full current
@@ -492,7 +644,8 @@ async def report_help_requested(
     # component-level help request while the learner is already on a specific
     # item) — the review read that stray, unrelated item in `grouping` as the
     # object being wrong, when the real bug was including an ancestor the
-    # object never had.
+    # object never had. `question_id` & co. ride along when the help was asked
+    # on a question (the ministry's example names it).
     await _report(
         statements.help_requested,
         learner_id,
@@ -501,6 +654,9 @@ async def report_help_requested(
         object_type=object_type,
         help_source=help_source,
         help_type=help_type,
+        question_id=question_id,
+        question_type=question_type,
+        attempt_number=attempt_number,
         **await _content_context(learner_id, component_id, item_id),
     )
 
@@ -544,31 +700,6 @@ async def report_component_completed(
     await _report(
         statements.component_completed, learner_id, session_id, component_id,
         source="kata", **kwargs,
-    )
-
-
-async def report_component_skipped(
-    learner_id: str, session_id: str, component_id: str,
-) -> None:
-    """The learner chose to move past a component without finishing it.
-
-    Spec v1.1 keeps `skipped` at the COMPONENT level ("דילוג על פריט הוחלף
-    בדילוג על רכיב"), and it is only reportable because the platform offers the
-    choice — a component the learner merely abandoned is not a skip.
-    """
-    context = await _content_context(learner_id, component_id)
-    object_id = ((context.get("hierarchy") or {}).get("self") or {}).get("id")
-    if not object_id:
-        # Without the catalog we cannot name the component in the ministry's own
-        # IRI space, and a skip pointing at an id they cannot resolve is noise.
-        return
-    await _report(
-        statements.content_skipped,
-        learner_id,
-        session_id,
-        object_id=object_id,
-        object_type="component",
-        **context,
     )
 
 

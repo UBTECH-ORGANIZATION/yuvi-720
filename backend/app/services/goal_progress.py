@@ -43,6 +43,45 @@ ACTION_KINDS = {
 _TARGET_CAP = 50
 _ANSWER_VERBS = {"answered", "attempted"}
 
+# The ministry's `goalType` (spec v1.1, closed list) for what a goal asks.
+# Derived from what we actually know about the goal — an explicit type when
+# the author set one, else the trackable action's nature, else the activeness
+# domain a recommendation came from — and `academic` only as the last word.
+GOAL_TYPES = ("academic", "personal", "social-emotional", "motivational", "behavioral", "other")
+_ACTION_GOAL_TYPES = {
+    "practice": "academic",
+    "complete_task": "academic",
+    "use_hint": "behavioral",
+    "ask_yuvi": "behavioral",
+    "retry_after_wrong": "behavioral",
+    "active_days": "motivational",
+}
+_DOMAIN_GOAL_TYPES = {
+    "motivation": "motivational",
+    "autonomy": "personal",
+    "self_awareness": "personal",
+    "cognitive": "behavioral",
+    "focus": "behavioral",
+    "school_climate": "social-emotional",
+    "tech_comfort": "other",
+}
+
+
+def goal_type_for(goal: Optional[dict[str, Any]]) -> str:
+    """The `goalType` the LRS hears for this goal."""
+    goal = goal or {}
+    explicit = str(goal.get("goal_type") or goal.get("type") or "").strip().lower()
+    if explicit in GOAL_TYPES:
+        return explicit
+    action = goal.get("action") or {}
+    kind = str(action.get("kind") or "") if isinstance(action, dict) else ""
+    if kind in _ACTION_GOAL_TYPES:
+        return _ACTION_GOAL_TYPES[kind]
+    domain = str(goal.get("domain") or goal.get("activeness_domain") or "").strip().lower()
+    if domain in _DOMAIN_GOAL_TYPES:
+        return _DOMAIN_GOAL_TYPES[domain]
+    return "academic"
+
 # The labels that make a message to Yuvi count toward a conversational goal
 # (#462). Reut's line — "צריך שהשאלות עם יובי יהיו ענייניות ולא סתם הודעות" —
 # draws the boundary: a real question about the material counts, whichever

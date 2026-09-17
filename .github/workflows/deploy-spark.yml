@@ -91,6 +91,11 @@ jobs:
 
       - name: Configure Dev slot routing
         run: |
+          # LRS_SUPPLIER_DOMAIN is the supplier's identity in every xAPI IRI
+          # (lms, session, content, dashboards), the same on Dev and production
+          # so the ministry's records stay continuous — it is NOT the slot's
+          # hostname. The dev slot once carried the spec's placeholder
+          # (720.example.co.il); pinning it here keeps that from coming back.
           az webapp config appsettings set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.WEBAPP_NAME }} \
@@ -98,6 +103,7 @@ jobs:
             --slot-settings \
               FRONTEND_URL=https://dev.spark.yuvilab.ai \
               PUBLIC_APP_URL=https://dev.spark.yuvilab.ai \
+              LRS_SUPPLIER_DOMAIN=https://spark.yuvilab.ai \
               WEBSITES_PORT=8000 \
               LLM_STRONG_DEPLOYMENT_NAME=gpt-5.4 \
               LLM_MINI_DEPLOYMENT_NAME=gpt-5.4-mini \
@@ -191,6 +197,10 @@ jobs:
             LRS_CLIENT_ID
             LRS_CLIENT_SECRET
             LRS_SUPPLIER_DOMAIN
+            LRS_DEFAULT_SCHOOL
+            LRS_DEFAULT_NMM
+            KATA_API_KEY
+            KATA_BASE_URL
             APPLICATIONINSIGHTS_CONNECTION_STRING
             SPARK_ENVIRONMENT
             REDIS_CONNECTION_STRING

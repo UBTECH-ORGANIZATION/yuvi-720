@@ -20,6 +20,7 @@ import {
   type CSSProperties, type ReactElement, type ReactNode,
 } from 'react'
 import { navigate } from '../../../app/router'
+import { useViewedDuration } from '../../../hooks/useViewedDuration'
 import {
   HoverSparkline, ProgressRing,
 } from '../../../components/charts'
@@ -41,7 +42,7 @@ import {
   getStudentActivity,
   getStudentDetail,
   getStudentObjectives, getStudentScores, getStudentTrends,
-  reportStudentDashboardViewed,
+  studentDashboardViewedPath,
   getTopicDigest,
   unpinNext,
   type RoadmapStep,
@@ -111,22 +112,8 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const live = useTeacherLive()
   const { nameOf } = useTeacherRoster()
 
-  useEffect(() => {
-    const startedAt = performance.now()
-    let reported = false
-    const reportDuration = () => {
-      if (reported) return
-      const durationSeconds = (performance.now() - startedAt) / 1_000
-      if (durationSeconds < 1) return
-      reported = true
-      void reportStudentDashboardViewed(learnerId, durationSeconds).catch(() => undefined)
-    }
-    window.addEventListener('pagehide', reportDuration)
-    return () => {
-      window.removeEventListener('pagehide', reportDuration)
-      reportDuration()
-    }
-  }, [learnerId])
+  // MoE `dashboard/viewed` (student-view), filed on leave with the visible time.
+  useViewedDuration(studentDashboardViewedPath(learnerId))
 
   /* The learner read, fetched once for the whole page: the AI-analysis bar
      shows its subjects, and the recommendations panel leads with its

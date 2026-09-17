@@ -345,7 +345,8 @@ def resolve_item_question(
     if item:
         return item, question
     tail = _object_tail(object_id)
-    if component_id and tail and tail.startswith(f"{component_id}-"):
+    component_slug = _object_tail(component_id)
+    if component_slug and tail and tail.startswith(f"{component_slug}-"):
         return tail, None
     return None, None
 
@@ -394,7 +395,9 @@ def _is_unmapped_screen_entry(event: dict[str, Any]) -> bool:
         return False
     if event.get("sub_item_id"):
         return False
-    component_id = str(event.get("launch") or "")
+    # The launch id is a slug; a row written while a URL id was in flight
+    # (Kata's 09/2026 id change) reduces to the same slug.
+    component_id = _object_tail(event.get("launch"))
     tail = _object_tail(event.get("object_id"))
     return bool(tail and component_id and tail != component_id)
 
@@ -483,7 +486,7 @@ def is_component_completion(event: dict[str, Any]) -> bool:
     """
     if event.get("verb") != "completed":
         return False
-    component_id = str(event.get("launch") or "")
+    component_id = _object_tail(event.get("launch"))
     if not component_id or event.get("sub_item_id"):
         return False
     object_id = event.get("object_id")
@@ -602,8 +605,9 @@ async def record_path_choice(
     affordance — "אני רוצה עוד תרגול" in the completion dialog — recorded as the
     same kind of evidence so the path engine reads both through one rule.
 
-    Deliberately NOT an xAPI statement: it describes a choice about our routing,
-    not an interaction with provider content, so it is never relayed onward.
+    Our own evidence row, never relayed as content. The ministry hears the
+    decision separately, as the selection dictionary's `practice-decision`
+    (`routes.learning_catalog.record_path_choice`).
     """
     safe_id = normalize_learner_id(learner_id)
     event = {
@@ -1140,9 +1144,11 @@ async def _forward_to_moe_lrs(
 
     if not lrs_config.is_enabled():
         return
+    event = event or {}
+    if _is_forward_duplicate(learner_id, statement, event):
+        return
     user = await get_user_by_id(learner_id)
     session_id = (user or {}).get("current_moe_session_id") or launch.get("sid")
-    event = event or {}
     ancestry = await lrs_hierarchy.for_content(
         event.get("launch") or launch.get("cmp"),
         event.get("sub_item_id"),
@@ -1169,9 +1175,47 @@ async def _forward_to_moe_lrs(
         # nests under its questionnaire screen in grouping/parent, per the
         # ministry's answered example.
         object_below_self=bool(
-            event.get("verb") in {"answered", "attempted"} and event.get("question_id")
+            event.get("verb") in {"answered", "attempted", "requested"} and event.get("question_id")
         ),
     )
+
+
+# "לא לשלוח כפילויות" (17/09). CET fires the same `initialized` several times
+# when a screen opens (the load burst the pointer already tolerates); each
+# copy used to become its own ministry statement. A statement that repeats
+# the previous one for the same learner — same verb, same object, same
+# result — within this window is the burst, not a new event.
+_FORWARD_DUPLICATE_WINDOW_SECONDS = 3.0
+_recent_forwards: dict[str, tuple[float, str]] = {}
+
+
+def _is_forward_duplicate(learner_id: str, statement: dict[str, Any], event: dict[str, Any]) -> bool:
+    import time as _time
+
+    verb = str(event.get("verb") or (statement.get("verb") or {}).get("id") or "")
+    obj = str(((statement.get("object") or {}).get("id")) or event.get("object_id") or "")
+    if not verb or not obj:
+        return False
+    signature = json.dumps(
+        [verb, obj, statement.get("result") or {}], sort_keys=True, ensure_ascii=False, default=str,
+    )
+    now = _time.monotonic()
+    last = _recent_forwards.get(learner_id)
+    _recent_forwards[learner_id] = (now, signature)
+    if len(_recent_forwards) > 5_000:
+        for key in list(_recent_forwards)[:1_000]:
+            _recent_forwards.pop(key, None)
+    return bool(last and last[1] == signature and now - last[0] < _FORWARD_DUPLICATE_WINDOW_SECONDS)
+
+
+def _declared_extension(statement: dict[str, Any], short_name: str) -> Any:
+    """A context extension the content sent, by its short name — whatever IRI
+    prefix the provider used for it."""
+    extensions = ((statement.get("context") or {}).get("extensions") or {})
+    for key, value in extensions.items():
+        if str(key).rsplit("/", 1)[-1] == short_name:
+            return value
+    return None
 
 
 # The xAPI Video Profile's own field names for "where in the clip", in SECONDS —
@@ -1236,7 +1280,7 @@ async def _content_report_fields(
     extensions: dict[str, Any] = {}
     result_extra: dict[str, Any] = {}
 
-    if verb in {"answered", "attempted"} and event.get("question_id"):
+    if verb in {"answered", "attempted", "requested"} and event.get("question_id"):
         from app.services import kata_catalog
 
         question_id = event["question_id"]
@@ -1248,6 +1292,18 @@ async def _content_report_fields(
         )
         if match and match.get("questionType"):
             extensions["questionType"] = match["questionType"]
+
+    if verb == "requested":
+        # The content's own help button ("אפשר רמז?" inside the lomda). v1.1
+        # `requested` names where the help came from and what kind it was: the
+        # source is the content, and the kind is what the content declared
+        # when it is on the ministry's short list, else a hint — which is what
+        # the lomdot's button is.
+        from app.services.lrs.statements import REQUESTED_HELP_TYPES
+
+        declared = str(_declared_extension(statement or {}, "helpType") or "").strip().lower()
+        extensions["helpSource"] = "content"
+        extensions["helpType"] = declared if declared in REQUESTED_HELP_TYPES else "hint"
 
     if verb == "completed" and not _is_media_item(component_id, item_id):
         # The ministry's questionnaire example: a completed questionnaire
@@ -1647,7 +1703,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     same_component = (
         not prior_state.get("component_id")
         or not event.get("launch")
-        or prior_state.get("component_id") == event.get("launch")
+        or _object_tail(prior_state.get("component_id")) == _object_tail(event.get("launch"))
     )
     pointer_is_stale = bool(
         same_component and event_at and pointer_at and event_at < pointer_at

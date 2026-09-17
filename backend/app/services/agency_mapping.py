@@ -332,6 +332,10 @@ def score_submission(answers: dict[int, int]) -> dict[str, Any]:
             "answer_id": chosen["id"],
             "value": value,
             "question_number": qnum,
+            # The ministry's own labels — the LRS example carries the chosen
+            # answer as text ("מסכים מאוד"), the question name likewise.
+            "question_he": question["text"]["male"].get("he-IL", ""),
+            "answer_he": chosen["display_text"]["male"].get("he-IL", ""),
         })
 
     # Per-measure mean + level.

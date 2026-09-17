@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from app.auth.dependencies import assert_can_read_learner, current_user
 from app.brain.context_engine import build_coach_bundle, view_for, AgentScopeError
@@ -101,9 +102,10 @@ async def _report_goal_event(learner_id: str, action: str, goal: dict[str, Any])
         session_id = (user or {}).get("current_moe_session_id")
         if not session_id or not goal.get("id"):
             return
+        from app.services.goal_progress import goal_type_for
+
         await lrs_reporter.report_student_goal(
-            learner_id, session_id, action, str(goal["id"]),
-            goal.get("type") or "academic",
+            learner_id, session_id, action, str(goal["id"]), goal_type_for(goal),
         )
     except Exception as exc:  # reporting must never break the goal workflow
         print(f"⚠️ student-goal report skipped: {type(exc).__name__}")
@@ -157,24 +159,40 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     focus and tab switch. Five minutes bounds whatever the version misses.
     """
     safe_id = await _authorized_id(actor, learner_id)
-    # MoE 720 dashboard/viewed. This is the route the dashboard UI actually
-    # calls — `POST /api/generate-dashboard` is the legacy twin, so reporting
-    # only there meant a real student opening their board emitted nothing.
-    # It sits here and not in `_build_dashboard`, which is cached and would
-    # skip the report on every hit.
+    # No MoE `viewed` here: the page reports it when the viewing ENDS, with
+    # the duration (`POST …/dashboard-viewed` below). A report on every GET —
+    # mount, focus, tab switch, brain refresh — filed several duration-less
+    # views per visit and doubled the teacher's on-leave report.
+    from app.services import cache_store
+    dashboard = await cache_store.remember(
+        "learner", safe_id, "dash", lang, 300, lambda: _build_dashboard(safe_id, lang),
+    )
+    return JSONResponse(content=dashboard)
+
+
+class DashboardViewedRequest(BaseModel):
+    duration_seconds: float = Field(gt=0, le=28_800)
+
+
+@router.post("/{learner_id}/dashboard-viewed")
+async def report_dashboard_viewed(
+    learner_id: str, data: DashboardViewedRequest, actor: dict = Depends(current_user),
+):
+    """MoE 720 `dashboard/viewed`, filed when the viewing ends with the time it
+    took: `student-personal` for a learner on their own board, `student-view`
+    for a teacher (or admin) on a student's. The page sends it on leave
+    (unmount, or a `pagehide` beacon), once per visit."""
+    safe_id = await _authorized_id(actor, learner_id)
     if actor.get("sid"):
         await lrs_reporter.report_dashboard_viewed(
             actor["sub"],
             actor["sid"],
             "student-personal" if actor["sub"] == safe_id else "student-view",
             None,
+            data.duration_seconds,
             subject_learner_id=safe_id,
         )
-    from app.services import cache_store
-    dashboard = await cache_store.remember(
-        "learner", safe_id, "dash", lang, 300, lambda: _build_dashboard(safe_id, lang),
-    )
-    return JSONResponse(content=dashboard)
+    return JSONResponse(content={"reported": bool(actor.get("sid"))})
 
 
 async def _build_dashboard(safe_id: str, lang: str) -> dict:

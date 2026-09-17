@@ -28,7 +28,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Optional
 
 from app.brain.mastery import entry_for, is_due_for_review
-from app.services.events import is_component_completion
+from app.services.events import _object_tail as _launch_slug, is_component_completion
 
 # ── Bands and thresholds (tunable; mirror the constants style in mastery.py) ──
 _MASTERY_RANK = {"basic": 0, "intermediate": 1, "advanced": 2}
@@ -156,7 +156,9 @@ def unit_evidence(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
     for event in events or []:
-        component_id = str(event.get("launch") or "")
+        # The catalog is keyed by slug; a launch recorded under Kata's URL id
+        # (briefly possible around the 09/2026 id change) still names its node.
+        component_id = _launch_slug(event.get("launch"))
         if component_id:
             touched.add(component_id)
         verb = event.get("verb")
@@ -702,7 +704,7 @@ def _legacy_projection(
     for event in events or []:
         if not is_component_completion(event):
             continue
-        component_id = str(event.get("launch") or "")
+        component_id = _launch_slug(event.get("launch"))
         result = event.get("result") or {}
         component = next((row for row in components if row.get("id") == component_id), None)
         if component and component.get("is_assessment") and result.get("success") is False:

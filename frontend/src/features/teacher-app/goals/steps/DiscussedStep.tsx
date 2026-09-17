@@ -104,23 +104,26 @@ export function DiscussedStep({
 
   return (
     <div className="tch-step">
-      {/* A closed list, because the ministry reports it as one. Blank stays
-          allowed: a talk that is not on the ladder is still a talk. */}
+      {/* A closed list, because the ministry reports it as one — and required,
+          because the meeting statement cannot be filed without it. */}
       <label className="tch-step__field">
         <span>{t('tch.mentoring.phase.label')}</span>
         <select
           className="sp-input"
           dir="auto"
           value={mentoringPhase}
+          required
+          aria-invalid={!mentoringPhase}
           onChange={(event) => onMentoringPhase(event.target.value)}
         >
-          <option value="">{t('tch.mentoring.phase.none')}</option>
+          <option value="" disabled>{t('tch.mentoring.phase.choose')}</option>
           {ladder.map((step) => (
             <option key={step.mentoringPhase} value={step.mentoringPhase}>
               {step.phaseName}
             </option>
           ))}
         </select>
+        {!mentoringPhase && <small className="tch-step__hint">{t('tch.mentoring.phase.required')}</small>}
       </label>
 
       <label className="tch-step__field">

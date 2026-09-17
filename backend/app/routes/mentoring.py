@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import optional_user, require_learner, require_learner_session
 from app.brain.repository import _get_collection_named
+from app.services import goal_progress
 from app.services import mentoring
 from app.services.lrs import reporter as lrs_reporter
 
@@ -29,6 +30,12 @@ async def create_mentoring(data: dict, session=Depends(require_learner_session))
     record = await mentoring.create_conversation({
         **data,
         "learner_id": learner_id,
+        # The learner writes as the learner: the author and the teacher id are
+        # not the client's to set (a body claiming `author: teacher` would
+        # otherwise report a mentor meeting that never took place).
+        "author": "learner",
+        "teacher_id": None,
+        "source": "learner",
         "lrs_session_id": session.get("sid"),
     })
     return JSONResponse(content=record)
@@ -70,16 +77,46 @@ async def list_mentoring(learner_id: str = Depends(require_learner)):
 
 @router.post("/mentoring/assist")
 async def mentoring_assist(data: dict, session=Depends(require_learner_session)):
-    """Yuvi (LLM) guided-writing helper: builds a draft + next question/options (F5)."""
+    """Yuvi (LLM) guided-writing helper: builds a draft + next question/options (F5).
+
+    A conversation with the bot is a conversation the ministry hears about:
+    one `interacted` for the answer the child just gave (when there is one)
+    and one for the question Yuvi asks back — no text, no lesson ancestry
+    (this happens outside any content). The composer mints the conversation
+    id once per write-up so every turn names the same conversation.
+    """
     from app.services import mentoring_assist as assist
+    qa = data.get("qa")
     result = await assist.guide_documentation(
         session["sub"],
         language=data.get("language", "he"),
-        qa=data.get("qa"),
+        qa=qa,
         notes=data.get("notes", ""),
         feeling=data.get("feeling", ""),
         more=bool(data.get("more")),
     )
+    if session.get("sid"):
+        from app.agents import sessions as agent_sessions
+        from app.services.lrs import reporter as lrs_reporter
+
+        conversation_id = agent_sessions.normalize_session_id(
+            data.get("conversation_id") or f"mentoring-assist-{date.today().isoformat()}"
+        )
+        try:
+            if isinstance(qa, list) and qa:
+                await lrs_reporter.report_conversation_interacted(
+                    session["sub"], session["sid"], conversation_id,
+                    speaker="student", conversation_trigger="student-request",
+                    help_type="other", content=False,
+                )
+            if str(result.get("question") or "").strip():
+                await lrs_reporter.report_conversation_interacted(
+                    session["sub"], session["sid"], conversation_id,
+                    speaker="bot", conversation_trigger="other",
+                    help_type="other", content=False,
+                )
+        except Exception as exc:  # report-and-forget
+            print(f"⚠️ mentoring assist report skipped ({type(exc).__name__})")
     return JSONResponse(content=result)
 
 
@@ -142,7 +179,7 @@ async def update_mentoring_goal_progress(
             session["sid"],
             "completed" if stage == "summarized" else "updated",
             goal_id,
-            "academic",
+            goal_progress.goal_type_for(_goal_in(record, goal_id)),
         )
     # A finished goal waits for the one step only a teacher can take (#497),
     # so their bell says so — deep-linking to this child's profile, where the
@@ -211,7 +248,20 @@ async def update_mentoring_goal(
     record = await mentoring.update_goal(session["sub"], conversation_id, goal_id, data)
     if record is None:
         raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    # MoE 720: an edited goal is `updated` (the ministry's own example moves a
+    # goal's due date). Report-and-forget.
+    if session.get("sid"):
+        await lrs_reporter.report_student_goal(
+            session["sub"], session["sid"], "updated", goal_id,
+            goal_progress.goal_type_for(_goal_in(record, goal_id)),
+        )
     return JSONResponse(content=record)
+
+
+def _goal_in(record: dict | None, goal_id: str) -> dict:
+    return next(
+        (g for g in (record or {}).get("goals") or [] if g.get("id") == goal_id), {}
+    )
 
 
 @router.delete("/mentoring/{conversation_id}/goals/{goal_id}")

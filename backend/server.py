@@ -109,9 +109,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Start shared application resources, including the MCP session manager."""
     # MoE-LRS outbox sweeper (Retry/Resend) — only when reporting is enabled.
     from app.services.lrs import config as lrs_config, outbox as lrs_outbox
+    from app.services.lrs import session_registry as lrs_sessions
 
     sweeper = (
         asyncio.create_task(lrs_outbox.run_sweeper()) if lrs_config.is_enabled() else None
+    )
+    # Session idle timeout (the `exit` a closed tab or a killed browser never
+    # sends) — same guard.
+    session_sweeper = (
+        asyncio.create_task(lrs_sessions.run_sweeper()) if lrs_config.is_enabled() else None
     )
     # Is the address we hand Kata for xAPI relay actually reachable? A dead
     # tunnel drops every content statement in silence, so it gets checked once
@@ -240,6 +246,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await realtime.stop_bridge()
         if sweeper:
             sweeper.cancel()
+        if session_sweeper:
+            session_sweeper.cancel()
         relay_probe.cancel()
         # Usage metering is written off the request path, so drain it here or a
         # restart loses the events for every in-flight AI call.

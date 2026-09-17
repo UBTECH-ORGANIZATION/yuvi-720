@@ -24,7 +24,8 @@ Fixes applied after integration report 4 (spec v1.1):
   · unit metadata `targetSector` → `targetSectors` (plural, array)
   · component metadata `cognitiveLevel` → `cognitiveLevels` (plural, array)
   · component metadata `manufacture` → `manufacturer`
-  · the generic ITEM skip is retired; a COMPONENT-level `skipped` is sent
+  · the generic ITEM skip is retired; the COMPONENT-level `skipped` is not
+    supported by the platform (no component skip in the app)
     ("דילוג על פריט הוחלף בדילוג על רכיב")
 
 Fixes applied after integration report 3 (17/08), shaped to match the ministry's
@@ -72,6 +73,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services import kata_catalog  # noqa: E402
+from app.auth.device import application_version  # noqa: E402
 from app.services.lrs import auth, client, config, hierarchy, statements  # noqa: E402
 
 ARTIFACTS = Path(__file__).resolve().parents[2] / "artifacts"
@@ -138,7 +140,9 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     add("session", "enter", statements.session_enter(
         identity, session_id,
         device={"deviceType": "Desktop", "platform": "Web",
-                "operatingSystem": "macOS", "osVersion": "15.5", "browser": "Chrome"},
+                "operatingSystem": "macOS", "osVersion": "macOS 15.5",
+                "browser": "Chrome", "browserVersion": "128.0.6613.120",
+                "applicationVersion": application_version() or "local"},
     ))
     add("session", "suspend", statements.session_suspend(identity, session_id))
     add("session", "resume", statements.session_resume(identity, session_id))
@@ -159,14 +163,8 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         duration_seconds=1290, ecat_item_id=ecat,
         name_he="פתיחה, הקנייה ותרגול סטנדרטי א", hierarchy=component_level,
     ))
-    # Report 4 (spec v1.1): the ITEM skip is retired and the skip is reported at
-    # the COMPONENT level — "יש לשלוח הודעת רכיב - skipped".
-    add("component", "skipped", statements.content_skipped(
-        identity, session_id,
-        object_id=hierarchy.component_activity(COMPONENT_ID)["id"],
-        object_type="component", name_he="פתיחה, הקנייה ותרגול סטנדרטי א",
-        ecat_item_id=ecat, hierarchy=component_level,
-    ))
+    # Spec v1.1 moved `skipped` to the COMPONENT level; the platform offers no
+    # component skip (no "I already know this" button), so it is not reported.
 
     # ── Agency questionnaire (answered carries result.score) ──────────────────
     add("questionnaire (agency)", "initialized",
@@ -183,7 +181,9 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     add("conversation", "interacted", statements.conversation_interacted(
         identity, session_id, conversation_id,
         speaker="bot", conversation_trigger="student-request", help_type="hint",
-        component_id=COMPONENT_ID, item_id=QUESTION_ITEM_ID,
+        # The extensions carry IRIs (the reporter builds them the same way).
+        component_id=hierarchy.component_activity(COMPONENT_ID)["id"],
+        item_id=hierarchy.item_activity(QUESTION_ITEM_ID)["id"],
         ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("conversation", "rated", statements.conversation_rated(
@@ -335,7 +335,7 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     return rows
 
 
-async def main(dry_run: bool, only: str | None) -> int:
+async def main(dry_run: bool, only: str | None, validate: bool = False) -> int:
     if not config.is_enabled():
         print("❌ LRS not enabled/configured — check LRS_* in backend/.env")
         return 1
@@ -348,6 +348,8 @@ async def main(dry_run: bool, only: str | None) -> int:
               "non-catalog content-vendor id). Fix the env, then re-run.")
         if not dry_run:
             return 2
+    for warning in config.identity_warnings():
+        print(f"ℹ️  {warning}")
 
     identity = _identity()
     session_id = str(uuid.uuid4())     # a real per-run session id, never a literal
@@ -356,6 +358,15 @@ async def main(dry_run: bool, only: str | None) -> int:
         rows = [r for r in rows if only in f"{r[0]} {r[1]}"]
 
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    problems_total = 0
+    if validate:
+        from app.services.lrs.validate import validate_statement
+
+        for kind, verb, statement in rows:
+            for problem in validate_statement(statement):
+                problems_total += 1
+                print(f"✗ {kind} {verb}: {problem}")
+        print(f"{'✅ every statement validates' if not problems_total else f'❌ {problems_total} problem(s)'} against spec v1.1\n")
     sent: list[dict] = []
     for kind, verb, statement in rows:
         status = "dry-run"
@@ -382,12 +393,13 @@ async def main(dry_run: bool, only: str | None) -> int:
     )
     print(f"\n📄 {csv_path}\n📄 {json_path}  (full statements, for the ministry's review)")
     print(f"   session id used: {session_id}")
-    return 0
+    return 3 if problems_total else 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="build + write, no network")
     parser.add_argument("--only", help="substring filter on 'object type verb'")
+    parser.add_argument("--validate", action="store_true", help="check every statement against spec v1.1 (non-zero exit on a problem)")
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(main(args.dry_run, args.only)))
+    raise SystemExit(asyncio.run(main(args.dry_run, args.only, args.validate)))

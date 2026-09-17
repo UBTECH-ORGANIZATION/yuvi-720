@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import os
 import re
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -13,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
 from app.auth.dependencies import COOKIE_NAME, current_user, optional_user
+from app.auth.device import application_version, device_from_request
 from app.auth.passwords import burn_timing, verify_password
 from app.auth.repository import (
     ALLOWED_PREFERENCES,
@@ -21,13 +25,13 @@ from app.auth.repository import (
     get_user_by_username,
     mark_tours_completed,
     public_user,
-    set_current_moe_session,
     touch_last_login,
     update_preferences,
 )
 from app.auth.tokens import TOKEN_LIFETIME, create_session_token
 from app.core.env import password_login_allowed
 from app.services.lrs import reporter as lrs_reporter
+from app.services.lrs import session_registry
 from learner_state import update_learner_state  # type: ignore
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -123,83 +127,8 @@ async def _moe_logout_url(user_id: Optional[str]) -> Optional[str]:
         return None
 
 
-def _ua_version(user_agent: str, *patterns: str) -> Optional[str]:
-    """First version number one of `patterns` captures in the User-Agent."""
-    for pattern in patterns:
-        match = re.search(pattern, user_agent, re.IGNORECASE)
-        if match:
-            return match.group(1).replace("_", ".").strip()
-    return None
-
-
-def _device_from_request(request: Request) -> dict[str, str]:
-    """Best-effort device extensions for the MoE session `enter` statement.
-
-    The 720 test script (TC-SES-01/07) asks for seven: deviceType, platform,
-    operatingSystem, osVersion, browser, browserVersion, applicationVersion.
-    Everything but the last is read off the User-Agent; a version that header
-    does not disclose is omitted rather than guessed.
-    """
-    ua = request.headers.get("user-agent", "")
-    lowered = ua.lower()
-    if "ipad" in lowered or "tablet" in lowered:
-        device_type = "Tablet"
-    elif "mobile" in lowered or "iphone" in lowered or "android" in lowered:
-        device_type = "Mobile"
-    else:
-        device_type = "Desktop"
-    if "windows" in lowered:
-        operating_system = "Windows"
-    elif "android" in lowered:
-        # Before macOS and Linux: an Android UA says "Linux", and an iPhone UA
-        # says "like Mac OS X" — checked in this order, both used to be misread.
-        operating_system = "Android"
-    elif "iphone" in lowered or "ipad" in lowered or "ipod" in lowered:
-        operating_system = "iOS"
-    elif "mac os" in lowered or "macintosh" in lowered:
-        operating_system = "macOS"
-    elif "linux" in lowered:
-        operating_system = "Linux"
-    else:
-        operating_system = "Other"
-    if "edg/" in lowered:
-        browser = "Edge"
-        browser_version = _ua_version(ua, r"Edg/([\d.]+)")
-    elif "chrome/" in lowered:
-        browser = "Chrome"
-        browser_version = _ua_version(ua, r"Chrome/([\d.]+)")
-    elif "firefox/" in lowered:
-        browser = "Firefox"
-        browser_version = _ua_version(ua, r"Firefox/([\d.]+)")
-    elif "safari/" in lowered:
-        browser = "Safari"
-        browser_version = _ua_version(ua, r"Version/([\d.]+)")
-    else:
-        browser = "Other"
-        browser_version = None
-    os_version = _ua_version(
-        ua,
-        r"Windows NT ([\d.]+)",
-        r"Mac OS X ([\d_.]+)",
-        r"(?:iPhone|CPU) OS ([\d_.]+)",
-        r"Android ([\d.]+)",
-    )
-    device = {
-        "deviceType": device_type,
-        "platform": "Web",
-        "operatingSystem": operating_system,
-        "browser": browser,
-    }
-    # The build the learner is actually running, set by the deploy pipeline.
-    # Absent (a local run) it is left out — a made-up version is worse than none.
-    for key, value in (
-        ("osVersion", os_version),
-        ("browserVersion", browser_version),
-        ("applicationVersion", os.getenv("APP_VERSION", "").strip()),
-    ):
-        if value:
-            device[key] = value
-    return device
+# Kept under their former names: tests and the OIDC callback import them here.
+_device_from_request = device_from_request
 
 
 @router.post("/login")
@@ -243,9 +172,11 @@ async def login(
     )
     response.headers.update(_NO_STORE)
     await touch_last_login(user["user_id"])
-    await set_current_moe_session(user["user_id"], moe_session_id)
-    await lrs_reporter.report_session_enter(
-        user["user_id"], moe_session_id, _device_from_request(request)
+    # The registry closes any session this user still had open (a re-login
+    # ends the previous visit), records the new one and reports `enter`.
+    await session_registry.open(
+        user["user_id"], moe_session_id,
+        roles=user["roles"], device=device_from_request(request),
     )
     return {"authenticated": True, "user": user}
 
@@ -254,11 +185,17 @@ async def login(
 async def logout(response: Response, session=Depends(optional_user)) -> dict[str, Any]:
     redirect_url: Optional[str] = None
     if session and session.get("sid"):
-        duration_seconds = max(0.0, time.time() - float(session.get("iat") or time.time()))
-        await lrs_reporter.report_session_exit(
-            session["sub"], session["sid"], duration_seconds
+        # The registry files the one `exit` (gross duration from its recorded
+        # start); a cookie minted before the registry existed is measured
+        # from the token's own start instead.
+        await session_registry.close(
+            session["sid"],
+            reason="logout",
+            user_id=session["sub"],
+            fallback_started_at=datetime.fromtimestamp(
+                float(session.get("iat") or time.time()), tz=timezone.utc
+            ),
         )
-        await set_current_moe_session(session["sub"], None)
     if session:
         # Dropping our cookie alone would leave the Ministry session alive, so
         # the next "log in" would silently sign the same child straight back in
@@ -269,20 +206,80 @@ async def logout(response: Response, session=Depends(optional_user)) -> dict[str
     return {"ok": True, "redirect_url": redirect_url}
 
 
+# How long a suspend beacon waits for the viewings sent in the same unload.
+SUSPEND_SETTLE_SECONDS = 0.5
+
+
 @router.post("/session/suspend")
 async def session_suspend(session=Depends(optional_user)) -> dict[str, Any]:
     """MoE 720 session `suspend` — the tab lost focus (frontend beacon)."""
     if session and session.get("sid"):
-        await lrs_reporter.report_session_suspend(session["sub"], session["sid"])
+        # The same unload burst carries the dashboard viewings (filed in the
+        # capture phase, before this beacon) — the browser sends them first,
+        # the server may still pick this one up first. The suspend waits a
+        # moment so those statements are stamped before it: nothing may sit
+        # between a suspend and its resume.
+        await asyncio.sleep(SUSPEND_SETTLE_SECONDS)
+        # Reported on the transition only: a second beacon for the same pause
+        # (visibilitychange + pagehide, two tabs) is not a second suspend.
+        if await session_registry.suspend(session["sid"]):
+            await lrs_reporter.report_session_suspend(session["sub"], session["sid"])
     return {"ok": True}
 
 
 @router.post("/session/resume")
-async def session_resume(session=Depends(optional_user)) -> dict[str, Any]:
-    """MoE 720 session `resume` — the tab regained focus (frontend beacon)."""
+async def session_resume(response: Response, session=Depends(optional_user)) -> dict[str, Any]:
+    """MoE 720 session `resume` — the tab regained focus (frontend beacon).
+
+    A tab that comes back after the idle window returns to a session that has
+    already exited: the auth dependency reopened a new one (with its own
+    `enter`), so no `resume` is filed for it — and the cookie is re-minted to
+    carry the new id.
+    """
     if session and session.get("sid"):
-        await lrs_reporter.report_session_resume(session["sub"], session["sid"])
+        if _session_moved(session):
+            _reissue_cookie(response, session)
+        elif await session_registry.resume(session["sid"]):
+            # Only a suspended session resumes — never a resume without its suspend.
+            await lrs_reporter.report_session_resume(session["sub"], session["sid"])
     return {"ok": True}
+
+
+@router.post("/session/ping")
+async def session_ping(response: Response, session=Depends(current_user)) -> dict[str, Any]:
+    """A sign of life from an open tab (every few minutes while visible), so
+    the idle sweeper can tell a closed browser from a quiet one."""
+    if session.get("sid"):
+        await session_registry.touch(session["sid"], force=True)
+        if _session_moved(session):
+            _reissue_cookie(response, session)
+    response.headers.update(_NO_STORE)
+    return {"ok": True, "session_id": session.get("sid")}
+
+
+def _session_moved(session: dict[str, Any]) -> bool:
+    """True when the auth dependency resolved this cookie to a newer session."""
+    jwt_sid = session.get("jwt_sid")
+    return bool(jwt_sid and session.get("sid") and jwt_sid != session["sid"])
+
+
+def _reissue_cookie(response: Response, session: dict[str, Any]) -> None:
+    """Re-mint the cookie so it carries the session the LRS is now told about."""
+    token = create_session_token(
+        user_id=session["sub"],
+        username=str(session.get("username") or ""),
+        roles=list(session.get("roles") or []),
+        session_id=session["sid"],
+    )
+    response.set_cookie(
+        COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="lax",
+        secure=_cookie_is_secure(),
+        max_age=int(TOKEN_LIFETIME.total_seconds()),
+        path="/",
+    )
 
 
 @router.get("/me")
@@ -296,6 +293,8 @@ async def me(response: Response, session=Depends(optional_user)) -> dict[str, An
         # Account removed while a token was still live.
         response.delete_cookie(COOKIE_NAME, path="/")
         return {"authenticated": False, "user": None}
+    if _session_moved(session):
+        _reissue_cookie(response, session)
     # session_id: the MoE LRS sid — the frontend suspend/resume beacon uses it.
     return {"authenticated": True, "user": user, "session_id": session.get("sid")}
 

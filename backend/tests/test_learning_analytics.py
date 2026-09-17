@@ -582,7 +582,10 @@ class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("subject", inspect.signature(routes.group_snapshot).parameters)
         self.assertNotIn("subject", inspect.signature(insights.group_insights).parameters)
 
-    async def test_reports_dashboard_viewed_only_after_guard(self):
+    async def test_the_fetch_itself_reports_no_dashboard_viewed(self):
+        """The MoE `viewed` is filed on leave with its duration (through the
+        group's dashboard-viewed POST) — a report per data fetch filed one
+        duration-less view per mount, focus and tab switch."""
         from app.routes import teacher_students as routes
 
         with patch.object(routes, "_guard_group", AsyncMock(return_value=True)), \
@@ -596,7 +599,7 @@ class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):
             response = await routes.group_learnings(
                 "g1", subject=None, language="he", session={"sub": "teacher-1"})
         self.assertEqual(response.status_code, 200)
-        report.assert_awaited_once()
+        report.assert_not_awaited()
         body = json.loads(response.body)
         self.assertIn("recommendations", body)
 

@@ -22,10 +22,9 @@ from app.auth.moe import config as moe_config
 from app.auth.moe import provisioning, verify
 from app.auth.moe import state as oidc_state
 from app.auth.moe.client import OidcError
-from app.auth.repository import set_current_moe_session, touch_last_login
+from app.auth.repository import touch_last_login
 from app.auth.tokens import TOKEN_LIFETIME, create_session_token
 from app.core.env import password_login_allowed
-from app.services.lrs import reporter as lrs_reporter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -193,10 +192,12 @@ async def complete_login(
     response.headers.update(_NO_STORE)
 
     await touch_last_login(user_id)
-    await set_current_moe_session(user_id, moe_session_id)
-    from app.routes.auth import _device_from_request
+    # The registry closes any session this user still had open (a re-login
+    # ends the previous visit), records the new one and reports `enter`.
+    from app.auth.device import device_from_request
+    from app.services.lrs import session_registry
 
-    await lrs_reporter.report_session_enter(
-        user_id, moe_session_id, _device_from_request(request)
+    await session_registry.open(
+        user_id, moe_session_id, roles=roles, device=device_from_request(request)
     )
     return response

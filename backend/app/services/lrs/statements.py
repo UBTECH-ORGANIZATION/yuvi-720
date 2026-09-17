@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 # An absolute IRI carries a scheme prefix (RFC 3986 scheme = ALPHA *(…)":").
@@ -40,6 +40,49 @@ from app.services.lrs.identity import ReportingIdentity
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ── Timestamps the LRS can order ─────────────────────────────────────────────
+# The ministry keeps statement times at second resolution and reads a session
+# as a sequence — "אירועים נשלחים עם timestamp זהה ברמת השנייה … נבקש לוודא
+# שהם נשלחים לפחות בפער של שנייה" (feedback 17/09). Two statements of one
+# actor within the same second (a student turn and the bot's reply, the
+# skips of a dismissed questionnaire, an exit and the re-login's enter) were
+# indistinguishable. Every timestamp issued here is therefore at least one
+# second after the last one issued for the same actor in this process, in
+# the order the statements were built. The drift is bounded by how much
+# faster than one-per-second the events really were.
+_last_stamp: dict[str, datetime] = {}
+_STAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _parse_stamp(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+
+
+def sequenced_timestamp(actor_key: str, wanted: Optional[str] = None) -> str:
+    """`wanted` (the content's own time, or the moment a session really
+    ended) floored to the second, pushed forward to keep a one-second gap
+    after this actor's previous statement."""
+    moment = (_parse_stamp(wanted) or datetime.now(timezone.utc)).replace(microsecond=0)
+    last = _last_stamp.get(actor_key)
+    if last is not None and moment <= last:
+        moment = last + timedelta(seconds=1)
+    _last_stamp[actor_key] = moment
+    if len(_last_stamp) > 20_000:  # a process serving many actors: forget the oldest
+        for key in list(_last_stamp)[:5_000]:
+            _last_stamp.pop(key, None)
+    return moment.strftime(_STAMP_FORMAT)
+
+
+def reset_timestamp_sequence_for_tests() -> None:
+    _last_stamp.clear()
 
 
 def iso_duration(seconds: float) -> str:
@@ -188,7 +231,7 @@ def _base(
         "verb": verb(verb_slug),
         "object": obj,
         "context": context,
-        "timestamp": timestamp or _now(),
+        "timestamp": sequenced_timestamp(identity["exidentifier"], timestamp),
     }
     if result:
         statement["result"] = result
@@ -201,6 +244,7 @@ def session_enter(
     session_id: str,
     *,
     device: Optional[dict[str, Any]] = None,
+    timestamp: Optional[str] = None,
 ) -> dict[str, Any]:
     """`device` short keys: deviceType, platform, operatingSystem, osVersion,
     browser, browserVersion, applicationVersion."""
@@ -210,6 +254,7 @@ def session_enter(
         session_activity(session_id),
         session_id,
         context_extra={"extensions": extensions(device or {})} if device else None,
+        timestamp=timestamp,
     )
 
 
@@ -222,19 +267,51 @@ def session_resume(identity: ReportingIdentity, session_id: str) -> dict[str, An
 
 
 def session_exit(
-    identity: ReportingIdentity, session_id: str, duration_seconds: float
+    identity: ReportingIdentity,
+    session_id: str,
+    duration_seconds: float,
+    *,
+    timestamp: Optional[str] = None,
 ) -> dict[str, Any]:
-    return _base(
+    """The one `exit` a session ever gets.
+
+    `timestamp` is the moment the session actually ended — for a tab that was
+    closed or a browser that vanished that is the last `suspend`/sign of life,
+    not the minute the sweeper noticed. The statement id is derived from the
+    session, so a second attempt to close the same session (logout racing the
+    sweeper, two instances) enqueues the same id: the outbox's `$setOnInsert`
+    keeps the first and the LRS drops a duplicate — one `exit`, by
+    construction.
+    """
+    statement = _base(
         identity,
         "exit",
         session_activity(session_id),
         session_id,
         result={"duration": iso_duration(duration_seconds)},
+        timestamp=timestamp,
     )
+    statement["id"] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{statement['object']['id']}#exit"))
+    return statement
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
-DASHBOARD_TYPES = {"student-personal", "student-view", "learning-group", "realtime-dashboard"}
+DASHBOARD_TYPES = frozenset({"student-personal", "student-view", "learning-group", "realtime-dashboard"})
+
+# Conversation extensions (spec v1.1 §שיחה): the closed lists, verbatim.
+CONVERSATION_TRIGGERS = frozenset({
+    "student-request", "success-effort", "student-error", "idle-time", "other",
+})
+HELP_TYPES = frozenset({
+    "hint", "explanation", "alternative-content", "other", "bot-help-offer", "motivation",
+})
+# `requested` (help asked of the content or the platform) uses the short list.
+REQUESTED_HELP_TYPES = frozenset({"hint", "explanation"})
+HELP_SOURCES = frozenset({"content", "platform"})
+# Reflection questionnaires (spec v1.1 §רפלקציה).
+REFLECTION_TRIGGERS = frozenset({
+    "end-of-learning-objective", "end-of-learning-component", "difficult-task", "other",
+})
 
 
 def dashboard_viewed(
@@ -246,12 +323,14 @@ def dashboard_viewed(
     duration_seconds: Optional[float] = None,
     name_he: Optional[str] = None,
 ) -> dict[str, Any]:
-    # dashboardId filter per the spec's split: student dashboards → the ת"ז
+    # dashboardId per the spec's split: student dashboards → the ת"ז
     # (exidentifier), group dashboards → the NMM id. Default from identity so
-    # callers never handle the exidentifier themselves (PII boundary).
+    # callers never handle the exidentifier themselves (PII boundary). A group
+    # board with no NMM anywhere carries no id — the school symbol is not an
+    # NMM and an empty string names nothing.
     if dashboard_id is None:
         if dashboard_type in {"learning-group", "realtime-dashboard"}:
-            dashboard_id = identity["nmm"] or identity["school"] or ""
+            dashboard_id = identity["nmm"] or None
         else:
             dashboard_id = identity["exidentifier"]
     obj = activity(
@@ -301,15 +380,25 @@ def agency_answered(
     question_id: Optional[str] = None,
     answer_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    # Prefer the official MoE question/answer URL ids so the statement is scored
-    # against the ministry catalog; fall back to the local activity id.
-    object_id = question_id or f"{_domain()}/agency/question/{question_number}"
-    obj = activity(object_id, "question", question_he or f"שאלה {question_number}")
-    # The official answer id (URL) is the canonical response; keep the numeric
-    # value (1–5) as the scaled score.
-    result: dict[str, Any] = {"response": answer_id or response}
+    # Spec v1.1 (agency example): the object is the platform's own question
+    # activity `{domain}/agency/question/{n}`, `result.response` the chosen
+    # answer as the learner saw it, the 1–5 value as the raw score. The
+    # ministry's catalog ids for the question and the answer
+    # (`https://moe.gov.il/720-agency-mapping/...`) ride as extensions so the
+    # statement still scores against the official questionnaire.
+    obj = activity(
+        f"{_domain()}/agency/question/{question_number}",
+        "question",
+        question_he or f"שאלה {question_number}",
+    )
+    result: dict[str, Any] = {"response": response}
     if score_raw is not None:
         result["score"] = {"min": score_min, "max": score_max, "raw": score_raw}
+    ext: dict[str, Any] = {}
+    if question_id:
+        ext["questionId"] = question_id
+    if answer_id:
+        ext["answerId"] = answer_id
     return _base(
         identity,
         "answered",
@@ -319,6 +408,7 @@ def agency_answered(
         # The full questionnaire activity, not a bare id — the ministry's
         # examples type every parent entry.
         parent=[_agency_object(phase)],
+        context_extra={"extensions": extensions(ext)} if ext else None,
     )
 
 
@@ -354,14 +444,13 @@ def conversation_interacted(
     obj = activity(f"{_domain()}/conversation/{conversation_id}", "conversation")
     # Spec v1.1 closed the trigger list and replaced `misconception` with
     # `student-error`; an off-list value becomes `other` rather than a rejection.
-    allowed_triggers = {
-        "student-request", "success-effort", "student-error", "idle-time", "other"
-    }
     trigger = {"misconception": "student-error"}.get(
         conversation_trigger, conversation_trigger
     )
-    if trigger not in allowed_triggers:
+    if trigger not in CONVERSATION_TRIGGERS:
         trigger = "other"
+    if help_type and help_type not in HELP_TYPES:
+        help_type = "other"
     ext = extensions(
         {
             "speaker": speaker,
@@ -425,7 +514,9 @@ def reflection_initialized(
         # The original spec PDF spelled this `reflactionTrigger`; the ministry's
         # examples page (16/08) fixed it to `reflectionTrigger` and staging
         # accepts both — the page's spelling is what reviewers compare against.
-        context_extra={"extensions": extensions({"reflectionTrigger": trigger})},
+        context_extra={"extensions": extensions({
+            "reflectionTrigger": trigger if trigger in REFLECTION_TRIGGERS else "other",
+        })},
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -503,15 +594,18 @@ def reflection_completed(
     questionnaire_id: str,
     duration_seconds: float,
     *,
+    completion: bool = True,
     ecat_item_id: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
+    """`completion=False` closes a questionnaire the learner dismissed: the
+    flow is over (its open questions were `skipped`), not finished."""
     return _base(
         identity,
         "completed",
         _reflection_object(questionnaire_id),
         session_id,
-        result={"completion": True, "duration": iso_duration(duration_seconds)},
+        result={"completion": completion, "duration": iso_duration(duration_seconds)},
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -568,8 +662,8 @@ def mentor_meeting_completed(
     session_id: str,
     meeting_id: str,
     *,
-    mentor_exid: str,
-    student_exid: str,
+    mentor_exid: Optional[str],
+    student_exid: Optional[str],
     meeting_date: str,  # YYYY-MM-DD
     mentoring_phase: Optional[str] = None,
 ) -> dict[str, Any]:
@@ -578,10 +672,12 @@ def mentor_meeting_completed(
     )
     ext = extensions(
         {
-            "mentor": mentor_exid,
-            "student": student_exid,
+            "mentor": mentor_exid or None,
+            "student": student_exid or None,
             "meetingDate": meeting_date,
-            "mentoringPhase": normalize_mentoring_phase(mentoring_phase),
+            # Required on the wire: a meeting whose phase is off the ladder
+            # (free text from before the form offered it) is on its first step.
+            "mentoringPhase": normalize_mentoring_phase(mentoring_phase) or "phase1",
         }
     )
     return _base(
@@ -590,7 +686,7 @@ def mentor_meeting_completed(
 
 
 # ── Student goal ─────────────────────────────────────────────────────────────
-GOAL_TYPES = {"academic", "personal", "social-emotional", "motivational", "behavioral", "other"}
+GOAL_TYPES = frozenset({"academic", "personal", "social-emotional", "motivational", "behavioral", "other"})
 
 
 def _goal_object(goal_id: str, goal_type: str) -> dict[str, Any]:
@@ -876,6 +972,18 @@ def content_skipped(
     )
 
 
+def _media_type_of(
+    hierarchy: dict[str, Any], context_extensions: Optional[dict[str, Any]]
+) -> Optional[str]:
+    """video | audio | animation for a media statement, from the catalog's
+    typing of the item (`hierarchy.self`) or the statement's mediaFormat."""
+    self_type = (((hierarchy.get("self") or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    if self_type in MEDIA_ACTIVITY_TYPES.values():
+        return self_type
+    declared = str((context_extensions or {}).get("mediaFormat") or "").strip().lower()
+    return MEDIA_ACTIVITY_TYPES.get(declared)
+
+
 def _infer_object_type(hierarchy: dict[str, Any]) -> str:
     """Default `object.definition.type` for a relayed content statement whose
     own object arrived with none (real Kata statements for a learning-unit or
@@ -1053,6 +1161,15 @@ def enriched_content_statement(
                 or ("question" if object_below_self else _infer_object_type(hierarchy))
             )
             definition["type"] = f"{ACTIVITY}/{inferred}"
+        # Media events are on a MEDIA object — "play/pause אמורים להיות על
+        # אובייקט video ולא item" (17/09). Kata types its clips `item`; the
+        # ministry's rule outranks the content's declaration here, and the
+        # kind comes from the catalog (the item's media format) or the
+        # statement's own mediaFormat, video being what the lomdot play.
+        verb_slug = str((raw_statement.get("verb") or {}).get("id") or "").rstrip("/").rsplit("/", 1)[-1]
+        if verb_slug in ("played", "paused"):
+            media = _media_type_of(hierarchy, context_extensions) or "video"
+            definition["type"] = f"{ACTIVITY}/{media}"
         # …and the same for `definition.name` (integration report 6): the name
         # the content omitted is taken from the catalog level this object IS,
         # never from the level above a question.
@@ -1125,7 +1242,7 @@ def enriched_content_statement(
         "verb": _moe_verb(raw_statement.get("verb")),
         "object": obj,
         "context": ctx,
-        "timestamp": raw_statement.get("timestamp") or _now(),
+        "timestamp": sequenced_timestamp(identity["exidentifier"], raw_statement.get("timestamp")),
     }
     result = dict(raw_statement.get("result") or {})
     # `result_extra` fills the fields the review found missing on relayed events
@@ -1191,8 +1308,8 @@ def help_requested(
         session_id,
         context_extra={
             "extensions": extensions({
-                "helpSource": help_source,
-                "helpType": help_type,
+                "helpSource": help_source if help_source in HELP_SOURCES else "platform",
+                "helpType": help_type if help_type in REQUESTED_HELP_TYPES else "hint",
                 "questionId": question_id,
                 "questionType": question_type,
                 "attemptNumber": attempt_number,
@@ -1209,23 +1326,25 @@ def help_requested(
 
 
 # ── Non-learning selection ───────────────────────────────────────────────────
-# 720 LRS v1.1 uses these exact wire values. Accept the existing normalized
-# names at the boundary so content providers and platform call sites can migrate
-# without emitting a non-compliant statement.
-SELECTION_TYPES = {
-    "type-learning",
-    "decision-practice",
-    "understood-is",
-    "repeat-is",
-    "learning-external",
-}
+# 720 LRS v1.1 `selectionType` — the five wire values exactly as the PDF
+# prints them (verified with `pdftotext` on 17/09: the earlier reading had the
+# two halves of each token swapped, an RTL rendering of the same page).
+SELECTION_TYPES = frozenset({
+    "learning-type",
+    "practice-decision",
+    "is-understood",
+    "is-repeat",
+    "external-learning",
+})
 
+# The reversed spellings shipped between 08/2026 and 09/2026, plus the
+# camelCase names the content providers use — all fold to the wire value.
 _SELECTION_TYPE_ALIASES = {
-    "learning-type": "type-learning",
-    "practice-decision": "decision-practice",
-    "is-understood": "understood-is",
-    "is-repeat": "repeat-is",
-    "external-learning": "learning-external",
+    "type-learning": "learning-type",
+    "decision-practice": "practice-decision",
+    "understood-is": "is-understood",
+    "repeat-is": "is-repeat",
+    "learning-external": "external-learning",
 }
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -1234,9 +1353,8 @@ _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 def kebab(value: str) -> str:
     """Normalize legacy and camelCase names to the v1.1 selection enum.
 
-    The 720 PDF v1.1 enum is not a mechanical kebab-case conversion: for
-    example, `practiceDecision` becomes `decision-practice`. Callers may pass
-    the established camelCase or legacy normalized names; the wire format is
+    `practiceDecision` → `practice-decision`; the reversed 08/2026 spellings
+    map back too. Callers may pass whichever they hold; the wire format is
     decided here once.
     """
     text = str(value or "").strip()
@@ -1244,6 +1362,14 @@ def kebab(value: str) -> str:
         return text
     normalized = _CAMEL_BOUNDARY.sub("-", text).replace("_", "-").replace(" ", "-").lower()
     return _SELECTION_TYPE_ALIASES.get(normalized, normalized)
+
+
+# The kinds of content a `learning-type` choice picks between — Kata's own
+# `contentType` vocabulary, which is what the choice answers with.
+CONTENT_TYPES = frozenset({
+    "instruction", "practice", "presentation", "motivational", "summary",
+    "simulation", "video",
+})
 
 
 def selected(

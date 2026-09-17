@@ -718,6 +718,8 @@ function ConversationComposer({ initialDraft, onPersist, onClear, onClose, onSav
     () => Boolean(initialDraft?.feeling) && !KNOWN_FEELINGS.includes(initialDraft?.feeling ?? ''),
   )
   const [yuviOpen, setYuviOpen] = useState(false)
+  // The helper's conversation id for the ministry: minted once per composer.
+  const yuviConversationId = useRef(`mentoring-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
   const [yuviQA, setYuviQA] = useState<YuviQA[]>([])
   const [yuviQuestion, setYuviQuestion] = useState('')
   const [yuviOptions, setYuviOptions] = useState<string[]>([])
@@ -744,7 +746,7 @@ function ConversationComposer({ initialDraft, onPersist, onClear, onClose, onSav
   const askYuvi = async (qa: YuviQA[], more = false) => {
     setYuviBusy(true)
     try {
-      const res = await assistMentoring({ language, qa, notes, feeling, more })
+      const res = await assistMentoring({ language, qa, notes, feeling, more, conversation_id: yuviConversationId.current })
       if (qa.length > 0 && typeof res.draft === 'string' && res.draft.trim()) setNotes(res.draft)
       setYuviQuestion(res.question || '')
       setYuviOptions(Array.isArray(res.options) ? res.options : [])

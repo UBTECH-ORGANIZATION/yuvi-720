@@ -58,6 +58,14 @@ def _new_goal(data: dict[str, Any]) -> dict[str, Any]:
         # validated to the closed vocabulary — None for hand-written goals.
         # This is what lets the teacher screen show "did it actually happen".
         "action": goal_progress.normalize_action(data.get("action")),
+        # The ministry's goalType, settled at creation from what the goal is
+        # (explicit type → action → domain), so every later statement about
+        # this goal — updated, completed, approved — names the same kind.
+        "goal_type": goal_progress.goal_type_for({
+            "goal_type": data.get("goal_type") or data.get("type"),
+            "action": goal_progress.normalize_action(data.get("action")),
+            "domain": data.get("domain") or data.get("activeness_domain"),
+        }),
         "progress_stage": stage,
         "status": "done" if stage == "summarized" else "open",
         "from_yuvi": bool(data.get("from_yuvi")),
@@ -366,6 +374,10 @@ async def create_conversation(data: dict[str, Any]) -> dict[str, Any]:
         # body this size is a pasted document, not a talk summary.
         "notes": str(data.get("notes", ""))[:4000],
         "author": data.get("author", "teacher"),          # teacher | learner
+        # What this record IS: a documented talk (`conversation`) or a goal a
+        # teacher assigned from the roster (`goal-assignment`) — only the first
+        # is a mentor–student meeting to the ministry.
+        "kind": data.get("kind") or "conversation",
         "visibility": _visibility(data),                    # shared | teacher_only
         "teacher_only_note": str(data.get("teacher_only_note", ""))[:4000],
         # Which teacher documented this. Was passed by `assign_goal` and

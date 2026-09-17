@@ -437,15 +437,22 @@ class ContentStatementTests(unittest.TestCase):
             object_type="item", selection_type="practiceDecision", response="true",
         )
         self.assertEqual(_short(stmt["context"]["extensions"])["selectionType"],
-                         "decision-practice")
+                         "practice-decision")
 
     def test_every_v11_selection_enum_value_is_mapped(self):
+        # The PDF's tokens (pdftotext, 17/09). The reversed spellings shipped
+        # for a month and must keep folding to the right value.
         for supplied, wire_value in (
-            ("learningType", "type-learning"),
-            ("practiceDecision", "decision-practice"),
-            ("isUnderstood", "understood-is"),
-            ("isRepeat", "repeat-is"),
-            ("externalLearning", "learning-external"),
+            ("learningType", "learning-type"),
+            ("practiceDecision", "practice-decision"),
+            ("isUnderstood", "is-understood"),
+            ("isRepeat", "is-repeat"),
+            ("externalLearning", "external-learning"),
+            ("type-learning", "learning-type"),
+            ("decision-practice", "practice-decision"),
+            ("understood-is", "is-understood"),
+            ("repeat-is", "is-repeat"),
+            ("learning-external", "external-learning"),
         ):
             self.assertEqual(statements.kebab(supplied), wire_value)
             self.assertIn(wire_value, statements.SELECTION_TYPES)
@@ -713,13 +720,16 @@ class MentoringPhaseTests(unittest.TestCase):
             _short(stmt["context"]["extensions"])["mentoringPhase"], "phase4"
         )
 
-    def test_an_unrecognised_phase_is_omitted_not_guessed(self):
+    def test_an_unrecognised_phase_is_the_first_step_never_free_text(self):
+        """The extension is required on the wire; a talk whose phase is off
+        the ladder (free text from before the form offered it) is filed on
+        the ladder's first step, and the free text never reaches the LRS."""
         stmt = statements.mentor_meeting_completed(
             IDENTITY, SESSION, "meet-1",
             mentor_exid="1099999999", student_exid="1012345678",
             meeting_date="2026-09-01", mentoring_phase="שיחה על הכיתה",
         )
-        self.assertNotIn("mentoringPhase", _short(stmt["context"]["extensions"]))
+        self.assertEqual(_short(stmt["context"]["extensions"])["mentoringPhase"], "phase1")
 
 
 class SeptemberReviewTests(unittest.TestCase):
@@ -850,3 +860,132 @@ class SeptemberReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GroupDashboardIdTests(unittest.IsolatedAsyncioTestCase):
+    """A group board names the class by its NMM — never the school symbol,
+    never an empty string — and the viewer's own NMM is only a fallback."""
+
+    async def _viewed(self, group, identity, subject_group_id="g1"):
+        from unittest.mock import AsyncMock, patch
+        from app.services.lrs import reporter
+
+        captured = {}
+
+        async def enqueue(statement, **_kwargs):
+            captured["statement"] = statement
+
+        with patch.dict("os.environ", {
+            "LRS_ENABLED": "true", "LRS_TOKEN_URL": "https://x/t", "LRS_STATEMENTS_URL": "https://x/s",
+            "LRS_CLIENT_ID": "c", "LRS_CLIENT_SECRET": "s", "LRS_SUPPLIER_DOMAIN": "https://spark.yuvilab.co.il",
+            "LRS_KATA_ECAT_ID": "123456", "LRS_TEST_EXIDENTIFIER": "1012345678",
+        }), patch.object(reporter.outbox, "enqueue", side_effect=enqueue), \
+             patch.object(reporter.identity_mod, "resolve_reporting_identity", AsyncMock(return_value=identity)), \
+             patch("app.services.org_repository.get_group", AsyncMock(return_value=group)):
+            reporter._warned_identities.clear()
+            await reporter.report_dashboard_viewed(
+                "teacher-1", "sess", "learning-group", None, 42.0, subject_group_id=subject_group_id,
+            )
+        return _short(captured["statement"]["context"].get("extensions") or {})
+
+    async def test_the_groups_nmm_is_the_dashboard_id(self):
+        ext = await self._viewed({"_id": "g1", "nmm_id": "90635956"}, {"exidentifier": "1", "school": "111", "nmm": "222"})
+        self.assertEqual(ext["dashboardId"], "90635956")
+
+    async def test_a_ministry_provisioned_group_is_its_own_nmm(self):
+        ext = await self._viewed({"_id": "90635956"}, {"exidentifier": "1", "school": "111", "nmm": None}, subject_group_id="90635956")
+        self.assertEqual(ext["dashboardId"], "90635956")
+
+    async def test_a_local_group_without_an_nmm_falls_back_to_the_viewers_nmm_or_nothing(self):
+        ext = await self._viewed({"_id": "g1"}, {"exidentifier": "1", "school": "111", "nmm": "222"})
+        self.assertEqual(ext["dashboardId"], "222")
+        ext = await self._viewed({"_id": "g1"}, {"exidentifier": "1", "school": "111", "nmm": None})
+        self.assertNotIn("dashboardId", ext)
+
+
+class ConversationIdsAndAncestryTests(unittest.IsolatedAsyncioTestCase):
+    """A coach turn names its component AND item as IRIs, carries the content's
+    ancestry (resolved from the catalog's own ids — an IRI was being passed
+    where the catalog id was expected, so every conversation went out with no
+    hierarchy and no vendor), and one conversation id per item (spec v1.1:
+    "conversationId חדש עבור שיחה חדשה או פריט שונה")."""
+
+    ENV = {
+        "LRS_ENABLED": "true", "LRS_TOKEN_URL": "https://x/t", "LRS_STATEMENTS_URL": "https://x/s",
+        "LRS_CLIENT_ID": "c", "LRS_CLIENT_SECRET": "s", "LRS_SUPPLIER_DOMAIN": "https://spark.yuvilab.co.il",
+        # No per-deployment ECAT id: the vendor comes from the catalog (310 = מתודיקה).
+        "LRS_KATA_ECAT_ID": "", "LRS_TEST_EXIDENTIFIER": "1012345678",
+    }
+
+    async def _report(self, call, *args, **kwargs):
+        from unittest.mock import AsyncMock, patch
+        from app.services import kata_catalog
+        from app.services.lrs import reporter
+
+        captured = {}
+
+        async def enqueue(statement, **_kwargs):
+            captured["statement"] = statement
+
+        unit = {**UNIT, "manufacture": "310", "components": [dict(COMPONENT, unit_id=UNIT["id"], items=[ITEM])]}
+        with mock.patch.dict(os.environ, self.ENV), \
+             patch.object(reporter.outbox, "enqueue", side_effect=enqueue), \
+             patch.object(reporter.identity_mod, "resolve_reporting_identity", AsyncMock(return_value=IDENTITY)), \
+             patch("app.brain.repository.get_brain", AsyncMock(return_value={"current_state": {
+                 "component_id": COMPONENT["id"], "item_id": ITEM["id"], "unit_id": UNIT["id"]}})), \
+             patch.object(kata_catalog, "ensure_loaded", AsyncMock()), \
+             patch.object(kata_catalog, "get_component", lambda cid: dict(COMPONENT, unit_id=UNIT["id"]) if cid == COMPONENT["id"] else None), \
+             patch.object(kata_catalog, "get_unit", lambda uid: unit if uid == UNIT["id"] else None), \
+             patch.object(kata_catalog, "item_profile", lambda cid, iid: ITEM if (cid, iid) == (COMPONENT["id"], ITEM["id"]) else None):
+            reporter._warned_identities.clear()
+            await call(*args, **kwargs)
+        return captured["statement"]
+
+    async def test_a_turn_carries_iris_and_the_ancestry_from_raw_ids(self):
+        from app.services.lrs import reporter
+
+        stmt = await self._report(
+            reporter.report_conversation_interacted, "kid", SESSION, "lesson-thread",
+            "student", "student-request", component_id=COMPONENT["id"],
+        )
+        ext = _short(stmt["context"]["extensions"])
+        self.assertEqual(ext["componentId"], f"https://spark.yuvilab.co.il/component/{COMPONENT['id']}")
+        self.assertEqual(ext["itemId"], f"https://spark.yuvilab.co.il/item/{ITEM['id']}")
+        self.assertEqual(stmt["object"]["id"], f"https://spark.yuvilab.co.il/conversation/lesson-thread--{ITEM['id']}")
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        ids = [g["id"] for g in grouping]
+        self.assertIn(f"https://spark.yuvilab.co.il/learning-unit/{UNIT['id']}", ids)
+        self.assertIn(f"https://spark.yuvilab.co.il/component/{COMPONENT['id']}", ids)
+        self.assertTrue(any(i.endswith("/ecat/content-vendor/310") for i in ids), ids)
+        self.assertEqual(ext["learningUnitId"], UNIT["id"])
+
+    async def test_a_rating_names_the_same_per_item_conversation(self):
+        from app.services.lrs import reporter
+
+        stmt = await self._report(
+            reporter.report_conversation_rated, "kid", SESSION, "lesson-thread", "like",
+            component_id=COMPONENT["id"],
+        )
+        self.assertEqual(stmt["object"]["id"], f"https://spark.yuvilab.co.il/conversation/lesson-thread--{ITEM['id']}")
+        self.assertEqual(stmt["result"]["response"], "like")
+
+    async def test_a_conversation_outside_content_carries_no_ids_or_ancestry(self):
+        from app.services.lrs import reporter
+
+        stmt = await self._report(
+            reporter.report_conversation_interacted, "kid", SESSION, "mentoring-x",
+            "bot", "other", help_type="other", content=False,
+        )
+        ext = _short(stmt["context"].get("extensions") or {})
+        self.assertNotIn("componentId", ext)
+        self.assertNotIn("itemId", ext)
+        self.assertEqual(stmt["object"]["id"], "https://spark.yuvilab.co.il/conversation/mentoring-x")
+        ids = [g["id"] for g in stmt["context"]["contextActivities"]["grouping"]]
+        self.assertFalse(any("/component/" in i or "content-vendor" in i for i in ids), ids)
+
+    def test_off_list_help_types_become_other(self):
+        stmt = statements.conversation_interacted(
+            IDENTITY, SESSION, "c1", speaker="bot", conversation_trigger="student-request",
+            help_type="video-summary",
+        )
+        self.assertEqual(_short(stmt["context"]["extensions"])["helpType"], "other")

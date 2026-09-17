@@ -249,8 +249,10 @@ async def create_provider_session(
 
     # Kata relays content xAPI to our ingest. studentId MUST equal the launch id
     # so the forwarded actor.account.name matches what the ingest scopes against.
+    # Kata's launcher wants Kata's own id (a URL since 09/2026); everything of
+    # ours — the launch token, the brain, the events — carries the slug.
     context = await kata_client.create_launch_context(
-        component_id=component["id"],
+        component_id=component.get("launch_id") or component["id"],
         student_id=launch["slxapi"]["actor"]["account"]["name"],
         platform_url=public_base,
         lrs_endpoint=launch["slxapi"]["endpoint"],
@@ -341,7 +343,7 @@ async def create_preview_launch(
     unit, component = await kata_client.resolve_component(component_id, None)
     public_base = _public_base_url(request_base_url)
     context = await kata_client.create_launch_context(
-        component_id=component["id"],
+        component_id=component.get("launch_id") or component["id"],
         student_id=f"preview-{normalize_learner_id(teacher_id)}",
         platform_url=public_base,
         lrs_endpoint=f"{public_base}/api/xapi/preview/",

@@ -14,6 +14,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import {
   answerReflection,
   completeReflection,
+  dismissReflection,
   skipReflection,
   startReflection,
   type ReflectionQuestion,
@@ -37,6 +38,12 @@ export function ReflectionPanel({ componentId, sessionId, onDone }: ReflectionPa
   const [drafts, setDrafts] = useState<Record<number, Draft>>({})
   const [busy, setBusy] = useState(false)
   const startedRef = useRef(false)
+  /* The flow the server opened, and whether it was sent. A panel that goes
+     away with an open flow — the ×, "continue", leaving the lesson — must
+     close it: the ministry heard `initialized`, so it must hear how it
+     ended. Refs, because the unmount cleanup runs after the state is gone. */
+  const reflectionIdRef = useRef<string | null>(null)
+  const sentRef = useRef(false)
 
   useEffect(() => {
     if (startedRef.current) return
@@ -44,6 +51,7 @@ export function ReflectionPanel({ componentId, sessionId, onDone }: ReflectionPa
     startReflection(componentId, sessionId, language)
       .then((flow) => {
         if (flow.questions?.length) {
+          reflectionIdRef.current = flow.reflection_id
           setReflectionId(flow.reflection_id)
           setQuestions(flow.questions)
           setPhase('asking')
@@ -58,6 +66,14 @@ export function ReflectionPanel({ componentId, sessionId, onDone }: ReflectionPa
       })
   }, [componentId, language, onDone, sessionId])
 
+  useEffect(() => () => {
+    const open = reflectionIdRef.current
+    if (open && !sentRef.current) {
+      sentRef.current = true
+      void dismissReflection(open).catch(() => undefined)
+    }
+  }, [])
+
   const isAnswered = (question: ReflectionQuestion) => {
     const draft = drafts[question.number]
     return question.kind === 'rating'
@@ -70,6 +86,7 @@ export function ReflectionPanel({ componentId, sessionId, onDone }: ReflectionPa
   const send = async (skipAll = false) => {
     if (busy) return
     setBusy(true)
+    sentRef.current = true
     for (const question of questions) {
       const draft = drafts[question.number]
       const answered = !skipAll && isAnswered(question)

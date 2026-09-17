@@ -194,24 +194,11 @@ export function createLearningSession(
  *  when the choice is offered inside the content; this is the platform's own
  *  affordance ("אני רוצה עוד תרגול" in the completion dialog). Both land in the
  *  same evidence, so the next re-plan already knows what they asked for. */
-export function reportPathChoice(componentId: string | null, choice: 'more_practice') {
+export function reportPathChoice(componentId: string | null, choice: 'more_practice' | 'continue') {
   if (!componentId) return Promise.resolve(null)
   return apiPost<{ ok: boolean }>('/api/learning/path-choice', {
     component_id: componentId,
     choice,
-  }).catch(() => null)
-}
-
-/** The learner choosing to move past a component without finishing it.
- *
- *  The other half of פעלנות: the route is a suggestion, and a learner who
- *  already knows this step may say so. Reported to the ministry LRS as
- *  `skipped` on the component, and kept as our own evidence so the next
- *  re-plan does not simply offer the same step again. */
-export function skipComponent(componentId: string | null) {
-  if (!componentId) return Promise.resolve(null)
-  return apiPost<{ ok: boolean }>('/api/learning/skip-component', {
-    component_id: componentId,
   }).catch(() => null)
 }
 

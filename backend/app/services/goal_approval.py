@@ -133,9 +133,16 @@ async def approve_goal(
         "granted": granted,
         # True when the learner had already banked these sparks themselves.
         "already_earned": already_summarized and granted == 0,
+        # The learner had already finished (summarized) this goal themselves.
+        "already_summarized": already_summarized,
         "capped": capped,
         "wallet": reward.get("wallet"),
-        "goal": {"id": goal_id, "title": goal.get("title")},
+        # `goal_type`/`action` ride along so the route can name the goal's
+        # kind to the ministry without a second read.
+        "goal": {
+            "id": goal_id, "title": goal.get("title"),
+            "goal_type": goal.get("goal_type"), "action": goal.get("action"),
+        },
     }
 
 
@@ -177,6 +184,9 @@ async def assign_goal(
         "teacher_id": teacher_id,
         "language": language,
         "source": "teacher",
+        # A goal set from the roster is not a talk that took place: the LRS
+        # hears the goal, never a mentor–student meeting.
+        "kind": "goal-assignment",
         "visible_to_learner": True,
         "lrs_session_id": lrs_session_id,
         "goals": [{

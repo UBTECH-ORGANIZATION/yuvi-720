@@ -88,8 +88,9 @@ async def report_questionnaire_answer(
         session["sub"],
         session["sid"],
         entry["question_number"],
-        entry["answer_id"],
+        entry["answer_he"] or entry["answer_id"],
         score_raw=float(entry["value"]),
+        question_he=entry["question_he"] or None,
         question_id=entry["question_id"],
         answer_id=entry["answer_id"],
     )

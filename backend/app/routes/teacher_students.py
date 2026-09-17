@@ -50,19 +50,20 @@ async def _guard_group(session: dict, group_id: str) -> bool:
 
 async def _report(
     session: dict, dashboard_type: str, duration_seconds: Optional[float] = None,
-    *, subject_learner_id: Optional[str] = None,
+    *, subject_learner_id: Optional[str] = None, subject_group_id: Optional[str] = None,
 ) -> None:
     """MoE 720 dashboard-viewed. Best-effort; never breaks the response.
 
     `subject_learner_id` names whose board it was: a student view is stamped
-    with that student's exidentifier, never the teacher's.
+    with that student's exidentifier, never the teacher's; `subject_group_id`
+    names the class of a group board (its NMM becomes `dashboardId`).
     """
     if not session.get("sid"):
         return
     try:
         await lrs_reporter.report_dashboard_viewed(
             session["sub"], session["sid"], dashboard_type, None, duration_seconds,
-            subject_learner_id=subject_learner_id,
+            subject_learner_id=subject_learner_id, subject_group_id=subject_group_id,
         )
     except Exception as exc:  # pragma: no cover - reporting is never critical
         print(f"⚠️ dashboard-viewed report skipped: {type(exc).__name__}")
@@ -128,7 +129,7 @@ async def report_group_dashboard_viewed(
         raise HTTPException(status_code=422, detail="invalid_duration")
     if not 0 < duration_seconds <= 28_800:
         raise HTTPException(status_code=422, detail="invalid_duration")
-    await _report(session, "learning-group", duration_seconds)
+    await _report(session, "learning-group", duration_seconds, subject_group_id=group_id)
     return _ok({"reported": True})
 
 
@@ -322,7 +323,8 @@ async def group_learnings(
     view = await cache_store.remember(
         "grp", group_id, "learnings", f"{subject or ''}:{lang}", 600, _build,
     )
-    await _report(session, "learning-group")
+    # The MoE `viewed` for this screen is filed on leave, with its duration,
+    # through `POST /groups/{group_id}/dashboard-viewed` — not per fetch.
     return _ok(view)
 
 
@@ -365,7 +367,6 @@ async def group_learning_detail(
     view = await learning_analytics.learning_detail(
         group_id, component_id, language=normalize_language(language)
     )
-    await _report(session, "learning-group")
     return _ok(view)
 
 
@@ -862,9 +863,16 @@ async def approve_student_goal(
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
     if not result.get("already_approved"):
         # Filed under the learner's own MoE session when they have one; the
-        # teacher's session is the fallback (see the reporter).
+        # teacher's session is the fallback (see the reporter). A goal the
+        # learner already summarized was `completed` then — the approval is
+        # the teacher's `updated` on it, never a second completion (the
+        # ministry reads two `completed` on one goal as a duplicate).
+        from app.services.goal_progress import goal_type_for
+
         await lrs_reporter.report_teacher_student_goal(
-            safe_id, session["sub"], "completed", goal_id, "academic",
+            safe_id, session["sub"],
+            "updated" if result.get("already_summarized") else "completed",
+            goal_id, goal_type_for(result.get("goal") or {}),
             session_id=session.get("sid"),
         )
     return _ok(result)
