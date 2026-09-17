@@ -437,15 +437,22 @@ class ContentStatementTests(unittest.TestCase):
             object_type="item", selection_type="practiceDecision", response="true",
         )
         self.assertEqual(_short(stmt["context"]["extensions"])["selectionType"],
-                         "decision-practice")
+                         "practice-decision")
 
     def test_every_v11_selection_enum_value_is_mapped(self):
+        # The PDF's tokens (pdftotext, 17/09). The reversed spellings shipped
+        # for a month and must keep folding to the right value.
         for supplied, wire_value in (
-            ("learningType", "type-learning"),
-            ("practiceDecision", "decision-practice"),
-            ("isUnderstood", "understood-is"),
-            ("isRepeat", "repeat-is"),
-            ("externalLearning", "learning-external"),
+            ("learningType", "learning-type"),
+            ("practiceDecision", "practice-decision"),
+            ("isUnderstood", "is-understood"),
+            ("isRepeat", "is-repeat"),
+            ("externalLearning", "external-learning"),
+            ("type-learning", "learning-type"),
+            ("decision-practice", "practice-decision"),
+            ("understood-is", "is-understood"),
+            ("repeat-is", "is-repeat"),
+            ("learning-external", "external-learning"),
         ):
             self.assertEqual(statements.kebab(supplied), wire_value)
             self.assertIn(wire_value, statements.SELECTION_TYPES)

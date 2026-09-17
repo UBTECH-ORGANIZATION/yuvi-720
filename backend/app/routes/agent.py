@@ -586,8 +586,6 @@ async def coach_explainer(
         except Exception:
             pass
         # MoE 720 `item/selected`: choosing the alternative-representation
-        # explainer is a real non-assessed learning-type choice.
-        # MoE 720 `item/selected`: choosing the alternative-representation
         # explainer is a real non-assessed learning-type choice. The object is
         # the ITEM the explainer was opened for (not the component) — the
         # integration review found the id AND the declared type disagreeing
@@ -607,8 +605,11 @@ async def coach_explainer(
                 session["sid"],
                 object_id=object_id,
                 object_type=object_type,
-                selection_type="learningType",
-                response="alternative-explainer",
+                # v1.1: `selectionType` = `learning-type`, and the response
+                # names the KIND of content chosen (Kata's contentType
+                # vocabulary) — the explainer is a slide deck: a presentation.
+                selection_type="learning-type",
+                response="presentation",
                 component_id=component_id,
                 item_id=item_id,
             )

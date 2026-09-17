@@ -234,7 +234,22 @@ def session_exit(
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
-DASHBOARD_TYPES = {"student-personal", "student-view", "learning-group", "realtime-dashboard"}
+DASHBOARD_TYPES = frozenset({"student-personal", "student-view", "learning-group", "realtime-dashboard"})
+
+# Conversation extensions (spec v1.1 §שיחה): the closed lists, verbatim.
+CONVERSATION_TRIGGERS = frozenset({
+    "student-request", "success-effort", "student-error", "idle-time", "other",
+})
+HELP_TYPES = frozenset({
+    "hint", "explanation", "alternative-content", "other", "bot-help-offer", "motivation",
+})
+# `requested` (help asked of the content or the platform) uses the short list.
+REQUESTED_HELP_TYPES = frozenset({"hint", "explanation"})
+HELP_SOURCES = frozenset({"content", "platform"})
+# Reflection questionnaires (spec v1.1 §רפלקציה).
+REFLECTION_TRIGGERS = frozenset({
+    "end-of-learning-objective", "end-of-learning-component", "difficult-task", "other",
+})
 
 
 def dashboard_viewed(
@@ -354,14 +369,13 @@ def conversation_interacted(
     obj = activity(f"{_domain()}/conversation/{conversation_id}", "conversation")
     # Spec v1.1 closed the trigger list and replaced `misconception` with
     # `student-error`; an off-list value becomes `other` rather than a rejection.
-    allowed_triggers = {
-        "student-request", "success-effort", "student-error", "idle-time", "other"
-    }
     trigger = {"misconception": "student-error"}.get(
         conversation_trigger, conversation_trigger
     )
-    if trigger not in allowed_triggers:
+    if trigger not in CONVERSATION_TRIGGERS:
         trigger = "other"
+    if help_type and help_type not in HELP_TYPES:
+        help_type = "other"
     ext = extensions(
         {
             "speaker": speaker,
@@ -425,7 +439,9 @@ def reflection_initialized(
         # The original spec PDF spelled this `reflactionTrigger`; the ministry's
         # examples page (16/08) fixed it to `reflectionTrigger` and staging
         # accepts both — the page's spelling is what reviewers compare against.
-        context_extra={"extensions": extensions({"reflectionTrigger": trigger})},
+        context_extra={"extensions": extensions({
+            "reflectionTrigger": trigger if trigger in REFLECTION_TRIGGERS else "other",
+        })},
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -590,7 +606,7 @@ def mentor_meeting_completed(
 
 
 # ── Student goal ─────────────────────────────────────────────────────────────
-GOAL_TYPES = {"academic", "personal", "social-emotional", "motivational", "behavioral", "other"}
+GOAL_TYPES = frozenset({"academic", "personal", "social-emotional", "motivational", "behavioral", "other"})
 
 
 def _goal_object(goal_id: str, goal_type: str) -> dict[str, Any]:
@@ -1191,8 +1207,8 @@ def help_requested(
         session_id,
         context_extra={
             "extensions": extensions({
-                "helpSource": help_source,
-                "helpType": help_type,
+                "helpSource": help_source if help_source in HELP_SOURCES else "platform",
+                "helpType": help_type if help_type in REQUESTED_HELP_TYPES else "hint",
                 "questionId": question_id,
                 "questionType": question_type,
                 "attemptNumber": attempt_number,
@@ -1209,23 +1225,25 @@ def help_requested(
 
 
 # ── Non-learning selection ───────────────────────────────────────────────────
-# 720 LRS v1.1 uses these exact wire values. Accept the existing normalized
-# names at the boundary so content providers and platform call sites can migrate
-# without emitting a non-compliant statement.
-SELECTION_TYPES = {
-    "type-learning",
-    "decision-practice",
-    "understood-is",
-    "repeat-is",
-    "learning-external",
-}
+# 720 LRS v1.1 `selectionType` — the five wire values exactly as the PDF
+# prints them (verified with `pdftotext` on 17/09: the earlier reading had the
+# two halves of each token swapped, an RTL rendering of the same page).
+SELECTION_TYPES = frozenset({
+    "learning-type",
+    "practice-decision",
+    "is-understood",
+    "is-repeat",
+    "external-learning",
+})
 
+# The reversed spellings shipped between 08/2026 and 09/2026, plus the
+# camelCase names the content providers use — all fold to the wire value.
 _SELECTION_TYPE_ALIASES = {
-    "learning-type": "type-learning",
-    "practice-decision": "decision-practice",
-    "is-understood": "understood-is",
-    "is-repeat": "repeat-is",
-    "external-learning": "learning-external",
+    "type-learning": "learning-type",
+    "decision-practice": "practice-decision",
+    "understood-is": "is-understood",
+    "repeat-is": "is-repeat",
+    "learning-external": "external-learning",
 }
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -1234,9 +1252,8 @@ _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 def kebab(value: str) -> str:
     """Normalize legacy and camelCase names to the v1.1 selection enum.
 
-    The 720 PDF v1.1 enum is not a mechanical kebab-case conversion: for
-    example, `practiceDecision` becomes `decision-practice`. Callers may pass
-    the established camelCase or legacy normalized names; the wire format is
+    `practiceDecision` → `practice-decision`; the reversed 08/2026 spellings
+    map back too. Callers may pass whichever they hold; the wire format is
     decided here once.
     """
     text = str(value or "").strip()
@@ -1244,6 +1261,14 @@ def kebab(value: str) -> str:
         return text
     normalized = _CAMEL_BOUNDARY.sub("-", text).replace("_", "-").replace(" ", "-").lower()
     return _SELECTION_TYPE_ALIASES.get(normalized, normalized)
+
+
+# The kinds of content a `learning-type` choice picks between — Kata's own
+# `contentType` vocabulary, which is what the choice answers with.
+CONTENT_TYPES = frozenset({
+    "instruction", "practice", "presentation", "motivational", "summary",
+    "simulation", "video",
+})
 
 
 def selected(
