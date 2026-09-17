@@ -35,13 +35,17 @@ describe('dashboard viewed durations', () => {
     })
   }
 
-  it('the hook counts visible time, beacons on pagehide and POSTs on unmount', () => {
+  it('the hook files one viewing per visible stretch, before the session suspend, and POSTs on unmount', () => {
     const hook = read('hooks/useViewedDuration.ts')
-    assert.match(hook, /document\.addEventListener\('visibilitychange', onVisibility\)/)
-    assert.match(hook, /window\.addEventListener\('pagehide', onPageHide\)/)
+    // Capture phase: runs before the auth shell's bubble-phase suspend listener,
+    // so nothing lands between the session's suspend and resume.
+    assert.match(hook, /document\.addEventListener\('visibilitychange', onVisibility, \{ capture: true \}\)/)
+    assert.match(hook, /window\.addEventListener\('pagehide', onPageHide, \{ capture: true \}\)/)
     assert.match(hook, /if \(viaBeacon\) apiBeacon\(path, payload\(seconds\)\)/)
     assert.match(hook, /void apiPost\(path, payload\(seconds\)\)/)
     assert.match(hook, /if \(reported\) return/)
+    // Coming back starts a new viewing.
+    assert.match(hook, /clock = startClock\(performance\.now\(\), true\)\n\s+reported = false/)
     assert.match(hook, /duration_seconds: seconds/)
   })
 

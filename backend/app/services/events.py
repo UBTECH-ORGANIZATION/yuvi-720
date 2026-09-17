@@ -1144,9 +1144,11 @@ async def _forward_to_moe_lrs(
 
     if not lrs_config.is_enabled():
         return
+    event = event or {}
+    if _is_forward_duplicate(learner_id, statement, event):
+        return
     user = await get_user_by_id(learner_id)
     session_id = (user or {}).get("current_moe_session_id") or launch.get("sid")
-    event = event or {}
     ancestry = await lrs_hierarchy.for_content(
         event.get("launch") or launch.get("cmp"),
         event.get("sub_item_id"),
@@ -1176,6 +1178,34 @@ async def _forward_to_moe_lrs(
             event.get("verb") in {"answered", "attempted", "requested"} and event.get("question_id")
         ),
     )
+
+
+# "לא לשלוח כפילויות" (17/09). CET fires the same `initialized` several times
+# when a screen opens (the load burst the pointer already tolerates); each
+# copy used to become its own ministry statement. A statement that repeats
+# the previous one for the same learner — same verb, same object, same
+# result — within this window is the burst, not a new event.
+_FORWARD_DUPLICATE_WINDOW_SECONDS = 3.0
+_recent_forwards: dict[str, tuple[float, str]] = {}
+
+
+def _is_forward_duplicate(learner_id: str, statement: dict[str, Any], event: dict[str, Any]) -> bool:
+    import time as _time
+
+    verb = str(event.get("verb") or (statement.get("verb") or {}).get("id") or "")
+    obj = str(((statement.get("object") or {}).get("id")) or event.get("object_id") or "")
+    if not verb or not obj:
+        return False
+    signature = json.dumps(
+        [verb, obj, statement.get("result") or {}], sort_keys=True, ensure_ascii=False, default=str,
+    )
+    now = _time.monotonic()
+    last = _recent_forwards.get(learner_id)
+    _recent_forwards[learner_id] = (now, signature)
+    if len(_recent_forwards) > 5_000:
+        for key in list(_recent_forwards)[:1_000]:
+            _recent_forwards.pop(key, None)
+    return bool(last and last[1] == signature and now - last[0] < _FORWARD_DUPLICATE_WINDOW_SECONDS)
 
 
 def _declared_extension(statement: dict[str, Any], short_name: str) -> Any:

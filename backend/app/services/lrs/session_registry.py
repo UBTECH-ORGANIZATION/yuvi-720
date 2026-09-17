@@ -287,7 +287,7 @@ async def open(
         await set_current_moe_session(user_id, sid)
     except Exception as exc:  # the pointer is a convenience, never a gate
         print(f"⚠️ current session pointer not updated ({type(exc).__name__})")
-    await reporter.report_session_enter(user_id, sid, device)
+    await reporter.report_session_enter(user_id, sid, device, timestamp=_statement_time(now))
 
 
 async def close(

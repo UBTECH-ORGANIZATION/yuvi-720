@@ -123,9 +123,15 @@ async def _report(build, learner_id: str, *args, source: str = "platform", **kwa
 
 # ── Session ──────────────────────────────────────────────────────────────────
 async def report_session_enter(
-    learner_id: str, session_id: str, device: Optional[dict[str, Any]] = None
+    learner_id: str,
+    session_id: str,
+    device: Optional[dict[str, Any]] = None,
+    *,
+    timestamp: Optional[str] = None,
 ) -> None:
-    await _report(statements.session_enter, learner_id, session_id, device=device)
+    await _report(
+        statements.session_enter, learner_id, session_id, device=device, timestamp=timestamp,
+    )
 
 
 async def report_session_suspend(learner_id: str, session_id: str) -> None:

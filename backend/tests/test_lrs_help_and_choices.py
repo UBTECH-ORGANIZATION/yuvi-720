@@ -81,3 +81,24 @@ class PracticeDecisionTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ForwardDuplicateTests(unittest.TestCase):
+    def setUp(self):
+        events._recent_forwards.clear()
+
+    def test_the_same_statement_repeated_within_the_burst_window_is_dropped(self):
+        stmt = {"verb": {"id": "http://adlnet.gov/expapi/verbs/initialized"}, "object": {"id": "https://lomdot.example/x/p1"}}
+        event = {"verb": "initialized", "object_id": "https://lomdot.example/x/p1"}
+        self.assertFalse(events._is_forward_duplicate("kid", stmt, event))
+        self.assertTrue(events._is_forward_duplicate("kid", stmt, event))
+        # A different object, or a different learner, is a new statement.
+        other = {"verb": {"id": "http://adlnet.gov/expapi/verbs/initialized"}, "object": {"id": "https://lomdot.example/x/p2"}}
+        self.assertFalse(events._is_forward_duplicate("kid", other, {"verb": "initialized", "object_id": "https://lomdot.example/x/p2"}))
+        self.assertFalse(events._is_forward_duplicate("kid-2", stmt, event))
+
+    def test_a_second_answer_with_a_different_result_is_not_a_duplicate(self):
+        base = {"verb": {"id": "http://adlnet.gov/expapi/verbs/answered"}, "object": {"id": "https://lomdot.example/x/q1"}}
+        event = {"verb": "answered", "object_id": "https://lomdot.example/x/q1"}
+        self.assertFalse(events._is_forward_duplicate("kid", {**base, "result": {"success": False}}, event))
+        self.assertFalse(events._is_forward_duplicate("kid", {**base, "result": {"success": True}}, event))

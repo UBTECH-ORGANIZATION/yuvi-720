@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 # An absolute IRI carries a scheme prefix (RFC 3986 scheme = ALPHA *(…)":").
@@ -40,6 +40,49 @@ from app.services.lrs.identity import ReportingIdentity
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ── Timestamps the LRS can order ─────────────────────────────────────────────
+# The ministry keeps statement times at second resolution and reads a session
+# as a sequence — "אירועים נשלחים עם timestamp זהה ברמת השנייה … נבקש לוודא
+# שהם נשלחים לפחות בפער של שנייה" (feedback 17/09). Two statements of one
+# actor within the same second (a student turn and the bot's reply, the
+# skips of a dismissed questionnaire, an exit and the re-login's enter) were
+# indistinguishable. Every timestamp issued here is therefore at least one
+# second after the last one issued for the same actor in this process, in
+# the order the statements were built. The drift is bounded by how much
+# faster than one-per-second the events really were.
+_last_stamp: dict[str, datetime] = {}
+_STAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _parse_stamp(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+
+
+def sequenced_timestamp(actor_key: str, wanted: Optional[str] = None) -> str:
+    """`wanted` (the content's own time, or the moment a session really
+    ended) floored to the second, pushed forward to keep a one-second gap
+    after this actor's previous statement."""
+    moment = (_parse_stamp(wanted) or datetime.now(timezone.utc)).replace(microsecond=0)
+    last = _last_stamp.get(actor_key)
+    if last is not None and moment <= last:
+        moment = last + timedelta(seconds=1)
+    _last_stamp[actor_key] = moment
+    if len(_last_stamp) > 20_000:  # a process serving many actors: forget the oldest
+        for key in list(_last_stamp)[:5_000]:
+            _last_stamp.pop(key, None)
+    return moment.strftime(_STAMP_FORMAT)
+
+
+def reset_timestamp_sequence_for_tests() -> None:
+    _last_stamp.clear()
 
 
 def iso_duration(seconds: float) -> str:
@@ -188,7 +231,7 @@ def _base(
         "verb": verb(verb_slug),
         "object": obj,
         "context": context,
-        "timestamp": timestamp or _now(),
+        "timestamp": sequenced_timestamp(identity["exidentifier"], timestamp),
     }
     if result:
         statement["result"] = result
@@ -201,6 +244,7 @@ def session_enter(
     session_id: str,
     *,
     device: Optional[dict[str, Any]] = None,
+    timestamp: Optional[str] = None,
 ) -> dict[str, Any]:
     """`device` short keys: deviceType, platform, operatingSystem, osVersion,
     browser, browserVersion, applicationVersion."""
@@ -210,6 +254,7 @@ def session_enter(
         session_activity(session_id),
         session_id,
         context_extra={"extensions": extensions(device or {})} if device else None,
+        timestamp=timestamp,
     )
 
 
@@ -916,6 +961,18 @@ def content_skipped(
     )
 
 
+def _media_type_of(
+    hierarchy: dict[str, Any], context_extensions: Optional[dict[str, Any]]
+) -> Optional[str]:
+    """video | audio | animation for a media statement, from the catalog's
+    typing of the item (`hierarchy.self`) or the statement's mediaFormat."""
+    self_type = (((hierarchy.get("self") or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    if self_type in MEDIA_ACTIVITY_TYPES.values():
+        return self_type
+    declared = str((context_extensions or {}).get("mediaFormat") or "").strip().lower()
+    return MEDIA_ACTIVITY_TYPES.get(declared)
+
+
 def _infer_object_type(hierarchy: dict[str, Any]) -> str:
     """Default `object.definition.type` for a relayed content statement whose
     own object arrived with none (real Kata statements for a learning-unit or
@@ -1093,6 +1150,15 @@ def enriched_content_statement(
                 or ("question" if object_below_self else _infer_object_type(hierarchy))
             )
             definition["type"] = f"{ACTIVITY}/{inferred}"
+        # Media events are on a MEDIA object — "play/pause אמורים להיות על
+        # אובייקט video ולא item" (17/09). Kata types its clips `item`; the
+        # ministry's rule outranks the content's declaration here, and the
+        # kind comes from the catalog (the item's media format) or the
+        # statement's own mediaFormat, video being what the lomdot play.
+        verb_slug = str((raw_statement.get("verb") or {}).get("id") or "").rstrip("/").rsplit("/", 1)[-1]
+        if verb_slug in ("played", "paused"):
+            media = _media_type_of(hierarchy, context_extensions) or "video"
+            definition["type"] = f"{ACTIVITY}/{media}"
         # …and the same for `definition.name` (integration report 6): the name
         # the content omitted is taken from the catalog level this object IS,
         # never from the level above a question.
@@ -1165,7 +1231,7 @@ def enriched_content_statement(
         "verb": _moe_verb(raw_statement.get("verb")),
         "object": obj,
         "context": ctx,
-        "timestamp": raw_statement.get("timestamp") or _now(),
+        "timestamp": sequenced_timestamp(identity["exidentifier"], raw_statement.get("timestamp")),
     }
     result = dict(raw_statement.get("result") or {})
     # `result_extra` fills the fields the review found missing on relayed events

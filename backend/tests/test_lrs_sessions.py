@@ -31,6 +31,7 @@ T0 = datetime(2026, 9, 17, 10, 0, tzinfo=timezone.utc)
 class RegistryTestCase(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         registry.reset_for_tests()
+        statements.reset_timestamp_sequence_for_tests()
         self.env = mock.patch.dict(os.environ, ENV, clear=False)
         self.env.start()
         self.enqueued: list[dict] = []
@@ -191,3 +192,48 @@ class EffectiveSidTests(RegistryTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SequencedTimestampTests(unittest.TestCase):
+    """The ministry reads a session as a sequence at second resolution: two
+    statements of one actor never share a second, and order is kept."""
+
+    def setUp(self):
+        statements.reset_timestamp_sequence_for_tests()
+
+    def tearDown(self):
+        statements.reset_timestamp_sequence_for_tests()
+
+    def test_statements_of_one_actor_are_a_second_apart_in_order(self):
+        first = statements.session_suspend(IDENTITY, "s1")
+        second = statements.session_resume(IDENTITY, "s1")
+        third = statements.session_suspend(IDENTITY, "s1")
+        stamps = [first["timestamp"], second["timestamp"], third["timestamp"]]
+        self.assertEqual(stamps, sorted(stamps))
+        self.assertEqual(len(set(stamps)), 3)
+        parsed = [datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ") for s in stamps]
+        self.assertGreaterEqual((parsed[1] - parsed[0]).total_seconds(), 1)
+        self.assertGreaterEqual((parsed[2] - parsed[1]).total_seconds(), 1)
+
+    def test_other_actors_are_not_pushed(self):
+        statements.session_suspend(IDENTITY, "s1")
+        other = statements.session_suspend({**IDENTITY, "exidentifier": "1020000002"}, "s2")
+        self.assertLessEqual(
+            datetime.strptime(other["timestamp"], "%Y-%m-%dT%H:%M:%SZ"),
+            datetime.utcnow().replace(microsecond=0) + timedelta(seconds=1),
+        )
+
+    def test_an_explicit_past_timestamp_is_kept_when_nothing_followed_it(self):
+        exit_ = statements.session_exit(IDENTITY, "s1", 60, timestamp="2026-09-17T10:08:00Z")
+        self.assertEqual(exit_["timestamp"], "2026-09-17T10:08:00Z")
+
+    def test_a_relayed_content_timestamp_is_floored_and_sequenced(self):
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/initialized"},
+            "object": {"id": "https://lomdot.example/x/methodica-1-01"},
+            "timestamp": "2026-09-17T10:00:00.400Z",
+        }
+        a = statements.enriched_content_statement(IDENTITY, "s1", raw)
+        b = statements.enriched_content_statement(IDENTITY, "s1", {**raw, "timestamp": "2026-09-17T10:00:00.900Z"})
+        self.assertEqual(a["timestamp"], "2026-09-17T10:00:00Z")
+        self.assertEqual(b["timestamp"], "2026-09-17T10:00:01Z")

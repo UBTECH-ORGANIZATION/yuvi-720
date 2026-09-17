@@ -74,6 +74,13 @@ def device_from_request(request: Request) -> dict[str, str]:
         r"(?:iPhone|CPU) OS ([\d_.]+)",
         r"Android ([\d.]+)",
     )
+    # The ministry's spreadsheet read "10.15.7" as the 15th of October 2007
+    # (their finding, 17/09): a bare dotted number is a date to Excel. The
+    # version is prefixed with the OS it belongs to — "macOS 10.15.7",
+    # "Windows 10.0" — which no spreadsheet mistakes for anything else and
+    # which reads as what it is.
+    if os_version:
+        os_version = f"{operating_system} {os_version}"
     device = {
         "deviceType": device_type,
         "platform": "Web",
