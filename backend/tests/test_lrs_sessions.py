@@ -201,6 +201,15 @@ class EffectiveSidTests(RegistryTestCase):
         await registry.sweep(now=T0 + timedelta(hours=1))
         self.assertEqual(self.exits()[-1]["timestamp"], (T0 + timedelta(minutes=9)).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
+    async def test_a_tab_left_open_after_a_relogin_and_logout_opens_nothing(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        await registry.open("u1", "s2", roles=["learner"], at=T0 + timedelta(minutes=5))  # s1: relogin
+        await registry.close("s2", reason="logout", at=T0 + timedelta(minutes=9))
+        payload = {"sub": "u1", "sid": "s1", "roles": ["learner"]}
+        # The old tab's ping finds no live session and starts none.
+        self.assertEqual(await registry.effective_sid(payload), "s1")
+        self.assertEqual(self.verbs(), ["enter", "exit", "enter", "exit"])
+
     async def test_a_cookie_the_registry_never_saw_is_adopted_from_its_own_start(self):
         payload = {"sub": "u1", "sid": "legacy", "roles": ["learner"], "iat": T0.timestamp()}
         self.assertEqual(await registry.effective_sid(payload), "legacy")

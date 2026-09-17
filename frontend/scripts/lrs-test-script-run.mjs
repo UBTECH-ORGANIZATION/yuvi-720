@@ -102,6 +102,10 @@ async function login(page, username, phase) {
   // session beacons (suspend/resume/ping) and the viewed hooks never run.
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined)
+  // A first visit opens the guided tour over the whole app; skipping it is
+  // what a tester does, and its completion is stored on the account.
+  const tourSkip = page.locator('.sp-tour__skip').first()
+  if (await tourSkip.count()) { await tourSkip.click().catch(() => undefined); await sleep(1000) }
   const me = await call(page, 'GET', '/api/auth/me')
   const sid = me.data?.session_id
   note(phase, `login ${username} → session ${sid}`, 'ui')
@@ -267,8 +271,9 @@ async function phaseTeacher(browser) {
   await page.goto(`${BASE}/teacher`, { waitUntil: 'domcontentloaded' })
   await settle(page, 2000)
   note(phase, 'left the last board (viewed filed with duration)')
+  await logout(page, phase)                     // TC-SES-08: the teacher's explicit logout
+  manifest.sessions.teacher_logout_session = sid
   await context.close()
-  manifest.sessions.teacher_open = true
 }
 
 async function phaseMentoring(browser) {
@@ -369,9 +374,14 @@ async function phaseKill(browser) {
   const sid = await login(page, STUDENT, phase)
   manifest.sessions.killed_session = sid
   await settle(page, 3000)
-  process.kill(server.process().pid, 'SIGKILL')  // no beacon, no unload — the browser is simply gone
+  const pid = server.process().pid
+  // No beacon, no unload — the browser is simply gone. The whole process
+  // group: a surviving renderer or network service would keep pinging.
+  try { process.kill(-pid, 'SIGKILL') } catch { process.kill(pid, 'SIGKILL') }
   note(phase, `browser killed on ${sid}; waiting ${IDLE_MINUTES + 1.5} min for the idle exit`)
   await sleep((IDLE_MINUTES + 1.5) * 60_000)
+  await separate.close().catch(() => undefined)
+  await server.close().catch(() => undefined)
 }
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
@@ -414,4 +424,4 @@ async function main() {
   log(`done · read back with: cd backend && ./.venv/bin/python scripts/lrs_ledger.py --since ${run.started_at} --json ${path.join(OUT, 'ledger.json')} --validate`)
 }
 
-main().catch((error) => { console.error(error); process.exit(1) })
+main().then(() => process.exit(0), (error) => { console.error(error); process.exit(1) })

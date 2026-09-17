@@ -85,10 +85,6 @@ def has_parent(entry: dict) -> bool:
     return bool(parents and parents[0].get("id"))
 
 
-def session_of(entry: dict) -> str:
-    return str(entry.get("session_id") or "")
-
-
 def when(entry: dict) -> str:
     return str(stmt(entry).get("timestamp") or entry.get("created_at") or "")
 
@@ -181,10 +177,11 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     if session_verb:
         found = ev.find(actor=actor, activity="session", verb=session_verb)
         if tc == "TC-SES-08":
-            sid = ev.manifest.get("relogin_previous_session")
+            # The teacher's explicit logout — the session the driver logged out of.
+            sid = ev.manifest.get("teacher_logout_session")
             found = [e for e in found if not sid or session_of(e) == sid]
             if not found:
-                return fail("לא נמצא exit לסשן הקודם לאחר התחברות מחדש.")
+                return fail("לא נמצא exit לסשן המורה שהתנתק.")
         if not found:
             return fail("לא נמצא statement מתאים.")
         pick = found[-1:]
