@@ -148,6 +148,10 @@ def unit_evidence(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """
     outcomes: dict[str, list[dict[str, Any]]] = {}
     touched: set[str] = set()
+    # Activity on a component since its last component-level completion: a
+    # component with some and no settled outcome is one the learner is in the
+    # middle of — re-entry offers "continue or start over" (Kata resetState).
+    activity_since_outcome: dict[str, int] = {}
     # 720 selection dictionary — the learner's own reports about the learning.
     # `practiceDecision` and `isRepeat` are agency (§1 פעלנות); `isUnderstood`
     # is a self-assessment. All three outrank our profile when they disagree.
@@ -180,8 +184,12 @@ def unit_evidence(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
         if verb == "path_choice" and str(event.get("response") or "") == "more_practice":
             self_reports["wants_practice"] = True
             continue
-        if not is_component_completion(event) or not component_id:
+        if not component_id:
             continue
+        if not is_component_completion(event):
+            activity_since_outcome[component_id] = activity_since_outcome.get(component_id, 0) + 1
+            continue
+        activity_since_outcome[component_id] = 0
         result = event.get("result") or {}
         scaled = result.get("score_scaled")
         outcomes.setdefault(component_id, []).append({
@@ -193,6 +201,7 @@ def unit_evidence(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
     return {
         "outcomes": outcomes,
         "touched": touched,
+        "in_progress": {cid for cid, n in activity_since_outcome.items() if n > 0},
         "self_reports": self_reports,
         "any_failure": any(
             not row["passed"] for rows in outcomes.values() for row in rows
@@ -337,6 +346,7 @@ def _node(
         "stage_index": stage_index,
         "progress_state": state,
         "outcome": outcome,
+        "in_progress": False,
         "progress_reason": {"code": code, "evidence": evidence or {}},
         # Legacy shape, one release of overlap.
         "progress_evidence": {
@@ -593,6 +603,10 @@ def _finalize(
         }
 
     pending = [node for node in on_path if node["outcome"] is None]
+    # Started and not settled: the learner left mid-way (refresh, back button,
+    # another day). The lesson page asks whether to continue or start over.
+    for node in pending:
+        node["in_progress"] = node["component_id"] in evidence.get("in_progress", set())
     # A gated assessment is not somewhere the learner can go — unless it is the
     # only thing left, in which case withholding it forever would strand them
     # with nothing to do, so the gate opens.

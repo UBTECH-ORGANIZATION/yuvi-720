@@ -79,9 +79,11 @@ export function LessonPage() {
   const [travellingFromId, setTravellingFromId] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   // 720 §6: on re-entry to an ALREADY-completed component, the learner chooses
-  // "view performance" or "redo". Until they choose, we hold a light overlay
-  // over the (resumed) content. Only "redo" launches a fresh attempt (restart).
-  const [reentryOpen, setReentryOpen] = useState(false)
+  // "view performance" or "redo"; on re-entry to one they left MID-WAY they
+  // choose "continue where I was" or "start over". Until they choose, we hold
+  // a light overlay over the (resumed) content. Only redo / start-over launch
+  // a fresh attempt (restart → Kata resetState).
+  const [reentryMode, setReentryMode] = useState<'completed' | 'in-progress' | null>(null)
   // Yuvi's "look here" overlay. Arrives from the companion over the yuvilab
   // event channel (the coach stream flushed a pointer frame), and must never
   // outlive its moment: the screen it describes, the session it arrived in, or
@@ -156,7 +158,12 @@ export function LessonPage() {
           const persisted = nextSession.roadmap.components.find(
             (component) => component.id === nextSession.component.id,
           )
-          setReentryOpen(!isRedo && persisted?.progress_state === 'completed')
+          setReentryMode(
+            isRedo ? null
+              : persisted?.progress_state === 'completed' ? 'completed'
+                : persisted?.in_progress ? 'in-progress'
+                  : null,
+          )
           wasCompletedAtLaunchRef.current = persisted?.progress_state === 'completed'
           // Every provider launch owns a clean Coach thread. Send its immutable
           // launch id so the companion never reloads a prior lesson entry.
@@ -444,22 +451,27 @@ export function LessonPage() {
   // §6 re-entry, "move on": they already finished this one, so the useful default
   // is the next station rather than sitting on work that is done.
   const continueFromCompleted = () => {
-    setReentryOpen(false)
+    setReentryMode(null)
     if (nextComponent) openRoadmapComponent(nextComponent)
     else navigate('/learning')
   }
 
   // §6 "view performance": keep the resumed content + our chat/hint state; just
   // dismiss the choice. The content itself shows the review on re-entry.
-  const viewCompletedPerformance = () => setReentryOpen(false)
+  const viewCompletedPerformance = () => setReentryMode(null)
 
-  // §6 "redo the component": fresh attempt — the next launch resets our coach
-  // thread + one-shot hint state and reloads the content.
+  // §6 "redo the component" / mid-way "start over": fresh attempt — the next
+  // launch resets our coach thread + one-shot hint state, asks Kata to forget
+  // the saved progress (resetState) and reloads the content.
   const redoCompletedComponent = () => {
-    setReentryOpen(false)
+    setReentryMode(null)
     restartPendingRef.current = true
     setReloadKey((key) => key + 1)
   }
+
+  // Mid-way "continue": the content already resumed where they were; just
+  // dismiss the choice.
+  const continueInProgress = () => setReentryMode(null)
 
   const closeCompletion = () => {
     if (!progressionReady) return
@@ -636,7 +648,25 @@ export function LessonPage() {
                   />
                 </>
               )}
-              {reentryOpen && (
+              {reentryMode === 'in-progress' && (
+                <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
+                  <div className="learning-reentry__card">
+                    <div className="learning-reentry__icon"><Icon name="clock" size={22} /></div>
+                    <h2 id="learning-reentry-title">{t('learning.lesson.resume.title')}</h2>
+                    <p>{t('learning.lesson.resume.body')}</p>
+                    <div className="learning-reentry__actions">
+                      <button className="learning-primary-button" type="button" onClick={continueInProgress}>
+                        {t('learning.lesson.resume.continue')}
+                        <Icon name="arrow" size={16} />
+                      </button>
+                      <button className="learning-secondary-button" type="button" onClick={redoCompletedComponent}>
+                        {t('learning.lesson.resume.restart')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {reentryMode === 'completed' && (
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
                   <div className="learning-reentry__card">
                     <div className="learning-reentry__icon"><Icon name="check" size={22} /></div>
