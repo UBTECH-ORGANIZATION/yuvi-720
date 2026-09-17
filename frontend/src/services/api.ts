@@ -104,6 +104,23 @@ export function apiPost<T>(path: string, body: unknown): Promise<T> {
   return request<T>('POST', path, body)
 }
 
+/** A fire-and-forget POST that survives the page going away.
+ *
+ * `sendBeacon` is the only request a closing tab is guaranteed to deliver, so
+ * anything reported on `pagehide` (a session suspend, a dashboard's viewing
+ * time) goes through here. A JSON `Blob` keeps the body a real JSON request
+ * for the server; when the browser refuses the beacon (queue full, no
+ * support) the ordinary POST is the fallback — best effort, never awaited. */
+export function apiBeacon(path: string, body: unknown = {}): void {
+  try {
+    const payload = new Blob([JSON.stringify(body)], { type: 'application/json' })
+    if (navigator.sendBeacon(path, payload)) return
+  } catch {
+    // fall through to a plain request
+  }
+  void apiPost(path, body).catch(() => undefined)
+}
+
 export function apiPut<T>(path: string, body: unknown): Promise<T> {
   return request<T>('PUT', path, body)
 }

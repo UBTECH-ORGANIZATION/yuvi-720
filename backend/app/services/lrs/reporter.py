@@ -136,9 +136,16 @@ async def report_session_resume(learner_id: str, session_id: str) -> None:
 
 
 async def report_session_exit(
-    learner_id: str, session_id: str, duration_seconds: float
+    learner_id: str,
+    session_id: str,
+    duration_seconds: float,
+    *,
+    timestamp: Optional[str] = None,
 ) -> None:
-    await _report(statements.session_exit, learner_id, session_id, duration_seconds)
+    await _report(
+        statements.session_exit, learner_id, session_id, duration_seconds,
+        timestamp=timestamp,
+    )
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────

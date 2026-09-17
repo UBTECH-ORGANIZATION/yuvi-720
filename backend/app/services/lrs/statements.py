@@ -222,15 +222,32 @@ def session_resume(identity: ReportingIdentity, session_id: str) -> dict[str, An
 
 
 def session_exit(
-    identity: ReportingIdentity, session_id: str, duration_seconds: float
+    identity: ReportingIdentity,
+    session_id: str,
+    duration_seconds: float,
+    *,
+    timestamp: Optional[str] = None,
 ) -> dict[str, Any]:
-    return _base(
+    """The one `exit` a session ever gets.
+
+    `timestamp` is the moment the session actually ended — for a tab that was
+    closed or a browser that vanished that is the last `suspend`/sign of life,
+    not the minute the sweeper noticed. The statement id is derived from the
+    session, so a second attempt to close the same session (logout racing the
+    sweeper, two instances) enqueues the same id: the outbox's `$setOnInsert`
+    keeps the first and the LRS drops a duplicate — one `exit`, by
+    construction.
+    """
+    statement = _base(
         identity,
         "exit",
         session_activity(session_id),
         session_id,
         result={"duration": iso_duration(duration_seconds)},
+        timestamp=timestamp,
     )
+    statement["id"] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{statement['object']['id']}#exit"))
+    return statement
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────

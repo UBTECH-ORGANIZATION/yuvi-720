@@ -28,13 +28,41 @@ def _session_from_request(request: Request) -> Optional[dict[str, Any]]:
     return decode_session_token(token)
 
 
+async def _resolve_session(request: Request) -> Optional[dict[str, Any]]:
+    """The cookie's payload, with `sid` pointing at the session that is LIVE.
+
+    The MoE session in the cookie may have ended (idle timeout, re-login
+    elsewhere) while the twelve-hour token is still good. Activity after that
+    is a new session: the registry reopens one (with its own `enter`) and the
+    payload carries it as `sid`, keeping the cookie's own value as `jwt_sid`
+    so the routes that mint cookies can notice the move. The registry is
+    bookkeeping — if it fails, the request keeps the cookie's sid.
+    """
+    session = _session_from_request(request)
+    if session is None or not session.get("sid"):
+        return session
+    session["jwt_sid"] = session["sid"]
+    try:
+        from app.auth.device import device_from_request
+        from app.services.lrs import session_registry
+
+        live = await session_registry.effective_sid(
+            session, device=device_from_request(request)
+        )
+        if live:
+            session["sid"] = live
+    except Exception as exc:  # never a reason to fail the request
+        print(f"⚠️ session registry lookup skipped ({type(exc).__name__})")
+    return session
+
+
 async def optional_user(request: Request) -> Optional[dict[str, Any]]:
     """Session payload, or None when unauthenticated. Never raises."""
-    return _session_from_request(request)
+    return await _resolve_session(request)
 
 
 async def current_user(request: Request) -> dict[str, Any]:
-    session = _session_from_request(request)
+    session = await _resolve_session(request)
     if session is None:
         raise HTTPException(status_code=401, detail="authentication_required")
     return session
