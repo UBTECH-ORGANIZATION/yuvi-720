@@ -176,12 +176,13 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
                     "TC-SES-07": "enter", "TC-SES-08": "exit"}.get(tc)
     if session_verb:
         found = ev.find(actor=actor, activity="session", verb=session_verb)
-        if tc == "TC-SES-08":
-            # The teacher's explicit logout — the session the driver logged out of.
-            sid = ev.manifest.get("teacher_logout_session")
+        if tc in {"TC-SES-04", "TC-SES-08"}:
+            # The explicit logout — the session the driver logged out of (not a
+            # timeout exit that happened to come later).
+            sid = ev.manifest.get("logout_session" if tc == "TC-SES-04" else "teacher_logout_session")
             found = [e for e in found if not sid or session_of(e) == sid]
             if not found:
-                return fail("לא נמצא exit לסשן המורה שהתנתק.")
+                return fail("לא נמצא exit לסשן שהתנתק ביציאה יזומה.")
         if not found:
             return fail("לא נמצא statement מתאים.")
         pick = found[-1:]

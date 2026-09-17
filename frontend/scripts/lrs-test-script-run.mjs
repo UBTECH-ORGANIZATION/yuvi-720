@@ -245,6 +245,14 @@ async function phaseLesson(browser) {
   note(phase, `idle nudge: waiting ${Number(process.env.LESSON_IDLE_SECONDS || 90) + 20}s without touching the page`)
   await sleep((Number(process.env.LESSON_IDLE_SECONDS || 90) + 20) * 1000)
   await shot(page, 'lesson-idle')
+  // Answering the nudge: the student's turn keeps the bot's trigger (TC-CNV-03).
+  const reply = page.locator('.sp-companion__composer input').first()
+  if (await reply.count()) {
+    await reply.fill('כן, אני כאן. תכף ממשיך')
+    await page.locator('.sp-companion__send').click()
+    note(phase, 'replied to the idle nudge → student turn with the bot\'s trigger')
+    await sleep(8000)
+  }
   await pause(phase, 'In the lomda: finish the component (complete every screen) so the completion dialog opens; then answer the reflection (rate + one text, skip one) and send. Then choose "continue". (TC-CMP-02, TC-ITM-03, TC-REF-*, practice-decision)')
   await shot(page, 'lesson-done')
   await logout(page, phase)
