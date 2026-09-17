@@ -538,15 +538,18 @@ def reflection_completed(
     questionnaire_id: str,
     duration_seconds: float,
     *,
+    completion: bool = True,
     ecat_item_id: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
+    """`completion=False` closes a questionnaire the learner dismissed: the
+    flow is over (its open questions were `skipped`), not finished."""
     return _base(
         identity,
         "completed",
         _reflection_object(questionnaire_id),
         session_id,
-        result={"completion": True, "duration": iso_duration(duration_seconds)},
+        result={"completion": completion, "duration": iso_duration(duration_seconds)},
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )

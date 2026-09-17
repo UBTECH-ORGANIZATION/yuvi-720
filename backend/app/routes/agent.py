@@ -700,6 +700,19 @@ async def reflection_complete(
     return JSONResponse(content=result)
 
 
+@router.post("/reflection/{reflection_id}/dismiss")
+async def reflection_dismiss(
+    reflection_id: str, session=Depends(require_learner_session)
+):
+    """The questionnaire was closed without being sent: open questions are
+    `skipped` and the flow `completed` with `completion: false`."""
+    from app.services import reflection_flow
+    result = await reflection_flow.dismiss_reflection(session["sub"], reflection_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Reflection not found")
+    return JSONResponse(content=result)
+
+
 @router.post("/coach/handoff")
 async def coach_handoff(data: dict, learner_id: str = Depends(require_learner)):
     """Escalate from Yuvi to a human, carrying what Yuvi already tried.

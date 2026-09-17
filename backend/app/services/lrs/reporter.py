@@ -379,7 +379,12 @@ async def report_reflection_skipped(
 
 
 async def report_reflection_completed(
-    learner_id: str, session_id: str, questionnaire_id: str, duration_seconds: float
+    learner_id: str,
+    session_id: str,
+    questionnaire_id: str,
+    duration_seconds: float,
+    *,
+    completion: bool = True,
 ) -> None:
     await _report(
         statements.reflection_completed,
@@ -387,6 +392,7 @@ async def report_reflection_completed(
         session_id,
         questionnaire_id,
         duration_seconds,
+        completion=completion,
         **await _content_context(learner_id),
     )
 

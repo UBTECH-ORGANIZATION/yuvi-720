@@ -764,6 +764,13 @@ export function completeReflection(reflectionId: string): Promise<{ ok: boolean 
   return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/complete`, {})
 }
 
+/** The questionnaire was closed without being sent (×, "continue", leaving
+ *  the lesson): the server skips every open question and closes the flow as
+ *  not completed. Best effort — a fire-and-forget the panel calls on unmount. */
+export function dismissReflection(reflectionId: string): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/dismiss`, {})
+}
+
 
 /* ── teacher praise (A11 #4) ───────────────────────────────────────────────
  * A מילה טובה is a card in the chat, not a coach turn: it carries the
