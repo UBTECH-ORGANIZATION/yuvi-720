@@ -27,4 +27,4 @@ video / audio / animation (media),played,
 video / audio / animation (media),paused,
 video / audio / animation (media),completed,
 component / item,requested,
-item,selected,נתמך דרך ממשק ספק התוכן (Kata) בלבד — נשלח כאשר הלומדה מדווחת בחירה בתוך פריט; בריצת 17/09 הלומדה לא ייצרה בחירה כזו. הבחירה של הפלטפורמה (practice-decision) נשלחת על הרכיב
+item,selected,"נשלח על הפריט כאשר הלומד פותח את ההסבר החלופי (""בוא/י נראה אחרת"", selectionType=learning-type) וכן דרך ממשק ספק התוכן כשהלומדה מדווחת בחירה בתוך פריט; בריצת 17/09 לא בוצעה בחירה כזו. בחירת הפלטפורמה practice-decision נשלחת על הרכיב (יש ראיה)"

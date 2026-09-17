@@ -27,4 +27,4 @@ video / audio / animation (media),played,b42e7f67-e764-47dd-a4fb-5da0046084e5,
 video / audio / animation (media),paused,f5f742ba-63ae-418e-a7f3-915de6aa1af6,
 video / audio / animation (media),completed,2043ac50-2f97-4ce2-8f4f-df135b3650e1,
 component / item,requested,eb30db83-5fd7-40ee-a7e8-04b8e17b42ae,
-item,selected,,נתמך דרך ממשק ספק התוכן (Kata) בלבד — נשלח כאשר הלומדה מדווחת בחירה בתוך פריט; בריצת 17/09 הלומדה לא ייצרה בחירה כזו. הבחירה של הפלטפורמה (practice-decision) נשלחת על הרכיב
+item,selected,,"נשלח על הפריט כאשר הלומד פותח את ההסבר החלופי (""בוא/י נראה אחרת"", selectionType=learning-type) וכן דרך ממשק ספק התוכן כשהלומדה מדווחת בחירה בתוך פריט; בריצת 17/09 לא בוצעה בחירה כזו. בחירת הפלטפורמה practice-decision נשלחת על הרכיב (יש ראיה)"
