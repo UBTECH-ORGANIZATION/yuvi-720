@@ -469,6 +469,8 @@ export function LessonPage() {
   }
   const continueAfterCompletion = () => {
     if (!progressionReady) return
+    // Declining an extra the dialog offered is a decision too (practice-decision: false).
+    if (optionalExtra) void reportPathChoice(session?.component.id || null, 'continue')
     closeCompletion()
     if (nextComponent) openRoadmapComponent(nextComponent)
     else navigate('/learning')

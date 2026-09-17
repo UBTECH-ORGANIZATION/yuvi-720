@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import require_learner, require_teacher
+from app.auth.dependencies import require_learner, require_learner_session, require_teacher
 from app.services import kata_client as content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
@@ -164,19 +164,47 @@ async def create_learning_session(
 
 class PathChoiceRequest(BaseModel):
     component_id: str = Field(min_length=1, max_length=200)
-    choice: Literal["more_practice"]
+    # `more_practice`: the learner took the extra the route had dropped;
+    # `continue`: they were offered it and moved on. Only a choice that was
+    # actually put to them is a decision worth recording.
+    choice: Literal["more_practice", "continue"]
 
 
 @router.post("/path-choice")
 async def record_path_choice(
-    data: PathChoiceRequest, learner_id: str = Depends(require_learner),
+    data: PathChoiceRequest, session: dict = Depends(require_learner_session),
 ) -> dict:
-    """The learner asking for work their route had dropped (720 §1 פעלנות)."""
+    """The learner deciding about work their route had dropped (720 §1 פעלנות).
+
+    Stored as our own evidence for the path engine, and reported to the
+    ministry as the selection dictionary's `practice-decision` on the
+    component — `true` when they asked for more practice, `false` when they
+    declined the offer. The same choice the content itself can put to them
+    (`practiceDecision`), raised here by the platform.
+    """
     from app.services import kata_catalog
     from app.services.events import record_path_choice as store
+    from app.services.lrs import hierarchy as lrs_hierarchy
+    from app.services.lrs import reporter as lrs_reporter
+
+    learner_id = session["sub"]
     await kata_catalog.ensure_loaded()
     component = kata_catalog.get_component(data.component_id) or {}
-    await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
+    if data.choice == "more_practice":
+        await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
+    if session.get("sid"):
+        try:
+            await lrs_reporter.report_selected(
+                learner_id,
+                session["sid"],
+                object_id=lrs_hierarchy.component_activity(data.component_id)["id"],
+                object_type="component",
+                selection_type="practice-decision",
+                response="true" if data.choice == "more_practice" else "false",
+                component_id=data.component_id,
+            )
+        except Exception as exc:  # reporting never breaks the learner's flow
+            print(f"⚠️ practice-decision report skipped: {type(exc).__name__}")
     return {"ok": True}
 
 

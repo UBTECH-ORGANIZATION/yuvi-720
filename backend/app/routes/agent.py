@@ -1336,6 +1336,26 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             "question_id": current_state.get("question_id"),
             "source_text": str(source_text).strip(),
         }
+        # MoE 720 `requested`: help asked of the platform about this video —
+        # an explanation of it (a summary, or the visual retelling). The
+        # object is the video item, typed by its media, like the button
+        # support the reservation files for hints and explanations.
+        if session.get("sid"):
+            try:
+                from app.services.lrs import hierarchy as lrs_hierarchy
+
+                await lrs_reporter.report_help_requested(
+                    learner_id,
+                    session["sid"],
+                    object_id=lrs_hierarchy.item_activity(item_id)["id"],
+                    object_type="video",
+                    help_source="platform",
+                    help_type="explanation",
+                    component_id=component_id,
+                    item_id=item_id,
+                )
+            except Exception as exc:  # report-and-forget
+                print(f"⚠️ video help report skipped ({type(exc).__name__})")
     else:
         # The hint ladder and one-shot explanation are server-enforced. Button
         # and qualifying chat requests reserve the same allowance.

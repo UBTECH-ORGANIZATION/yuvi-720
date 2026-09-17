@@ -605,8 +605,9 @@ async def record_path_choice(
     affordance — "אני רוצה עוד תרגול" in the completion dialog — recorded as the
     same kind of evidence so the path engine reads both through one rule.
 
-    Deliberately NOT an xAPI statement: it describes a choice about our routing,
-    not an interaction with provider content, so it is never relayed onward.
+    Our own evidence row, never relayed as content. The ministry hears the
+    decision separately, as the selection dictionary's `practice-decision`
+    (`routes.learning_catalog.record_path_choice`).
     """
     safe_id = normalize_learner_id(learner_id)
     event = {
@@ -1172,9 +1173,19 @@ async def _forward_to_moe_lrs(
         # nests under its questionnaire screen in grouping/parent, per the
         # ministry's answered example.
         object_below_self=bool(
-            event.get("verb") in {"answered", "attempted"} and event.get("question_id")
+            event.get("verb") in {"answered", "attempted", "requested"} and event.get("question_id")
         ),
     )
+
+
+def _declared_extension(statement: dict[str, Any], short_name: str) -> Any:
+    """A context extension the content sent, by its short name — whatever IRI
+    prefix the provider used for it."""
+    extensions = ((statement.get("context") or {}).get("extensions") or {})
+    for key, value in extensions.items():
+        if str(key).rsplit("/", 1)[-1] == short_name:
+            return value
+    return None
 
 
 # The xAPI Video Profile's own field names for "where in the clip", in SECONDS —
@@ -1239,7 +1250,7 @@ async def _content_report_fields(
     extensions: dict[str, Any] = {}
     result_extra: dict[str, Any] = {}
 
-    if verb in {"answered", "attempted"} and event.get("question_id"):
+    if verb in {"answered", "attempted", "requested"} and event.get("question_id"):
         from app.services import kata_catalog
 
         question_id = event["question_id"]
@@ -1251,6 +1262,18 @@ async def _content_report_fields(
         )
         if match and match.get("questionType"):
             extensions["questionType"] = match["questionType"]
+
+    if verb == "requested":
+        # The content's own help button ("אפשר רמז?" inside the lomda). v1.1
+        # `requested` names where the help came from and what kind it was: the
+        # source is the content, and the kind is what the content declared
+        # when it is on the ministry's short list, else a hint — which is what
+        # the lomdot's button is.
+        from app.services.lrs.statements import REQUESTED_HELP_TYPES
+
+        declared = str(_declared_extension(statement or {}, "helpType") or "").strip().lower()
+        extensions["helpSource"] = "content"
+        extensions["helpType"] = declared if declared in REQUESTED_HELP_TYPES else "hint"
 
     if verb == "completed" and not _is_media_item(component_id, item_id):
         # The ministry's questionnaire example: a completed questionnaire

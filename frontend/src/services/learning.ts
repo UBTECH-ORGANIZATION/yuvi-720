@@ -194,7 +194,7 @@ export function createLearningSession(
  *  when the choice is offered inside the content; this is the platform's own
  *  affordance ("אני רוצה עוד תרגול" in the completion dialog). Both land in the
  *  same evidence, so the next re-plan already knows what they asked for. */
-export function reportPathChoice(componentId: string | null, choice: 'more_practice') {
+export function reportPathChoice(componentId: string | null, choice: 'more_practice' | 'continue') {
   if (!componentId) return Promise.resolve(null)
   return apiPost<{ ok: boolean }>('/api/learning/path-choice', {
     component_id: componentId,
