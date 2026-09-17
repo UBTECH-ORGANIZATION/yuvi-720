@@ -92,10 +92,42 @@ async def seed(password: str) -> None:
     print(f"✅ org: {TEACHER_ID} teaches {GROUP_ID}, {STUDENT_ID} enrolled")
 
 
+async def fresh() -> None:
+    """A clean run of the ministry's script: the learner starts at onboarding
+    again (brain, events, threads, reflections, goals wiped — the account and
+    the permanent `lrs_outbox` ledger stay), and both accounts forget their
+    MoE session and agency start so the next login opens a new session and
+    the questionnaire is timed from its first screen."""
+    from app.auth.repository import set_agency_started_at, set_current_moe_session
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import reset_learner  # noqa: E402
+
+    await reset_learner.purge_mongo([STUDENT_ID], apply=True)
+    reset_learner.purge_fallbacks([STUDENT_ID], apply=True)
+    for account in ACCOUNTS:
+        await set_current_moe_session(account["_id"], None)
+        await set_agency_started_at(account["_id"], None)
+    try:
+        from app.services.lrs import session_registry
+
+        for account in ACCOUNTS:
+            await session_registry.close_open_for_user(account["_id"], reason="relogin")
+    except Exception as exc:  # the registry is bookkeeping, never a gate
+        print(f"⚠️ open sessions not closed: {type(exc).__name__}")
+    print(f"✅ fresh: {STUDENT_ID} reset to onboarding; sessions and agency starts cleared")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed the LRS manual-test accounts")
     parser.add_argument("--password", default=DEFAULT_PASSWORD)
-    asyncio.run(seed(parser.parse_args().password))
+    parser.add_argument("--fresh", action="store_true", help="also reset the learner and both accounts' sessions")
+
+    async def run(args) -> None:
+        await seed(args.password)
+        if args.fresh:
+            await fresh()
+
+    asyncio.run(run(parser.parse_args()))
 
 
 if __name__ == "__main__":

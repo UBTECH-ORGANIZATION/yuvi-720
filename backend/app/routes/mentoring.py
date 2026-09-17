@@ -30,6 +30,12 @@ async def create_mentoring(data: dict, session=Depends(require_learner_session))
     record = await mentoring.create_conversation({
         **data,
         "learner_id": learner_id,
+        # The learner writes as the learner: the author and the teacher id are
+        # not the client's to set (a body claiming `author: teacher` would
+        # otherwise report a mentor meeting that never took place).
+        "author": "learner",
+        "teacher_id": None,
+        "source": "learner",
         "lrs_session_id": session.get("sid"),
     })
     return JSONResponse(content=record)
