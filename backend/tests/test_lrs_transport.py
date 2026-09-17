@@ -131,7 +131,7 @@ class OutboxTests(unittest.IsolatedAsyncioTestCase):
         await self._enqueue(_statement(), mock.AsyncMock(side_effect=auth.LrsAuthError("token endpoint returned 403")))
         row = self.rows()[_statement()["id"]]
         self.assertEqual(row["status"], "pending")
-        self.assertEqual(row["last_error"], "LrsAuthError")
+        self.assertEqual(row["last_error"], "LrsAuthError: token endpoint returned 403")
 
 
 class ClientTests(unittest.IsolatedAsyncioTestCase):
