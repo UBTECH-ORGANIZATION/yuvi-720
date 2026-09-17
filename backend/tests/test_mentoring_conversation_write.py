@@ -20,6 +20,7 @@ from unittest.mock import AsyncMock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services import goal_approval, mentoring
+from app.services.lrs.identity import ReportingIdentity
 
 
 class _FakeCollection:
@@ -53,9 +54,15 @@ class ConversationWriteTest(unittest.IsolatedAsyncioTestCase):
             patch("app.services.lrs.reporter.report_mentor_meeting_completed",
                   AsyncMock(return_value=None)),
             patch("app.services.lrs.reporter.report_student_goal", AsyncMock(return_value=None)),
+            # Both people resolve to a reporting identity of their own — the
+            # instructor extension must not depend on the machine's staging
+            # stub (`LRS_TEST_EXIDENTIFIER`), which CI does not have.
+            patch("app.services.lrs.identity.resolve_reporting_identity",
+                  AsyncMock(side_effect=lambda user_id: ReportingIdentity(
+                      exidentifier=f"exid-{user_id}", school="1", nmm="2"))),
         ]
         (self.access, _coll, self.project, self.price,
-         self.notify, self.meeting, self.goal_statement) = [p.start() for p in self._patches]
+         self.notify, self.meeting, self.goal_statement, _identity) = [p.start() for p in self._patches]
 
     async def asyncTearDown(self):
         for handle in self._patches:
