@@ -6,12 +6,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 from app.services import studio_time
 
 
-def test_studio_time_limit_defaults_to_twenty_minutes(monkeypatch):
+@pytest.fixture(autouse=True)
+def _default_allowance(monkeypatch):
+    """The app loads `backend/.env` on import, so a developer's own
+    `STUDIO_TIME_LIMIT_SECONDS` would reach these tests; every one of them
+    reasons about the twenty-minute default."""
     monkeypatch.delenv("STUDIO_TIME_LIMIT_SECONDS", raising=False)
 
+
+def test_studio_time_limit_defaults_to_twenty_minutes():
     assert studio_time.studio_time_limit_seconds() == 20 * 60
 
 
