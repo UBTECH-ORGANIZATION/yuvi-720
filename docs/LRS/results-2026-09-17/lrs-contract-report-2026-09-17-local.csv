@@ -1,0 +1,32 @@
+﻿Object Type,Verb,Id
+session,enter,b3177d9c-7958-41e6-b863-75f3b37ae822
+session,suspend,97972ebc-778f-4497-ba54-2cf5122234a8
+session,resume,644814c0-67a1-4b06-b09b-6a69066df243
+session,exit,ac2ef9e8-c6ff-5a39-b759-1527ce1e7895
+dashboard,viewed,5d55da7a-aa1e-4f33-b4f8-baa667ca69c6
+component,initialized,
+component,completed,
+component,skipped,
+questionnaire (agency),initialized,58b0f7b6-c8f9-4e40-94dd-b6bfdf287ee8
+question (agency),answered,14be1918-60f9-4054-a136-52eddefb77a2
+questionnaire (agency),completed,96d1a0e6-f42f-41ef-ab5f-915616b7a75a
+conversation,interacted,
+conversation,rated,
+questionnaire (reflection),initialized,
+question (reflection),answered,
+question (reflection),skipped,
+questionnaire (reflection),completed,
+mentor-student-meeting,completed,55dd67de-04e8-4f44-89ce-9a64e5672b9a
+student-goal,initialized,c9d15c68-dab2-42cf-ac21-5eca27f9ee2a
+student-goal,updated,a47719ae-c351-453a-8656-673df109ef4e
+student-goal,completed,78565c84-8373-4358-88b7-9ef992d3147a
+questionnaire,initialized,
+questionnaire,completed,
+question,answered,
+questionnaire,skipped,
+video / audio / animation (media),played,
+video / audio / animation (media),paused,
+video / audio / animation (media),completed,
+component / item,requested,
+item,selected,
+learning-unit,initialized,

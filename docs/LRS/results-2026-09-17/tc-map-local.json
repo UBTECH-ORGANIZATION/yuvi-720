@@ -1,0 +1,872 @@
+{
+  "TC-SES-01": [
+    {
+      "row": 1,
+      "verb": "enter",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "b3177d9c-7958-41e6-b863-75f3b37ae822"
+      ],
+      "timestamps": [
+        "2026-09-17T15:48:12Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-02": [
+    {
+      "row": 2,
+      "verb": "suspend",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "97972ebc-778f-4497-ba54-2cf5122234a8"
+      ],
+      "timestamps": [
+        "2026-09-17T15:44:39Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-03": [
+    {
+      "row": 3,
+      "verb": "resume",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "644814c0-67a1-4b06-b09b-6a69066df243"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:07Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-04": [
+    {
+      "row": 4,
+      "verb": "exit",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "563e88ed-9c3d-5af6-827f-18dbe107accd"
+      ],
+      "timestamps": [
+        "2026-09-17T13:55:42Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-05": [
+    {
+      "row": 5,
+      "verb": "exit",
+      "status": "עבר",
+      "detail": "exit נשלח לסשן שנסגר ללא התנתקות יזומה, עם משך ברוטו.",
+      "statement_ids": [
+        "7ee4c43b-c551-5118-a24d-2905c00f0b28"
+      ],
+      "timestamps": [
+        "2026-09-17T15:44:40Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-06": [
+    {
+      "row": 6,
+      "verb": "exit",
+      "status": "עבר",
+      "detail": "exit נשלח לסשן שנסגר ללא התנתקות יזומה, עם משך ברוטו.",
+      "statement_ids": [
+        "ac2ef9e8-c6ff-5a39-b759-1527ce1e7895"
+      ],
+      "timestamps": [
+        "2026-09-17T15:48:14Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-07": [
+    {
+      "row": 7,
+      "verb": "enter",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "187aca63-99c7-4b46-bb7e-a61ae93030c3"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:39Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-SES-08": [
+    {
+      "row": 8,
+      "verb": "exit",
+      "status": "עבר",
+      "detail": "ה-statement נשלח עם כל השדות הנדרשים.",
+      "statement_ids": [
+        "24efcd8a-c6ac-5f7b-b2b6-a5c095242861"
+      ],
+      "timestamps": [
+        "2026-09-17T14:00:25Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-DSH-01": [
+    {
+      "row": 9,
+      "verb": "viewed",
+      "status": "עבר",
+      "detail": "viewed נשלח עם dashboardId=1020000001 ומשך צפייה.",
+      "statement_ids": [
+        "5d55da7a-aa1e-4f33-b4f8-baa667ca69c6"
+      ],
+      "timestamps": [
+        "2026-09-17T15:44:38Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-DSH-02": [
+    {
+      "row": 10,
+      "verb": "viewed",
+      "status": "עבר",
+      "detail": "viewed נשלח עם dashboardId=90635956 ומשך צפייה.",
+      "statement_ids": [
+        "1adac5bc-81f5-4aa5-9028-88e709bef04b"
+      ],
+      "timestamps": [
+        "2026-09-17T14:00:43Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-DSH-03": [
+    {
+      "row": 11,
+      "verb": "viewed",
+      "status": "עבר",
+      "detail": "viewed נשלח עם dashboardId=90635956 ומשך צפייה.",
+      "statement_ids": [
+        "608427d2-64b5-4481-aaf1-cb75e715d624"
+      ],
+      "timestamps": [
+        "2026-09-17T13:59:28Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-DSH-04": [
+    {
+      "row": 12,
+      "verb": "viewed",
+      "status": "עבר",
+      "detail": "viewed נשלח עם dashboardId=1020000001 ומשך צפייה.",
+      "statement_ids": [
+        "acb65716-410e-419f-a39d-e8939ee386d0"
+      ],
+      "timestamps": [
+        "2026-09-17T14:00:09Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-QST-01": [
+    {
+      "row": 13,
+      "verb": "initialized",
+      "status": "עבר",
+      "detail": "שאלון הפעלנות אותחל.",
+      "statement_ids": [
+        "58b0f7b6-c8f9-4e40-94dd-b6bfdf287ee8"
+      ],
+      "timestamps": [
+        "2026-09-17T13:55:04Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-QST-02": [
+    {
+      "row": 14,
+      "verb": "answered",
+      "status": "עבר",
+      "detail": "31 תשובות עם parent, response ו-score, כל אחת בחותמת זמן משלה.",
+      "statement_ids": [
+        "d5289072-8b84-4c64-8e84-c1a2b313ce4e",
+        "aa845904-7e76-41fb-aa87-803e6faff597",
+        "6d6c604f-5045-4e3d-98e1-8cd752fb12a7",
+        "50da0935-ce7e-4902-84eb-ca99938253b1",
+        "46a9f4e9-ce4a-494a-b190-a2e4a962ba8a",
+        "9e28c308-9670-4a47-9e7a-5be1df7fdf0a",
+        "916ec5ab-f828-42d3-bfe9-49378575a02c",
+        "f102e8cc-ca08-4bb7-b551-ec7d69812f60",
+        "438e76d9-8276-4c67-a539-cc24fdd32f51",
+        "0c464ff3-cae8-4186-8948-d0d2c559037c",
+        "334066a8-40b4-4ff1-bd28-dbcdc58d852c",
+        "88acd0df-8db6-4899-ae1e-2fb152683e13",
+        "86a4e723-b910-4c37-9882-ab004785dc98",
+        "b0beb647-8f93-4fbe-9de5-f7f3cc5b5e73",
+        "a669bd96-afad-45bf-89f8-edbeddde4d28",
+        "774bd4f3-deee-49d4-b831-079e9847cf04",
+        "a2ff7663-682f-46fe-b831-d5d98cd9c1b2",
+        "3957183e-66d2-4733-a990-9f7f98491eb9",
+        "b9dabbea-ba21-4b5c-ae37-85290ff1851d",
+        "bec911ef-9c38-4e76-b7d7-090f38fa3997",
+        "122eb155-5a61-4ae8-a00e-c8d4e4c8a04c",
+        "e61f7d6d-18e2-4530-a58b-649549a5c488",
+        "e412878f-1cbf-492f-851d-048c5dd38900",
+        "79a005b3-aeff-429d-8b47-39380dcf61a9",
+        "64677469-fc99-428c-aa85-db6c7a472686",
+        "573b7e2d-037f-4336-b550-d55b696abb01",
+        "00dd3324-68ed-4d5a-b02d-16f416d454ab",
+        "ca46b299-b8df-4bc6-adaa-0087e3d76688",
+        "8fdb0bb9-59e5-470b-b173-5617b2b096c8",
+        "9112b97a-f563-489a-a16b-14aaabe6d491",
+        "14be1918-60f9-4054-a136-52eddefb77a2"
+      ],
+      "timestamps": [
+        "2026-09-17T13:56:19Z",
+        "2026-09-17T13:56:20Z",
+        "2026-09-17T13:56:22Z",
+        "2026-09-17T13:56:24Z",
+        "2026-09-17T13:56:25Z",
+        "2026-09-17T13:56:27Z",
+        "2026-09-17T13:56:29Z",
+        "2026-09-17T13:56:30Z",
+        "2026-09-17T13:56:32Z",
+        "2026-09-17T13:56:34Z",
+        "2026-09-17T13:56:35Z",
+        "2026-09-17T13:56:37Z",
+        "2026-09-17T13:56:39Z",
+        "2026-09-17T13:56:40Z",
+        "2026-09-17T13:56:42Z",
+        "2026-09-17T13:56:44Z",
+        "2026-09-17T13:56:45Z",
+        "2026-09-17T13:56:47Z",
+        "2026-09-17T13:56:49Z",
+        "2026-09-17T13:56:50Z",
+        "2026-09-17T13:56:52Z",
+        "2026-09-17T13:56:54Z",
+        "2026-09-17T13:56:55Z",
+        "2026-09-17T13:56:57Z",
+        "2026-09-17T13:56:59Z",
+        "2026-09-17T13:57:00Z",
+        "2026-09-17T13:57:02Z",
+        "2026-09-17T13:57:04Z",
+        "2026-09-17T13:57:05Z",
+        "2026-09-17T13:57:07Z",
+        "2026-09-17T13:57:09Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-QST-03": [
+    {
+      "row": 15,
+      "verb": "completed",
+      "status": "עבר",
+      "detail": "completion=true ו-duration נשלחו.",
+      "statement_ids": [
+        "96d1a0e6-f42f-41ef-ab5f-915616b7a75a"
+      ],
+      "timestamps": [
+        "2026-09-17T13:57:33Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-MNT-01": [
+    {
+      "row": 16,
+      "verb": "completed",
+      "status": "עבר",
+      "detail": "meetingDate, mentoringPhase, mentor ו-student תקינים.",
+      "statement_ids": [
+        "55dd67de-04e8-4f44-89ce-9a64e5672b9a"
+      ],
+      "timestamps": [
+        "2026-09-17T14:01:05Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    },
+    {
+      "row": 48,
+      "verb": "completed",
+      "status": "עבר",
+      "detail": "meetingDate, mentoringPhase, mentor ו-student תקינים.",
+      "statement_ids": [
+        "55dd67de-04e8-4f44-89ce-9a64e5672b9a"
+      ],
+      "timestamps": [
+        "2026-09-17T14:01:05Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-01": [
+    {
+      "row": 17,
+      "verb": "initialized",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType.",
+      "statement_ids": [
+        "c9d15c68-dab2-42cf-ac21-5eca27f9ee2a"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:27Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-02": [
+    {
+      "row": 18,
+      "verb": "initialized",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType ו-instructor.",
+      "statement_ids": [
+        "04e451a4-cb9b-43e6-ba60-2ee48bb7df17"
+      ],
+      "timestamps": [
+        "2026-09-17T14:01:06Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-03": [
+    {
+      "row": 19,
+      "verb": "updated",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType.",
+      "statement_ids": [
+        "10f860d3-4dbe-46b1-a845-37ae09b3c0ad"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:33Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-04": [
+    {
+      "row": 20,
+      "verb": "updated",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType ו-instructor.",
+      "statement_ids": [
+        "a47719ae-c351-453a-8656-673df109ef4e"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:59Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-05": [
+    {
+      "row": 21,
+      "verb": "completed",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType.",
+      "statement_ids": [
+        "60ff373e-46f7-42f2-ba4d-b305d0dbb7da"
+      ],
+      "timestamps": [
+        "2026-09-17T15:43:38Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-GOL-06": [
+    {
+      "row": 22,
+      "verb": "completed",
+      "status": "עבר",
+      "detail": "אירוע היעד נשלח עם goalType ו-instructor.",
+      "statement_ids": [
+        "78565c84-8373-4358-88b7-9ef992d3147a"
+      ],
+      "timestamps": [
+        "2026-09-17T15:44:03Z"
+      ],
+      "delivery": [
+        "sent"
+      ]
+    }
+  ],
+  "TC-CMP-01": [
+    {
+      "row": 23,
+      "verb": "initialized",
+      "status": "לא עבר",
+      "detail": "initialized לרכיב חסר מטא-נתונים או parent.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-01": [
+    {
+      "row": 24,
+      "verb": "initialized",
+      "status": "לא עבר",
+      "detail": "שאלון פנימי אותחל אך חסרים מטא-נתוני פריט.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-02": [
+    {
+      "row": 25,
+      "verb": "answered",
+      "status": "לא עבר",
+      "detail": "לא נמצאה תשובה תקינה לשאלה בתוכן.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-CMP-02": [
+    {
+      "row": 26,
+      "verb": "completed",
+      "status": "לא עבר",
+      "detail": "לא נמצא completed לרכיב.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-04": [
+    {
+      "row": 27,
+      "verb": "skipped",
+      "status": "לא רלוונטי",
+      "detail": "ב-1.1 הדילוג הוא ברמת הרכיב (TC-ITM-12); אין דילוג ברמת פריט.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-05": [
+    {
+      "row": 28,
+      "verb": "played",
+      "status": "לא עבר",
+      "detail": "לא נמצא played על פריט מדיה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-06": [
+    {
+      "row": 29,
+      "verb": "paused",
+      "status": "לא עבר",
+      "detail": "לא נמצא paused על פריט מדיה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-07": [
+    {
+      "row": 30,
+      "verb": "completed",
+      "status": "לא עבר",
+      "detail": "לא נמצא completed על פריט מדיה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-08": [
+    {
+      "row": 31,
+      "verb": "requested",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא נלחץ כפתור העזרה שבתוך הלומדה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-09": [
+    {
+      "row": 32,
+      "verb": "requested",
+      "status": "לא עבר",
+      "detail": "לא נמצאה בקשת עזרה תקינה מהפלטפורמה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    },
+    {
+      "row": 49,
+      "verb": "selected",
+      "status": "לא עבר",
+      "detail": "לא נמצא selected עם selectionType מהרשימה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-10": [
+    {
+      "row": 33,
+      "verb": "completed",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא הושלם רכיב הערכה עם success=true.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-11": [
+    {
+      "row": 34,
+      "verb": "completed",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא הושלם רכיב הערכה עם success=false.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-CNV-01": [
+    {
+      "row": 35,
+      "verb": "interacted",
+      "status": "לא עבר",
+      "detail": "פניית תלמיד חסרה שדות חובה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-CNV-02": [
+    {
+      "row": 36,
+      "verb": "interacted",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא התרחשה פנייה יזומה מסוג ['student-error'].",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    },
+    {
+      "row": 37,
+      "verb": "interacted",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא התרחשה פנייה יזומה מסוג ['idle-time'].",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    },
+    {
+      "row": 38,
+      "verb": "interacted",
+      "status": "לא נבדק",
+      "detail": "בריצה זו לא התרחשה פנייה יזומה מסוג ['other', 'success-effort'].",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    },
+    {
+      "row": 50,
+      "verb": "rated",
+      "status": "לא עבר",
+      "detail": "דירוג ללא response/conversationType.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-CNV-03": [
+    {
+      "row": 39,
+      "verb": "interacted",
+      "status": "לא נבדק",
+      "detail": "בריצה זו התלמיד לא הגיב לפנייה יזומה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-CNV-04": [
+    {
+      "row": 40,
+      "verb": "interacted",
+      "status": "לא עבר",
+      "detail": "לא נמצאה תשובת בוט לפניית תלמיד.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-41": [
+    {
+      "row": 41,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-42": [
+    {
+      "row": 42,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-12": [
+    {
+      "row": 43,
+      "verb": "skipped",
+      "status": "לא רלוונטי",
+      "detail": "לא נתמך: באפליקציה אין דילוג על רכיב (\"אני כבר יודע/ת\"), ולכן האירוע skipped ברמת רכיב אינו נשלח.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-REF-01": [
+    {
+      "row": 44,
+      "verb": "initialized",
+      "status": "לא עבר",
+      "detail": "רפלקציה: initialized חסר שדות.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-REF-02": [
+    {
+      "row": 45,
+      "verb": "answered",
+      "status": "לא עבר",
+      "detail": "רפלקציה: answered חסר שדות.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-REF-03": [
+    {
+      "row": 46,
+      "verb": "skipped",
+      "status": "לא עבר",
+      "detail": "רפלקציה: skipped חסר שדות.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-REF-04": [
+    {
+      "row": 47,
+      "verb": "completed",
+      "status": "לא עבר",
+      "detail": "רפלקציה: completed חסר שדות.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-51": [
+    {
+      "row": 51,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "TC-ITM-03": [
+    {
+      "row": 52,
+      "verb": "completed",
+      "status": "לא עבר",
+      "detail": "שאלון פנימי הושלם ללא score/duration.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-53": [
+    {
+      "row": 53,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-54": [
+    {
+      "row": 54,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שורת כותרת/הפרדה במסמך המקור; נשמרה כפי שהיא.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-55": [
+    {
+      "row": 55,
+      "verb": "Initiated + no Complete",
+      "status": "לא נבדק",
+      "detail": "לא נמצא אובייקט תוכן שאותחל ולא הושלם.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-56": [
+    {
+      "row": 56,
+      "verb": "Initialized+ יציאה מהמשימה + second Initialized",
+      "status": "לא נבדק",
+      "detail": "לא נמצא אתחול חוזר של אותו אובייקט.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-57": [
+    {
+      "row": 57,
+      "verb": "Initialized + Answered + Completed + Success = False + initialized + Answered + Completed + Success = True",
+      "status": "לא נבדק",
+      "detail": "לא נמצא רצף ניסיונות מתאים על אותה שאלה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-58": [
+    {
+      "row": 58,
+      "verb": "Initialized + Answered + Completed + Success = False + initialized + Answered + Completed + Success = False",
+      "status": "לא נבדק",
+      "detail": "לא נמצא רצף ניסיונות מתאים על אותה שאלה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-59": [
+    {
+      "row": 59,
+      "verb": "Sesssion 1 + Initialize+ no Complete + Logout + Login + Initialize",
+      "status": "לא נבדק",
+      "detail": "לא נמצא רצף חזרה בין סשנים לאותו אובייקט.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-60": [
+    {
+      "row": 60,
+      "verb": "1. Login + action 1 + action 2 etc….   2. Initialized + answered + completed…",
+      "status": "עבר",
+      "detail": "כל האירועים של כל משתמש בחותמות זמן שונות ובסדר ביצוע.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-61": [
+    {
+      "row": 61,
+      "verb": "Initialized + requested + answered + completed",
+      "status": "לא נבדק",
+      "detail": "לא נמצאה בקשת עזרה במהלך משימה.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ],
+  "row-62": [
+    {
+      "row": 62,
+      "verb": "",
+      "status": "לא רלוונטי",
+      "detail": "שאלון הפעלנות דורש 31 תשובות; הגשה חלקית אינה אפשרית במוצר.",
+      "statement_ids": [],
+      "timestamps": [],
+      "delivery": []
+    }
+  ]
+}
