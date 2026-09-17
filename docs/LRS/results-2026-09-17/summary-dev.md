@@ -9,8 +9,4 @@
 - TC-ITM-10 (completed): לא נבדק — בריצה זו לא הושלם רכיב הערכה עם success=true.
 - TC-ITM-11 (completed): לא נבדק — בריצה זו לא הושלם רכיב הערכה עם success=false.
 
-## אינדקס החוזה ללא ראיה
-- component:skipped
-- questionnaire:skipped
-- item:selected
-- learning-unit:initialized
+## אינדקס החוזה: לכל שורה יש statement
