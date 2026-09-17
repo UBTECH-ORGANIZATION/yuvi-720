@@ -1,7 +1,12 @@
 # 720 → LRS · ריכוז אירועי xAPI לבדיקה ב-Postman
 
 מסמך זה מרכז את **כל הקריאות** ש-720 צריכה לשלוח ל-LRS של משרד החינוך, על בסיס
-`docs/LRS/720 התממשקות לLRS 1.0 (2).pdf` (גרסה 1.0, 14/7/26).
+`docs/LRS/מסמך התממשקות LRS.md` (גרסה **1.1**, 16/8/26; ה-PDF `720 התממשקות ל-LRS_1.1` הוא אותו מסמך).
+
+שינויי 1.1 שמופיעים בקריאות: שיוך לספק התוכן דרך `…/ecat/content-vendor/{vendorId}` (מטח 10 · קמפוס 521 · מתודיקה 310);
+מטא-נתונים של יחידה/רכיב/פריט כ-extensions בכל אירוע תוכן; `selectionType` כ-extension עם הערכים
+`learning-type / practice-decision / is-understood / is-repeat / external-learning`; `skipped` ברמת רכיב;
+`mediaDuration` הוסר; `reflectionTrigger` (ולא `reflactionTrigger`); `targetSectors` ו-`cognitiveLevels` כמערכים.
 
 לצד המסמך יש שני קבצים מוכנים לייבוא ל-Postman:
 
@@ -19,11 +24,13 @@
 
 ```
 POST https://lrs-stg.education.gov.il/auth/oauth/v2/token
-     ?grant_type=client_credentials
-     &client_id={{client_id}}
-     &client_secret={{client_secret}}
-     &scope=lrs
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_secret}}&scope=lrs
 ```
+
+> הגוף חייב להיות **form-encoded** — פרמטרים ב-query string נדחים ב-400 ("Missing or duplicate parameters",
+> נבדק מול staging ב-20/7/26). ה-`expires_in` מגיע תחת `token_details`.
 
 בקשת **`00 · Get OAuth Token`** באוסף עושה זאת אוטומטית ושומרת את
 `access_token` למשתנה הסביבה. הריצו אותה פעם אחת ואז את שאר הבקשות.
@@ -135,12 +142,12 @@ POST https://lrs-stg.education.gov.il/auth/oauth/v2/token
 | 22 | תחילת שאלון | `initialized` | `questionnaire` | `parent` → רכיב · כל המטא-דאטה |
 | 23 | סיום שאלון | `completed` | `questionnaire` | `result.score`, `result.duration` |
 | 24 | מענה על שאלה | `answered` | `item`/`question` | `result.response/success/score` · `extensions`: questionId, questionType, attemptNumber |
-| 25 | דילוג על פריט | `skipped` | (סוג הפריט) | `parent` → רכיב |
+| 25 | דילוג על רכיב | `skipped` | `component` | ב-1.1 הדילוג הוא ברמת הרכיב; `parent` → יחידת הלימוד |
 
 ### 3.10 מדיה
 | # | אירוע | Verb | Object type | הערות |
 |---|---|---|---|---|
-| 26 | התחלת צפייה | `played` | `video`/audio/animation | `extensions`: mediaFormat, mediaPosition, mediaDuration |
+| 26 | התחלת צפייה | `played` | `video`/audio/animation (לעולם לא `item`) | `extensions`: mediaFormat, mediaPosition (`mediaDuration` הוסר ב-1.1) |
 | 27 | השהיה | `paused` | media | `extensions.mediaPosition` + `result.duration` |
 | 28 | סיום צפייה | `completed` | media | `result.duration` |
 
@@ -148,7 +155,7 @@ POST https://lrs-stg.education.gov.il/auth/oauth/v2/token
 | # | אירוע | Verb | Object type | הערות |
 |---|---|---|---|---|
 | 29 | בקשת עזרה | `requested` | component/item | `extensions`: helpSource, helpType |
-| 30 | בחירה לא-לימודית | `selected` | component/item | `extensions.selectionType` + `result.response` |
+| 30 | בחירה לא-לימודית | `selected` | component/item | `extensions.selectionType` ∈ learning-type / practice-decision / is-understood / is-repeat / external-learning + `result.response` |
 
 ---
 
@@ -162,5 +169,6 @@ POST https://lrs-stg.education.gov.il/auth/oauth/v2/token
 
 ## 5. מקורות
 
-- מסמך אפיון 720: `docs/LRS/720 התממשקות לLRS 1.0 (2).pdf`
+- מסמך אפיון 720 (v1.1): `docs/LRS/מסמך התממשקות LRS.md` · `docs/LRS/720 התממשקות ל-LRS_1.1[70].pdf`
+- תסריט הבדיקות של המשרד: `docs/LRS/test script xAPI.csv`; תוצאות ריצה: `docs/LRS/test-script-xapi-results-<date>-<env>.csv`
 - אפיון LRS כללי לספקים: https://sapakim.education.gov.il/tech/lrs/
