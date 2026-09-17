@@ -32,6 +32,10 @@ def _identity_is_reportable() -> bool:
     """
     problems = config.identity_problems()
     if not problems:
+        for warning in config.identity_warnings():
+            if warning not in _warned_identities:
+                _warned_identities.add(warning)
+                print(f"ℹ️ LRS — {warning}")
         return True
     fingerprint = "|".join(problems)
     if fingerprint not in _warned_identities:
@@ -314,8 +318,8 @@ async def report_mentor_meeting_completed(
     # `None` when there is no session to name — see `report_mentoring_record`.
     session_id: Optional[str],
     meeting_id: str,
-    mentor_exid: str,
-    student_exid: str,
+    mentor_exid: Optional[str],
+    student_exid: Optional[str],
     meeting_date: str,
     mentoring_phase: Optional[str] = None,
 ) -> None:
@@ -352,7 +356,9 @@ async def report_student_goal(
     )
 
 
-async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, str]:
+async def _meeting_identities(
+    learner_id: str, teacher_id: str
+) -> tuple[Optional[str], Optional[str]]:
     """`(student_exid, mentor_exid)` for a teacher-authored event.
 
     Each side is the person's own reporting identity when one resolves (a real
@@ -360,8 +366,10 @@ async def _meeting_identities(learner_id: str, teacher_id: str) -> tuple[str, st
     value for both, which is what v1 staging reports everywhere. Reporting is
     never withheld over the identities: the session rule below is the only
     gate, and a stub-for-stub record on staging is the documented behaviour.
+    A side that resolves to nothing at all is `None` — the extension (or the
+    `instructor`) is then omitted, never sent as an empty string.
     """
-    stub = config.test_exidentifier()
+    stub = config.test_exidentifier() or None
     student_exid, mentor_exid = stub, stub
     try:
         learner_identity = await identity_mod.resolve_reporting_identity(learner_id)

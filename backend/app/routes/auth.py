@@ -190,16 +190,50 @@ def _device_from_request(request: Request) -> dict[str, str]:
         "operatingSystem": operating_system,
         "browser": browser,
     }
-    # The build the learner is actually running, set by the deploy pipeline.
-    # Absent (a local run) it is left out — a made-up version is worse than none.
+    # The build the learner is actually running. Absent everywhere (no deploy
+    # stamp, no git) it is left out — a made-up version is worse than none.
     for key, value in (
         ("osVersion", os_version),
         ("browserVersion", browser_version),
-        ("applicationVersion", os.getenv("APP_VERSION", "").strip()),
+        ("applicationVersion", application_version()),
     ):
         if value:
             device[key] = value
     return device
+
+
+_git_version: Optional[str] = None
+
+
+def application_version() -> str:
+    """The `applicationVersion` extension of `session enter` (spec v1.1).
+
+    `APP_VERSION` when someone sets it explicitly; else the release the deploy
+    pipeline stamps on the image (`SPARK_RELEASE` = the commit sha — the same
+    value telemetry reports, so a statement and a trace name one build); else
+    the working tree's short sha for a local run. Deployed slots never set
+    `APP_VERSION`, which is how the extension went missing in the 07/09 run.
+    """
+    global _git_version
+    explicit = os.getenv("APP_VERSION", "").strip()
+    if explicit:
+        return explicit[:40]
+    for key in ("SPARK_RELEASE", "IMAGE_TAG", "GIT_SHA", "GITHUB_SHA"):
+        value = os.getenv(key, "").strip()
+        if value:
+            return value[:12]
+    if _git_version is None:
+        try:
+            import subprocess
+
+            _git_version = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=2,
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+            ).stdout.strip()
+        except Exception:
+            _git_version = ""
+    return _git_version
 
 
 @router.post("/login")

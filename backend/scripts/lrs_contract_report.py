@@ -348,6 +348,8 @@ async def main(dry_run: bool, only: str | None) -> int:
               "non-catalog content-vendor id). Fix the env, then re-run.")
         if not dry_run:
             return 2
+    for warning in config.identity_warnings():
+        print(f"ℹ️  {warning}")
 
     identity = _identity()
     session_id = str(uuid.uuid4())     # a real per-run session id, never a literal

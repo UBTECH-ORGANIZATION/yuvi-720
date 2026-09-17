@@ -82,9 +82,18 @@ class SessionDeviceExtensionTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"APP_VERSION": "2026.08.27.1"}):
             device = _device_from_request(_Request(CHROME_MAC))
         self.assertEqual(device["applicationVersion"], "2026.08.27.1")
-        with mock.patch.dict(os.environ, {"APP_VERSION": ""}):
+        # The deploy workflow stamps SPARK_RELEASE (the commit sha), never
+        # APP_VERSION — the slot must still name its build.
+        with mock.patch.dict(os.environ, {"APP_VERSION": "", "SPARK_RELEASE": "0123456789abcdef0123"}):
             device = _device_from_request(_Request(CHROME_MAC))
-        self.assertNotIn("applicationVersion", device)
+        self.assertEqual(device["applicationVersion"], "0123456789ab")
+
+    def test_a_local_run_names_its_working_tree(self):
+        from app.routes import auth
+        with mock.patch.dict(os.environ, {"APP_VERSION": "", "SPARK_RELEASE": "", "IMAGE_TAG": "", "GIT_SHA": "", "GITHUB_SHA": ""}):
+            auth._git_version = None
+            device = _device_from_request(_Request(CHROME_MAC))
+        self.assertRegex(device.get("applicationVersion", ""), r"^[0-9a-f]{7,12}$")
 
 
 if __name__ == "__main__":

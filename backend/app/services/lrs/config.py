@@ -278,6 +278,22 @@ def identity_problems() -> list[str]:
                 f"LRS_ECAT_ITEMS[{key}] is a placeholder ({value}) — it must be the "
                 "id from the MoE educational catalog"
             )
-    if not test_exidentifier():
-        problems.append("LRS_TEST_EXIDENTIFIER is empty — nothing to report as")
     return problems
+
+
+def identity_warnings() -> list[str]:
+    """Things worth saying once at startup that must NOT stop reporting.
+
+    An empty `LRS_TEST_EXIDENTIFIER` used to be a *problem*, which switched the
+    whole reporter off — in production too, where every real user carries
+    their own `exidentifier` from the ministry's SSO and the stub is rightly
+    empty. Without the stub, users who have no identity of their own are
+    simply skipped per statement (`resolve_reporting_identity` → None).
+    """
+    warnings: list[str] = []
+    if not test_exidentifier():
+        warnings.append(
+            "LRS_TEST_EXIDENTIFIER is empty — only users with their own "
+            "exidentifier (MoE SSO / seeded overrides) are reported"
+        )
+    return warnings

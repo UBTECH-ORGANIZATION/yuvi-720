@@ -584,8 +584,8 @@ def mentor_meeting_completed(
     session_id: str,
     meeting_id: str,
     *,
-    mentor_exid: str,
-    student_exid: str,
+    mentor_exid: Optional[str],
+    student_exid: Optional[str],
     meeting_date: str,  # YYYY-MM-DD
     mentoring_phase: Optional[str] = None,
 ) -> dict[str, Any]:
@@ -594,8 +594,8 @@ def mentor_meeting_completed(
     )
     ext = extensions(
         {
-            "mentor": mentor_exid,
-            "student": student_exid,
+            "mentor": mentor_exid or None,
+            "student": student_exid or None,
             "meetingDate": meeting_date,
             "mentoringPhase": normalize_mentoring_phase(mentoring_phase),
         }
