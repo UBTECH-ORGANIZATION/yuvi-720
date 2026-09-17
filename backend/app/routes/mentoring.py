@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import optional_user, require_learner, require_learner_session
 from app.brain.repository import _get_collection_named
+from app.services import goal_progress
 from app.services import mentoring
 from app.services.lrs import reporter as lrs_reporter
 
@@ -172,7 +173,7 @@ async def update_mentoring_goal_progress(
             session["sid"],
             "completed" if stage == "summarized" else "updated",
             goal_id,
-            "academic",
+            goal_progress.goal_type_for(_goal_in(record, goal_id)),
         )
     # A finished goal waits for the one step only a teacher can take (#497),
     # so their bell says so — deep-linking to this child's profile, where the
@@ -241,7 +242,20 @@ async def update_mentoring_goal(
     record = await mentoring.update_goal(session["sub"], conversation_id, goal_id, data)
     if record is None:
         raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    # MoE 720: an edited goal is `updated` (the ministry's own example moves a
+    # goal's due date). Report-and-forget.
+    if session.get("sid"):
+        await lrs_reporter.report_student_goal(
+            session["sub"], session["sid"], "updated", goal_id,
+            goal_progress.goal_type_for(_goal_in(record, goal_id)),
+        )
     return JSONResponse(content=record)
+
+
+def _goal_in(record: dict | None, goal_id: str) -> dict:
+    return next(
+        (g for g in (record or {}).get("goals") or [] if g.get("id") == goal_id), {}
+    )
 
 
 @router.delete("/mentoring/{conversation_id}/goals/{goal_id}")

@@ -3267,6 +3267,8 @@
   "tch.mentoring.guide.review.desc": "זה מה שיישמר, וזה מה שגלוי לתלמיד/ה.",
   "tch.mentoring.phase.label": "באיזה צעד במסע אתם נמצאים",
   "tch.mentoring.phase.none": "לא משויך לצעד",
+  "tch.mentoring.phase.choose": "בחרו צעד במסע",
+  "tch.mentoring.phase.required": "כדי לתעד שיחה צריך לבחור באיזה צעד במסע אתם",
   "tch.mentoring.notes.label": "מה דיברתם",
   "tch.mentoring.notes.placeholder": "למשל: דיברנו על הקושי בשברים, וסיכמנו שתבקש/י רמז במקום לנחש",
   "tch.mentoring.teacherOnly.label": "הערה למורים בלבד",

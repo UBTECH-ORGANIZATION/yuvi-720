@@ -3267,6 +3267,8 @@
   "tch.mentoring.guide.review.desc": "This is what will be saved, and what the student will see.",
   "tch.mentoring.phase.label": "Which step of the journey you are on",
   "tch.mentoring.phase.none": "Not tied to a step",
+  "tch.mentoring.phase.choose": "Choose a step of the journey",
+  "tch.mentoring.phase.required": "A talk is recorded on a step of the journey — choose one",
   "tch.mentoring.notes.label": "What you talked about",
   "tch.mentoring.notes.placeholder": "For example: we talked about the difficulty with fractions, and agreed you'd use a hint instead of guessing",
   "tch.mentoring.teacherOnly.label": "A note for teachers only",

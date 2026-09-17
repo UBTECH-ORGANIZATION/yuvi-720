@@ -3267,6 +3267,8 @@
   "tch.mentoring.guide.review.desc": "هذا ما سيُحفظ، وهذا ما سيراه الطالب/ة.",
   "tch.mentoring.phase.label": "في أي خطوة من الرحلة أنتم",
   "tch.mentoring.phase.none": "غير مرتبط بخطوة",
+  "tch.mentoring.phase.choose": "اختاروا خطوة من الرحلة",
+  "tch.mentoring.phase.required": "لتوثيق محادثة يجب اختيار الخطوة التي أنتم فيها",
   "tch.mentoring.notes.label": "عمّ تحدثتم",
   "tch.mentoring.notes.placeholder": "مثال: تحدثنا عن الصعوبة في الكسور، واتفقنا على طلب تلميح بدل التخمين",
   "tch.mentoring.teacherOnly.label": "ملاحظة للمعلمين فقط",

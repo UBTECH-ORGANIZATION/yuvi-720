@@ -223,11 +223,19 @@ class AssignGoalStillReportsTest(unittest.IsolatedAsyncioTestCase):
         for handle in self._patches:
             handle.stop()
 
-    async def test_an_assigned_goal_now_reaches_the_ministry(self):
+    async def test_an_assigned_goal_reaches_the_ministry_as_a_goal_not_a_meeting(self):
+        """A goal set from the roster is `student-goal initialized` with the
+        teacher as instructor — and NOT a mentor–student meeting, because no
+        talk took place (the record is tagged `goal-assignment`)."""
         await goal_approval.assign_goal(
-            "teacher-1", "kid-a", {"title": "לתרגל זוויות"}, lrs_session_id="sid-1")
-        self.assertEqual(self.meeting.await_count, 1)
+            "teacher-1", "kid-a", {"title": "לתרגל זוויות", "action": {"kind": "practice", "target": 3}},
+            lrs_session_id="sid-1")
+        self.assertEqual(self.meeting.await_count, 0)
         self.assertEqual(self.goal_statement.await_count, 1)
+        self.assertEqual(self.goal_statement.await_args.args[2], "initialized")
+        self.assertEqual(self.goal_statement.await_args.args[4], "academic")
+        self.assertEqual(self.collection.inserted[0].get("kind"), "goal-assignment")
+        self.assertEqual(self.collection.inserted[0]["goals"][0]["goal_type"], "academic")
 
     async def test_it_keeps_its_own_notification(self):
         """Only the documented conversation uses the new key; a single assigned
@@ -239,3 +247,54 @@ class AssignGoalStillReportsTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LearnerRecordsAndGoalTypesTest(unittest.IsolatedAsyncioTestCase):
+    """Meetings come from the mentor only; goals name their kind."""
+
+    async def asyncSetUp(self):
+        self.collection = _FakeCollection()
+        self._patches = [
+            patch.object(mentoring, "_get_collection_named", return_value=self.collection),
+            patch.object(mentoring, "_project_goals", AsyncMock(return_value=None)),
+            patch.object(mentoring.rewards, "price_goal", AsyncMock(return_value={"value": 10, "why": "b"})),
+            patch("app.services.notifications.notify", AsyncMock(return_value={})),
+            patch("app.services.lrs.reporter._learner_session_id", AsyncMock(return_value="learner-sid")),
+            patch("app.services.lrs.reporter.report_mentor_meeting_completed", AsyncMock(return_value=None)),
+            patch("app.services.lrs.reporter.report_student_goal", AsyncMock(return_value=None)),
+        ]
+        (_coll, _project, _price, _notify, _sid, self.meeting, self.goal_statement) = [p.start() for p in self._patches]
+
+    async def asyncTearDown(self):
+        for handle in self._patches:
+            handle.stop()
+
+    async def test_a_learners_own_write_up_reports_its_goals_but_no_meeting(self):
+        await mentoring.create_conversation({
+            "learner_id": "kid-a", "author": "learner", "source": "learner", "visibility": "shared",
+            "notes": "דיברנו על מתמטיקה", "meeting_stage": "שמח",
+            "goals": [{"title": "להיכנס כל יום", "action": {"kind": "active_days", "target": 5}}],
+        })
+        self.assertEqual(self.meeting.await_count, 0)
+        self.assertEqual(self.goal_statement.await_count, 1)
+        self.assertEqual(self.goal_statement.await_args.args[4], "motivational")
+        self.assertIsNone(self.goal_statement.await_args.kwargs.get("instructor_exid"))
+
+    async def test_a_teacher_talk_without_a_phase_is_on_the_first_step(self):
+        await mentoring.create_conversation({
+            "learner_id": "kid-a", "author": "teacher", "teacher_id": "t-1", "visibility": "shared",
+            "notes": "שיחה", "goals": [],
+        })
+        self.assertEqual(self.meeting.await_count, 1)
+        self.assertEqual(self.meeting.await_args.kwargs["mentoring_phase"], "phase1")
+
+    def test_goal_type_derivation(self):
+        from app.services.goal_progress import goal_type_for
+
+        self.assertEqual(goal_type_for({"goal_type": "social-emotional"}), "social-emotional")
+        self.assertEqual(goal_type_for({"action": {"kind": "use_hint", "target": 2}}), "behavioral")
+        self.assertEqual(goal_type_for({"action": {"kind": "practice", "target": 2}}), "academic")
+        self.assertEqual(goal_type_for({"domain": "school_climate"}), "social-emotional")
+        self.assertEqual(goal_type_for({"domain": "tech_comfort"}), "other")
+        self.assertEqual(goal_type_for({"title": "x"}), "academic")
+        self.assertEqual(goal_type_for(None), "academic")

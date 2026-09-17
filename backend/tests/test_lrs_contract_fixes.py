@@ -720,13 +720,16 @@ class MentoringPhaseTests(unittest.TestCase):
             _short(stmt["context"]["extensions"])["mentoringPhase"], "phase4"
         )
 
-    def test_an_unrecognised_phase_is_omitted_not_guessed(self):
+    def test_an_unrecognised_phase_is_the_first_step_never_free_text(self):
+        """The extension is required on the wire; a talk whose phase is off
+        the ladder (free text from before the form offered it) is filed on
+        the ladder's first step, and the free text never reaches the LRS."""
         stmt = statements.mentor_meeting_completed(
             IDENTITY, SESSION, "meet-1",
             mentor_exid="1099999999", student_exid="1012345678",
             meeting_date="2026-09-01", mentoring_phase="שיחה על הכיתה",
         )
-        self.assertNotIn("mentoringPhase", _short(stmt["context"]["extensions"]))
+        self.assertEqual(_short(stmt["context"]["extensions"])["mentoringPhase"], "phase1")
 
 
 class SeptemberReviewTests(unittest.TestCase):

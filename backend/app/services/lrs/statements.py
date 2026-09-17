@@ -619,7 +619,9 @@ def mentor_meeting_completed(
             "mentor": mentor_exid or None,
             "student": student_exid or None,
             "meetingDate": meeting_date,
-            "mentoringPhase": normalize_mentoring_phase(mentoring_phase),
+            # Required on the wire: a meeting whose phase is off the ladder
+            # (free text from before the form offered it) is on its first step.
+            "mentoringPhase": normalize_mentoring_phase(mentoring_phase) or "phase1",
         }
     )
     return _base(

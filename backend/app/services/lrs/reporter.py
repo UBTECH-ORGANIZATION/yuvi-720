@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from app.services import goal_progress
 from app.services.lrs import config, identity as identity_mod, outbox, statements
 
 # Remember which identity we already complained about, so a misconfigured
@@ -539,30 +540,41 @@ async def report_mentoring_record(
         return
     # Both people by their own reporting identities when a teacher documented
     # the talk; the learner's own writing has no second person in it.
-    teacher_id = str(record.get("teacher_id") or "") if record.get("author") == "teacher" else ""
+    teacher_authored = record.get("author") == "teacher"
+    teacher_id = str(record.get("teacher_id") or "") if teacher_authored else ""
     student_exid, mentor_exid = await _meeting_identities(learner_id, teacher_id)
-    await report_mentor_meeting_completed(
-        learner_id,
-        session_id,
-        record["id"],
-        mentor_exid=mentor_exid,
-        student_exid=student_exid,
-        meeting_date=record.get("date") or "",
-        # The dedicated field when the form offered the ladder; the free stage
-        # text only as a fallback for records written before it existed. Either
-        # way an off-list value normalizes away rather than reaching the wire.
-        mentoring_phase=record.get("mentoring_phase") or record.get("meeting_stage") or None,
-    )
+    # A mentor–student meeting is reported only when the MENTOR recorded it
+    # (Gal, 17/09: the learner's own write-up is not supported for now — it
+    # has no mentoring phase, and a goal a teacher assigns from the roster is
+    # not a meeting that happened at all: `kind == "goal-assignment"`). The
+    # goals that came out of any shared record are still reported below.
+    if teacher_authored and record.get("kind") != "goal-assignment":
+        await report_mentor_meeting_completed(
+            learner_id,
+            session_id,
+            record["id"],
+            mentor_exid=mentor_exid,
+            student_exid=student_exid,
+            meeting_date=record.get("date") or "",
+            # The dedicated field when the form offered the ladder; the free
+            # stage text only as a fallback for records written before it
+            # existed. The ladder starts at phase1 for a record that carries
+            # none — the extension is required, and the first step is the one
+            # a talk with no stated phase is on.
+            mentoring_phase=(
+                record.get("mentoring_phase") or record.get("meeting_stage") or "phase1"
+            ),
+        )
     if record.get("visibility") != "shared":
         return
-    instructor = mentor_exid if record.get("author") == "teacher" else None
+    instructor = mentor_exid if teacher_authored else None
     for goal in record.get("goals") or []:
         await report_student_goal(
             learner_id,
             session_id,
             "initialized",
             goal["id"],
-            "academic",
+            goal_progress.goal_type_for(goal),
             instructor_exid=instructor,
         )
 

@@ -864,8 +864,11 @@ async def approve_student_goal(
     if not result.get("already_approved"):
         # Filed under the learner's own MoE session when they have one; the
         # teacher's session is the fallback (see the reporter).
+        from app.services.goal_progress import goal_type_for
+
         await lrs_reporter.report_teacher_student_goal(
-            safe_id, session["sub"], "completed", goal_id, "academic",
+            safe_id, session["sub"], "completed", goal_id,
+            goal_type_for(result.get("goal") or {}),
             session_id=session.get("sid"),
         )
     return _ok(result)

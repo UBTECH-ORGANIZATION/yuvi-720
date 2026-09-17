@@ -102,9 +102,10 @@ async def _report_goal_event(learner_id: str, action: str, goal: dict[str, Any])
         session_id = (user or {}).get("current_moe_session_id")
         if not session_id or not goal.get("id"):
             return
+        from app.services.goal_progress import goal_type_for
+
         await lrs_reporter.report_student_goal(
-            learner_id, session_id, action, str(goal["id"]),
-            goal.get("type") or "academic",
+            learner_id, session_id, action, str(goal["id"]), goal_type_for(goal),
         )
     except Exception as exc:  # reporting must never break the goal workflow
         print(f"⚠️ student-goal report skipped: {type(exc).__name__}")

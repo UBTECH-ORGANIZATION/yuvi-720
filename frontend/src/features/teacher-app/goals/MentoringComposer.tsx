@@ -90,8 +90,12 @@ export function MentoringComposer({
   const goalsValid = named.every((goal) => Boolean(goal.deadline))
   /* Parallel to the step list. "Can I leave this step" and "can I save" are
      different questions — a talk with no goals is a valid record. */
-  const stepValid = [Boolean(draft.notes.trim()), goalsValid, true]
-  const canSave = Boolean(draft.notes.trim()) && goalsValid
+  /* The ladder step is part of the record now: the ministry's meeting
+     statement requires `mentoringPhase`, and a talk that is not on the ladder
+     is a talk we cannot report. */
+  const discussedValid = Boolean(draft.notes.trim()) && Boolean(draft.mentoring_phase)
+  const stepValid = [discussedValid, goalsValid, true]
+  const canSave = discussedValid && goalsValid
   const isLast = draft.step === STEPS.length - 1
   const hasContent = Boolean(draft.notes.trim() || named.length || draft.teacher_only_note.trim())
 
