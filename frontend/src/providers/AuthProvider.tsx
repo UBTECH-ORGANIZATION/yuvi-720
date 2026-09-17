@@ -5,6 +5,8 @@ import { setTelemetryUser } from '../services/telemetry'
 /* The server closes a session after LRS_SESSION_IDLE_MINUTES (30) without a
    sign of life; five minutes leaves plenty of margin for a slow network. */
 const SESSION_PING_MS = 5 * 60 * 1000
+// A fresh document's resume waits for the previous document's suspend to land.
+const RESUME_ON_LOAD_MS = 1500
 
 /* AuthProvider — the single source of "who is using the app".
 
@@ -139,11 +141,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the previous document's `pagehide` already filed a `suspend`; the fresh
   // document announces itself with a `resume` — the server files it only
   // when the session really is suspended, so a login or a second tab never
-  // produces a resume without its suspend.
+  // produces a resume without its suspend. It waits a moment: the previous
+  // document's suspend beacon settles behind the viewings it left with, and
+  // a resume that overtook it would be filed before it.
   useEffect(() => {
     if (!user) return
     let suspended = document.hidden
-    if (!suspended) apiBeacon('/api/auth/session/resume')
+    const announce = window.setTimeout(() => {
+      if (!suspended && !document.hidden) apiBeacon('/api/auth/session/resume')
+    }, RESUME_ON_LOAD_MS)
     const suspend = () => {
       if (suspended) return
       suspended = true
@@ -170,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('pagehide', suspend)
       window.removeEventListener('pageshow', onPageShow)
       window.clearInterval(timer)
+      window.clearTimeout(announce)
     }
   }, [user])
 

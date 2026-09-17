@@ -37,7 +37,9 @@ describe('session beacons', () => {
     // A refresh or typed URL fires `pagehide` (suspend) on the old document;
     // the new one announces itself — the server files the resume only when
     // the session is really suspended (strict transition).
-    assert.match(provider, /if \(!suspended\) apiBeacon\('\/api\/auth\/session\/resume'\)/)
+    assert.match(provider, /if \(!suspended && !document\.hidden\) apiBeacon\('\/api\/auth\/session\/resume'\)/)
+    assert.match(provider, /RESUME_ON_LOAD_MS = 1500/)
+    assert.match(provider, /window\.clearTimeout\(announce\)/)
   })
 
   it('pings every five minutes while the tab is visible', () => {
