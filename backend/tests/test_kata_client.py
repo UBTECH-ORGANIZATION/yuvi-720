@@ -93,6 +93,13 @@ class KataNormalizationTests(unittest.TestCase):
             kata_client._safe_id("../secret", "component_id")
         self.assertEqual(raised.exception.status_code, 422)
 
+        with self.assertRaises(kata_client.KataError):
+            kata_client._safe_component_id("../secret")
+
+    def test_accepts_https_component_ids(self) -> None:
+        component_id = "https://kata.cet.ac.il/content/methodica-math-angles-01-04"
+        self.assertEqual(kata_client._safe_component_id(component_id), component_id)
+
 
 class KataHttpTests(unittest.IsolatedAsyncioTestCase):
     async def test_get_unit_normalizes_kata_response(self) -> None:
@@ -116,12 +123,13 @@ class KataHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("secret upstream detail", str(raised.exception))
 
     async def test_create_launch_context_returns_launch_url(self) -> None:
+        component_id = "https://kata.cet.ac.il/content/methodica-math-angles-01-04"
         with patch(
             "app.services.kata_client._post_json",
             new=AsyncMock(return_value={"launchUrl": "https://lomdot.example/x", "registrationId": "reg-1"}),
-        ):
+        ) as post_json:
             ctx = await kata_client.create_launch_context(
-                component_id="methodica-math-angles-01-04",
+                component_id=component_id,
                 student_id="learner-1",
                 platform_url="https://spark.example",
                 lrs_endpoint="https://spark.example/api/xapi/tok/",
@@ -129,6 +137,7 @@ class KataHttpTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertEqual(ctx["launch_url"], "https://lomdot.example/x")
         self.assertEqual(ctx["registration_id"], "reg-1")
+        self.assertEqual(post_json.await_args.args[1]["componentId"], component_id)
 
 
 class ProviderXapiCompatibilityTests(unittest.TestCase):

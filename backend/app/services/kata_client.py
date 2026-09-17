@@ -25,6 +25,7 @@ import json
 import os
 import re
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -72,6 +73,27 @@ def _safe_id(value: str, field: str) -> str:
     candidate = str(value or "").strip()
     if not _ID_PATTERN.fullmatch(candidate):
         raise KataError(f"invalid_{field}", 422)
+    return candidate
+
+
+def _safe_component_id(value: str) -> str:
+    candidate = str(value or "").strip()
+    if _ID_PATTERN.fullmatch(candidate):
+        return candidate
+    parsed = urlsplit(candidate)
+    if (
+        len(candidate) > 160
+        or parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or not parsed.path.strip("/")
+        or "\\" in candidate
+        or any(character.isspace() for character in candidate)
+    ):
+        raise KataError("invalid_component_id", 422)
     return candidate
 
 
@@ -547,7 +569,7 @@ async def resolve_component(
     unit_id: Optional[str] = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Resolve and validate a component against its Kata-owned unit."""
-    safe_component_id = _safe_id(component_id, "component_id")
+    safe_component_id = _safe_component_id(component_id)
     if unit_id:
         units = [await get_unit(_safe_id(unit_id, "unit_id"))]
     else:
@@ -631,7 +653,7 @@ async def create_launch_context(
     (our own ``/api/xapi/{token}/`` ingest); stored server-side, never in the URL.
     """
     body: dict[str, Any] = {
-        "componentId": _safe_id(component_id, "component_id"),
+        "componentId": _safe_component_id(component_id),
         "studentId": student_id,
         "platformUrl": platform_url,
         "lrsEndpoint": lrs_endpoint,
