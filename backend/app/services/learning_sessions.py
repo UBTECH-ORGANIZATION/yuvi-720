@@ -251,12 +251,16 @@ async def create_provider_session(
     # so the forwarded actor.account.name matches what the ingest scopes against.
     # Kata's launcher wants Kata's own id (a URL since 09/2026); everything of
     # ours — the launch token, the brain, the events — carries the slug.
+    # An explicit redo (§6 re-entry dialog) also resets the content's own saved
+    # progress at Kata, so the learner really starts over rather than landing
+    # on the finished last screen. Everything else resumes.
     context = await kata_client.create_launch_context(
         component_id=component.get("launch_id") or component["id"],
         student_id=launch["slxapi"]["actor"]["account"]["name"],
         platform_url=public_base,
         lrs_endpoint=launch["slxapi"]["endpoint"],
         lrs_auth=launch["slxapi"]["auth"],
+        reset_state=restart,
     )
 
     # Content progress may resume according to the provider contract, but the

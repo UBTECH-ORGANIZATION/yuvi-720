@@ -683,6 +683,7 @@ async def create_launch_context(
     lrs_endpoint: str,
     lrs_auth: str,
     student_name: Optional[str] = None,
+    reset_state: bool = False,
 ) -> dict[str, Any]:
     """Create a Kata launch context → ``{launchUrl, registrationId}``.
 
@@ -690,6 +691,11 @@ async def create_launch_context(
     actor account name, which is exactly what our ingest matches the launch
     against. ``lrs_endpoint``/``lrs_auth`` are Kata's downstream forward target
     (our own ``/api/xapi/{token}/`` ingest); stored server-side, never in the URL.
+
+    ``reset_state`` (Kata, 18/09/2026): the platform asks Kata to forget this
+    student's saved progress in the component, so the launch starts a fresh
+    attempt instead of resuming. Sent only when the learner explicitly chose
+    to redo — an ordinary relaunch must keep resuming.
     """
     body: dict[str, Any] = {
         "componentId": _safe_component_id(component_id),
@@ -700,6 +706,8 @@ async def create_launch_context(
     }
     if student_name:
         body["studentName"] = student_name
+    if reset_state:
+        body["resetState"] = True
     payload = await _post_json("/api/v1/launcher/context", body)
     if not isinstance(payload, dict) or not payload.get("launchUrl"):
         raise KataError("kata_launch_rejected", 502)
