@@ -863,12 +863,16 @@ async def approve_student_goal(
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
     if not result.get("already_approved"):
         # Filed under the learner's own MoE session when they have one; the
-        # teacher's session is the fallback (see the reporter).
+        # teacher's session is the fallback (see the reporter). A goal the
+        # learner already summarized was `completed` then — the approval is
+        # the teacher's `updated` on it, never a second completion (the
+        # ministry reads two `completed` on one goal as a duplicate).
         from app.services.goal_progress import goal_type_for
 
         await lrs_reporter.report_teacher_student_goal(
-            safe_id, session["sub"], "completed", goal_id,
-            goal_type_for(result.get("goal") or {}),
+            safe_id, session["sub"],
+            "updated" if result.get("already_summarized") else "completed",
+            goal_id, goal_type_for(result.get("goal") or {}),
             session_id=session.get("sid"),
         )
     return _ok(result)

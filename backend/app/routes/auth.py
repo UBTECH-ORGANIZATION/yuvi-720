@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import os
 import re
 import time
@@ -204,10 +206,20 @@ async def logout(response: Response, session=Depends(optional_user)) -> dict[str
     return {"ok": True, "redirect_url": redirect_url}
 
 
+# How long a suspend beacon waits for the viewings sent in the same unload.
+SUSPEND_SETTLE_SECONDS = 0.5
+
+
 @router.post("/session/suspend")
 async def session_suspend(session=Depends(optional_user)) -> dict[str, Any]:
     """MoE 720 session `suspend` — the tab lost focus (frontend beacon)."""
     if session and session.get("sid"):
+        # The same unload burst carries the dashboard viewings (filed in the
+        # capture phase, before this beacon) — the browser sends them first,
+        # the server may still pick this one up first. The suspend waits a
+        # moment so those statements are stamped before it: nothing may sit
+        # between a suspend and its resume.
+        await asyncio.sleep(SUSPEND_SETTLE_SECONDS)
         # Reported on the transition only: a second beacon for the same pause
         # (visibilitychange + pagehide, two tabs) is not a second suspend.
         if await session_registry.suspend(session["sid"]):

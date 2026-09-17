@@ -351,20 +351,25 @@ async function phaseTabClose(browser) {
   const sid = await login(page, STUDENT, phase)
   manifest.sessions.tab_closed_session = sid
   await settle(page, 3000)
-  await context.close()  // pagehide → suspend beacon; nothing after
+  // Close the TAB the way a child does: pagehide fires and the suspend
+  // beacon leaves; the browser (context) stays alive long enough to send it.
+  await page.close({ runBeforeUnload: true })
+  await sleep(3000)
+  await context.close()
   note(phase, `tab closed on ${sid}; waiting ${IDLE_MINUTES + 1.5} min for the idle exit`)
   await sleep((IDLE_MINUTES + 1.5) * 60_000)
 }
 
 async function phaseKill(browser) {
   const phase = 'kill'
-  const separate = await chromium.launch({ headless: !HEADED })
+  // A browser server is the one Playwright object that exposes its OS process.
+  const server = await chromium.launchServer({ headless: !HEADED })
+  const separate = await chromium.connect(server.wsEndpoint())
   const { page } = await newPage(separate)
   const sid = await login(page, STUDENT, phase)
   manifest.sessions.killed_session = sid
   await settle(page, 3000)
-  const pid = separate.process()?.pid
-  if (pid) process.kill(pid, 'SIGKILL')  // no beacon, no unload — the browser is simply gone
+  process.kill(server.process().pid, 'SIGKILL')  // no beacon, no unload — the browser is simply gone
   note(phase, `browser killed on ${sid}; waiting ${IDLE_MINUTES + 1.5} min for the idle exit`)
   await sleep((IDLE_MINUTES + 1.5) * 60_000)
 }

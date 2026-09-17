@@ -4,6 +4,7 @@ session really ended, and a new session for activity after a timeout."""
 from __future__ import annotations
 
 import os
+import time
 import unittest
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -180,6 +181,25 @@ class EffectiveSidTests(RegistryTestCase):
         self.assertEqual(await registry.effective_sid(payload), "s2")
         # One session per user: no third session, no extra enter.
         self.assertEqual(self.verbs(), ["enter", "exit", "enter"])
+
+    async def test_a_statement_is_a_sign_of_life_so_a_timeout_exit_lands_after_it(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        # Requests touch the row throttled; a statement filed a minute later
+        # must still move last-seen, or the exit would be stamped before it.
+        registry._touched["s1"] = time.monotonic()
+        await registry.reporter.report_session_resume("u1", "s1")
+        filed = self.enqueued[-1]["timestamp"]
+        await registry.sweep(now=datetime.now(timezone.utc) + timedelta(hours=1))
+        exit_statement = self.exits()[-1]
+        self.assertGreaterEqual(exit_statement["timestamp"], filed)
+
+    async def test_the_last_sign_of_life_is_the_later_of_suspend_and_last_seen(self):
+        await registry.open("u1", "s1", roles=["learner"], at=T0)
+        await registry.suspend("s1", at=T0 + timedelta(minutes=5))
+        # Content kept reporting while the tab was hidden (a video running on).
+        await registry.touch("s1", at=T0 + timedelta(minutes=9), force=True)
+        await registry.sweep(now=T0 + timedelta(hours=1))
+        self.assertEqual(self.exits()[-1]["timestamp"], (T0 + timedelta(minutes=9)).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     async def test_a_cookie_the_registry_never_saw_is_adopted_from_its_own_start(self):
         payload = {"sub": "u1", "sid": "legacy", "roles": ["learner"], "iat": T0.timestamp()}

@@ -265,8 +265,6 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
         found = ev.find(actor=ev.student, activity="student-goal", verb=goal_verb,
                         where=lambda e: bool((stmt(e).get("context") or {}).get("instructor")) == teacher_side)
         if not found:
-            if tc == "TC-GOL-04":
-                return na("אין במערכת פעולת עדכון יעד על ידי המורה (המורה מאשר יעד — TC-GOL-06).")
             return fail("לא נמצא student-goal מתאים." + (" (עם instructor)" if teacher_side else ""))
         pick = found[-1:]
         return fail("goalType חסר.", pick) if missing(pick[0], {"goalType"}) else ok("אירוע היעד נשלח עם goalType" + (" ו-instructor." if teacher_side else "."), pick)

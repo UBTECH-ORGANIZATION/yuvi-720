@@ -9,6 +9,7 @@ statement → enqueue (which persists + sends Near-Real-Time).
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Optional
 
 from app.services import goal_progress
@@ -117,8 +118,43 @@ async def _report(build, learner_id: str, *args, source: str = "platform", **kwa
             return  # no reporting identity configured — skip, never guess
         statement = build(identity, *args, **kwargs)
         await outbox.enqueue(statement, learner_id=learner_id, source=source)
+        await _mark_session_alive(statement)
     except Exception as exc:  # report-and-forget: log class name only
         print(f"⚠️ LRS report skipped ({type(exc).__name__})")
+
+
+def _session_of(statement: dict[str, Any]) -> Optional[str]:
+    grouping = (((statement.get("context") or {}).get("contextActivities") or {}).get("grouping")) or []
+    for activity in grouping:
+        activity_id = str(activity.get("id") or "")
+        if "/session/" in activity_id:
+            return activity_id.rsplit("/", 1)[-1]
+    return None
+
+
+async def _mark_session_alive(statement: dict[str, Any]) -> None:
+    """A statement is the strongest sign of life a session gives.
+
+    Requests touch the registry throttled (once a minute per process), which
+    is fine for the idle timeout but not for the exit's place in the sequence:
+    a session closed at its "last sign of life" must be closed AFTER its last
+    statement, or the ministry sees a goal approved in an exited session. So
+    every statement moves the session's last-seen mark, unthrottled, unless it
+    is the exit itself.
+    """
+    verb = str((statement.get("verb") or {}).get("id") or "")
+    session_id = _session_of(statement)
+    if not session_id or verb.endswith("/exit"):
+        return
+    from app.services.lrs import session_registry
+
+    try:
+        # At the statement's own time, so the mark and the sequence agree.
+        stamped = statement.get("timestamp")
+        at = datetime.fromisoformat(str(stamped).replace("Z", "+00:00")) if stamped else None
+        await session_registry.touch(session_id, at=at, force=True)
+    except Exception as exc:
+        print(f"⚠️ session last-seen not moved ({type(exc).__name__})")
 
 
 # ── Session ──────────────────────────────────────────────────────────────────

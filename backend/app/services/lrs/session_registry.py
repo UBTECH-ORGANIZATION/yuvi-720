@@ -347,13 +347,21 @@ async def close(
     return True
 
 
+def _last_sign_of_life(row: dict[str, Any]) -> Optional[datetime]:
+    """When the session was last known to be alive: the later of its last
+    suspend and its last-seen mark (a statement filed while the tab was hidden
+    — a video running on — moves last-seen past the suspend)."""
+    marks = [m for m in (_parse(row.get("suspended_at")), _parse(row.get("last_seen_at"))) if m]
+    return max(marks) if marks else None
+
+
 async def close_open_for_user(user_id: str, *, reason: str, at: Optional[datetime] = None) -> int:
     """Close every session this user still has open (re-login). Each is closed
     at its own last sign of life — the old tab, if it is still there, will get
     a 401 on its next call and start over."""
     closed = 0
     for row in await _open_rows_for_user(user_id):
-        last = _parse(row.get("suspended_at")) or _parse(row.get("last_seen_at")) or (at or _now())
+        last = _last_sign_of_life(row) or (at or _now())
         if await close(str(row["_id"]), reason=reason, at=min(last, at or _now())):
             closed += 1
     return closed
@@ -398,7 +406,25 @@ async def touch(sid: str, at: Optional[datetime] = None, *, force: bool = False)
     if not force and last is not None and time.monotonic() - last < TOUCH_THROTTLE_SECONDS:
         return
     _touched[sid] = time.monotonic()
-    await _update(sid, {"last_seen_at": _iso(at or _now())})
+    await _advance_last_seen(sid, _iso(at or _now()))
+
+
+async def _advance_last_seen(sid: str, stamp: str) -> None:
+    """Move `last_seen_at` forward to `stamp`, never back: a statement stamped
+    a moment ago must not undo a later request's touch. ISO-8601 UTC strings
+    of one format order like the instants they name."""
+    collection = _collection()
+    if collection is not None:
+        try:
+            await collection.update_one({"_id": sid, "exited_at": None}, {"$max": {"last_seen_at": stamp}})
+            return
+        except Exception as exc:
+            print(f"⚠️ lrs_sessions update failed, using fallback: {exc}")
+    data = _fallback_read()
+    row = data.get(sid)
+    if row and row.get("exited_at") is None and str(row.get("last_seen_at") or "") < stamp:
+        row["last_seen_at"] = stamp
+        _fallback_write(data)
 
 
 # ── Timeout sweeper ──────────────────────────────────────────────────────────
@@ -408,7 +434,7 @@ async def sweep(now: Optional[datetime] = None) -> int:
     current = now or _now()
     closed = 0
     for row in await _idle_rows(current - timedelta(minutes=idle_minutes())):
-        ended = _parse(row.get("suspended_at")) or _parse(row.get("last_seen_at")) or current
+        ended = _last_sign_of_life(row) or current
         if await close(str(row["_id"]), reason="timeout", at=ended):
             closed += 1
     return closed

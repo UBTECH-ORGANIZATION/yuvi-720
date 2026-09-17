@@ -133,6 +133,8 @@ async def approve_goal(
         "granted": granted,
         # True when the learner had already banked these sparks themselves.
         "already_earned": already_summarized and granted == 0,
+        # The learner had already finished (summarized) this goal themselves.
+        "already_summarized": already_summarized,
         "capped": capped,
         "wallet": reward.get("wallet"),
         # `goal_type`/`action` ride along so the route can name the goal's

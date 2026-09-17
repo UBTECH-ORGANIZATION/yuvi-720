@@ -144,6 +144,8 @@ class GoalApprovalTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["granted"], 0)
         self.assertTrue(result["already_earned"])
         self.assertFalse(result["capped"], "already-earned is not the same as capped")
+        # The route reports the approval as `updated`, not a second `completed`.
+        self.assertTrue(result["already_summarized"])
 
         [row] = await notifications.list_for("kid")
         self.assertEqual(row["title_key"], "notif.goal.approved.noSparks")
