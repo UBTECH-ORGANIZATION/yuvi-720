@@ -387,3 +387,54 @@ class DeniedRequestsEmitNoLrsView(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LearnerDashboardRoute(unittest.IsolatedAsyncioTestCase):
+    """`GET /api/brain/{id}/dashboard` is the route the student's board calls
+    and the one that reports dashboard/viewed for a learner's own visit.
+
+    It had no test of its own, so a merge that renamed its session parameter
+    while the body kept the old name reached main as a 500 on every dashboard.
+    The route is called here end to end with the projection and the reporter
+    patched — for the learner, and for a teacher, whose view must not be
+    turned away by a learner-only gate."""
+
+    async def _call(self, actor, learner_id="kid-a", teacher_ok=True):
+        from app.routes import brain
+        from app.services import cache_store
+
+        reporter = AsyncMock()
+        async def remember(scope, ident, name, args, ttl, compute):
+            return await compute()
+        with patch("app.brain.org.teacher_can_access_learner", AsyncMock(return_value=teacher_ok)), \
+             patch.object(cache_store, "remember", remember), \
+             patch.object(brain, "_build_dashboard", AsyncMock(return_value={"ok": True, "for": learner_id})), \
+             patch.object(brain.lrs_reporter, "report_dashboard_viewed", reporter):
+            response = await brain.read_dashboard(learner_id=learner_id, lang="he", actor=actor)
+        return response, reporter
+
+    async def test_the_learner_opens_their_own_board(self):
+        response, reporter = await self._call({"sub": "kid-a", "sid": "session-1", "roles": ["learner"]})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.body), {"ok": True, "for": "kid-a"})
+        reporter.assert_awaited_once()
+        self.assertEqual(reporter.await_args.args[:3], ("kid-a", "session-1", "student-personal"))
+        self.assertEqual(reporter.await_args.kwargs.get("subject_learner_id"), "kid-a")
+
+    async def test_a_teacher_of_the_learner_opens_it_as_a_student_view(self):
+        response, reporter = await self._call({"sub": "teacher-a", "sid": "session-2", "roles": ["teacher"]})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(reporter.await_args.args[:3], ("teacher-a", "session-2", "student-view"))
+        self.assertEqual(reporter.await_args.kwargs.get("subject_learner_id"), "kid-a")
+
+    async def test_without_a_moe_session_the_board_still_loads_unreported(self):
+        response, reporter = await self._call({"sub": "kid-a", "roles": ["learner"]})
+        self.assertEqual(response.status_code, 200)
+        reporter.assert_not_awaited()
+
+    async def test_an_outsider_is_refused(self):
+        from fastapi import HTTPException
+
+        with self.assertRaises(HTTPException) as caught:
+            await self._call({"sub": "teacher-b", "sid": "s", "roles": ["teacher"]}, teacher_ok=False)
+        self.assertEqual(caught.exception.status_code, 403)

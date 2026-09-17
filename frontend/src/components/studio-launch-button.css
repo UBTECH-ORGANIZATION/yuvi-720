@@ -12,6 +12,7 @@
   background: linear-gradient(135deg, rgba(124, 108, 255, .16), rgba(76, 201, 240, .16));
   color: var(--sp-primary-700);
   font: 800 var(--sp-fs-xs)/1 var(--sp-font);
+  white-space: nowrap;   /* a pill, never two lines: below 720px the label folds away instead */
   cursor: pointer;
   transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
 }

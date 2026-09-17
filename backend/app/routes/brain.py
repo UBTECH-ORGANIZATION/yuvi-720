@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from app.auth.dependencies import assert_can_read_learner, current_user, require_learner_session
+from app.auth.dependencies import assert_can_read_learner, current_user
 from app.brain.context_engine import build_coach_bundle, view_for, AgentScopeError
 from app.brain.repository import get_brain, apply_brain_updates
 from app.services import kata_catalog
@@ -142,12 +142,14 @@ async def update_goal_status(
 
 
 @router.get("/{learner_id}/dashboard")
-async def read_dashboard(
-    learner_id: str,
-    lang: str = "he",
-    session: dict = Depends(require_learner_session),
-):
+async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depends(current_user)):
     """Return the F4 dashboard DTO projected from the brain (real numbers).
+
+    `current_user`, not `require_learner_session`: a teacher or an admin may
+    open a student's board too (`_authorized_id` decides), and the report
+    below names that view `student-view`. A learner-only gate here would 403
+    them, and it once left the body referring to a parameter that no longer
+    existed — this route has no unit test hitting it, so that reached main.
 
     Served from the cache under the learner's version: every brain write
     (a fold on an answer, a goal, a pin) moves the version, so the projection
