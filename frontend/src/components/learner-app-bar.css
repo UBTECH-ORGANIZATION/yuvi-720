@@ -36,6 +36,45 @@
   align-items: center;
   gap: var(--sp-2);
 }
+.learner-app-bar__trailing > * { flex-shrink: 0; }
+
+/* The account cluster keeps its content width above the fold. The shared
+   `.app-bar-user { min-width: 0 }` let its grid column collapse, so between
+   the fold (1350) and ~1650px the studio button folded onto two lines and
+   slid under the nav's last tab. The bar's columns are `1fr auto 1fr`: with a
+   rigid cluster the nav stays centred while both sides fit, and moves toward
+   the logo by exactly what the cluster needs when they do not — it can never
+   be overlapped. Below the fold the nav is a sheet and the column may shrink
+   again (its pieces fold on their own, see the phone rules below). */
+.app-bar--learner:not(.is-compact) .app-bar-user { min-width: auto; }
+
+/* Phones: the compact bar is logo · menu · cluster in one row. The account
+   chip shows the medal alone (name and XP live in its menu), so the row fits
+   from 360px up without the cluster sliding over the menu button and logo. */
+@media (max-width: 520px) {
+  .app-bar--learner .user-menu__trigger--progression {
+    min-inline-size: 0;
+    padding-inline-end: 8px;
+  }
+  .app-bar--learner .user-menu__trigger--progression .user-menu__identity { display: none; }
+  .app-bar--learner .user-menu__trigger--progression .user-menu__progress { inset-inline: 6px; }
+  .app-bar--learner .learner-app-bar__trailing { gap: var(--sp-1); }
+}
+
+/* The narrowest phones (360–400px): the same row with the air taken out —
+   tighter gutters, a smaller logo and menu button, the chip without its
+   chevron (the medal is the button). Measured: 354px of a 360px screen. */
+@media (max-width: 400px) {
+  /* `.app-bar.is-compact` in responsive.css loads later at the same
+     specificity; the extra class wins the gutter, gap and button size. */
+  .app-bar--learner.app-bar.is-compact { gap: var(--sp-2); padding-inline: 10px; }
+  .app-bar--learner.is-compact .app-bar-brand { inline-size: 56px; }
+  .app-bar--learner.is-compact .app-bar-brand .yuvi-brand-logo { inline-size: 52px; }
+  .app-bar--learner.app-bar.is-compact .app-bar-menu-toggle { inline-size: 40px; block-size: 40px; }
+  .app-bar--learner .user-menu__trigger--progression { gap: 0; padding-inline: 4px 6px; }
+  .app-bar--learner .user-menu__trigger--progression .user-menu__chevron { display: none; }
+  .app-bar--learner .wallet-chip { padding-inline: 8px; }
+}
 
 /* Unread-messages badge on the chat tab — same shape as the teacher bar's. */
 .learner-app-nav__badge {
