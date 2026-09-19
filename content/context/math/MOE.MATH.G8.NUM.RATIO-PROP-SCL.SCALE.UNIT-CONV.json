@@ -8,7 +8,7 @@
       "component_id": "methodica-math-scale-01-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-05T10:33:05.109178Z",
       "component_fingerprint": "ea38be8bacf1bbfb",
       "extraction": {
@@ -384,7 +384,7 @@
       "component_id": "methodica-math-scale-01-02",
       "title": "זמן תרגול #2",
       "cognitive_level": "['algorithmic-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-05T10:33:11.675070Z",
       "component_fingerprint": "9435625bd65f7e31",
       "extraction": {
@@ -727,7 +727,7 @@
       "component_id": "methodica-math-scale-01-03",
       "title": "משימת כיתה",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-05T10:33:16.942786Z",
       "component_fingerprint": "5f5a73abb1f941dd",
       "extraction": {
@@ -773,7 +773,7 @@
       "component_id": "methodica-math-scale-01-04",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-05T10:33:18.241453Z",
       "component_fingerprint": "f92243be061c258a",
       "extraction": {
@@ -1025,7 +1025,7 @@
       "component_id": "methodica-math-scale-01-05",
       "title": "שאלת שיא",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-05T10:33:21.464396Z",
       "component_fingerprint": "9e20968402929b00",
       "extraction": {

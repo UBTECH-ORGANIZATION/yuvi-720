@@ -8,7 +8,7 @@
       "component_id": "methodica-science-mass-measure-01-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['applying-a-model-or-procedure']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-07-20T11:49:35.436061Z",
       "component_fingerprint": "2176ce262115f424",
       "extraction": {
@@ -526,7 +526,7 @@
       "component_id": "methodica-science-mass-measure-01-02",
       "title": "זמן תרגול",
       "cognitive_level": "['applying-a-model-or-procedure']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-07-20T11:46:56.744434Z",
       "component_fingerprint": "7cc811eab75b1f8e",
       "extraction": {
@@ -723,7 +723,7 @@
       "component_id": "methodica-science-mass-measure-01-04",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['analyzing']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-07-20T11:47:00.794118Z",
       "component_fingerprint": "d431389f7ac1d5fc",
       "extraction": {
@@ -1018,7 +1018,7 @@
       "component_id": "methodica-science-mass-measure-01-05",
       "title": "שאלת שיא",
       "cognitive_level": "['evaluating-and-justifying']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-07-20T11:47:05.281589Z",
       "component_fingerprint": "0c2fc596dc6e04f7",
       "extraction": {
