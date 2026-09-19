@@ -8,7 +8,7 @@
       "component_id": "methodica-math-ratio-02-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-06T05:13:31.191058Z",
       "component_fingerprint": "06fd957ce05aa942",
       "extraction": {
@@ -4391,12 +4391,12 @@
       "component_id": "methodica-math-ratio-02-02",
       "title": "זמן תרגול",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-06T05:13:32.241637Z",
       "component_fingerprint": "93bca46bc32e4b13",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:45Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -4663,12 +4663,12 @@
       "component_id": "methodica-math-ratio-02-03",
       "title": "זמן תרגול 2",
       "cognitive_level": "['algorithmic-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-06T05:13:33.352703Z",
       "component_fingerprint": "1ff0888d0ba9f2d8",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:45Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -5010,12 +5010,12 @@
       "component_id": "methodica-math-ratio-02-04",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-06T05:13:34.581505Z",
       "component_fingerprint": "69d01c4ff53c8179",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:45Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -5231,7 +5231,7 @@
       "component_id": "methodica-math-ratio-02-05",
       "title": "שאלת שיא",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-06T05:13:35.356041Z",
       "component_fingerprint": "de4ca61dc86cb6d3",
       "extraction": {

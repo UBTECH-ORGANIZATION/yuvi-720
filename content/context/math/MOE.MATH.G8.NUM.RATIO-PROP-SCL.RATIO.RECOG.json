@@ -8,7 +8,7 @@
       "component_id": "methodica-math-ratio-01-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:02.737152Z",
       "component_fingerprint": "b05ce0123b2f79af",
       "extraction": {
@@ -2701,7 +2701,7 @@
       "component_id": "methodica-math-ratio-01-02",
       "title": "זמן תרגול",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:06.283512Z",
       "component_fingerprint": "de06a116375d2f6b",
       "extraction": {
@@ -3485,12 +3485,12 @@
       "component_id": "methodica-math-ratio-01-03",
       "title": "זמן תרגול #2",
       "cognitive_level": "['algorithmic-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:08.036960Z",
       "component_fingerprint": "cc6c1ce663ec3140",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:43Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -3998,12 +3998,12 @@
       "component_id": "methodica-math-ratio-01-04",
       "title": "משימה בכיתה",
       "cognitive_level": "['process-thinking']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:09.785529Z",
       "component_fingerprint": "26403f12e32204fb",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:44Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -4044,12 +4044,12 @@
       "component_id": "methodica-math-ratio-01-05",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:10.377935Z",
       "component_fingerprint": "9c651bdb2b0ac53e",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:44Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -4213,12 +4213,12 @@
       "component_id": "methodica-math-ratio-01-06",
       "title": "שאלת שיא",
       "cognitive_level": "['interpretation-and-reasoning']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-09-03T11:50:11.385229Z",
       "component_fingerprint": "717d788649192fda",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-19T01:39:44Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
