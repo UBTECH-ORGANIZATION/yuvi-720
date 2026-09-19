@@ -18,12 +18,13 @@ import { fileURLToPath } from 'node:url'
 import {
   anchorAt, focusedIndex, isMilestone, itemSlots, levelState, litFraction, positionIndex,
   progressForScroll, scrollForIndex, trackHeight, xpAway, SEGMENT_PX, SWAY,
+  yuviPosition, idleBreakerPose, createYuviFlight,
 } from '../src/features/roadmap/roadmapModel.ts'
 import { rewardItems, rewardLabel } from '../src/services/levelRewards.ts'
 import type { ProgressionStatus, RoadmapLevel, XpLevelReward } from '../src/services/progression.ts'
 
 const SRC = fileURLToPath(new URL('../src/', import.meta.url))
-const read = (path: string) => readFileSync(join(SRC, path), 'utf8')
+const read = (path: string) => readFileSync(join(SRC, path), 'utf8').replace(/\r\n/g, '\n')
 
 const status = (level: number, progress = 0, totalXp = 0): ProgressionStatus => ({
   level, totalXp, currentLevelXp: 0, xpToNext: level < 50 ? 100 : null, nextLevel: level < 50 ? level + 1 : null,
@@ -72,6 +73,119 @@ describe('the learner on the road', () => {
     const row: RoadmapLevel = { level: 10, startXp: 1800, xpToNext: 350, reward: reward({ level: 10 }) }
     assert.equal(xpAway(row, status(5, 0, 680)), 1120)
     assert.equal(xpAway(row, status(12, 0, 2500)), 0)
+  })
+})
+
+describe('Yuvi on the focused level', () => {
+  it('starts on the current pad, independent of partial XP', () => {
+    const anchor = anchorAt(4)
+    assert.deepEqual(yuviPosition(status(5, 0.75), 50), {
+      x: anchor.x, y: anchor.y + 0.07, z: anchor.z + 0.8,
+    })
+    assert.deepEqual(yuviPosition(status(5, 0), 50), yuviPosition(status(5, 0.99), 50))
+    assert.notDeepEqual(yuviPosition(status(5), 50), yuviPosition(status(6), 50))
+    assert.deepEqual(yuviPosition(status(51), 50), yuviPosition(status(50), 50))
+  })
+
+  it('lands inside reached rings and hovers outside locked rings, mirrored in RTL', () => {
+    for (const index of [0, 3, 4, 5, 9, 49]) {
+      const anchor = anchorAt(index)
+      const position = yuviPosition(status(5), 50, index)
+      const mirrored = yuviPosition(status(5), 50, index, true)
+      if (index < 5) {
+        assert.equal(position.x, anchor.x)
+        assert.equal(position.y, anchor.y + 0.07)
+      } else {
+        assert.ok(position.x - anchor.x > (isMilestone(index + 1) ? 2.52 : 1.8))
+        assert.equal(position.y, anchor.y + 0.65)
+        assert.ok(Math.abs(mirrored.x + position.x - 2 * anchor.x) < 1e-9)
+      }
+    }
+    assert.deepEqual(yuviPosition(status(5), 50, -20), yuviPosition(status(5), 50, 0))
+    assert.deepEqual(yuviPosition(status(5), 50, 80), yuviPosition(status(5), 50, 49))
+  })
+
+  it('flies vertically and horizontally, sometimes spinning, then lands exactly', () => {
+    const origin = yuviPosition(status(5), 50, 3)
+    const destination = yuviPosition(status(5), 50, 4)
+    for (const spin of [0, 1, -1]) {
+      const flight = createYuviFlight(origin)
+      flight.retarget(destination, spin)
+      flight.update(0.4)
+      assert.notEqual(flight.position.x, origin.x)
+      assert.notEqual(flight.position.z, origin.z)
+      assert.ok(flight.position.y > Math.max(origin.y, destination.y))
+      assert.equal(Math.sign(flight.yaw), spin)
+      flight.update(2)
+      assert.deepEqual(flight.position, destination)
+      assert.equal(flight.active, false)
+      assert.equal(flight.yaw, 0)
+      assert.equal(flight.bank, 0)
+    }
+  })
+
+  it('reverses from the visible position and velocity without jumping', () => {
+    const origin = yuviPosition(status(5), 50, 3)
+    const flight = createYuviFlight(origin)
+    flight.retarget(yuviPosition(status(5), 50, 6), 1)
+    flight.update(0.3)
+    const previous = { ...flight.position }
+    flight.update(0.0001)
+    const visible = { ...flight.position }
+    const yaw = flight.yaw
+    flight.retarget(origin, -1)
+    assert.deepEqual(flight.position, visible)
+    assert.equal(flight.yaw, yaw)
+    flight.update(0.0001)
+    for (const axis of ['x', 'y', 'z'] as const) {
+      assert.ok(Math.abs((flight.position[axis] - visible[axis]) - (visible[axis] - previous[axis])) < 0.00001)
+    }
+    flight.update(2)
+    assert.deepEqual(flight.position, origin)
+  })
+
+  it('lands when a focused level unlocks and skips flight for reduced motion', () => {
+    const flight = createYuviFlight(yuviPosition(status(5), 50, 5))
+    const landing = yuviPosition(status(6), 50, 5)
+    flight.retarget(landing)
+    assert.equal(flight.active, true)
+    flight.update(2)
+    assert.deepEqual(flight.position, landing)
+    const next = yuviPosition(status(6), 50, 9)
+    flight.retarget(next, 1, true)
+    assert.deepEqual(flight.position, next)
+    assert.equal(flight.active, false)
+    assert.equal(flight.yaw, 0)
+  })
+
+  it('returns to a neutral standing pose between idle breakers', () => {
+    const neutral = idleBreakerPose(0)
+    for (const seconds of [5, 6, 10, 11, 16, 17, 18, 36]) {
+      assert.deepEqual(idleBreakerPose(seconds), neutral)
+    }
+    assert.notEqual(idleBreakerPose(2).headYaw, neutral.headYaw)
+    assert.ok(idleBreakerPose(8).rightArm > 1)
+    assert.ok(idleBreakerPose(14).leftArm < -2)
+    for (const seconds of [2, 8, 14]) {
+      assert.deepEqual(idleBreakerPose(seconds, true), neutral)
+      assert.deepEqual(idleBreakerPose(seconds + 18), idleBreakerPose(seconds))
+    }
+  })
+
+  it('shares the scene renderer and follows live level and design updates', () => {
+    const scene = read('features/roadmap/RoadmapScene.ts')
+    const avatar = read('features/roadmap/RoadmapYuvi.ts')
+    assert.match(scene, /yuvi\.update\(clock\.t, reduceMotion, yuviFlight\.active \|\| hovering, dt\)/)
+    assert.match(scene, /placeBeacon\(\)\s+targetYuvi\(\)/)
+    assert.match(scene, /targetYuvi\(previous < 0, true\)/)
+    assert.match(scene, /flightCount % 3 === 0/)
+    assert.match(avatar, /roadmap-yuvi-thruster/)
+    assert.match(avatar, /exhaustTexture\.dispose\(\)/)
+    assert.match(scene, /yuvi\.dispose\(\)/)
+    assert.match(avatar, /createYuviAvatarRig/)
+    assert.doesNotMatch(avatar, /WebGLRenderer|requestAnimationFrame|setInterval/)
+    assert.match(read('features/roadmap/RoadmapPage.tsx'), /setDesign\(design\)/)
+    assert.match(read('features/Yuvi-studio/YuviAvatar3D.tsx'), /createYuviAvatarRig\(design, settings, tier\)/)
   })
 })
 

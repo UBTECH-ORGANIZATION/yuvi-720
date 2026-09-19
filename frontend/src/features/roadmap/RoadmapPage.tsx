@@ -8,6 +8,7 @@ import { ErrorState, Icon, LoadingState } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useProgression } from '../../providers/ProgressionProvider'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
+import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { rewardItems, rewardLabel, type RewardItem } from '../../services/levelRewards'
 import {
   getProgressionRoadmap, type ProgressionRoadmap, type ProgressionStatus, type RoadmapLevel,
@@ -76,6 +77,7 @@ interface StageProps {
 
 function RoadmapStage({ roadmap, status }: StageProps) {
   const { t, direction } = useI18n()
+  const { design } = useYuviDesign()
   const studioOpen = useStudioTransition()?.isOpen ?? false
   const levels = roadmap.levels
   const count = levels.length
@@ -83,6 +85,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
   const cardRef = useRef<HTMLElement>(null)
   const sceneRef = useRef<RoadmapScene | null>(null)
   const statusRef = useRef(status)
+  const designRef = useRef(design)
   const focusRef = useRef(-1)
   const anchorRef = useRef<SceneAnchor | null>(null)
   const [focus, setFocus] = useState(-1)
@@ -137,6 +140,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     const scene = createRoadmapScene(stage, {
       levels,
       status: statusRef.current,
+      design: designRef.current,
       tier: resolved.final,
       reduceMotion,
       onAnchor: (anchor) => { anchorRef.current = anchor; placeCard(anchor) },
@@ -209,6 +213,12 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     statusRef.current = status
     sceneRef.current?.setStatus(status)
   }, [status])
+
+  useEffect(() => {
+    if (designRef.current === design) return
+    designRef.current = design
+    sceneRef.current?.setDesign(design)
+  }, [design])
 
   // The studio opens as an overlay over this page and brings its own WebGL
   // context; the road stops drawing underneath it rather than sharing the GPU.

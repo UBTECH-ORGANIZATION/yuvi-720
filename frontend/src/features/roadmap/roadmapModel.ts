@@ -54,6 +54,105 @@ export function positionIndex(status: ProgressionStatus, levelCount: number): nu
   return Math.max(0, Math.min(levelCount - 1, status.level - 1 + fraction))
 }
 
+export function yuviPosition(status: ProgressionStatus, levelCount: number, focus = status.level - 1, rtl = false): Vec3 {
+  const index = focusedIndex(focus, levelCount)
+  const anchor = anchorAt(index)
+  const locked = index + 1 > status.level
+  const beside = isMilestone(index + 1) ? 3.1 : 2.35
+  return {
+    x: anchor.x + (locked ? beside * (rtl ? -1 : 1) : 0),
+    y: anchor.y + (locked ? 0.65 : 0.07),
+    z: anchor.z + 0.8,
+  }
+}
+
+export function createYuviFlight(initial: Vec3) {
+  const position = { ...initial }
+  const velocity = { x: 0, y: 0, z: 0 }
+  let origin = { ...initial }
+  let destination = { ...initial }
+  let initialVelocity = { ...velocity }
+  let elapsed = 0
+  let duration = 1
+  let height = 0
+  let yaw = 0
+  let startYaw = 0
+  let endYaw = 0
+  let bank = 0
+  let startBank = 0
+  let active = false
+  return {
+    position,
+    get active() { return active },
+    get yaw() { return yaw },
+    get bank() { return bank },
+    retarget(next: Vec3, spin = 0, reduceMotion = false) {
+      if (reduceMotion) {
+        Object.assign(position, next)
+        Object.assign(velocity, { x: 0, y: 0, z: 0 })
+        destination = { ...next }
+        yaw = bank = 0
+        active = false
+        return
+      }
+      if (next.x === destination.x && next.y === destination.y && next.z === destination.z) return
+      origin = { ...position }
+      destination = { ...next }
+      initialVelocity = { ...velocity }
+      const distance = Math.hypot(next.x - origin.x, next.y - origin.y, next.z - origin.z)
+      duration = Math.min(1.5, 0.65 + distance * 0.045)
+      height = Math.min(2, 0.65 + distance * 0.08)
+      startYaw = yaw
+      endYaw = Math.round(yaw / (Math.PI * 2)) * Math.PI * 2 + spin * Math.PI * 2
+      startBank = bank
+      elapsed = 0
+      active = true
+    },
+    update(dt: number) {
+      if (!active) return
+      elapsed = Math.min(duration, elapsed + Math.max(0, dt))
+      const progress = elapsed / duration
+      const eased = progress * progress * (3 - 2 * progress)
+      const tangent = progress * (1 - progress) ** 2
+      const arch = 16 * progress ** 2 * (1 - progress) ** 2
+      for (const axis of ['x', 'y', 'z'] as const) {
+        const delta = destination[axis] - origin[axis]
+        position[axis] = origin[axis] + delta * eased + initialVelocity[axis] * duration * tangent
+          + (axis === 'y' ? height * arch : 0)
+        velocity[axis] = delta * 6 * progress * (1 - progress) / duration
+          + initialVelocity[axis] * (1 - 4 * progress + 3 * progress ** 2)
+          + (axis === 'y' ? height * 32 * progress * (1 - progress) * (1 - 2 * progress) / duration : 0)
+      }
+      yaw = startYaw + (endYaw - startYaw) * eased
+      bank = startBank * (1 - eased) - Math.tanh((destination.x - origin.x) / 5) * arch * 0.18
+      if (elapsed === duration) {
+        Object.assign(position, destination)
+        Object.assign(velocity, { x: 0, y: 0, z: 0 })
+        yaw = bank = 0
+        active = false
+      }
+    },
+  }
+}
+
+export function idleBreakerPose(seconds: number, reduceMotion = false) {
+  const phase = Math.max(0, seconds) % 18
+  const envelope = (start: number, duration: number) => {
+    const progress = (phase - start) / duration
+    return progress > 0 && progress < 1 ? Math.sin(Math.PI * progress) ** 2 : 0
+  }
+  const look = reduceMotion ? 0 : envelope(1, 4)
+  const wave = reduceMotion ? 0 : envelope(7, 3)
+  const stretch = reduceMotion ? 0 : envelope(12, 4)
+  return {
+    headYaw: look ? look * Math.sin((phase - 1) * Math.PI / 2) * 0.4 : 0,
+    headPitch: stretch ? -stretch * 0.12 : 0,
+    headRoll: wave * 0.09,
+    leftArm: -0.095 - stretch * 2.4,
+    rightArm: 0.095 + stretch * 2.4 + wave * (2.2 + Math.sin(phase * 8) * 0.18),
+  }
+}
+
 /** How much of the road, start to finish, is lit: everything travelled plus
  *  the part-way to the next level. */
 export function litFraction(status: ProgressionStatus, levelCount: number): number {

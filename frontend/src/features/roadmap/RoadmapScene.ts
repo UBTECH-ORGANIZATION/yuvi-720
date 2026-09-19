@@ -16,11 +16,13 @@ import { tierSettings, type RenderTier } from '../Yuvi-studio/renderTier'
 import { preRenderedThumb } from '../Yuvi-studio/studioThumbs'
 import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramPad, worldHologramStrip } from '../Yuvi-studio/worldHologramStrips'
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
+import type { YuviDesign } from '../Yuvi-studio/YuviDesign'
+import { createRoadmapYuvi } from './RoadmapYuvi'
 import yuviBadgeUrl from '../../assets/yuvi-badge.webp'
 import { rewardItems, type RewardItem } from '../../services/levelRewards'
 import type { ProgressionStatus, RoadmapLevel } from '../../services/progression'
 import {
-  anchorAt, isMilestone, itemSlots, levelState, litFraction, positionIndex, type LevelState,
+  anchorAt, createYuviFlight, isMilestone, itemSlots, levelState, litFraction, positionIndex, yuviPosition, type LevelState,
 } from './roadmapModel'
 import { beamGradient, glowDot, levelBadge, rewardGlyph, sparkGlyph } from './roadmapGlyphs'
 
@@ -42,6 +44,7 @@ export interface SceneAnchor {
 export interface RoadmapSceneOptions {
   levels: RoadmapLevel[]
   status: ProgressionStatus
+  design: YuviDesign
   tier: RenderTier
   reduceMotion: boolean
   onAnchor: (anchor: SceneAnchor) => void
@@ -57,6 +60,7 @@ export interface RoadmapScene {
   /** The pad whose rewards are up. */
   setFocus(index: number): void
   setStatus(status: ProgressionStatus): void
+  setDesign(design: YuviDesign): void
   setQuality(tier: RenderTier): void
   /** Stop drawing (the studio overlay is up over the page) without losing
    *  the context; drawing resumes where it left off. */
@@ -446,8 +450,8 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     const restY = 0.52
     node.group.position.set(
       node.slot.x * (0.6 + 0.4 * t),
-      restY + (node.slot.y - restY) * t + bob * t,
-      node.slot.z * t,
+      restY + (node.slot.y - restY) * t + bob * t + (pad.state !== 'locked' ? 1.25 : 0),
+      node.slot.z * t - (pad.state !== 'locked' ? 0.65 : 0),
     )
     node.group.visible = scale > 0.002
   }
@@ -483,6 +487,25 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     beacon.position.set(a.x, a.y, a.z)
   }
   placeBeacon()
+
+  let yuvi = createRoadmapYuvi(options.design)
+  scene.add(yuvi.object)
+  const yuviFlight = createYuviFlight(yuviPosition(status, count))
+  let flightCount = 0
+  let hovering = false
+  const placeYuvi = () => {
+    const position = yuviFlight.position
+    yuvi.object.position.set(position.x, position.y, position.z)
+  }
+  const targetYuvi = (immediate = false, browsing = false) => {
+    const index = focus < 0 ? status.level - 1 : focus
+    hovering = index + 1 > status.level
+    if (browsing && !immediate) flightCount++
+    const spin = browsing && flightCount % 3 === 0 ? (flightCount % 2 === 0 ? -1 : 1) : 0
+    yuviFlight.retarget(yuviPosition(status, count, index, document.documentElement.dir === 'rtl'), spin, reduceMotion || immediate)
+    placeYuvi()
+  }
+  placeYuvi()
 
   // ── Dust: static points in a box around the whole road, drifting upward.
   const DUST_MAX = 700
@@ -522,6 +545,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   const parallax = new THREE.Vector2()
   let lastX = 0
   let bank = 0
+  let cameraSide = 0
   const cameraTarget = new THREE.Vector3()
   const cameraGoal = new THREE.Vector3()
   const lookGoal = new THREE.Vector3()
@@ -582,11 +606,12 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       projected.copy(local).applyMatrix4(pad.group.matrixWorld).project(camera)
       return { x: (projected.x + 1) / 2 * width, y: (1 - projected.y) / 2 * height, inFront: projected.z < 1 }
     }
-    const items = toScreen(new THREE.Vector3(0, 1.75, 0))
+    const rewardHeight = pad.state !== 'locked' ? 3 : 1.75
+    const items = toScreen(new THREE.Vector3(0, rewardHeight, 0))
     const centre = toScreen(new THREE.Vector3(0, 0, 0))
     const reach = Math.min(-0.95, ...(pad.items ?? []).map((node) => node.slot.x - 0.95))
-    const edgeA = toScreen(new THREE.Vector3(reach, 1.75, 0))
-    const edgeB = toScreen(new THREE.Vector3(-reach, 1.75, 0))
+    const edgeA = toScreen(new THREE.Vector3(reach, rewardHeight, 0))
+    const edgeB = toScreen(new THREE.Vector3(-reach, rewardHeight, 0))
     const visible = items.inFront && items.x > -200 && items.x < width + 200 && items.y > -200 && items.y < height + 200
     const next = {
       x: items.x, y: items.y, padX: centre.x, padY: centre.y,
@@ -618,9 +643,12 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     // Portrait screens dock the card over the bottom third, so the pad is
     // framed higher there: the camera sits a little higher and looks lower.
     const portrait = camera.aspect < 0.9
-    cameraGoal.set(here.x + parallax.x * 0.9, here.y + CAMERA_UP + (portrait ? 0.9 : 0) + parallax.y * 0.45, here.z + CAMERA_BACK + (portrait ? 1.5 : 0))
+    const hoverFrameOffset = isMilestone(focus + 1) ? 2.8 : 1.55
+    const sideGoal = portrait && hovering ? hoverFrameOffset * (document.documentElement.dir === 'rtl' ? -1 : 1) : 0
+    cameraSide += (sideGoal - cameraSide) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 6.5))
+    cameraGoal.set(here.x + cameraSide + parallax.x * 0.9, here.y + CAMERA_UP + (portrait ? 0.9 : 0) + parallax.y * 0.45, here.z + CAMERA_BACK + (portrait ? 1.5 : 0))
     camera.position.copy(cameraGoal)
-    lookGoal.set(ahead.x, ahead.y + (portrait ? -0.9 : 1.25), ahead.z)
+    lookGoal.set(portrait ? here.x + cameraSide : ahead.x, ahead.y + (portrait ? -0.9 : 1.25), ahead.z)
     cameraTarget.copy(lookGoal)
     const dx = here.x - lastX
     lastX = here.x
@@ -631,7 +659,8 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     // The beacon is a seven-unit beam: seen from the pad next to it, it is
     // the whole screen. It fades out as the camera comes within reach.
     const beaconDistance = camera.position.distanceTo(beacon.position)
-    const beaconFade = Math.max(0, Math.min(1, (beaconDistance - 4.5) / 6))
+    const nearbyFade = Math.max(0, Math.min(1, Math.abs(progress - positionIndex(status, count)) - 2))
+    const beaconFade = Math.max(0, Math.min(1, (beaconDistance - 4.5) / 6)) * nearbyFade
     beacon.visible = beaconFade > 0.01
     beamMaterial.opacity = 0.55 * beaconFade
     coreMaterial.opacity = 0.9 * beaconFade
@@ -665,6 +694,11 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
         dustGeometry.attributes.position.needsUpdate = true
       }
     }
+    yuviFlight.update(dt)
+    placeYuvi()
+    if (hovering && !yuviFlight.active && !reduceMotion) yuvi.object.position.y += Math.sin(clock.t * 5.2) * 0.04
+    yuvi.object.rotation.set(0, yuviFlight.yaw, yuviFlight.bank)
+    yuvi.update(clock.t, reduceMotion, yuviFlight.active || hovering, dt)
     // Items: bob while up, spin the spark, step the hologram.
     for (let i = Math.max(0, focus - 3); i <= Math.min(count - 1, focus + 3); i++) {
       const pad = pads[i]
@@ -697,9 +731,11 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false)
 
   const setFocus = (index: number) => {
+    index = Math.max(0, Math.min(count - 1, Math.round(index)))
     if (index === focus) return
     const previous = focus
     focus = index
+    targetYuvi(previous < 0, true)
     if (previous >= 0) popItems(previous, false)
     popItems(index, true)
     dirty = true
@@ -710,6 +746,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     status = next
     roadGlowMaterial.uniforms.uLit.value = litFraction(status, count)
     placeBeacon()
+    targetYuvi()
     pads.forEach((pad, i) => {
       const state = levelState(levels[i].level, status)
       if (state === pad.state) return
@@ -736,6 +773,13 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     jumpTo(next) { goal = progress = Math.max(0, Math.min(count - 1, next)); lastX = anchorAt(progress).x; dirty = true },
     setFocus,
     setStatus: applyStatus,
+    setDesign(design) {
+      yuvi.dispose()
+      yuvi = createRoadmapYuvi(design)
+      scene.add(yuvi.object)
+      placeYuvi()
+      dirty = true
+    },
     setQuality: applyQuality,
     setPaused(next) { paused = next; if (!next) dirty = true },
     dispose() {
@@ -747,6 +791,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
       renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored)
       g.revert()
+      yuvi.dispose()
       for (const pad of pads) for (const node of pad.items ?? []) node.group.traverse((o) => { if (o instanceof THREE.Sprite) o.material.dispose() })
       for (const pad of pads) pad.badge.material.dispose()
       ;[beaconHalo, mark].forEach((s) => s.material.dispose())
