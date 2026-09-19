@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { useProgression } from '../providers/ProgressionProvider'
+import { rewardLabel as nameReward } from '../services/levelRewards'
 
 const REASON_KEYS: Record<string, string> = {
   'onboarding.personal_path_started': 'progression.reason.personalPathStarted',
@@ -11,38 +12,6 @@ const REASON_KEYS: Record<string, string> = {
   'personal_objective.progressed': 'progression.reason.objectiveProgressed',
   'personal_objective.completed': 'progression.reason.objectiveCompleted',
   'learning_help.milestone': 'progression.reason.helpMilestone'
-}
-
-const REWARD_LABEL_KEYS: Record<string, string> = {
-  studio_wall_decals_03: 'progression.reward.wallDecals',
-  neon: 'progression.reward.neonAmbience',
-  level_furniture_05: 'YuviStudio.room.item.level_furniture_05',
-  room_ambient_lights_06: 'progression.reward.ambientLights',
-  stringLights: 'progression.reward.stringLights',
-  studio_desk_accessory_08: 'progression.reward.deskDisplay',
-  globe: 'progression.reward.globe',
-  level_furniture_09: 'progression.reward.trophyStand',
-  parkCarousel: 'progression.reward.parkCarousel',
-  room_audio_theme_10: 'progression.reward.roomAudio',
-  'layout:sportsArena': 'progression.reward.sportsArena',
-  rocketModel: 'progression.reward.rocketModel',
-  studio_posters_13: 'progression.reward.studioPosters',
-  parkTree: 'progression.reward.parkTree',
-  level_furniture_14: 'progression.reward.creativeDisplay',
-  telescope: 'progression.reward.telescope',
-  parkBasketSwing: 'progression.reward.basketSwing',
-  level_furniture_17: 'progression.reward.soundWaveLamp',
-  level_furniture_18: 'progression.reward.constellationLamp',
-  room_theme_20: 'progression.reward.roomTheme',
-  'layout:creatorLoft': 'progression.reward.creatorLoft',
-  starProjector: 'progression.reward.starProjector',
-  studio_display_shelf_23: 'progression.reward.displayShelf',
-  trophies: 'progression.reward.trophyCollection',
-  level_furniture_24: 'progression.reward.makerCorner',
-  dragonwings: 'YuviStudio.item.dragonwings',
-  level_furniture_26: 'progression.reward.achievementDisplay',
-  premium_room_ambience_27: 'progression.reward.premiumAmbience',
-  personal_journey_monument_29: 'progression.reward.journeyMonument'
 }
 
 function LevelUpConfetti() {
@@ -76,13 +45,7 @@ export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
   if (!batch || paused) return null
   const totalXp = batch.receipts.reduce((sum, receipt) => sum + receipt.awarded, 0)
   const levelRewards = batch.receipts.flatMap((receipt) => receipt.levelRewards ?? [])
-  const rewardLabel = (assetId: string) => {
-    const profileFrameLevel = assetId.match(/^(?:profile|prestige)_level_frame_(\d+)$/)
-    if (profileFrameLevel) return t('progression.reward.profileFrame', { level: profileFrameLevel[1] })
-    const prestigeObjectLevel = assetId.match(/^prestige_room_object_(\d+)$/)
-    if (prestigeObjectLevel) return t('progression.reward.prestigeObject', { level: prestigeObjectLevel[1] })
-    return t(REWARD_LABEL_KEYS[assetId] ?? 'progression.reward.item')
-  }
+  const rewardLabel = (assetId: string) => nameReward(t, assetId)
 
   return (
     <>

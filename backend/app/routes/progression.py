@@ -47,6 +47,27 @@ async def read_ledger(
     })
 
 
+@router.get("/roadmap")
+async def read_roadmap(learner_id: str = Depends(require_learner)):
+    """The whole ladder — every level, the XP that opens it and what it
+    unlocks — with the learner's place on it. A read-only projection of the
+    server-owned rules, so the roadmap screen never carries its own copy of
+    the curve or the reward table to drift out of step with the settlement."""
+    from app.services.progression.curve import MAX_LEVEL, level_table
+    from app.services.progression.rewards import public_reward_for_level
+
+    levels = [
+        {**row, "reward": public_reward_for_level(row["level"])}
+        for row in level_table()
+    ]
+    return JSONResponse(content={
+        "rulesVersion": progression.RULES_VERSION,
+        "maxLevel": MAX_LEVEL,
+        "levels": levels,
+        "progression": await progression.get_status(learner_id),
+    })
+
+
 @router.post("/debug/grant-xp")
 async def grant_debug_xp(learner_id: str = Depends(require_learner)):
     """Local-only XP increment for exercising level rewards and catalog locks."""
