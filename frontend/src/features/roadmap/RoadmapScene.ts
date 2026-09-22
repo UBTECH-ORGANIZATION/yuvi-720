@@ -1,6 +1,5 @@
-/* The roadmap's one WebGL scene: a road that climbs through space, a pad per
-   level, the learner's beacon, and the rewards that rise off a pad when the
-   camera settles on it.
+/* The roadmap's one WebGL scene: stations climbing through space, the
+  learner's beacon, and rewards that rise when the camera settles on one.
 
    Rules it keeps, from the studio's performance work (`renderTier.ts`):
    one WebGL context on the page (the page mounts nothing else that draws),
@@ -18,11 +17,13 @@ import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramPad, worldHol
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import type { YuviDesign } from '../Yuvi-studio/YuviDesign'
 import { createRoadmapYuvi } from './RoadmapYuvi'
+import { createJungleStationAssets } from './RoadmapJungleStation'
 import yuviBadgeUrl from '../../assets/yuvi-badge.webp'
+import type { Theme } from '../../providers/ThemeProvider'
 import { rewardItems, type RewardItem } from '../../services/levelRewards'
 import type { ProgressionStatus, RoadmapLevel } from '../../services/progression'
 import {
-  anchorAt, createYuviFlight, isMilestone, itemSlots, levelState, litFraction, positionIndex, yuviPosition, type LevelState,
+  anchorAt, createYuviFlight, isMilestone, itemSlots, levelState, positionIndex, yuviPosition, type LevelState,
 } from './roadmapModel'
 import { beamGradient, glowDot, levelBadge, rewardGlyph, sparkGlyph } from './roadmapGlyphs'
 
@@ -37,6 +38,12 @@ export interface SceneAnchor {
    *  it rather than over it. */
   spanLeft: number
   spanRight: number
+  /** Projected footprint of Yuvi, used to keep the level card from hiding him. */
+  yuviLeft: number
+  yuviRight: number
+  yuviTop: number
+  yuviBottom: number
+  yuviVisible: boolean
   /** False while the pad is behind the camera or off screen. */
   visible: boolean
 }
@@ -45,6 +52,7 @@ export interface RoadmapSceneOptions {
   levels: RoadmapLevel[]
   status: ProgressionStatus
   design: YuviDesign
+  theme: Theme
   tier: RenderTier
   reduceMotion: boolean
   onAnchor: (anchor: SceneAnchor) => void
@@ -61,6 +69,7 @@ export interface RoadmapScene {
   setFocus(index: number): void
   setStatus(status: ProgressionStatus): void
   setDesign(design: YuviDesign): void
+  setTheme(theme: Theme): void
   setQuality(tier: RenderTier): void
   /** Stop drawing (the studio overlay is up over the page) without losing
    *  the context; drawing resumes where it left off. */
@@ -74,12 +83,21 @@ const COLOR = {
   gold: new THREE.Color(0xf4c95d),
   pink: new THREE.Color(0xff8abc),
   slate: new THREE.Color(0x3a4066),
-  slateDeep: new THREE.Color(0x1c2144),
-  road: new THREE.Color(0x161b3f),
-  fog: new THREE.Color(0x070b24),
-  pad: new THREE.Color(0x9ca3bf),
 }
-const ROAD_WIDTH = 1.5
+const SCENE_THEME = {
+  dark: {
+    fog: 0x070b24,
+    dust: 0x9fd8ff, sky: 0xc9deff, ground: 0x243b35, key: 0xfff2e0, lamp: 0x77f4ff,
+    current: 0x77f4ff, reached: 0xf4c95d, locked: 0x3a4066,
+    exposure: 1.05, hemisphere: 1.32, keyIntensity: 1.6, lampIntensity: 34,
+  },
+  light: {
+    fog: 0xd8eff8,
+    dust: 0x4b82b5, sky: 0xffffff, ground: 0x9ec9dc, key: 0xfff3d8, lamp: 0x27b8cb,
+    current: 0x087f96, reached: 0xa66a00, locked: 0x66738c,
+    exposure: 1.12, hemisphere: 1.65, keyIntensity: 1.25, lampIntensity: 20,
+  },
+} as const
 /** The part of a baked world frame that holds the projection: the strips
  *  leave a margin around the pad that a picker card needs and a sprite
  *  floating over a pad does not. */
@@ -88,71 +106,24 @@ const CAMERA_BACK = 12.4
 const CAMERA_UP = 4.7
 const REST_SCALE = 0.55
 
-function stateColor(state: LevelState): THREE.Color {
-  return state === 'current' ? COLOR.cyan : state === 'reached' ? COLOR.gold : COLOR.slate
+function stateColor(state: LevelState, theme: Theme): THREE.Color {
+  const palette = SCENE_THEME[theme]
+  return new THREE.Color(state === 'current' ? palette.current : state === 'reached' ? palette.reached : palette.locked)
 }
 
-/* ── Road ribbon ─────────────────────────────────────────────────────────── */
-
-/** A flat strip along the curve: `segments` quads, u across (0..1), v along. */
-function ribbon(curve: THREE.CatmullRomCurve3, segments: number, width: number, lift: number): THREE.BufferGeometry {
-  const positions = new Float32Array((segments + 1) * 2 * 3)
-  const uvs = new Float32Array((segments + 1) * 2 * 2)
-  const indices: number[] = []
-  const up = new THREE.Vector3(0, 1, 0)
-  const side = new THREE.Vector3()
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments
-    const p = curve.getPointAt(t)
-    const tangent = curve.getTangentAt(t)
-    side.crossVectors(tangent, up).normalize().multiplyScalar(width / 2)
-    const o = i * 6
-    positions[o] = p.x - side.x; positions[o + 1] = p.y + lift; positions[o + 2] = p.z - side.z
-    positions[o + 3] = p.x + side.x; positions[o + 4] = p.y + lift; positions[o + 5] = p.z + side.z
-    uvs[i * 4] = 0; uvs[i * 4 + 1] = t
-    uvs[i * 4 + 2] = 1; uvs[i * 4 + 3] = t
-    if (i < segments) {
-      const a = i * 2
-      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
-    }
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
-  geometry.setIndex(indices)
-  geometry.computeVertexNormals()
-  return geometry
+function rewardGlowColor(item: RewardItem, locked: boolean, theme: Theme): number {
+  if (locked) return theme === 'light' ? 0x287191 : 0x77f4ff
+  if (item.kind === 'sparks' || item.kind === 'frame') return theme === 'light' ? 0xb06b00 : 0xf4c95d
+  if (item.kind === 'sound') return theme === 'light' ? 0xa83269 : 0xff8abc
+  if (item.kind === 'world') return theme === 'light' ? 0x087f96 : 0x77f4ff
+  return theme === 'light' ? 0x5c48ad : 0x9f7afe
 }
 
-/** Edge lines, a dashed centre line and a pulse that runs up the lit part.
- *  `uLit` is how far along (0..1) the road has been travelled. */
-const ROAD_GLOW = {
-  vertex: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }`,
-  fragment: /* glsl */ `
-    uniform float uLit;
-    uniform float uTime;
-    uniform float uDashes;
-    uniform vec3 uLitColor;
-    uniform vec3 uDimColor;
-    varying vec2 vUv;
-    void main() {
-      float across = abs(vUv.x - 0.5) * 2.0;
-      float edge = smoothstep(0.84, 0.97, across) * (1.0 - smoothstep(0.985, 1.0, across));
-      float centre = 1.0 - smoothstep(0.0, 0.07, across);
-      float dash = smoothstep(0.42, 0.5, fract(vUv.y * uDashes - uTime * 0.35)) * (1.0 - smoothstep(0.9, 0.98, fract(vUv.y * uDashes - uTime * 0.35)));
-      float lit = 1.0 - smoothstep(uLit - 0.002, uLit + 0.002, vUv.y);
-      vec3 base = mix(uDimColor, uLitColor, lit);
-      float head = fract(uTime * 0.07) * uLit;
-      float pulse = exp(-pow((head - vUv.y) * 90.0, 2.0)) * lit;
-      float alpha = edge * (0.55 + 0.45 * lit) + centre * dash * (0.25 + 0.55 * lit) + pulse * 0.9;
-      vec3 colour = base * (edge + centre * dash) + vec3(0.75, 1.0, 1.0) * pulse;
-      gl_FragColor = vec4(colour, alpha);
-    }`,
+function applyRewardGlow(glow: THREE.Sprite, item: RewardItem, locked: boolean, theme: Theme): void {
+  glow.material.color.setHex(rewardGlowColor(item, locked, theme))
+  glow.material.blending = theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending
+  glow.material.opacity = theme === 'light' ? 0.46 : Number(glow.userData.darkOpacity ?? 0.3)
+  glow.material.needsUpdate = true
 }
 
 /* ── Textures ────────────────────────────────────────────────────────────── */
@@ -186,9 +157,6 @@ interface PadNode {
   group: THREE.Group
   ring: THREE.MeshBasicMaterial
   halo: THREE.MeshBasicMaterial
-  gate: THREE.MeshBasicMaterial | null
-  /** The standing ring of a milestone, turned slowly like a coin. */
-  gateGroup: THREE.Group | null
   badge: THREE.Sprite
   state: LevelState
   items: ItemNode[] | null
@@ -209,6 +177,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   const { levels, reduceMotion, onAnchor, onFrame } = options
   const count = levels.length
   let status = options.status
+  let theme = options.theme
   let tier = options.tier
   let settings = tierSettings(tier, true)
   // Render-on-demand flag (reduced motion) and the context-lost latch. Up
@@ -241,7 +210,8 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
 
   // ── Light: a cool sky, one warm key, and a cyan lamp that rides with the
   //    focus so the pad in front of the camera is the bright one.
-  scene.add(new THREE.HemisphereLight(0xbcd3ff, 0x1b1236, 1.15))
+  const hemisphere = new THREE.HemisphereLight(0xbcd3ff, 0x1b1236, 1.15)
+  scene.add(hemisphere)
   const key = new THREE.DirectionalLight(0xfff2e0, 1.6)
   key.position.set(6, 12, 8)
   scene.add(key)
@@ -270,93 +240,39 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     return texture
   }
 
-  // ── The road
   const anchors = levels.map((_, i) => { const a = anchorAt(i); return new THREE.Vector3(a.x, a.y, a.z) })
-  const curve = new THREE.CatmullRomCurve3(anchors, false, 'catmullrom', 0.5)
-  const segments = Math.max(24, (count - 1) * 14)
-  const roadBase = new THREE.Mesh(
-    track(ribbon(curve, segments, ROAD_WIDTH, 0)),
-    track(new THREE.MeshStandardMaterial({ color: COLOR.road, roughness: 0.62, metalness: 0.22, side: THREE.DoubleSide })),
-  )
-  scene.add(roadBase)
-  const roadGlowMaterial = track(new THREE.ShaderMaterial({
-    uniforms: {
-      uLit: { value: litFraction(status, count) },
-      uTime: { value: 0 },
-      uDashes: { value: (count - 1) * 6 },
-      uLitColor: { value: COLOR.cyan.clone() },
-      uDimColor: { value: COLOR.purple.clone().multiplyScalar(0.55) },
-    },
-    vertexShader: ROAD_GLOW.vertex,
-    fragmentShader: ROAD_GLOW.fragment,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  }))
-  scene.add(new THREE.Mesh(track(ribbon(curve, segments, ROAD_WIDTH * 1.02, 0.025)), roadGlowMaterial))
 
-  // ── Pads
-  const padGeometry = track(new THREE.CylinderGeometry(1.6, 1.8, 0.36, 8))
-  const padMaterial = track(new THREE.MeshStandardMaterial({ color: COLOR.pad, roughness: 0.3, metalness: 0.2, flatShading: true }))
-  const stemGeometry = track(new THREE.CylinderGeometry(0.22, 0.42, 2.6, 6))
-  const stemMaterial = track(new THREE.MeshStandardMaterial({ color: COLOR.slateDeep, roughness: 0.7, metalness: 0.3, flatShading: true }))
+  // ── Jungle stations
+  const jungleStations = createJungleStationAssets(theme, tier)
   const ringGeometry = track(new THREE.TorusGeometry(1.52, 0.05, 10, 64))
   const haloGeometry = track(new THREE.RingGeometry(1.5, 2.15, 64))
-  const gateGeometry = track(new THREE.TorusGeometry(2.55, 0.075, 12, 80))
-  const gateFieldGeometry = track(new THREE.CircleGeometry(2.48, 64))
 
   const pads: PadNode[] = levels.map((row, i) => {
     const group = new THREE.Group()
     group.position.copy(anchors[i])
     const milestone = isMilestone(row.level)
     const state = levelState(row.level, status)
-    const base = new THREE.Mesh(padGeometry, padMaterial)
-    base.position.y = -0.2
-    base.rotation.y = Math.PI / 8
-    const stem = new THREE.Mesh(stemGeometry, stemMaterial)
-    stem.position.y = -1.65
-    const ringMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state) }))
+    group.add(jungleStations.create(row.level, milestone))
+    const ringMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state, theme) }))
     ringMaterial.toneMapped = false
     const ring = new THREE.Mesh(ringGeometry, ringMaterial)
     ring.rotation.x = Math.PI / 2
-    ring.position.y = -0.01
-    const haloMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state), transparent: true, opacity: state === 'locked' ? 0.06 : 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }))
+    ring.position.y = 0.15
+    const haloMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state, theme), transparent: true, opacity: state === 'locked' ? 0.06 : 0.22, blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }))
     haloMaterial.toneMapped = false
     const halo = new THREE.Mesh(haloGeometry, haloMaterial)
     halo.rotation.x = -Math.PI / 2
-    halo.position.y = -0.03
-    group.add(base, stem, ring, halo)
+    halo.position.y = 0.12
+    group.add(ring, halo)
     if (milestone) {
-      base.scale.set(1.4, 1, 1.4)
       ring.scale.set(1.4, 1.4, 1)
       halo.scale.set(1.4, 1.4, 1)
-    }
-    let gate: THREE.MeshBasicMaterial | null = null
-    let gateSpinner: THREE.Group | null = null
-    if (milestone) {
-      // A standing ring the road passes through, facing along the road.
-      const gateGroup = new THREE.Group()
-      const t = i / Math.max(1, count - 1)
-      const tangent = curve.getTangentAt(t)
-      gateGroup.lookAt(tangent.clone().add(gateGroup.position))
-      gateGroup.position.y = 2.45
-      gate = track(new THREE.MeshBasicMaterial({ color: stateColor(state) }))
-      gate.toneMapped = false
-      const fieldMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state), transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }))
-      fieldMaterial.toneMapped = false
-      // The ring itself turns inside the oriented group, so the slow coin
-      // spin in the frame loop never fights the orientation set here.
-      const gateSpin = new THREE.Group()
-      gateSpin.add(new THREE.Mesh(gateGeometry, gate), new THREE.Mesh(gateFieldGeometry, fieldMaterial))
-      gateGroup.add(gateSpin)
-      group.add(gateGroup)
-      gateSpinner = gateSpin
     }
     const badge = sprite(track(canvasTexture(levelBadge(row.level, state, milestone))), { scale: 0.82 })
     badge.position.set(0, 0.58, milestone ? 2.2 : 1.62)
     group.add(badge)
     scene.add(group)
-    return { group, ring: ringMaterial, halo: haloMaterial, gate, gateGroup: gateSpinner, badge, state, items: null }
+    return { group, ring: ringMaterial, halo: haloMaterial, badge, state, items: null }
   })
 
   // ── Items on a pad: built the first time they are needed.
@@ -416,6 +332,8 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       if (glow) {
         glow.position.z = -0.05
         glow.visible = tier !== 'low'
+        glow.userData.darkOpacity = glow.material.opacity
+        applyRewardGlow(glow, item, locked, theme)
         group.add(glow)
       }
       if (locked) {
@@ -461,7 +379,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     if (pad.state !== 'locked') pad.items = buildItems(i)
   })
 
-  // ── The beacon: where the learner stands on the road.
+  // ── The beacon: the learner's current station.
   const beacon = new THREE.Group()
   const beamMaterial = track(new THREE.MeshBasicMaterial({ map: track(canvasTexture(beamGradient())), color: COLOR.cyan, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }))
   beamMaterial.toneMapped = false
@@ -483,15 +401,21 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   beacon.add(beam, core, beaconHalo, pulse, mark)
   scene.add(beacon)
   const placeBeacon = () => {
-    const a = anchorAt(positionIndex(status, count))
+    const a = anchorAt(Math.max(0, Math.min(count - 1, status.level - 1)))
     beacon.position.set(a.x, a.y, a.z)
   }
+  let beaconFade = 1
   placeBeacon()
 
   let yuvi = createRoadmapYuvi(options.design)
   scene.add(yuvi.object)
   const yuviFlight = createYuviFlight(yuviPosition(status, count))
   let flightCount = 0
+  let horizontalFlightCount = 0
+  let horizontalFlight = false
+  let forwardFlight = true
+  let leadLeft = false
+  let lastYuviIndex = status.level - 1
   let hovering = false
   const placeYuvi = () => {
     const position = yuviFlight.position
@@ -499,9 +423,23 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   }
   const targetYuvi = (immediate = false, browsing = false) => {
     const index = focus < 0 ? status.level - 1 : focus
+    const changedLevel = index !== lastYuviIndex
     hovering = index + 1 > status.level
-    if (browsing && !immediate) flightCount++
+    if (browsing && !immediate && changedLevel) {
+      flightCount++
+      forwardFlight = index > lastYuviIndex
+      if (forwardFlight) {
+        horizontalFlightCount++
+        leadLeft = horizontalFlightCount % 2 === 0
+      }
+      horizontalFlight = forwardFlight
+    } else if (!browsing || immediate) {
+      horizontalFlight = false
+    }
+    lastYuviIndex = index
     const spin = browsing && flightCount % 3 === 0 ? (flightCount % 2 === 0 ? -1 : 1) : 0
+    // Advancing is head-first and horizontal; retreating stays upright so
+    // direction is immediately legible without an awkward backward pose.
     yuviFlight.retarget(yuviPosition(status, count, index, document.documentElement.dir === 'rtl'), spin, reduceMotion || immediate)
     placeYuvi()
   }
@@ -523,18 +461,47 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   const dust = new THREE.Points(dustGeometry, dustMaterial)
   scene.add(dust)
 
+  const applyTheme = (next: Theme) => {
+    theme = next
+    const palette = SCENE_THEME[next]
+    jungleStations.setTheme(next)
+    dustMaterial.color.setHex(palette.dust)
+    pads.forEach((pad) => {
+      const color = stateColor(pad.state, next)
+      pad.ring.color.copy(color)
+      pad.halo.color.copy(color)
+      pad.halo.blending = next === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending
+      pad.halo.opacity = pad.state === 'locked' ? (next === 'light' ? 0.1 : 0.06) : (next === 'light' ? 0.3 : 0.22)
+      pad.halo.needsUpdate = true
+      for (const node of pad.items ?? []) if (node.glow) applyRewardGlow(node.glow, node.item, pad.state === 'locked', next)
+    })
+    hemisphere.color.setHex(palette.sky)
+    hemisphere.groundColor.setHex(palette.ground)
+    hemisphere.intensity = palette.hemisphere
+    key.color.setHex(palette.key)
+    key.intensity = palette.keyIntensity
+    lamp.color.setHex(palette.lamp)
+    lamp.intensity = palette.lampIntensity
+    renderer.toneMappingExposure = palette.exposure
+    scene.fog = settings.fog ? new THREE.FogExp2(palette.fog, 0.0135) : null
+    container.dataset.theme = next
+    dirty = true
+  }
+
   const applyQuality = (next: RenderTier) => {
     tier = next
     settings = tierSettings(next, true)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap))
-    scene.fog = settings.fog ? new THREE.FogExp2(COLOR.fog.getHex(), 0.0135) : null
+    scene.fog = settings.fog ? new THREE.FogExp2(SCENE_THEME[theme].fog, 0.0135) : null
     const motes = next === 'high' ? DUST_MAX : next === 'medium' ? 300 : 0
     dust.visible = motes > 0
+    jungleStations.setQuality(next)
     dustGeometry.setDrawRange(0, motes)
     for (const pad of pads) for (const node of pad.items ?? []) if (node.glow) node.glow.visible = next !== 'low'
     container.dataset.renderTier = next
     dirty = true
   }
+  applyTheme(theme)
   applyQuality(tier)
 
   // ── Camera rig
@@ -550,7 +517,11 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   const cameraGoal = new THREE.Vector3()
   const lookGoal = new THREE.Vector3()
   const projected = new THREE.Vector3()
-  const lastAnchor = { x: -1, y: -1, padX: -1, padY: -1, spanLeft: -1, spanRight: -1, visible: false }
+  const lastAnchor = {
+    x: -1, y: -1, padX: -1, padY: -1, spanLeft: -1, spanRight: -1,
+    yuviLeft: -1, yuviRight: -1, yuviTop: -1, yuviBottom: -1, yuviVisible: false,
+    visible: false,
+  }
 
   const onPointerMove = (event: PointerEvent) => {
     if (event.pointerType !== 'mouse') return
@@ -612,12 +583,38 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     const reach = Math.min(-0.95, ...(pad.items ?? []).map((node) => node.slot.x - 0.95))
     const edgeA = toScreen(new THREE.Vector3(reach, rewardHeight, 0))
     const edgeB = toScreen(new THREE.Vector3(-reach, rewardHeight, 0))
+    const yuviBounds = new THREE.Box3().setFromObject(yuvi.object)
+    const yuviCorners = [
+      new THREE.Vector3(yuviBounds.min.x, yuviBounds.min.y, yuviBounds.min.z),
+      new THREE.Vector3(yuviBounds.min.x, yuviBounds.min.y, yuviBounds.max.z),
+      new THREE.Vector3(yuviBounds.min.x, yuviBounds.max.y, yuviBounds.min.z),
+      new THREE.Vector3(yuviBounds.min.x, yuviBounds.max.y, yuviBounds.max.z),
+      new THREE.Vector3(yuviBounds.max.x, yuviBounds.min.y, yuviBounds.min.z),
+      new THREE.Vector3(yuviBounds.max.x, yuviBounds.min.y, yuviBounds.max.z),
+      new THREE.Vector3(yuviBounds.max.x, yuviBounds.max.y, yuviBounds.min.z),
+      new THREE.Vector3(yuviBounds.max.x, yuviBounds.max.y, yuviBounds.max.z),
+    ].map((corner) => {
+      projected.copy(corner).project(camera)
+      return { x: (projected.x + 1) / 2 * width, y: (1 - projected.y) / 2 * height, inFront: projected.z < 1 }
+    })
+    const yuviVisible = yuviCorners.some((corner) => corner.inFront)
     const visible = items.inFront && items.x > -200 && items.x < width + 200 && items.y > -200 && items.y < height + 200
     const next = {
       x: items.x, y: items.y, padX: centre.x, padY: centre.y,
       spanLeft: Math.min(edgeA.x, edgeB.x), spanRight: Math.max(edgeA.x, edgeB.x), visible,
+      yuviLeft: Math.min(...yuviCorners.map((corner) => corner.x)),
+      yuviRight: Math.max(...yuviCorners.map((corner) => corner.x)),
+      yuviTop: Math.min(...yuviCorners.map((corner) => corner.y)),
+      yuviBottom: Math.max(...yuviCorners.map((corner) => corner.y)),
+      yuviVisible,
     }
-    if (!force && Math.abs(next.x - lastAnchor.x) < 0.5 && Math.abs(next.y - lastAnchor.y) < 0.5 && next.visible === lastAnchor.visible) return
+    if (!force
+      && Math.abs(next.x - lastAnchor.x) < 0.5
+      && Math.abs(next.y - lastAnchor.y) < 0.5
+      && Math.abs(next.yuviLeft - lastAnchor.yuviLeft) < 0.5
+      && Math.abs(next.yuviTop - lastAnchor.yuviTop) < 0.5
+      && next.visible === lastAnchor.visible
+      && next.yuviVisible === lastAnchor.yuviVisible) return
     Object.assign(lastAnchor, next)
     onAnchor(next)
   }
@@ -656,16 +653,17 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     camera.up.set(Math.sin(bank), Math.cos(bank), 0)
     camera.lookAt(cameraTarget)
     lamp.position.set(here.x, here.y + 3.2, here.z + 1.5)
-    // The beacon is a seven-unit beam: seen from the pad next to it, it is
-    // the whole screen. It fades out as the camera comes within reach.
-    const beaconDistance = camera.position.distanceTo(beacon.position)
-    const nearbyFade = Math.max(0, Math.min(1, Math.abs(progress - positionIndex(status, count)) - 2))
-    const beaconFade = Math.max(0, Math.min(1, (beaconDistance - 4.5) / 6)) * nearbyFade
+    // Keep the learner's beacon readable from any station. Yuvi
+    // replaces it only while settled on the learner's current stage.
+    const yuviFocus = focus < 0 ? status.level - 1 : focus
+    const yuviStandingAtCurrent = !yuviFlight.active && yuviFocus === status.level - 1
+    const beaconTarget = yuviStandingAtCurrent ? 0 : 1
+    beaconFade += (beaconTarget - beaconFade) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 12))
     beacon.visible = beaconFade > 0.01
     beamMaterial.opacity = 0.55 * beaconFade
     coreMaterial.opacity = 0.9 * beaconFade
     mark.material.opacity = beaconFade
-    // Far pads keep their rings but lose their numbers, or the road ahead
+    // Far stations keep their rings but lose their numbers, or the route
     // reads as a cloud of white dots.
     for (let i = 0; i < count; i++) {
       const away = Math.abs(i - progress)
@@ -676,7 +674,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
 
     if (continuous) {
       clock.t += dt
-      roadGlowMaterial.uniforms.uTime.value = clock.t
+      jungleStations.update(clock.t)
       // Beacon breath and pulse ring.
       const breath = 0.5 + 0.5 * Math.sin(clock.t * 2.2)
       mark.position.y = 3.3 + Math.sin(clock.t * 1.7) * 0.14
@@ -697,12 +695,14 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     yuviFlight.update(dt)
     placeYuvi()
     if (hovering && !yuviFlight.active && !reduceMotion) yuvi.object.position.y += Math.sin(clock.t * 5.2) * 0.04
-    yuvi.object.rotation.set(0, yuviFlight.yaw, yuviFlight.bank)
-    yuvi.update(clock.t, reduceMotion, yuviFlight.active || hovering, dt)
+    yuvi.update(
+      clock.t, reduceMotion, yuviFlight.active || hovering,
+      horizontalFlight && yuviFlight.active, leadLeft, dt,
+    )
+    yuvi.object.rotation.set(yuvi.flightPitch, yuviFlight.yaw, yuviFlight.bank)
     // Items: bob while up, spin the spark, step the hologram.
     for (let i = Math.max(0, focus - 3); i <= Math.min(count - 1, focus + 3); i++) {
       const pad = pads[i]
-      if (pad.gateGroup && continuous) pad.gateGroup.rotation.y = Math.sin(clock.t * 0.45 + i) * 0.32
       if (!pad.items) continue
       pad.items.forEach((node, k) => {
         const bob = continuous ? Math.sin(clock.t * 1.6 + k * 1.3 + i) * 0.07 : 0
@@ -744,17 +744,15 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
 
   const applyStatus = (next: ProgressionStatus) => {
     status = next
-    roadGlowMaterial.uniforms.uLit.value = litFraction(status, count)
     placeBeacon()
     targetYuvi()
     pads.forEach((pad, i) => {
       const state = levelState(levels[i].level, status)
       if (state === pad.state) return
       pad.state = state
-      pad.ring.color.copy(stateColor(state))
-      pad.halo.color.copy(stateColor(state))
-      pad.halo.opacity = state === 'locked' ? 0.06 : 0.22
-      if (pad.gate) pad.gate.color.copy(stateColor(state))
+      pad.ring.color.copy(stateColor(state, theme))
+      pad.halo.color.copy(stateColor(state, theme))
+      pad.halo.opacity = state === 'locked' ? (theme === 'light' ? 0.1 : 0.06) : (theme === 'light' ? 0.3 : 0.22)
       const badge = pad.badge.material.map
       pad.badge.material.map = track(canvasTexture(levelBadge(levels[i].level, state, isMilestone(levels[i].level))))
       badge?.dispose()
@@ -780,6 +778,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       placeYuvi()
       dirty = true
     },
+    setTheme: applyTheme,
     setQuality: applyQuality,
     setPaused(next) { paused = next; if (!next) dirty = true },
     dispose() {
@@ -792,6 +791,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored)
       g.revert()
       yuvi.dispose()
+      jungleStations.dispose()
       for (const pad of pads) for (const node of pad.items ?? []) node.group.traverse((o) => { if (o instanceof THREE.Sprite) o.material.dispose() })
       for (const pad of pads) pad.badge.material.dispose()
       ;[beaconHalo, mark].forEach((s) => s.material.dispose())

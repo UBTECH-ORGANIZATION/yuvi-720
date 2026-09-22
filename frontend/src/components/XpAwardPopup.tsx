@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { navigate } from '../app/router'
 import { useI18n } from '../i18n/I18nProvider'
 import { useProgression } from '../providers/ProgressionProvider'
 import { rewardLabel as nameReward } from '../services/levelRewards'
@@ -46,6 +47,11 @@ export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
   const totalXp = batch.receipts.reduce((sum, receipt) => sum + receipt.awarded, 0)
   const levelRewards = batch.receipts.flatMap((receipt) => receipt.levelRewards ?? [])
   const rewardLabel = (assetId: string) => nameReward(t, assetId)
+  const openRoadmap = () => {
+    setLevelUp(false)
+    dismissAward()
+    navigate('/roadmap')
+  }
 
   return (
     <>
@@ -63,8 +69,11 @@ export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
           {batch.sparks > 0 ? (
             <span>{t('progression.award.sparks')}<b>+{batch.sparks}</b></span>
           ) : null}
+          <button type="button" className="xp-award__roadmap" onClick={openRoadmap}>
+            {t('roadmap.title')}
+          </button>
         </div>
-        <button type="button" onClick={() => {
+        <button type="button" className="xp-award__close" onClick={() => {
           if (crossedLevels.length) setLevelUp(true)
           else dismissAward()
         }} aria-label={t('progression.award.dismiss')}>×</button>
@@ -98,8 +107,11 @@ export function XpAwardPopup({ paused = false }: { paused?: boolean }) {
                 </span>
               )
             })}
+            <button type="button" className="xp-award__roadmap" onClick={openRoadmap}>
+              {t('roadmap.title')}
+            </button>
           </div>
-          <button type="button" onClick={() => {
+          <button type="button" className="xp-award__close" onClick={() => {
             setLevelUp(false)
             dismissAward()
           }} aria-label={t('progression.award.dismiss')}>×</button>

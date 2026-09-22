@@ -7,6 +7,7 @@ import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { ErrorState, Icon, LoadingState } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useProgression } from '../../providers/ProgressionProvider'
+import { useTheme } from '../../providers/ThemeProvider'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { rewardItems, rewardLabel, type RewardItem } from '../../services/levelRewards'
@@ -18,7 +19,7 @@ import { preRenderedThumb } from '../Yuvi-studio/studioThumbs'
 import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramStrip } from '../Yuvi-studio/worldHologramStrips'
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import {
-  focusedIndex, isMilestone, levelState, positionIndex, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
+  focusedIndex, isMilestone, levelState, positionIndex, railVisualPosition, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
 } from './roadmapModel'
 import { createRoadmapScene, type RoadmapScene, type SceneAnchor } from './RoadmapScene'
 import './roadmap.css'
@@ -77,6 +78,7 @@ interface StageProps {
 
 function RoadmapStage({ roadmap, status }: StageProps) {
   const { t, direction } = useI18n()
+  const { theme } = useTheme()
   const { design } = useYuviDesign()
   const studioOpen = useStudioTransition()?.isOpen ?? false
   const levels = roadmap.levels
@@ -86,6 +88,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
   const sceneRef = useRef<RoadmapScene | null>(null)
   const statusRef = useRef(status)
   const designRef = useRef(design)
+  const themeRef = useRef(theme)
   const focusRef = useRef(-1)
   const anchorRef = useRef<SceneAnchor | null>(null)
   const [focus, setFocus] = useState(-1)
@@ -114,15 +117,27 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     // Beside the raised rewards, on the side with more room for the card.
     const roomRight = vw - anchor.spanRight
     const roomLeft = anchor.spanLeft
-    const right = roomRight >= roomLeft
     const top = Math.max(88, Math.min(vh - height - 16, anchor.y - height / 2))
-    const left = right
-      ? Math.min(vw - width - 16, anchor.spanRight + gap)
-      : Math.max(16, anchor.spanLeft - gap - width)
-    card.style.left = `${Math.round(left)}px`
+    const placement = (right: boolean) => ({
+      right,
+      left: right
+        ? Math.min(vw - width - 16, anchor.spanRight + gap)
+        : Math.max(16, anchor.spanLeft - gap - width),
+    })
+    const overlapsYuvi = (left: number) => anchor.yuviVisible
+      && left < anchor.yuviRight
+      && left + width > anchor.yuviLeft
+      && top < anchor.yuviBottom
+      && top + height > anchor.yuviTop
+    const preferredRight = roomRight >= roomLeft
+    const candidates = [placement(preferredRight), placement(!preferredRight)]
+    // Yuvi moves beside locked pads; the card must choose the other side when
+    // its normal reward-based preference would cover him.
+    const chosen = candidates.find((candidate) => !overlapsYuvi(candidate.left)) ?? candidates[0]
+    card.style.left = `${Math.round(chosen.left)}px`
     card.style.top = `${Math.round(top)}px`
-    card.classList.toggle('is-right', right)
-    card.classList.toggle('is-left', !right)
+    card.classList.toggle('is-right', chosen.right)
+    card.classList.toggle('is-left', !chosen.right)
   }, [])
 
   // ── The scene, the scroll and the governor: one mount, one teardown.
@@ -141,6 +156,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
       levels,
       status: statusRef.current,
       design: designRef.current,
+      theme: themeRef.current,
       tier: resolved.final,
       reduceMotion,
       onAnchor: (anchor) => { anchorRef.current = anchor; placeCard(anchor) },
@@ -219,6 +235,11 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     designRef.current = design
     sceneRef.current?.setDesign(design)
   }, [design])
+
+  useEffect(() => {
+    themeRef.current = theme
+    sceneRef.current?.setTheme(theme)
+  }, [theme])
 
   // The studio opens as an overlay over this page and brings its own WebGL
   // context; the road stops drawing underneath it rather than sharing the GPU.
@@ -346,17 +367,18 @@ function Rail({ levels, status, focus, onJump, onScrub }: {
   const { t } = useI18n()
   const count = levels.length
   const litPercent = `${(positionIndex(status, count) / Math.max(1, count - 1)) * 100}%`
-  const focusedLevel = levels[Math.max(0, focus)]?.level ?? 1
+  const focusedIndex = Math.max(0, Math.min(count - 1, focus))
+  const focusedLevel = levels[focusedIndex]?.level ?? 1
+  const focusedPosition = railVisualPosition(focusedIndex, count)
   return (
     <nav className="rm-rail" aria-label={t('roadmap.rail.label')}>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.prev')} title={t('roadmap.rail.prev')} onClick={() => onJump(focus - 1)} disabled={focus <= 0}>
+      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.next')} title={t('roadmap.rail.next')} onClick={() => onJump(focus + 1)} disabled={focus >= count - 1}>
         <Icon name="chevronUp" size={18} />
       </button>
-      <div className="rm-rail__track" style={{ '--rm-lit': litPercent } as React.CSSProperties}>
-        {/* The dots are decoration behind the slider: gold behind, cyan here,
-            grey ahead. The slider is the control — a range so a drag scrubs
-            the road, a click jumps, and the arrow keys walk it one pad at a
-            time; fifty dots in a rail this short were never tappable. */}
+      <div className="rm-rail__track" style={{ '--rm-lit': litPercent, '--rm-focus-at': focusedPosition } as React.CSSProperties}>
+        <output className="rm-rail__current" aria-hidden="true">{focusedLevel}</output>
+        {/* Leaves show the route's growth inside the rail. The invisible range
+            remains the control, while the badge at left names the exact level. */}
         <ol className="rm-rail__marks" aria-hidden="true">
           {levels.map((row, index) => {
             const state = levelState(row.level, status)
@@ -365,7 +387,7 @@ function Rail({ levels, status, focus, onJump, onScrub }: {
               <li
                 key={row.level}
                 className={`rm-rail__dot is-${state}${labelled ? ' is-labelled' : ''}`}
-                style={{ '--rm-at': index / Math.max(1, count - 1) } as React.CSSProperties}
+                style={{ '--rm-at': railVisualPosition(index, count) } as React.CSSProperties}
               >
                 {labelled ? <span>{row.level}</span> : null}
               </li>
@@ -384,7 +406,7 @@ function Rail({ levels, status, focus, onJump, onScrub }: {
           onChange={(event) => onScrub(Number(event.target.value))}
         />
       </div>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.next')} title={t('roadmap.rail.next')} onClick={() => onJump(focus + 1)} disabled={focus >= count - 1}>
+      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.prev')} title={t('roadmap.rail.prev')} onClick={() => onJump(focus - 1)} disabled={focus <= 0}>
         <Icon name="chevronDown" size={18} />
       </button>
     </nav>
@@ -409,7 +431,7 @@ const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: Progressi
     return (
       <article className={`rm-card is-${state}${milestone ? ' is-milestone' : ''}`} ref={ref} key={row.level}>
         <header className="rm-card__head">
-          <span className="rm-card__eyebrow">{milestone ? t('roadmap.card.gate') : t('roadmap.card.level')}</span>
+          <span className="rm-card__eyebrow">{t('roadmap.card.level')}</span>
           <h2>{t('roadmap.card.title', { level: String(row.level) })}</h2>
           <p className="rm-card__status">{statusLine}</p>
           {row.level > 1 ? <p className="rm-card__opens" dir="auto">{t('roadmap.card.opensAt', { xp: String(row.startXp) })}</p> : null}

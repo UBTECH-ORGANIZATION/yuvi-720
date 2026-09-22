@@ -29,9 +29,8 @@ export function anchorAt(index: number): Vec3 {
   return { x: Math.sin(phase) * SWAY, y: index * CLIMB_PER_LEVEL, z: index * -LEVEL_SPACING + 0 }
 }
 
-/** Every tenth level is a gate: a wider pad under a standing ring. The world
- *  unlocks (10, 20) are the ones that matter most; the prestige tens keep the
- *  rhythm going to the cap. */
+/** Every tenth level is a larger milestone station. World unlocks (10, 20)
+ *  matter most; the prestige tens keep the rhythm going to the cap. */
 export const isMilestone = (level: number) => level % 10 === 0
 
 export type LevelState = 'reached' | 'current' | 'locked'
@@ -52,6 +51,13 @@ export function xpAway(row: RoadmapLevel, status: ProgressionStatus): number {
 export function positionIndex(status: ProgressionStatus, levelCount: number): number {
   const fraction = status.nextLevel ? Math.max(0, Math.min(1, status.progress)) : 0
   return Math.max(0, Math.min(levelCount - 1, status.level - 1 + fraction))
+}
+
+/** CSS block position for the vertical rail: the first level grows from the
+ *  bottom (100%) and the final level finishes at the top (0%). */
+export function railVisualPosition(index: number, levelCount: number): number {
+  const clamped = Math.max(0, Math.min(levelCount - 1, index))
+  return 1 - clamped / Math.max(1, levelCount - 1)
 }
 
 export function yuviPosition(status: ProgressionStatus, levelCount: number, focus = status.level - 1, rtl = false): Vec3 {

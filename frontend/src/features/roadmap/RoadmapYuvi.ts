@@ -83,6 +83,9 @@ export function createRoadmapYuvi(savedDesign: YuviDesign) {
     return flame
   })
   let flightBlend = 0
+  let horizontalBlend = 0
+  let flightPitch = 0
+  let horizontalFaceTurn = 0
   const geometries = new Set<THREE.BufferGeometry>()
   const materials = new Set<THREE.Material>([rig.ringMat, exhaustMaterial])
   robot.traverse((object) => {
@@ -97,13 +100,29 @@ export function createRoadmapYuvi(savedDesign: YuviDesign) {
   faceLight.draw()
   return {
     object: robot,
-    update(seconds: number, reduceMotion: boolean, airborne: boolean, dt: number) {
+    get flightPitch() { return flightPitch },
+    update(seconds: number, reduceMotion: boolean, airborne: boolean, horizontalFlight: boolean, leadLeft: boolean, dt: number) {
       flightBlend = reduceMotion ? 0 : THREE.MathUtils.lerp(flightBlend, airborne ? 1 : 0, 1 - Math.exp(-dt * 14))
+      horizontalBlend = reduceMotion ? 0 : THREE.MathUtils.lerp(horizontalBlend, horizontalFlight ? 1 : 0, 1 - Math.exp(-dt * 18))
+      const pitchTarget = !reduceMotion && horizontalFlight ? -Math.PI / 2 : 0
+      flightPitch = THREE.MathUtils.lerp(flightPitch, pitchTarget, 1 - Math.exp(-dt * 9))
+      const faceTurnTarget = !reduceMotion && horizontalFlight ? Math.PI : 0
+      horizontalFaceTurn = THREE.MathUtils.lerp(horizontalFaceTurn, faceTurnTarget, 1 - Math.exp(-dt * 12))
       const pose = idleBreakerPose(seconds, reduceMotion)
       const flutter = reduceMotion ? 0 : Math.sin(seconds * 9.5) * 0.06
-      head.rotation.set(pose.headPitch * (1 - flightBlend), pose.headYaw * (1 - flightBlend), pose.headRoll * (1 - flightBlend))
-      armL.rotation.z = THREE.MathUtils.lerp(pose.leftArm, -2.15 - flutter, flightBlend)
-      armR.rotation.z = THREE.MathUtils.lerp(pose.rightArm, 2.15 + flutter, flightBlend)
+      head.rotation.set(
+        pose.headPitch * (1 - flightBlend),
+        pose.headYaw * (1 - flightBlend) + horizontalFaceTurn,
+        pose.headRoll * (1 - flightBlend),
+      )
+      const uprightLeftArm = THREE.MathUtils.lerp(pose.leftArm, -2.15 - flutter, flightBlend)
+      const uprightRightArm = THREE.MathUtils.lerp(pose.rightArm, 2.15 + flutter, flightBlend)
+      const horizontalLeftArm = leadLeft ? -Math.PI + flutter : -0.18
+      const horizontalRightArm = leadLeft ? 0.18 : Math.PI - flutter
+      armL.rotation.z = THREE.MathUtils.lerp(uprightLeftArm, horizontalLeftArm, horizontalBlend)
+      armR.rotation.z = THREE.MathUtils.lerp(uprightRightArm, horizontalRightArm, horizontalBlend)
+      armL.rotation.x = THREE.MathUtils.lerp(0, leadLeft ? -0.55 : 0.75, horizontalBlend)
+      armR.rotation.x = THREE.MathUtils.lerp(0, leadLeft ? -0.75 : 0.55, horizontalBlend)
       legL.rotation.x = legR.rotation.x = flightBlend * 0.12
       exhaustMaterial.opacity = flightBlend * 0.9
       thrusters.forEach((flame, index) => {

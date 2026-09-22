@@ -17,9 +17,10 @@ import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import {
   anchorAt, focusedIndex, isMilestone, itemSlots, levelState, litFraction, positionIndex,
-  progressForScroll, scrollForIndex, trackHeight, xpAway, SEGMENT_PX, SWAY,
+  progressForScroll, railVisualPosition, scrollForIndex, trackHeight, xpAway, SEGMENT_PX, SWAY,
   yuviPosition, idleBreakerPose, createYuviFlight,
 } from '../src/features/roadmap/roadmapModel.ts'
+import { stationArchetype, stationDetailProfile, stationFlowerVariant } from '../src/features/roadmap/RoadmapJungleStation.ts'
 import { rewardItems, rewardLabel } from '../src/services/levelRewards.ts'
 import type { ProgressionStatus, RoadmapLevel, XpLevelReward } from '../src/services/progression.ts'
 
@@ -46,8 +47,57 @@ describe('the road', () => {
     assert.deepEqual(anchorAt(0), { x: 0, y: 0, z: 0 })
   })
 
-  it('gates every tenth level', () => {
+  it('marks every tenth level as a milestone', () => {
     assert.deepEqual([1, 5, 9, 10, 11, 20, 30, 50].map(isMilestone), [false, false, false, true, false, true, true, true])
+  })
+
+  it('grows the rail from level 1 at the bottom to level 50 at the top', () => {
+    assert.equal(railVisualPosition(0, 50), 1)
+    assert.equal(railVisualPosition(49, 50), 0)
+    assert.ok(railVisualPosition(9, 50) > railVisualPosition(39, 50))
+  })
+
+  it('shows the exact focused level without a native slider dot', () => {
+    const page = read('features/roadmap/RoadmapPage.tsx')
+    const css = read('features/roadmap/roadmap.css')
+    assert.match(page, /className="rm-rail__current"[^>]*>\{focusedLevel\}<\/output>/)
+    assert.match(css, /\.rm-rail__current\s*\{/)
+    assert.match(css, /\.rm-rail__range::-webkit-slider-thumb[\s\S]*?background: transparent/)
+    assert.doesNotMatch(css, /\.rm-rail__dot\.is-current::before/)
+  })
+})
+
+describe('jungle station variety', () => {
+  it('distributes all 50 levels across four station archetypes', () => {
+    const counts = new Map<string, number>()
+    for (let level = 1; level <= 50; level++) {
+      const archetype = stationArchetype(level)
+      counts.set(archetype, (counts.get(archetype) ?? 0) + 1)
+    }
+    assert.deepEqual([...counts.keys()], ['vine-ruin', 'tropical-canopy', 'shattered-garden', 'root-shrine'])
+    assert.deepEqual([...counts.values()], [13, 13, 12, 12])
+  })
+
+  it('gives each station type one restrained visual identity', () => {
+    assert.deepEqual(stationDetailProfile(1, false), { roots: 3, leaves: 4, vines: 3, flowers: 0, stones: 3, monstera: 0 })
+    assert.deepEqual(stationDetailProfile(2, false), { roots: 2, leaves: 7, vines: 0, flowers: 0, stones: 0, monstera: 3 })
+    assert.deepEqual(stationDetailProfile(3, false), { roots: 2, leaves: 3, vines: 0, flowers: 3, stones: 6, monstera: 0 })
+    assert.deepEqual(stationDetailProfile(4, false), { roots: 8, leaves: 3, vines: 0, flowers: 0, stones: 0, monstera: 0 })
+  })
+
+  it('does not add gate geometry to milestone stations', () => {
+    const station = read('features/roadmap/RoadmapJungleStation.ts')
+    const page = read('features/roadmap/RoadmapPage.tsx')
+    assert.doesNotMatch(station, /ruinGeometry|const ruins = new THREE\.Group|const lintel/)
+    assert.doesNotMatch(page, /roadmap\.card\.gate/)
+  })
+
+  it('mixes flower silhouettes across nearby stations', () => {
+    const variants = new Set(Array.from({ length: 16 }, (_, index) => stationFlowerVariant(index + 1, index % 5)))
+    assert.deepEqual([...variants].sort(), ['orchid', 'star-bloom', 'torch-flower'])
+    for (const level of [2, 6, 10, 14]) {
+      assert.equal(new Set(Array.from({ length: 5 }, (_, index) => stationFlowerVariant(level, index))).size, 3)
+    }
   })
 })
 
@@ -175,11 +225,24 @@ describe('Yuvi on the focused level', () => {
   it('shares the scene renderer and follows live level and design updates', () => {
     const scene = read('features/roadmap/RoadmapScene.ts')
     const avatar = read('features/roadmap/RoadmapYuvi.ts')
-    assert.match(scene, /yuvi\.update\(clock\.t, reduceMotion, yuviFlight\.active \|\| hovering, dt\)/)
+    assert.match(scene, /horizontalFlight && yuviFlight\.active, leadLeft, dt/)
+    assert.match(scene, /yuvi\.object\.rotation\.set\(yuvi\.flightPitch, yuviFlight\.yaw, yuviFlight\.bank\)/)
     assert.match(scene, /placeBeacon\(\)\s+targetYuvi\(\)/)
     assert.match(scene, /targetYuvi\(previous < 0, true\)/)
     assert.match(scene, /flightCount % 3 === 0/)
+    assert.match(scene, /browsing && !immediate && changedLevel/)
+    assert.match(scene, /horizontalFlight = forwardFlight/)
+    assert.match(scene, /const yuviStandingAtCurrent = !yuviFlight\.active && yuviFocus === status\.level - 1/)
+    assert.match(scene, /const beaconTarget = yuviStandingAtCurrent \? 0 : 1/)
+    assert.match(scene, /anchorAt\(Math\.max\(0, Math\.min\(count - 1, status\.level - 1\)\)\)/)
+    assert.doesNotMatch(scene, /beaconDistance|nearbyFade/)
     assert.match(avatar, /roadmap-yuvi-thruster/)
+    assert.match(avatar, /const pitchTarget = !reduceMotion && horizontalFlight \? -Math\.PI \/ 2 : 0/)
+    assert.match(avatar, /const faceTurnTarget = !reduceMotion && horizontalFlight \? Math\.PI : 0/)
+    assert.match(avatar, /const horizontalLeftArm = leadLeft \? -Math\.PI \+ flutter : -0\.18/)
+    assert.match(avatar, /const horizontalRightArm = leadLeft \? 0\.18 : Math\.PI - flutter/)
+    assert.match(avatar, /armL\.rotation\.x = THREE\.MathUtils\.lerp\(0, leadLeft \? -0\.55 : 0\.75, horizontalBlend\)/)
+    assert.match(avatar, /armR\.rotation\.x = THREE\.MathUtils\.lerp\(0, leadLeft \? -0\.75 : 0\.55, horizontalBlend\)/)
     assert.match(avatar, /exhaustTexture\.dispose\(\)/)
     assert.match(scene, /yuvi\.dispose\(\)/)
     assert.match(avatar, /createYuviAvatarRig/)
@@ -274,10 +337,30 @@ describe('reward naming (shared with the level-up popup)', () => {
     const popup = read('components/XpAwardPopup.tsx')
     assert.match(popup, /from '\.\.\/services\/levelRewards'/)
     assert.doesNotMatch(popup, /REWARD_LABEL_KEYS/)
+    assert.match(popup, /className="xp-award__roadmap" onClick=\{openRoadmap\}/)
+    assert.match(popup, /\{t\('roadmap\.title'\)\}/)
+    assert.match(popup, /navigate\('\/roadmap'\)/)
   })
 })
 
 describe('the page', () => {
+  it('updates both its chrome and WebGL scene when the app theme changes', () => {
+    const page = read('features/roadmap/RoadmapPage.tsx')
+    const scene = read('features/roadmap/RoadmapScene.ts')
+    const css = read('features/roadmap/roadmap.css')
+    assert.match(page, /const \{ theme \} = useTheme\(\)/)
+    assert.match(page, /theme: themeRef\.current/)
+    assert.match(page, /sceneRef\.current\?\.setTheme\(theme\)/)
+    assert.match(scene, /const SCENE_THEME = \{[\s\S]*dark:[\s\S]*light:/)
+    assert.match(scene, /setTheme: applyTheme/)
+    assert.match(scene, /SCENE_THEME\[theme\]\.fog/)
+    assert.match(scene, /theme === 'light' \? THREE\.NormalBlending : THREE\.AdditiveBlending/)
+    assert.match(scene, /applyRewardGlow\(node\.glow, node\.item, pad\.state === 'locked', next\)/)
+    assert.match(css, /\[data-theme='light'\] \.rm-page/)
+    assert.match(css, /\[data-theme='light'\] \.rm-stage/)
+    assert.match(css, /\.rm-card__cta:not\(\.rm-card__cta--quiet\).*color: #fff/)
+  })
+
   it('is a bare route like the studio: one WebGL context, no companion dock beside it', () => {
     const app = read('app/App.tsx')
     assert.match(app, /pathname\.startsWith\('\/roadmap'\)\) return <RoadmapPage \/>/)
@@ -297,6 +380,33 @@ describe('the page', () => {
     assert.match(scene, /preRenderedThumb\(/)
     assert.match(scene, /worldHologramStrip\(/)
     assert.doesNotMatch(scene, /RoomCatalog|YuviAssets|worldHolograms'/)
+  })
+
+  it('renders stations without a road mesh or road shader', () => {
+    const scene = read('features/roadmap/RoadmapScene.ts')
+    assert.doesNotMatch(scene, /ROAD_GLOW|ROAD_WIDTH|roadBase|roadGlowMaterial|function ribbon/)
+  })
+
+  it('builds the stations as shader-textured floating jungle ruins', () => {
+    const scene = read('features/roadmap/RoadmapScene.ts')
+    const station = read('features/roadmap/RoadmapJungleStation.ts')
+    assert.match(scene, /createJungleStationAssets\(theme, tier\)/)
+    assert.match(scene, /jungleStations\.create\(row\.level, milestone\)/)
+    assert.doesNotMatch(scene, /stemGeometry|padGeometry|gateGeometry/)
+    assert.match(station, /new THREE\.ShaderMaterial/g)
+    assert.match(station, /float fbm\(vec3 p\)/)
+    assert.match(station, /mossMask/)
+    assert.match(station, /uAmbient/)
+    assert.match(station, /stationDetailProfile/)
+    assert.match(station, /'vine-ruin', 'tropical-canopy', 'shattered-garden', 'root-shrine'/)
+    assert.match(station, /stationArchetype\(level\)/)
+    assert.match(station, /addClimbingVines/)
+    assert.match(station, /addFlower/)
+    assert.match(station, /addBrokenStones/)
+    assert.match(station, /fracturedStoneGeometry/)
+    assert.match(station, /addMonsteraMonkey/)
+    assert.match(station, /monsteraMonkeyLeafGeometry/)
+    assert.match(station, /lichenMaterial/)
   })
 
   it('opens from the profile menu, for learners only', () => {
