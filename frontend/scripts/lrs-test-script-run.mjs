@@ -21,9 +21,20 @@
  * are cross-origin and vendor-owned: the lesson phase opens the lomda and,
  * with --manual, pauses for a person to click through it.
  *
- * Phases: session, onboarding, dashboard, lesson, teacher, mentoring, goals,
- *         relogin, tabclose, kill  (or `all`; the last three need the idle
+ * Phases: session, onboarding, dashboard, lesson, assessment, teacher, mentoring,
+ *         goals, relogin, tabclose, kill  (or `all`; the last three need the idle
  *         window: set LRS_SESSION_IDLE_MINUTES=2 on the server for the run).
+ *         Two extras, not in `all`: `reflection` (the post-lesson reflection and
+ *         the practice decision through the product's own API — for a run where
+ *         the completion dialog never opened, e.g. the content resumed finished)
+ *         and `explainer` (a lesson whose objective HAS an alternative
+ *         representation, for item·selected; --component names it).
+ *
+ * The assessment phase (TC-ITM-10/11) opens an `isAssessment=true` component
+ * ("שאלת שיא") twice — once to finish it with every answer WRONG, once RIGHT.
+ * --assess-fail / --assess-pass name the components; when both are the same
+ * one, the second visit takes the re-entry dialog's "start over" (Kata
+ * resetState) so the attempt really begins again.
  *
  * Accounts: scripts/seed_lrs_test_accounts.py --fresh (backend). */
 
@@ -45,7 +56,8 @@ const args = Object.fromEntries(
 if (args.help === 'true') {
   console.log(`usage: node scripts/lrs-test-script-run.mjs [--base URL] [--api URL] [--out DIR] [--password P]
        [--student ID] [--teacher ID] [--headed] [--manual] [--idle-minutes N] [--unit ID] [--component ID]
-       [--phase session,onboarding,dashboard,lesson,teacher,mentoring,goals,relogin,tabclose,kill]`)
+       [--assess-fail COMPONENT] [--assess-pass COMPONENT]
+       [--phase session,onboarding,dashboard,lesson,assessment,teacher,mentoring,goals,relogin,tabclose,kill]`)
   process.exit(0)
 }
 
@@ -60,8 +72,12 @@ const MANUAL = args.manual === 'true'
 const IDLE_MINUTES = Number(args['idle-minutes'] || process.env.LRS_SESSION_IDLE_MINUTES || 2)
 const UNIT = args.unit || 'methodica-science-mass-measure-01'
 const COMPONENT = args.component || 'methodica-science-mass-measure-01-01'
+// The catalog's assessment components in the methodica mass units (isAssessment=true).
+const ASSESS_FAIL = args['assess-fail'] || 'methodica-science-mass-measure-01-05'
+const ASSESS_PASS = args['assess-pass'] || 'methodica-science-mass-measure-02-05'
+const unitOf = (componentId) => componentId.replace(/-\d+$/, '')
 const PHASES = (args.phase || 'all') === 'all'
-  ? ['session', 'onboarding', 'dashboard', 'lesson', 'teacher', 'mentoring', 'goals', 'relogin', 'tabclose', 'kill']
+  ? ['session', 'onboarding', 'dashboard', 'lesson', 'assessment', 'teacher', 'mentoring', 'goals', 'relogin', 'tabclose', 'kill']
   : args.phase.split(',').map((p) => p.trim()).filter(Boolean)
 
 const manifest = { base: BASE, api: API, sessions: {}, phases: {}, notes: [] }
@@ -74,11 +90,14 @@ const note = (phase, text, source = 'ui') => {
 }
 const rl = createInterface({ input: stdin, output: stdout })
 let pauseCount = 0
+const RUN_TAG = Date.now().toString(36)
 async function pause(phase, instruction) {
   if (!MANUAL) { note(phase, `skipped (no --manual): ${instruction}`, 'manual'); return false }
   // Either Enter on this terminal, or a marker file (`continue-N` in the run
   // directory) when the driver runs detached from the tester's keyboard.
-  const marker = path.join(OUT, `continue-${++pauseCount}`)
+  // Per-process name: a marker left by an earlier invocation into the same
+  // run folder must not release this one's pauses.
+  const marker = path.join(OUT, `continue-${RUN_TAG}-${++pauseCount}`)
   log(`\n⏸  ${instruction}\n   press Enter here — or create ${marker} — when done…`)
   await Promise.race([
     rl.question('').catch(() => new Promise(() => undefined)),
@@ -232,7 +251,18 @@ async function phaseLesson(browser) {
   await settle(page, 8000)
   await shot(page, 'lesson-open')
   note(phase, `lesson ${COMPONENT} opened (component initialized via the CET relay when the iframe loaded)`)
-  await pause(phase, 'In the lomda: open the first screens, answer one question WRONG then RIGHT, press the content\'s own hint button, play the video and pause it. (TC-CMP-01, TC-ITM-01/02/05/06/08)')
+  await pause(phase, 'In the lomda: open the first screens, answer the SAME question WRONG twice (until Yuvi offers "בוא/י נראה אחרת" — stay on that question), then RIGHT; press the content\'s own hint button, play the video and pause it. (TC-CMP-01, TC-ITM-01/02/05/06/08, item·selected)')
+
+  // v1.1 item·selected: the alternative explainer is offered after a repeated
+  // wrong answer; opening it files selected(learning-type) on the ITEM.
+  const alt = page.locator('.sp-companion__support-option--alt').first()
+  if (await alt.count()) {
+    await alt.click()
+    note(phase, 'opened the alternative explainer → item selected (selectionType=learning-type, response=presentation)')
+    await sleep(5000)
+    await page.locator('.sp-explainer__close').first().click().catch(() => page.keyboard.press('Escape'))
+    await sleep(1500)
+  } else note(phase, 'alternative explainer not offered (needs a repeated wrong answer on one question)', 'ui')
 
   // Platform support: the hint and explanation buttons, then a typed chat turn and a rating.
   const hint = page.locator('.sp-companion__support-option', { hasText: /רמז|hint/i }).first()
@@ -263,6 +293,114 @@ async function phaseLesson(browser) {
   }
   await pause(phase, 'In the lomda: finish the component (complete every screen) so the completion dialog opens; then answer the reflection (rate + one text, skip one) and send. Then choose "continue". (TC-CMP-02, TC-ITM-03, TC-REF-*, practice-decision)')
   await shot(page, 'lesson-done')
+  await logout(page, phase)
+  await context.close()
+}
+
+// `pass`: the components named by --pass, each finished with every answer
+// right — the repair round the route demands before an assessment opens.
+async function phasePass(browser) {
+  const phase = 'pass'
+  const components = (args.pass || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const { context, page } = await newPage(browser)
+  await login(page, STUDENT, phase)
+  for (const component of components) {
+    await page.goto(`${BASE}/learning/lesson?unit=${encodeURIComponent(unitOf(component))}&component=${encodeURIComponent(component)}`, { waitUntil: 'domcontentloaded' })
+    await settle(page, 8000)
+    const startOver = page.locator('.learning-reentry button', { hasText: /להתחיל מחדש|להתחיל מהתחלה|start over|redo/i }).first()
+    if (await startOver.count()) { await startOver.click(); note(phase, `re-entry dialog → start over on ${component}`); await settle(page, 8000) }
+    await shot(page, `pass-${component.slice(-5)}-open`)
+    await pause(phase, `In the lomda (${component}): answer EVERY question RIGHT and finish the component. If the completion dialog opens, send or skip the reflection and choose "continue". If it opened already finished, say so.`)
+    await shot(page, `pass-${component.slice(-5)}-done`)
+  }
+  await logout(page, phase)
+  await context.close()
+}
+
+async function phaseAssessment(browser) {
+  const phase = 'assessment'
+  const { context, page } = await newPage(browser)
+  await login(page, STUDENT, phase)
+  const visits = [[ASSESS_FAIL, 'WRONG', 'TC-ITM-11 · completed success=false'], [ASSESS_PASS, 'RIGHT', 'TC-ITM-10 · completed success=true']]
+  for (const [component, verdict, tc] of visits) {
+    await page.goto(`${BASE}/learning/lesson?unit=${encodeURIComponent(unitOf(component))}&component=${encodeURIComponent(component)}`, { waitUntil: 'domcontentloaded' })
+    await settle(page, 8000)
+    // A component seen before (finished, or left mid-way) opens the §6 re-entry
+    // dialog; take "start over" so the attempt is meant as a fresh one. Kata's
+    // resetState did not clear the saved content state on 22/09/2026 (same
+    // registrationId either way) — the lomda may still resume; noted per run.
+    const startOver = page.locator('.learning-reentry button', { hasText: /להתחיל מחדש|להתחיל מהתחלה|start over|redo/i }).first()
+    if (await startOver.count()) {
+      await startOver.click()
+      note(phase, `re-entry dialog → start over (resetState) on ${component}`)
+      await settle(page, 8000)
+    }
+    await shot(page, `assessment-${verdict.toLowerCase()}-open`)
+    note(phase, `assessment component ${component} opened (isAssessment=true)`)
+    await pause(phase, `In the lomda (שאלת שיא ${component}): answer every question ${verdict} and finish the component. If it opened already FINISHED (Kata kept its state): click "לכל הפעילויות", wait 60s, open it again and choose "start over" in the dialog — repeat until it starts fresh. If the completion dialog opens, close the reflection (send or skip). (${tc})`)
+    await shot(page, `assessment-${verdict.toLowerCase()}-done`)
+  }
+  await logout(page, phase)
+  await context.close()
+}
+
+async function phaseReflection(browser) {
+  const phase = 'reflection'
+  const { context, page } = await newPage(browser)
+  await login(page, STUDENT, phase)
+  // The same calls ReflectionPanel makes, in the same order: start (initialized),
+  // one rating + one text (answered), the rest skipped, then complete.
+  const launch = await call(page, 'POST', '/api/learning/sessions', { component_id: COMPONENT, unit_id: UNIT, language: 'he', restart: false })
+  note(phase, `learning session for ${COMPONENT} → ${launch.status}`, 'api')
+  const start = await call(page, 'POST', '/api/agent/reflection/start', { component_id: COMPONENT, session_id: launch.data?.session_id || null, language: 'he' })
+  const reflectionId = start.data?.reflection_id
+  const questions = start.data?.questions || []
+  note(phase, `reflection start → ${start.status} (${questions.length} questions; reflection initialized)`, 'api')
+  let answered = 0
+  for (const question of questions) {
+    await sleep(1500)
+    if (answered < 2) {
+      const payload = question.kind === 'rating' ? { rating: 4 } : { answer: 'היה לי קשה בהתחלה אבל הבנתי בסוף.' }
+      const r = await call(page, 'POST', `/api/agent/reflection/${reflectionId}/answer`, { question_number: question.number, ...payload })
+      note(phase, `reflection q${question.number} (${question.kind}) answered → ${r.status}`, 'api')
+      answered += 1
+    } else {
+      const r = await call(page, 'POST', `/api/agent/reflection/${reflectionId}/skip`, { question_number: question.number })
+      note(phase, `reflection q${question.number} skipped → ${r.status}`, 'api')
+    }
+  }
+  await sleep(1500)
+  const done = await call(page, 'POST', `/api/agent/reflection/${reflectionId}/complete`, {})
+  note(phase, `reflection complete → ${done.status}`, 'api')
+  await sleep(1500)
+  // The completion dialog's "continue" = the platform's practice decision.
+  const choice = await call(page, 'POST', '/api/learning/path-choice', { component_id: COMPONENT, choice: 'continue' })
+  note(phase, `path choice continue → ${choice.status} (component selected, practice-decision=false)`, 'api')
+  await logout(page, phase)
+  await context.close()
+}
+
+async function phaseExplainer(browser) {
+  const phase = 'explainer'
+  const { context, page } = await newPage(browser)
+  await login(page, STUDENT, phase)
+  await page.goto(`${BASE}/learning/lesson?unit=${encodeURIComponent(UNIT)}&component=${encodeURIComponent(COMPONENT)}`, { waitUntil: 'domcontentloaded' })
+  await settle(page, 8000)
+  const dialogButton = page.locator('.learning-reentry button', { hasText: /להמשיך מאיפה|continue where/i }).first()
+  if (await dialogButton.count()) { await dialogButton.click(); note(phase, 're-entry dialog → continue'); await settle(page, 3000) }
+  await shot(page, 'explainer-open')
+  await pause(phase, `In the lomda (${COMPONENT}): on ONE question give three WRONG answers in a row, slowly (a few seconds each, no correct answer in between), until Yuvi offers "בוא/י נראה אחרת". Stay on that question.`)
+  const alt = page.locator('.sp-companion__support-option--alt').first()
+  if (await alt.count()) {
+    await alt.click()
+    note(phase, 'opened the alternative explainer → item selected (selectionType=learning-type, response=presentation)')
+    await sleep(5000)
+    await shot(page, 'explainer-panel')
+    await page.locator('.sp-explainer__close').first().click().catch(() => page.keyboard.press('Escape'))
+    await sleep(1500)
+  } else note(phase, 'alternative explainer not offered', 'ui')
+  await pause(phase, `In the lomda (${COMPONENT}): now finish the component — every remaining screen — so it completes (it unlocks the assessment). If the completion dialog opens, do the reflection (rating + text, skip one, send) and choose "continue".`)
+  await shot(page, 'explainer-done')
   await logout(page, phase)
   await context.close()
 }
@@ -403,7 +541,7 @@ async function phaseKill(browser) {
 /* ── Main ────────────────────────────────────────────────────────────────── */
 const PHASE_FN = {
   session: phaseSession, onboarding: phaseOnboarding, dashboard: phaseDashboard, lesson: phaseLesson,
-  teacher: phaseTeacher, mentoring: phaseMentoring, goals: phaseGoals, relogin: phaseRelogin,
+  assessment: phaseAssessment, pass: phasePass, reflection: phaseReflection, explainer: phaseExplainer, teacher: phaseTeacher, mentoring: phaseMentoring, goals: phaseGoals, relogin: phaseRelogin,
   tabclose: phaseTabClose, kill: phaseKill,
 }
 

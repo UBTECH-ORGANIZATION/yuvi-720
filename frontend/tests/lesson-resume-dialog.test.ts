@@ -21,9 +21,10 @@ describe('lesson re-entry', () => {
     assert.match(dto, /in_progress: boolean/)
   })
 
-  it('a started, unfinished component opens the resume choice; a finished one the redo choice', () => {
-    assert.match(page, /persisted\?\.progress_state === 'completed' \? 'completed'/)
+  it('a started, unfinished component opens the resume choice; a settled one (passed OR failed) the redo choice', () => {
+    assert.match(page, /persisted\?\.outcome \? 'completed'/)
     assert.match(page, /persisted\?\.in_progress \? 'in-progress'/)
+    assert.doesNotMatch(page, /progress_state === 'completed'/)
     assert.match(page, /reentryMode === 'in-progress'/)
     assert.match(page, /reentryMode === 'completed'/)
   })
@@ -41,5 +42,28 @@ describe('lesson re-entry', () => {
   it('the copy tells the learner that starting over clears their answers', () => {
     for (const key of ['title', 'body', 'continue', 'restart']) assert.ok(he[`learning.lesson.resume.${key}`], key)
     assert.match(he['learning.lesson.resume.body'], /יימחקו/)
+  })
+
+  it('a failed visit still finalizes the lesson: the dialog keys on a visit settled since launch, not on `completed`', () => {
+    assert.match(page, /freshOutcome\(nextRoadmap\.components, session\.component\.id, outcomesAtLaunchRef\.current\)/)
+    assert.match(page, /freshOutcome\(unit\.components, session\.component\.id, outcomesAtLaunchRef\.current\)/)
+    assert.match(page, /setCompletionOutcome\(settled\.outcome\)/)
+  })
+
+  it('a failed visit gets its own copy in both dialogs, in every locale', () => {
+    for (const lang of ['he', 'en', 'ar']) {
+      const strings = JSON.parse(readFileSync(path.join(here, `../../locales/${lang}.json`), 'utf8'))
+      for (const key of ['completed.failed', 'completed.failed.body', 'reentry.failedTitle', 'reentry.failedBody']) {
+        assert.ok(strings[`learning.lesson.${key}`], `${lang} ${key}`)
+      }
+    }
+    assert.match(page, /completionOutcome === 'failed' \? 'learning\.lesson\.completed\.failed'/)
+    assert.match(page, /reentryOutcome === 'failed' \? 'learning\.lesson\.reentry\.failedTitle'/)
+  })
+
+  it('a failed completion offers another attempt first, through the same restart path', () => {
+    assert.match(page, /completionOutcome === 'failed' \? \(/)
+    assert.match(page, /onClick=\{restartAfterFailure\}/)
+    assert.match(page, /const restartAfterFailure = \(\) => \{[\s\S]*?redoCompletedComponent\(\)/)
   })
 })
