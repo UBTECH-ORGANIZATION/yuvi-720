@@ -24,6 +24,31 @@ import type { CoachPointerFrame } from '../../services/agents'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import './lesson-workspace.css'
 
+/** One key per settled visit of `componentId` on the roadmap — a redo or a
+ *  repair round adds a visit, and a failed visit is settled just like a passed
+ *  one. The event id is the key; the fallback only exists for a node without one. */
+function settledOutcomeKeys(components: LearningComponentDTO[], componentId: string): Set<string> {
+  const keys = new Set<string>()
+  components.forEach((node, index) => {
+    if (node.id !== componentId || !node.outcome) return
+    keys.add(node.progress_evidence?.event_id || `${node.outcome}:${index}`)
+  })
+  return keys
+}
+
+/** The visit of `componentId` that settled since `atLaunch` was taken, if any. */
+function freshOutcome(
+  components: LearningComponentDTO[],
+  componentId: string,
+  atLaunch: Set<string>,
+): LearningComponentDTO | null {
+  const index = components.findIndex((node, position) => (
+    node.id === componentId && Boolean(node.outcome)
+    && !atLaunch.has(node.progress_evidence?.event_id || `${node.outcome}:${position}`)
+  ))
+  return index === -1 ? null : components[index]
+}
+
 interface ProviderMessage {
   source?: string
   event?: string
@@ -84,18 +109,24 @@ export function LessonPage() {
   // a light overlay over the (resumed) content. Only redo / start-over launch
   // a fresh attempt (restart → Kata resetState).
   const [reentryMode, setReentryMode] = useState<'completed' | 'in-progress' | null>(null)
+  // How the visit the learner came back to had ended (the re-entry dialog's
+  // copy) and how the visit that just ended went (the completion dialog's).
+  const [reentryOutcome, setReentryOutcome] = useState<'passed' | 'failed' | null>(null)
+  const [completionOutcome, setCompletionOutcome] = useState<'passed' | 'failed' | null>(null)
   // Yuvi's "look here" overlay. Arrives from the companion over the yuvilab
   // event channel (the coach stream flushed a pointer frame), and must never
   // outlive its moment: the screen it describes, the session it arrived in, or
   // a few seconds of attention.
   const [coachPointer, setCoachPointer] = useState<CoachPointerFrame | null>(null)
-  // True when the launch already found this component finished. The completion
-  // POLL below only reads catalog STATE, so on re-entry it sees `completed` —
-  // which was already true — and threw the celebration dialog up a few seconds
-  // after the learner opened a lesson they had merely come back to look at.
-  // A live signal (SSE / postMessage) is evidence something JUST happened and
-  // still celebrates, which is what a redo needs.
-  const wasCompletedAtLaunchRef = useRef(false)
+  // The outcomes this component already had when the launch found it. The
+  // completion POLL below only reads catalog STATE, so on re-entry it would see
+  // the old outcome and throw the dialog up over a lesson the learner merely
+  // came back to look at. Something JUST happened only when a visit settles
+  // that was not settled at launch — passed or failed alike. A failed
+  // component never projects as `completed` (it stays open and re-doable), and
+  // keying on that state is how a failed lesson used to end in silence: no
+  // reflection, no "what now", no repair step, just a finished lomda.
+  const outcomesAtLaunchRef = useRef<Set<string>>(new Set())
   // Consumed by the session effect: the next (re)launch is an explicit redo, so
   // the backend resets our coach thread + one-shot hint state for a fresh run.
   const restartPendingRef = useRef(false)
@@ -155,16 +186,20 @@ export function LessonPage() {
           completionPendingRef.current = false
           // §6 re-entry: if this component is already completed and we're NOT
           // mid-redo, offer the view/redo choice over the resumed content.
-          const persisted = nextSession.roadmap.components.find(
+          // The visit the learner stands on: an open repair/redo round of this
+          // component when the path added one, else its first visit.
+          const visits = nextSession.roadmap.components.filter(
             (component) => component.id === nextSession.component.id,
           )
+          const persisted = visits.find((c) => c.in_progress || c.progress_state === 'current') ?? visits[0]
           setReentryMode(
             isRedo ? null
-              : persisted?.progress_state === 'completed' ? 'completed'
+              : persisted?.outcome ? 'completed'
                 : persisted?.in_progress ? 'in-progress'
                   : null,
           )
-          wasCompletedAtLaunchRef.current = persisted?.progress_state === 'completed'
+          setReentryOutcome(persisted?.outcome ?? null)
+          outcomesAtLaunchRef.current = settledOutcomeKeys(nextSession.roadmap.components, nextSession.component.id)
           // Every provider launch owns a clean Coach thread. Send its immutable
           // launch id so the companion never reloads a prior lesson entry.
           window.dispatchEvent(new CustomEvent('yuvilab:lesson-session-created', {
@@ -241,10 +276,11 @@ export function LessonPage() {
           try {
             const catalog = await getLearningCatalog(controller.signal)
             const nextRoadmap = catalog.units.find((unit) => unit.id === session.unit.id)
-            const persistedComponent = nextRoadmap?.components.find(
-              (component) => component.id === session.component.id,
-            )
-            if (!nextRoadmap || persistedComponent?.progress_state !== 'completed') continue
+            const settled = nextRoadmap
+              ? freshOutcome(nextRoadmap.components, session.component.id, outcomesAtLaunchRef.current)
+              : null
+            if (!nextRoadmap || !settled) continue
+            setCompletionOutcome(settled.outcome)
 
             setRoadmap(nextRoadmap)
             setProgressionReady(false)
@@ -303,14 +339,14 @@ export function LessonPage() {
     // the flip to 'completed' and run the same finalize path as the message.
     const checkPersistedCompletion = async () => {
       if (controller.signal.aborted || completionPendingRef.current || completedRef.current) return
-      // Nothing to detect: it was already finished when we opened it. Polling a
-      // state that never changes is how re-entry ended up celebrating.
-      if (wasCompletedAtLaunchRef.current) return
+      // Only a visit that settled since launch counts: what was already settled
+      // when we opened the lesson is re-entry, not news.
       try {
         const catalog = await getLearningCatalog(controller.signal)
         const unit = catalog.units.find((candidate) => candidate.id === session.unit.id)
-        const persisted = unit?.components.find((c) => c.id === session.component.id)
-        if (persisted?.progress_state === 'completed') void confirmPersistedCompletion()
+        if (unit && freshOutcome(unit.components, session.component.id, outcomesAtLaunchRef.current)) {
+          void confirmPersistedCompletion()
+        }
       } catch {
         /* transient catalog/network error — the next tick retries */
       }
@@ -478,6 +514,14 @@ export function LessonPage() {
     setCompleted(false)
     setTravellingFromId(null)
   }
+  // A failed component's first offer is another attempt — not the next station.
+  // Same restart path as the re-entry dialog's redo (Kata resetState).
+  const restartAfterFailure = () => {
+    if (!progressionReady) return
+    closeCompletion()
+    redoCompletedComponent()
+  }
+
   const continueAfterCompletion = () => {
     if (!progressionReady) return
     // Declining an extra the dialog offered is a decision too (practice-decision: false).
@@ -670,8 +714,10 @@ export function LessonPage() {
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
                   <div className="learning-reentry__card">
                     <div className="learning-reentry__icon"><Icon name="check" size={22} /></div>
-                    <h2 id="learning-reentry-title">{t('learning.lesson.reentry.title')}</h2>
-                    <p>{t('learning.lesson.reentry.body')}</p>
+                    <h2 id="learning-reentry-title">
+                      {t(reentryOutcome === 'failed' ? 'learning.lesson.reentry.failedTitle' : 'learning.lesson.reentry.title')}
+                    </h2>
+                    <p>{t(reentryOutcome === 'failed' ? 'learning.lesson.reentry.failedBody' : 'learning.lesson.reentry.body')}</p>
                     <div className="learning-reentry__actions">
                       <button className="learning-primary-button" type="button" onClick={continueFromCompleted}>
                         {nextComponent ? t('learning.lesson.reentry.next') : t('learning.lesson.chooseNext')}
@@ -716,11 +762,13 @@ export function LessonPage() {
                   <div className="learning-completion-icon"><Icon name="check" size={19} /></div>
                   <div>
                     <span>{t('learning.lesson.completionDialog.eyebrow')}</span>
-                    <h2 id="learning-completion-title">{t('learning.lesson.completed')}</h2>
+                    <h2 id="learning-completion-title">
+                      {t(completionOutcome === 'failed' ? 'learning.lesson.completed.failed' : 'learning.lesson.completed')}
+                    </h2>
                   </div>
                 </header>
                 <p id="learning-completion-description" className="learning-completion-work__lede">
-                  {timingLabel || t('learning.lesson.completed.body')}
+                  {timingLabel || t(completionOutcome === 'failed' ? 'learning.lesson.completed.failed.body' : 'learning.lesson.completed.body')}
                 </p>
 
                 <div className="learning-completion-work__body">
@@ -752,17 +800,41 @@ export function LessonPage() {
                     </p>
                   )}
                   <div className="learning-completion-work__choices">
-                    <button
-                      ref={completionActionRef}
-                      className="learning-completion-cta"
-                      type="button"
-                      disabled={!progressionReady}
-                      aria-busy={!progressionReady}
-                      onClick={continueAfterCompletion}
-                    >
-                      {nextComponent ? t('learning.path.continue') : t('learning.lesson.chooseNext')}
-                      <Icon name="arrow" size={17} />
-                    </button>
+                    {completionOutcome === 'failed' ? (
+                      <>
+                        <button
+                          ref={completionActionRef}
+                          className="learning-completion-cta"
+                          type="button"
+                          disabled={!progressionReady}
+                          aria-busy={!progressionReady}
+                          onClick={restartAfterFailure}
+                        >
+                          {t('learning.lesson.reentry.redo')}
+                          <Icon name="arrow" size={17} />
+                        </button>
+                        <button
+                          className="learning-completion-alt"
+                          type="button"
+                          disabled={!progressionReady}
+                          onClick={continueAfterCompletion}
+                        >
+                          {nextComponent ? t('learning.path.continue') : t('learning.lesson.chooseNext')}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        ref={completionActionRef}
+                        className="learning-completion-cta"
+                        type="button"
+                        disabled={!progressionReady}
+                        aria-busy={!progressionReady}
+                        onClick={continueAfterCompletion}
+                      >
+                        {nextComponent ? t('learning.path.continue') : t('learning.lesson.chooseNext')}
+                        <Icon name="arrow" size={17} />
+                      </button>
+                    )}
                     {/* 720 §1 פעלנות — the learner may overrule the route. Taking
                         an extra is recorded, so the next re-plan already knows. */}
                     {optionalExtra && progressionReady && (

@@ -1408,14 +1408,38 @@ async def _time_on_target(
 async def _component_outcome(event: dict[str, Any]) -> dict[str, Any]:
     """`success` + `score.scaled` for a component the learner just completed.
 
-    v1.1 marks both mandatory on a component completion, and the relay's own
-    statement carries neither. They are counted from the answers this learner
-    actually gave inside the component in this session: the LAST attempt on each
-    distinct question decides it, `scaled` is the share of those that ended
-    correct, and `success` says whether every one of them did. Nothing is
-    inferred from a threshold nobody published; a component with no graded
-    answer reports neither field.
+    v1.1 marks both mandatory on a component completion. The content provider's
+    own verdict comes first: Kata's component completion now carries
+    `result.success` (and `score.scaled`) — verified 22/09/2026, where it
+    counted every question in the component (10/11 → `success: false`). What
+    the lomda told the learner on its last screen is what the ministry hears,
+    and what the roadmap already judged from the stored event; a second opinion
+    of ours would let the three disagree.
+
+    Only when the provider says nothing are they counted from the answers this
+    learner actually gave inside the component in this session: the LAST
+    attempt on each distinct question decides it, `scaled` is the share of
+    those that ended correct, and `success` says whether every one of them did.
+    Nothing is inferred from a threshold nobody published; a component with no
+    verdict and no graded answer reports neither field.
     """
+    provider = event.get("result") or {}
+    provider_success = provider.get("success")
+    provider_scaled = provider.get("score_scaled")
+    if isinstance(provider_success, bool):
+        outcome: dict[str, Any] = {"success": provider_success}
+        if isinstance(provider_scaled, (int, float)) and not isinstance(provider_scaled, bool):
+            outcome["score"] = {"scaled": round(float(provider_scaled), 4)}
+            return outcome
+        derived = await _counted_component_outcome(event)
+        if derived.get("score"):
+            outcome["score"] = derived["score"]
+        return outcome
+    return await _counted_component_outcome(event)
+
+
+async def _counted_component_outcome(event: dict[str, Any]) -> dict[str, Any]:
+    """The fallback verdict, counted from this session's graded answers."""
     try:
         prior = await get_session_events(event["learner_id"], event.get("session_id"))
     except Exception:
