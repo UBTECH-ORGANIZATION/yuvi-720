@@ -32,6 +32,20 @@ def _cumulative_thresholds() -> tuple[int, ...]:
 LEVEL_START_XP = _cumulative_thresholds()
 
 
+def level_table() -> list[dict[str, Any]]:
+    """Every level with the cumulative XP that opens it and the XP its own bar
+    spans — the ladder the roadmap screen draws. Level 50 is the display cap,
+    so it has no next span."""
+    return [
+        {
+            "level": level,
+            "startXp": LEVEL_START_XP[level],
+            "xpToNext": XP_TO_NEXT[level - 1] if level < MAX_LEVEL else None,
+        }
+        for level in range(1, MAX_LEVEL + 1)
+    ]
+
+
 def status_for_total_xp(total_xp: int) -> dict[str, Any]:
     """Return level and current-level progress for a non-negative XP total."""
     safe_total = max(0, int(total_xp))
