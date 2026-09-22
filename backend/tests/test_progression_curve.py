@@ -7,6 +7,7 @@ from app.services.progression.curve import (
     MAX_LEVEL,
     RULES_VERSION,
     XP_TO_NEXT,
+    level_table,
     status_for_total_xp,
 )
 
@@ -49,3 +50,14 @@ class ProgressionCurveTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_level_table_is_the_curve_row_by_row(self) -> None:
+        table = level_table()
+        self.assertEqual([row["level"] for row in table], list(range(1, MAX_LEVEL + 1)))
+        self.assertEqual(table[0], {"level": 1, "startXp": 0, "xpToNext": 100})
+        self.assertEqual(table[1]["startXp"], 100)
+        self.assertEqual(table[9], {"level": 10, "startXp": LEVEL_START_XP[10], "xpToNext": 350})
+        # The cap has no bar to fill, exactly as `status_for_total_xp` reports it.
+        self.assertEqual(table[-1], {"level": MAX_LEVEL, "startXp": LEVEL_START_XP[MAX_LEVEL], "xpToNext": None})
+        for row in table[:-1]:
+            self.assertEqual(row["startXp"] + row["xpToNext"], LEVEL_START_XP[row["level"] + 1])

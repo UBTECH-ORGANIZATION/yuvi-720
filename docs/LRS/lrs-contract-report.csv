@@ -25,6 +25,6 @@ questionnaire,completed,
 question,answered,
 video / audio / animation (media),played,
 video / audio / animation (media),paused,
-video / audio / animation (media),completed,
+video / audio / animation (media),completed,,"לא נשלח — אפיון 1.2 (דוח אינטגרציה 9, 22/09): אין צורך לשלוח הודעת מדיה completed"
 component / item,requested,
 item,selected,"נשלח על הפריט כאשר הלומד פותח את ההסבר החלופי (""בוא/י נראה אחרת"", selectionType=learning-type) וכן דרך ממשק ספק התוכן כשהלומדה מדווחת בחירה בתוך פריט. בחירת הפלטפורמה practice-decision נשלחת על הרכיב (יש ראיה)"

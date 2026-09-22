@@ -422,8 +422,12 @@ export function LessonPage() {
     if (!completed) return
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const hasNextStation = Boolean(roadmap?.next_path_node_id)
-    const duration = reducedMotion ? 450 : hasNextStation ? 6800 : 2600
-    const stopAudio = reducedMotion ? () => undefined : playCelebrationCheer(duration)
+    // A failed visit is not a celebration: no cheer, no journey animation to
+    // sit through — the dialog is usable almost at once, and its first offer
+    // is another attempt.
+    const failed = completionOutcome === 'failed'
+    const duration = reducedMotion || failed ? 450 : hasNextStation ? 6800 : 2600
+    const stopAudio = reducedMotion || failed ? () => undefined : playCelebrationCheer(duration)
     const readyTimer = window.setTimeout(() => {
       setTravellingFromId(null)
       setProgressionReady(true)
@@ -432,7 +436,7 @@ export function LessonPage() {
       window.clearTimeout(readyTimer)
       stopAudio()
     }
-  }, [completed, roadmap?.next_component_id])
+  }, [completed, completionOutcome, roadmap?.next_component_id])
 
   useEffect(() => {
     if (!roadmap || !session) return
@@ -741,7 +745,7 @@ export function LessonPage() {
           <div className="learning-completion-backdrop" role="presentation">
             <section
               ref={completionDialogRef}
-              className="learning-completion-dialog is-single"
+              className={`learning-completion-dialog is-single${completionOutcome === 'failed' ? ' is-failed' : ''}`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="learning-completion-title"
@@ -759,9 +763,9 @@ export function LessonPage() {
 
               <div className="learning-completion-work">
                 <header className="learning-completion-work__head">
-                  <div className="learning-completion-icon"><Icon name="check" size={19} /></div>
+                  <div className="learning-completion-icon"><Icon name={completionOutcome === 'failed' ? 'refresh' : 'check'} size={19} /></div>
                   <div>
-                    <span>{t('learning.lesson.completionDialog.eyebrow')}</span>
+                    <span>{t(completionOutcome === 'failed' ? 'learning.lesson.completionDialog.eyebrowFailed' : 'learning.lesson.completionDialog.eyebrow')}</span>
                     <h2 id="learning-completion-title">
                       {t(completionOutcome === 'failed' ? 'learning.lesson.completed.failed' : 'learning.lesson.completed')}
                     </h2>

@@ -1145,6 +1145,13 @@ async def _forward_to_moe_lrs(
     if not lrs_config.is_enabled():
         return
     event = event or {}
+    if event.get("verb") == "completed" and _is_media_item(
+        event.get("launch") or launch.get("cmp"), event.get("sub_item_id")
+    ):
+        # Spec v1.2 (integration report 9, 22/09): "אין צורך לשלוח הודעת מדיה
+        # completed". A clip watched to the end is still `played`/`paused`
+        # for the ministry; only the completion stays home.
+        return
     if _is_forward_duplicate(learner_id, statement, event):
         return
     user = await get_user_by_id(learner_id)

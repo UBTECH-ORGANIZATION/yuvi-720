@@ -308,6 +308,8 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
         return na("ב-1.1 הדילוג הוא ברמת הרכיב (TC-ITM-12); אין דילוג ברמת פריט.")
     if tc == "TC-ITM-12":
         return na("לא נתמך: באפליקציה אין דילוג על רכיב (\"אני כבר יודע/ת\"), ולכן האירוע skipped ברמת רכיב אינו נשלח.")
+    if tc == "TC-ITM-07":
+        return na("אפיון 1.2 (דוח אינטגרציה 9, 22/09): אין צורך לשלוח הודעת מדיה completed; האירוע אינו נשלח.")
     if tc in {"TC-ITM-05", "TC-ITM-06", "TC-ITM-07"}:
         wanted = {"TC-ITM-05": "played", "TC-ITM-06": "paused", "TC-ITM-07": "completed"}[tc]
         found = ev.find(actor=content, verb=wanted, where=lambda e: object_type(e) in MEDIA_TYPES or ext_of(e).get("mediaFormat") in MEDIA_TYPES)
@@ -529,6 +531,12 @@ def main() -> int:
             # evidence (not supported, vendor-only); only an unexplained blank
             # is a gap worth listing.
             note = (row.get("Note") or "").strip()
+            # A pair the contract itself marks as not sent (unsupported, or
+            # retired by the spec) gets no id even when an older build's
+            # statement is still inside the window: the index describes what
+            # the current build sends.
+            if note.startswith(("לא נשלח", "לא נתמך")):
+                found = []
             if not found and not note:
                 missing_contract.append(f"{row['Object Type']}:{row['Verb']}")
             writer.writerow({

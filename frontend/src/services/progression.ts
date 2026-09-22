@@ -41,9 +41,33 @@ export interface XpAwardReceipt {
   levelRewards?: XpLevelReward[]
 }
 
+/** One rung of the ladder: the cumulative XP that opens it, the XP its own
+ *  bar spans (null at the display cap) and what reaching it unlocks. */
+export interface RoadmapLevel {
+  level: number
+  startXp: number
+  xpToNext: number | null
+  reward: XpLevelReward
+}
+
+export interface ProgressionRoadmap {
+  rulesVersion: number
+  maxLevel: number
+  levels: RoadmapLevel[]
+  progression: ProgressionStatus
+}
+
 export function getProgressionStatus(signal?: AbortSignal) {
   return apiGet<ProgressionStatus>(
     '/api/progression/status', signal ? { signal } : undefined
+  )
+}
+
+/** The whole ladder with the learner's place on it — the roadmap screen's
+ *  one request. The curve and the reward table live on the server only. */
+export function getProgressionRoadmap(signal?: AbortSignal) {
+  return apiGet<ProgressionRoadmap>(
+    '/api/progression/roadmap', signal ? { signal } : undefined
   )
 }
 

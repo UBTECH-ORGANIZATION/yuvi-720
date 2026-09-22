@@ -134,7 +134,22 @@
   font-size: 12px;
 }
 .xp-award__content b { color: #17835a; white-space: nowrap; }
-.xp-award > button {
+.xp-award__roadmap {
+  justify-self: start;
+  margin-block-start: 3px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--sp-primary-600), transparent 60%);
+  border-radius: 6px;
+  background: var(--sp-primary-600);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.xp-award__roadmap:hover { background: var(--sp-primary-700); }
+.xp-award__roadmap:focus-visible { outline: 3px solid var(--sp-focus-ring); outline-offset: 2px; }
+.xp-award__close {
   inline-size: 28px;
   block-size: 28px;
   border: 0;

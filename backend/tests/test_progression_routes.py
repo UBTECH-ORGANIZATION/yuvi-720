@@ -47,6 +47,32 @@ class ProgressionRouteTests(unittest.TestCase):
         invalid = TestClient(_app()).get("/api/progression/ledger?limit=101")
         self.assertEqual(invalid.status_code, 422)
 
+    def test_roadmap_lists_every_level_with_its_reward_and_the_learner_place(self) -> None:
+        status = {"level": 4, "totalXp": 410}
+        with patch.object(
+            routes.progression, "get_status", AsyncMock(return_value=status)
+        ) as get_status:
+            response = TestClient(_app()).get("/api/progression/roadmap")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        get_status.assert_awaited_once_with(LEARNER)
+        self.assertEqual(body["progression"], status)
+        self.assertEqual(body["maxLevel"], 50)
+        self.assertEqual(body["rulesVersion"], routes.progression.RULES_VERSION)
+        self.assertEqual(len(body["levels"]), 50)
+        self.assertEqual(body["levels"][0]["startXp"], 0)
+        self.assertEqual(body["levels"][1]["startXp"], 100)
+        # The rewards are the settlement's own public shape, level by level.
+        ten = body["levels"][9]
+        self.assertEqual(ten["level"], 10)
+        self.assertIn("layout:sportsArena", ten["reward"]["roomUnlocks"])
+        self.assertEqual(ten["reward"]["sparks"], 25)
+        twenty = body["levels"][19]["reward"]
+        self.assertEqual(twenty["extraHintTokens"], 1)
+        self.assertIn("layout:creatorLoft", twenty["roomUnlocks"])
+        self.assertIsNone(body["levels"][-1]["xpToNext"])
+        self.assertEqual(body["levels"][-1]["reward"]["avatarUnlocks"], ["prestige_level_frame_50"])
+
     def test_no_public_grant_route_exists(self) -> None:
         response = TestClient(_app()).post("/api/progression/grant", json={"amount": 9999})
         self.assertEqual(response.status_code, 404)
