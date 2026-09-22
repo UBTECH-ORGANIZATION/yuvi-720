@@ -66,4 +66,16 @@ describe('lesson re-entry', () => {
     assert.match(page, /onClick=\{restartAfterFailure\}/)
     assert.match(page, /const restartAfterFailure = \(\) => \{[\s\S]*?redoCompletedComponent\(\)/)
   })
+
+  it('a failed completion is not celebrated: no cheer, no green, its own eyebrow', () => {
+    assert.match(page, /const failed = completionOutcome === 'failed'/)
+    assert.match(page, /reducedMotion \|\| failed \? \(\) => undefined : playCelebrationCheer/)
+    assert.match(page, /completionOutcome === 'failed' \? ' is-failed' : ''/)
+    assert.match(page, /'learning\.lesson\.completionDialog\.eyebrowFailed'/)
+    for (const lang of ['he', 'en', 'ar']) {
+      const strings = JSON.parse(readFileSync(path.join(here, `../../locales/${lang}.json`), 'utf8'))
+      assert.ok(strings['learning.lesson.completionDialog.eyebrowFailed'], lang)
+    }
+  })
 })
+
