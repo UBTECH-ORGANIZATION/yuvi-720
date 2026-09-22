@@ -382,3 +382,47 @@ class InProgressTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RedoBeyondThePlanTests(unittest.TestCase):
+    """§6 lets a learner redo a component as often as they like; the path only
+    ever PLANS one stage visit plus a repair round. A completion beyond that
+    plan used to vanish: on Dev (22/09/2026) a third attempt at ‑01 that finally
+    passed left both planned visits "failed", opened no dialog and kept the
+    assessment locked. A visit is settled by the attempts from that round on —
+    the most recent pass, else the latest attempt."""
+
+    def test_a_third_attempt_that_passes_settles_both_planned_visits(self) -> None:
+        events = [
+            completion(C1, success=False, scaled=0.9, event_id="c1-first"),
+            completion(C2, success=False, scaled=0.64, event_id="c2-first"),   # → repair round on ‑01
+            completion(C1, success=False, scaled=0.9, event_id="c1-repair"),
+            completion(C1, success=True, scaled=1.0, event_id="c1-third"),      # beyond the plan
+        ]
+        projected = plan(STRUGGLING, events, signals=["wheel_spinning"])
+        first, repair = node(projected, C1, visit=1), node(projected, C1, visit=2)
+        self.assertEqual((first["outcome"], first["progress_state"]), ("passed", "completed"))
+        self.assertEqual((repair["outcome"], repair["progress_state"]), ("passed", "completed"))
+        # The evidence a client keys on is the attempt that settled the visit.
+        self.assertEqual(first["progress_evidence"]["event_id"], "c1-third")
+        self.assertEqual(repair["progress_evidence"]["event_id"], "c1-third")
+
+    def test_a_plain_redo_that_passes_needs_no_repair_round(self) -> None:
+        projected = plan(MIDDLE, [
+            completion(C1, success=False, scaled=0.9, event_id="c1-first"),
+            completion(C1, success=True, scaled=1.0, event_id="c1-redo"),
+        ])
+        first = node(projected, C1, visit=1)
+        self.assertEqual((first["outcome"], first["progress_state"]), ("passed", "completed"))
+        self.assertEqual(first["progress_evidence"]["event_id"], "c1-redo")
+        self.assertEqual([n["visit"] for n in projected["components"] if n["component_id"] == C1], [1])
+
+    def test_a_later_worse_attempt_does_not_take_a_pass_away(self) -> None:
+        projected = plan(MIDDLE, [
+            completion(C1, success=True, scaled=1.0, event_id="c1-pass"),
+            completion(C1, success=False, scaled=0.4, event_id="c1-worse"),
+        ])
+        first = node(projected, C1, visit=1)
+        self.assertEqual(first["outcome"], "passed")
+        self.assertEqual(first["progress_evidence"]["event_id"], "c1-pass")
+
