@@ -210,9 +210,22 @@ def unit_evidence(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _outcome_for(evidence: dict[str, Any], component_id: str, visit: int) -> Optional[dict[str, Any]]:
-    """The outcome settling a component's Nth visit, if it has happened yet."""
+    """The outcome settling a component's Nth visit, if it has happened yet.
+
+    A visit is settled by the attempts made from that round on: the most recent
+    PASS among them, else the latest attempt. The Nth completion alone used to
+    settle the Nth visit, so a learner who redid a component beyond the visits
+    the path had planned (§6 allows it) was judged by an old attempt — on Dev,
+    22/09/2026, a third completion that finally passed changed nothing: the
+    node stayed failed, no dialog opened, the assessment stayed locked. A pass
+    is never taken away by a later, worse attempt; the failure then is a repair
+    the profile records, not a lock.
+    """
     rows = (evidence.get("outcomes") or {}).get(component_id) or []
-    return rows[visit - 1] if len(rows) >= visit else None
+    if len(rows) < visit:
+        return None
+    since = rows[visit - 1:]
+    return next((row for row in reversed(since) if row["passed"]), since[-1])
 
 
 # ── Rules ────────────────────────────────────────────────────────────────────
