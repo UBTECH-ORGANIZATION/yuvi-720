@@ -429,6 +429,9 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   padding-inline-end: 44px;   /* clears the floating close button */
 }
 .learning-completion-work__head > div:nth-child(2) { display: grid; gap: 1px; min-inline-size: 0; }
+/* A failed visit: the same dialog, without the green. */
+.learning-completion-dialog.is-failed .learning-completion-icon { background: var(--sp-ink-500); }
+.learning-completion-dialog.is-failed .learning-completion-work__head span { color: var(--sp-ink-500); }
 .learning-completion-work__head span {
   color: var(--sp-success-600);
   font-size: 11px;
