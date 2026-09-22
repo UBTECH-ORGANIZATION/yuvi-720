@@ -530,6 +530,29 @@ class ContentStatementTests(unittest.TestCase):
         self.assertEqual(stmt["context"]["contextActivities"]["parent"],
                          [self.hierarchy["self"]])
 
+    def test_a_relayed_answer_parented_by_the_component_skips_the_screen(self):
+        """Report 9 (22/09), מענה על שאלה: "נשלח תיוג מיותר של Item ב-grouping
+        (השאלה נשלחה מתוך component, לכן נדרש לשלוח ב-grouping רק את התיוגים
+        של parent, שאלה, רכיב ויחידה)". The content's own parent decides the
+        chain: parent = component → grouping = […, unit, component, question]."""
+        component = self.hierarchy["parent"][0]
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/item/q1"},
+            "context": {"contextActivities": {"parent": [{"id": component["id"]}]}},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+            object_below_self=True,
+        )
+        activities = stmt["context"]["contextActivities"]
+        grouping = activities["grouping"]
+        self.assertEqual(grouping[-1], stmt["object"])
+        self.assertEqual(grouping[-2]["id"], component["id"])
+        self.assertNotIn(self.hierarchy["self"]["id"], [g["id"] for g in grouping])
+        self.assertEqual([p["id"] for p in activities["parent"]], [component["id"]])
+        self.assertEqual(activities["parent"][0]["definition"]["type"], f"{ACTIVITY}/component")
+
     def test_selected_groups_the_exact_object_type_included(self):
         """Report 3, בחירה שאינה לימודית: "הפריט עצמו ב-grouping יהיה אותו
         אובייקט בדיוק כמו ב-object, נשלח type שונה"."""

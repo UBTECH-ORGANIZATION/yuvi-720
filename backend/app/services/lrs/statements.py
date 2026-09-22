@@ -1207,10 +1207,22 @@ def enriched_content_statement(
     # "הפריט עצמו ב-grouping צריך להיות אותו אובייקט בדיוק כמו ב-object", with
     # the object's own type (a questionnaire tags itself `questionnaire`).
     grouping.extend(hierarchy.get("grouping") or [])
-    if object_below_self and hierarchy.get("self"):
-        grouping.append(copy.deepcopy(hierarchy["self"]))
+    # A question nests under its screen ONLY when the screen is its parent.
+    # Integration report 9 (22/09): a question the content parents directly
+    # under the component ("השאלה נשלחה מתוך component") must not carry the
+    # screen in grouping — "רק את התיוגים של parent, שאלה, רכיב ויחידה". The
+    # content's own parent decides; the catalog's screen is added only when
+    # the content named it (or named nothing, and the screen becomes parent).
+    content_parent_ids = {
+        str(entry.get("id"))
+        for entry in (context_activities.get("parent") or [])
+        if isinstance(entry, dict) and entry.get("id")
+    }
+    screen = hierarchy.get("self") if object_below_self else None
+    if screen and (not content_parent_ids or str(screen.get("id")) in content_parent_ids):
+        grouping.append(copy.deepcopy(screen))
         if not context_activities.get("parent"):
-            context_activities["parent"] = [copy.deepcopy(hierarchy["self"])]
+            context_activities["parent"] = [copy.deepcopy(screen)]
     if isinstance(obj, dict) and obj.get("id"):
         # The object's copy must be the one that survives de-dup, so any entry
         # the content already sent under the same id (possibly typed differently)

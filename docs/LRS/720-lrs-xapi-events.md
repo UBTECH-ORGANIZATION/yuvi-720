@@ -149,7 +149,7 @@ grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_sec
 |---|---|---|---|---|
 | 26 | התחלת צפייה | `played` | `video`/audio/animation (לעולם לא `item`) | `extensions`: mediaFormat, mediaPosition (`mediaDuration` הוסר ב-1.1) |
 | 27 | השהיה | `paused` | media | `extensions.mediaPosition` + `result.duration` |
-| 28 | סיום צפייה | `completed` | media | `result.duration` |
+| 28 | סיום צפייה | `completed` | media | **לא נשלח** — אפיון 1.2 (דוח אינטגרציה 9): "אין צורך לשלוח הודעת מדיה completed" |
 
 ### 3.11 בקשת עזרה / בחירה לא-לימודית
 | # | אירוע | Verb | Object type | הערות |
