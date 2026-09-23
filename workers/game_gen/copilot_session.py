@@ -67,6 +67,11 @@ _BLOCKED_TOOL_CONTEXT = (
 
 # Events vibe deliberately did not log as "unhandled".
 CREDIT_LIMIT_ERROR = "credit_limit"
+#: The model's safety filter declined the turn: no output, and in place of the
+#: reply Copilot returns a one-line notice ("The model returned no content
+#: because the response was blocked by content filtering."). Not a game, not a
+#: retryable glitch on the same prompt — see pipeline's model fallback.
+CONTENT_FILTERED_ERROR = "content_filtered"
 
 _QUIET_EVENTS = frozenset({
     "hook.start", "hook.end",
@@ -345,6 +350,9 @@ class HeadlessCopilotSession:
 
         if self._credit_exhausted:
             self._error = CREDIT_LIMIT_ERROR
+        if not self._error and _is_content_filtered(self.full_response, getattr(self._usage, "output_tokens", None)):
+            self._error = CONTENT_FILTERED_ERROR
+            logger.warning("[%s] turn blocked by the model's content filter (%s)", self.session_id[:8], self.model)
         if self._done.is_set() and self._error:
             stop_reason = "error"
 
@@ -662,6 +670,12 @@ def _build_client(copilot_mod: Any) -> Any:
         github_token=token,
         use_logged_in_user=config.use_logged_in_user(),
     )
+
+
+def _is_content_filtered(text: str, output_tokens: int | None) -> bool:
+    """Copilot's notice for a turn the model's content filter blocked."""
+    t = (text or "").strip().lower()
+    return bool(t) and len(t) < 300 and "blocked by content filtering" in t and not output_tokens
 
 
 def _is_credit_limit_error(text: str) -> bool:
