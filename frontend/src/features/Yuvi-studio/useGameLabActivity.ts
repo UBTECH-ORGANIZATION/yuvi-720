@@ -35,6 +35,8 @@ export interface GameLabActivity {
   busyIds: string[]
   /** `at`: when the game was fetched (defaults to now) — a page's request start, for a list. */
   noteGame: (game: LearnerGame, at?: number) => void
+  /** A deleted game: dropped from every map, and later news about it ignored. */
+  forgetGame: (gameId: string) => void
 }
 
 const POLL_MS = 15_000
@@ -46,6 +48,8 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
   const [phases, setPhases] = useState<Record<string, Stamped<LivePhase>>>({})
   const [flashKey, setFlashKey] = useState(0)
   const busyRef = useRef(new Set<string>())
+  // Deleted on this visit. A poll or frame already in flight must not bring the card back.
+  const goneRef = useRef(new Set<string>())
 
   const mark = useCallback((gameId: string, busy: boolean) => {
     const has = busyRef.current.has(gameId)
@@ -64,6 +68,7 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
   }, [])
 
   const noteGame = useCallback((game: LearnerGame, at: number = Date.now()) => {
+    if (goneRef.current.has(game.game_id)) return
     const wasBusy = busyRef.current.has(game.game_id)
     setSnapshots((current) => {
       const known = current[game.game_id]
@@ -72,6 +77,19 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     const busy = isBusy(game)
     mark(game.game_id, busy)
     if (wasBusy && !busy && game.status === 'ready') setFlashKey((key) => key + 1)
+  }, [mark])
+
+  const forgetGame = useCallback((gameId: string) => {
+    goneRef.current.add(gameId)
+    const drop = <T,>(current: Record<string, T>) => {
+      if (!(gameId in current)) return current
+      const { [gameId]: _gone, ...rest } = current
+      return rest
+    }
+    setSnapshots(drop)
+    setFrames(drop)
+    setPhases(drop)
+    mark(gameId, false)
   }, [mark])
 
   // Seed: a build started on a previous visit should already be pulsing.
@@ -91,7 +109,7 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
   useEffect(() => {
     if (!enabled) return
     return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
-      if (!isGameFrame(frame)) return
+      if (!isGameFrame(frame) || goneRef.current.has(frame.game_id)) return
       setFrames((current) => ({ ...current, [frame.game_id]: { value: frame, at: Date.now() } }))
       if (!frame.status) return
       const busy = isBusy({ status: frame.status })
@@ -128,6 +146,7 @@ export function useGameLabActivity(enabled: boolean): GameLabActivity {
     phases,
     busyIds,
     noteGame,
+    forgetGame,
   }
 }
 

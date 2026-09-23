@@ -134,7 +134,10 @@ function MyGames({ activity, onCreate }: { activity: GameLabActivity; onCreate: 
     })
   }, [activity.snapshots, activity.frames])
 
-  const remove = (gameId: string) => setGames((current) => current.filter((row) => row.game_id !== gameId))
+  const remove = (gameId: string) => {
+    activity.forgetGame(gameId)
+    setGames((current) => current.filter((row) => row.game_id !== gameId))
+  }
   const replace = (game: LearnerGame) => {
     const at = Date.now()
     freshAt.current[game.game_id] = at
@@ -277,7 +280,9 @@ function GameCard({
     try {
       await deleteGame(game.game_id)
       onDeleted()
-    } catch {
+    } catch (error) {
+      // Already gone (deleted on another tab or an earlier press): the card goes too.
+      if ((error as { status?: number }).status === 404) { onDeleted(); return }
       setDeleteBusy(false)
       setConfirmDelete(false)
     }
