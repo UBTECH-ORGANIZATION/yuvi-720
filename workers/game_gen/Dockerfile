@@ -1,4 +1,4 @@
-# Learning Game Lab worker — Copilot SDK (claude-opus-5) + Playwright validator.
+# Learning Game Lab worker — Copilot SDK (claude-opus-5.5) + Playwright validator.
 # Build from the repo root so backend/app (usage ledger, notifications) is on the path:
 #   docker build -f workers/game_gen/Dockerfile -t yuvi720acr.azurecr.io/game-gen:dev .
 FROM python:3.12-slim-bookworm

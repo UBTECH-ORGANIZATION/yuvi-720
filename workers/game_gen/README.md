@@ -65,7 +65,7 @@ cd workers && PYTHONPATH=.:../backend game_gen/.venv/bin/python -m game_gen.scri
 
 **Job payload** (`payload`): `kind`, `genre`, `vibe`, `inspirations`, `language`,
 `device`, `learner_title`, `instruction`/`errors`/`history`/`version` (edit/fix),
-`model` (None → `COPILOT_MODEL` → `claude-opus-5`), `reasoning_effort`
+`model` (None → `COPILOT_MODEL` → `claude-opus-5.5`), `reasoning_effort`
 (default `low`), `judge`, `plan`, and `context = {component: {id, title, purpose,
 relative_difficulty}, unit: {id, title, subject}, objective: {id, title,
 description, curriculum_title}, learning_description}`. No question rows, no

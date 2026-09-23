@@ -146,7 +146,7 @@ async def main() -> None:
     ap.add_argument("--vibe", default="")
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--matrix", action="store_true")
-    ap.add_argument("--model", default="claude-opus-5")
+    ap.add_argument("--model", default="claude-opus-5.5")
     ap.add_argument("--effort", default="low")
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--no-plan", action="store_true")
