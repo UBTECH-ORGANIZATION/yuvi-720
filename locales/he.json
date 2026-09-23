@@ -2222,6 +2222,7 @@
   "tch.evidence.field.highest_hint_level": "רמת הרמז הגבוהה ביותר",
   "tch.evidence.field.reason": "סיבה",
   "notif.title": "התראות",
+  "notif.unreadCount": "{count} התראות שלא נקראו",
   "notif.empty": "אין התראות חדשות",
   "notif.fallback": "עדכון חדש",
   "notif.markAllRead": "סמן הכל כנקרא",

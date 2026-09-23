@@ -26,6 +26,8 @@
 .learner-app-nav button.is-active { background: var(--sp-surface); color: var(--sp-primary-700); box-shadow: var(--sp-shadow-sm); }
 .learner-app-nav button:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 
+.learner-app-nav > .learner-app-nav__hint { display: inline-flex; }
+
 @media (max-width: 720px) {
   .learner-app-nav span { display: none; }
   .learner-app-nav button { padding-inline: 11px; }

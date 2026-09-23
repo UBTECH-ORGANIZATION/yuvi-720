@@ -2222,6 +2222,7 @@
   "tch.evidence.field.highest_hint_level": "أعلى مستوى تلميح",
   "tch.evidence.field.reason": "السبب",
   "notif.title": "الإشعارات",
+  "notif.unreadCount": "{count} إشعارات غير مقروءة",
   "notif.empty": "لا جديد",
   "notif.fallback": "تحديث جديد",
   "notif.markAllRead": "تعليم الكل كمقروء",

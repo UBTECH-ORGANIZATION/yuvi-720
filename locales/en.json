@@ -2222,6 +2222,7 @@
   "tch.evidence.field.highest_hint_level": "Highest hint level",
   "tch.evidence.field.reason": "Reason",
   "notif.title": "Notifications",
+  "notif.unreadCount": "{count} unread notifications",
   "notif.empty": "No new notifications",
   "notif.fallback": "New update",
   "notif.markAllRead": "Mark all as read",

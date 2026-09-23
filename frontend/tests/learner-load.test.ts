@@ -19,6 +19,7 @@ const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.m
 const companion = read('../src/providers/CompanionProvider.tsx')
 const lesson = read('../src/features/learning-lesson/LessonPage.tsx')
 const appBar = read('../src/components/LearnerAppBar.tsx')
+const bell = read('../src/components/NotificationBell.tsx')
 
 describe('the coach panel survives navigation', () => {
   it('does not reload its history because the route changed', () => {
@@ -51,5 +52,10 @@ describe('the learner app bar remembers its counts across a remount', () => {
     assert.match(appBar, /useState\(\(\) => fresh\('tasks', onTasks\) \?\? 0\)/)
     assert.match(appBar, /if \(fresh\('unread', onChat\) === null\) read\(\)/)
     assert.match(appBar, /if \(fresh\('tasks', onTasks\) === null\) read\(\)/)
+  })
+
+  it('explains task and notification badges on hover and keyboard focus', () => {
+    assert.match(appBar, /<Hint[\s\S]{0,180}sdash\.nav\.openTasks/)
+    assert.match(bell, /<Hint[\s\S]{0,180}notif\.unreadCount/)
   })
 })
