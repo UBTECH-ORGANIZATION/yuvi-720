@@ -96,8 +96,9 @@ def default_model() -> Optional[str]:
 #: Deep thinking is a different model, not just more effort: the bake-off
 #: (2026-09-10) showed Sonnet at medium scores like Sonnet at low, while an
 #: Opus at medium is the only cell that scored higher. Gal asked for Opus 4.6;
-#: it is not on the Copilot catalog; Opus 4.8 stood in until 2026-09-10, when Gal moved deep thinking to Opus 5.
-DEEP_MODEL_FALLBACK = "claude-opus-5"
+#: it is not on the Copilot catalog; Opus 4.8 stood in until 2026-09-10, when Gal moved deep thinking to Opus 5,
+#: and Opus 5.5 from 2026-09-23 (Copilot catalog id ``claude-opus-5.5``, dotted).
+DEEP_MODEL_FALLBACK = "claude-opus-5.5"
 
 
 def deep_model() -> str:

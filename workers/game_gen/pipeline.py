@@ -70,7 +70,7 @@ MAX_SUBMISSIONS = 3
 #: A turn that produced this much output and no game hit the model's
 #: per-turn output cap (32k on claude-opus-5 via Copilot) — the game did not fit.
 OUTPUT_CAP_HINT_TOKENS = 30_000
-DEFAULT_MODEL = "claude-opus-5"  # Opus only, low by default, medium for deep (Gal, 2026-09-14)
+DEFAULT_MODEL = "claude-opus-5.5"  # Opus only, low by default, medium for deep (Gal, 2026-09-14); Opus 5.5 from 2026-09-23
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or "gpt-5.4-mini"
 PLAN_MODEL = os.environ.get("PLAN_MODEL") or "gpt-5.4-mini"
 PLAN_TIMEOUT_S = 45.0  # the pitch took 18-19 s at 20 s; a timeout means no pitch for the kid, so give it room

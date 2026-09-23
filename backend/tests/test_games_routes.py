@@ -118,8 +118,8 @@ class GamesRoutesTest(unittest.TestCase):
         job = self._run(store.get_job(created["job_id"]))
         self.assertEqual(job["payload"]["reasoning_effort"], "medium")
         # …and switches to the premium model (the bake-off's only cell that scored higher).
-        self.assertEqual(job["payload"]["model"], "claude-opus-5")
-        self.assertEqual(self._run(store.get_game(created["game_id"]))["model"], "claude-opus-5")
+        self.assertEqual(job["payload"]["model"], "claude-opus-5.5")
+        self.assertEqual(self._run(store.get_game(created["game_id"]))["model"], "claude-opus-5.5")
         self.assertEqual(job["reasoning_effort"], "medium")
         self.assertEqual(self._run(store.get_game(created["game_id"]))["reasoning_effort"], "medium")
         self.assertEqual(self.client.get(f"/api/games/{created['game_id']}").json()["reasoning_effort"], "medium")
@@ -127,11 +127,11 @@ class GamesRoutesTest(unittest.TestCase):
     # ── model policy ─────────────────────────────────────────────────────────
 
     def test_learner_cannot_pick_a_model_but_an_admin_can(self):
-        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5"}):
+        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5.5"}):
             created = self._create(model="gpt-5.6-sol")
             game = self._run(store.get_game(created["game_id"]))
-            self.assertEqual(game["model"], "claude-opus-5", "a learner's pick is ignored, not refused")
-            self.assertEqual(self._run(store.get_job(created["job_id"]))["payload"]["model"], "claude-opus-5")
+            self.assertEqual(game["model"], "claude-opus-5.5", "a learner's pick is ignored, not refused")
+            self.assertEqual(self._run(store.get_job(created["job_id"]))["payload"]["model"], "claude-opus-5.5")
 
             admin = TestClient(app_for(LEARNER, roles=("learner", "admin")))
             picked = admin.post("/api/games", json={**CREATE_BODY, "model": "gpt-5.6-sol"})
@@ -143,7 +143,7 @@ class GamesRoutesTest(unittest.TestCase):
             self.assertEqual(job["model"], "gpt-5.6-sol")
             # An admin without a pick gets the default like everyone else.
             plain = admin.post("/api/games", json=CREATE_BODY).json()
-            self.assertEqual(self._run(store.get_game(plain["game_id"]))["model"], "claude-opus-5")
+            self.assertEqual(self._run(store.get_game(plain["game_id"]))["model"], "claude-opus-5.5")
 
     def test_edits_reuse_the_create_model_and_effort(self):
         admin = TestClient(app_for(LEARNER, roles=("learner", "admin")))
@@ -151,7 +151,7 @@ class GamesRoutesTest(unittest.TestCase):
         self.assertEqual(created.status_code, 201, created.text)
         gid = created.json()["game_id"]
         self._run(self._ready(gid))
-        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5"}):
+        with patch.dict(os.environ, {"GAME_MODEL_DEFAULT": "claude-opus-5.5"}):
             edited = self.client.post(f"/api/games/{gid}/edit", json={"instruction": "more cats"})
         self.assertEqual(edited.status_code, 200, edited.text)
         job = self._run(store.get_job(edited.json()["job_id"]))
@@ -169,7 +169,7 @@ class GamesRoutesTest(unittest.TestCase):
         created = self._create()
         gid, job_id = created["game_id"], created["job_id"]
         self._run(store.update_job(job_id, timings={"total_s": 91.2}, attempts_detail=[{"n": 1, "ok": True}],
-                                   judge={"scores": {"fun": 4}, "revised": False}, model="claude-opus-5"))
+                                   judge={"scores": {"fun": 4}, "revised": False}, model="claude-opus-5.5"))
         learner_view = self.client.get(f"/api/games/{gid}").json()
         self.assertEqual(learner_view["model"], None)
         for key in ("timings", "judge", "model", "reasoning_effort", "attempts_detail"):
@@ -178,7 +178,7 @@ class GamesRoutesTest(unittest.TestCase):
         admin_view = admin.get(f"/api/games/{gid}").json()
         self.assertEqual(admin_view["last_job"]["timings"], {"total_s": 91.2})
         self.assertEqual(admin_view["last_job"]["judge"]["scores"]["fun"], 4)
-        self.assertEqual(admin_view["last_job"]["model"], "claude-opus-5")
+        self.assertEqual(admin_view["last_job"]["model"], "claude-opus-5.5")
         self.assertEqual(admin_view["last_job"]["reasoning_effort"], "low")
         self.assertNotIn("payload", admin_view["last_job"])
 
