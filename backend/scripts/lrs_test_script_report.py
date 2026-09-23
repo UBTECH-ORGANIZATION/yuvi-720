@@ -340,7 +340,7 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     if tc == "TC-ITM-12":
         return na("לא נתמך: באפליקציה אין דילוג על רכיב (\"אני כבר יודע/ת\"), ולכן האירוע skipped ברמת רכיב אינו נשלח.")
     if tc == "TC-ITM-07":
-        return na("אפיון 1.2 (דוח אינטגרציה 9, 22/09): אין צורך לשלוח הודעת מדיה completed; האירוע אינו נשלח.")
+        return na("לא נשלח — לפי הערת המשרד בדוח אינטגרציה 9 (22/09): אין צורך לשלוח הודעת מדיה completed.")
     if tc in {"TC-ITM-05", "TC-ITM-06", "TC-ITM-07"}:
         wanted = {"TC-ITM-05": "played", "TC-ITM-06": "paused", "TC-ITM-07": "completed"}[tc]
         found = ev.find(actor=content, verb=wanted, where=lambda e: object_type(e) in MEDIA_TYPES or ext_of(e).get("mediaFormat") in MEDIA_TYPES)
