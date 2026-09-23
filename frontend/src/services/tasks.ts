@@ -205,6 +205,7 @@ export interface OpenTask {
   content: TaskContent
   answers: Record<string, unknown>
   status: AttemptStatus
+  test_started_at?: string | null
 }
 
 export interface SubmitResult {
@@ -227,6 +228,12 @@ export function listMyTasks(signal?: AbortSignal) {
 
 export function openTask(launchId: string, signal?: AbortSignal) {
   return apiGet<OpenTask>(`/api/tasks/${encodeURIComponent(launchId)}`, { signal })
+}
+
+export function startTaskTest(launchId: string) {
+  return apiPost<{ test_started_at: string }>(
+    `/api/tasks/${encodeURIComponent(launchId)}/test/start`, {},
+  )
 }
 
 export function saveAnswers(

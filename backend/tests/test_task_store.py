@@ -164,6 +164,55 @@ class TheSnapshotIsFrozen(unittest.TestCase):
 
 
 class WhatTheChildReceives(unittest.TestCase):
+    def test_test_clock_starts_only_on_entry_and_survives_reopening(self):
+        with _Isolated():
+            async def scenario():
+                task_id = await _task_with({**PRACTICE_V1, "time_limit_minutes": 20}, "test")
+                launch = await _open(task_id)
+                opened = await attempts.open_task(launch, KID)
+                self.assertIsNone(opened["test_started_at"])
+                with patch.object(store, "_now", return_value="2026-09-23T12:00:00+00:00"):
+                    first = await attempts.start_test(launch, KID)
+                with patch.object(store, "_now", return_value="2026-09-23T12:05:00+00:00"):
+                    again = await attempts.start_test(launch, KID)
+                    await attempts.save_answers(launch, KID, {"q1": 1})
+                    reopened = await attempts.open_task(launch, KID)
+                self.assertEqual(first, again)
+                self.assertEqual(reopened["test_started_at"], first["test_started_at"])
+                retake = await _open(task_id)
+                self.assertIsNone((await attempts.open_task(retake, KID))["test_started_at"])
+
+            run(scenario())
+
+    def test_test_clock_refuses_unassigned_closed_finished_and_untimed_tasks(self):
+        with _Isolated():
+            async def scenario():
+                task_id = await _task_with({**PRACTICE_V1, "time_limit_minutes": 20}, "test")
+                launch = await _open(task_id)
+                with self.assertRaisesRegex(attempts.AttemptError, "not_assigned"):
+                    await attempts.start_test(launch, "someone-else")
+                await store.save_attempt(launch, KID, status="submitted")
+                with self.assertRaisesRegex(attempts.AttemptError, "already_submitted"):
+                    await attempts.start_test(launch, KID)
+                with patch.object(attempts, "_open_launch", AsyncMock(side_effect=attempts.AttemptError("closed"))):
+                    with self.assertRaisesRegex(attempts.AttemptError, "closed"):
+                        await attempts.start_test(launch, KID)
+                practice_id = await _task_with(PRACTICE_V1)
+                practice_launch = await _open(practice_id)
+                with self.assertRaisesRegex(attempts.AttemptError, "not_timed"):
+                    await attempts.start_test(practice_launch, KID)
+
+            run(scenario())
+
+    def test_mongo_starts_test_clock_with_a_conditional_update(self):
+        collection = AsyncMock()
+        collection.find_one.return_value = {"test_started_at": "2026-09-23T12:00:00+00:00"}
+        with patch.object(store, "_get_collection_named", return_value=collection):
+            run(store.start_test("tsk-1:1", KID))
+        query, update = collection.update_one.call_args.args
+        self.assertEqual(query, {"_id": "tsk-1:1:kid-a", "status": "in_progress", "test_started_at": None})
+        self.assertIn("test_started_at", update["$set"])
+
     def test_the_answer_key_never_reaches_the_browser(self):
         with _Isolated():
             async def scenario():

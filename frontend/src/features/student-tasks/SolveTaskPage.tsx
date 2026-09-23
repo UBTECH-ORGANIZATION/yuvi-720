@@ -17,7 +17,7 @@ import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { TaskPlayer } from '../tasks/TaskPlayer'
 import {
-  openTask, saveAnswers, submitTask,
+  openTask, saveAnswers, startTaskTest, submitTask,
   type OpenTask,
 } from '../../services/tasks'
 import { putCelebration } from './sparksCelebration'
@@ -29,6 +29,8 @@ export function SolveTaskPage({ taskId }: { taskId: string }) {
   const [error, setError] = useState<'missing' | 'failed' | null>(null)
   /* Where the child was headed when the leave-confirm caught them. */
   const [leaving, setLeaving] = useState<string | null>(null)
+
+  const startTest = useCallback(() => startTaskTest(taskId), [taskId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -131,12 +133,15 @@ export function SolveTaskPage({ taskId }: { taskId: string }) {
       </header>
 
       <TaskPlayer
+        key={taskId}
         content={task.content}
         /* The same ground the teacher previewed. Never `teacher`, so notes and
            the present/print controls cannot appear in a child's lane. */
         subject={task.subject}
         theme={task.theme}
         initialAnswers={task.answers}
+        testStartedAt={task.test_started_at}
+        onStartTest={finished ? undefined : startTest}
         readOnly={finished}
         onSave={finished ? undefined : save}
         onSubmit={finished ? undefined : submit}

@@ -123,7 +123,26 @@ async def open_task(launch: str, learner_id: str) -> dict[str, Any]:
         "content": _without_answers(activation.get("content_snapshot") or {}),
         "answers": attempt.get("answers") or {},
         "status": attempt.get("status"),
+        "test_started_at": attempt.get("test_started_at"),
     }
+
+
+async def start_test(launch: str, learner_id: str) -> dict[str, Any]:
+    activation = await store.get_activation(launch, learner_id)
+    if activation is None:
+        raise AttemptError("not_assigned")
+    await _open_launch(launch)
+    test = (activation.get("content_snapshot") or {}).get("test") or {}
+    limit = test.get("time_limit_minutes")
+    if not test.get("questions") or not isinstance(limit, (int, float)) or limit <= 0:
+        raise AttemptError("not_timed")
+    attempt = await store.start_attempt(launch, learner_id)
+    if attempt.get("status") != "in_progress":
+        raise AttemptError("already_submitted")
+    attempt = await store.start_test(launch, learner_id)
+    if attempt.get("status") != "in_progress":
+        raise AttemptError("already_submitted")
+    return {"test_started_at": attempt["test_started_at"]}
 
 
 def blank_shape(question: dict[str, Any]) -> Optional[list[dict[str, Any]]]:

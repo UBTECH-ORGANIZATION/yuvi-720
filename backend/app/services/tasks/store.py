@@ -585,6 +585,25 @@ async def start_attempt(launch: str, learner_id: str) -> dict[str, Any]:
     return attempt or document
 
 
+async def start_test(launch: str, learner_id: str) -> dict[str, Any]:
+    document_id = activation_id(launch, learner_id)
+    handle = _get_collection_named(ATTEMPTS)
+    if handle is not None:
+        await handle.update_one(
+            {"_id": document_id, "status": "in_progress", "test_started_at": None},
+            {"$set": {"test_started_at": _now()}},
+        )
+        return await get_attempt(launch, learner_id) or {}
+    data = _read_fallback()
+    for row in data[_FALLBACK_KEYS[ATTEMPTS]]:
+        if row.get("_id") == document_id:
+            if row.get("status") == "in_progress" and not row.get("test_started_at"):
+                row["test_started_at"] = _now()
+                _write_fallback(data)
+            return row
+    return {}
+
+
 async def save_attempt(
     launch: str, learner_id: str, *, status: Optional[str] = None, **fields: Any,
 ) -> dict[str, Any]:
