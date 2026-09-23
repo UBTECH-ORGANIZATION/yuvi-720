@@ -4,7 +4,7 @@
    Rules it keeps, from the studio's performance work (`renderTier.ts`):
    one WebGL context on the page (the page mounts nothing else that draws),
    pixel ratio and effects by tier, two lights plus a hemisphere, no shadow
-   map, and a scene that costs the same on every tier apart from the dust,
+  map, and a scene that costs the same on every tier apart from the background particles,
    the fog and the glows. Pictures are the studio's pre-rendered thumbnails
    and world strips, so nothing here builds catalogue geometry. Reduced
    motion turns the idle animation off and renders only while something is
@@ -18,12 +18,18 @@ import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import type { YuviDesign } from '../Yuvi-studio/YuviDesign'
 import { createRoadmapYuvi } from './RoadmapYuvi'
 import { createJungleStationAssets } from './RoadmapJungleStation'
+import { createSpaceStationAssets, spaceStationArchetype } from './RoadmapSpaceStation'
+import { createMusicStationAssets, musicStationArchetype } from './RoadmapMusicStation'
+import { createGraffitiStationAssets, graffitiStationArchetype } from './RoadmapGraffitiStation'
+import { createSnowStationAssets, snowStationArchetype } from './RoadmapSnowStation'
+import { createRoadmapBackground } from './RoadmapBackground'
+import { createRoadmapAstronautTexture } from './RoadmapAstronaut'
 import yuviBadgeUrl from '../../assets/yuvi-badge.webp'
 import type { Theme } from '../../providers/ThemeProvider'
 import { rewardItems, type RewardItem } from '../../services/levelRewards'
 import type { ProgressionStatus, RoadmapLevel } from '../../services/progression'
 import {
-  anchorAt, createYuviFlight, isMilestone, itemSlots, levelState, positionIndex, yuviPosition, type LevelState,
+  anchorAt, createYuviFlight, isMilestone, itemSlots, levelState, positionIndex, stationDesignLevel, yuviPosition, type LevelState,
 } from './roadmapModel'
 import { beamGradient, glowDot, levelBadge, rewardGlyph, sparkGlyph } from './roadmapGlyphs'
 
@@ -87,13 +93,13 @@ const COLOR = {
 const SCENE_THEME = {
   dark: {
     fog: 0x070b24,
-    dust: 0x9fd8ff, sky: 0xc9deff, ground: 0x243b35, key: 0xfff2e0, lamp: 0x77f4ff,
+    sky: 0xc9deff, ground: 0x243b35, key: 0xfff2e0, lamp: 0x77f4ff,
     current: 0x77f4ff, reached: 0xf4c95d, locked: 0x3a4066,
     exposure: 1.05, hemisphere: 1.32, keyIntensity: 1.6, lampIntensity: 34,
   },
   light: {
     fog: 0xd8eff8,
-    dust: 0x4b82b5, sky: 0xffffff, ground: 0x9ec9dc, key: 0xfff3d8, lamp: 0x27b8cb,
+    sky: 0xffffff, ground: 0x9ec9dc, key: 0xfff3d8, lamp: 0x27b8cb,
     current: 0x087f96, reached: 0xa66a00, locked: 0x66738c,
     exposure: 1.12, hemisphere: 1.65, keyIntensity: 1.25, lampIntensity: 20,
   },
@@ -196,6 +202,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.05
   renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.autoClear = false
   renderer.domElement.style.display = 'block'
   renderer.domElement.style.width = '100%'
   renderer.domElement.style.height = '100%'
@@ -203,6 +210,7 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   container.dataset.renderTier = tier
 
   const scene = new THREE.Scene()
+  const background = createRoadmapBackground(theme, tier, reduceMotion, createRoadmapAstronautTexture)
   const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 170)
   const disposables: Array<{ dispose(): void }> = []
   const track = <T extends { dispose(): void }>(value: T): T => { disposables.push(value); return value }
@@ -242,8 +250,11 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
 
   const anchors = levels.map((_, i) => { const a = anchorAt(i); return new THREE.Vector3(a.x, a.y, a.z) })
 
-  // ── Jungle stations
   const jungleStations = createJungleStationAssets(theme, tier)
+  const spaceStations = createSpaceStationAssets(theme, tier)
+  const musicStations = createMusicStationAssets(theme, tier)
+  const graffitiStations = createGraffitiStationAssets(theme, tier)
+  const snowStations = createSnowStationAssets(theme, tier)
   const ringGeometry = track(new THREE.TorusGeometry(1.52, 0.05, 10, 64))
   const haloGeometry = track(new THREE.RingGeometry(1.5, 2.15, 64))
 
@@ -252,7 +263,12 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     group.position.copy(anchors[i])
     const milestone = isMilestone(row.level)
     const state = levelState(row.level, status)
-    group.add(jungleStations.create(row.level, milestone))
+    const designLevel = stationDesignLevel(row.level)
+    const stationAssets = snowStationArchetype(designLevel) ? snowStations
+      : graffitiStationArchetype(row.level) ? graffitiStations
+      : musicStationArchetype(row.level) ? musicStations
+      : spaceStationArchetype(row.level) ? spaceStations : jungleStations
+    group.add(stationAssets.create(designLevel, milestone))
     const ringMaterial = track(new THREE.MeshBasicMaterial({ color: stateColor(state, theme) }))
     ringMaterial.toneMapped = false
     const ring = new THREE.Mesh(ringGeometry, ringMaterial)
@@ -411,11 +427,6 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   scene.add(yuvi.object)
   const yuviFlight = createYuviFlight(yuviPosition(status, count))
   let flightCount = 0
-  let horizontalFlightCount = 0
-  let horizontalFlight = false
-  let forwardFlight = true
-  let leadLeft = false
-  let lastYuviIndex = status.level - 1
   let hovering = false
   const placeYuvi = () => {
     const position = yuviFlight.position
@@ -423,49 +434,23 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
   }
   const targetYuvi = (immediate = false, browsing = false) => {
     const index = focus < 0 ? status.level - 1 : focus
-    const changedLevel = index !== lastYuviIndex
     hovering = index + 1 > status.level
-    if (browsing && !immediate && changedLevel) {
-      flightCount++
-      forwardFlight = index > lastYuviIndex
-      if (forwardFlight) {
-        horizontalFlightCount++
-        leadLeft = horizontalFlightCount % 2 === 0
-      }
-      horizontalFlight = forwardFlight
-    } else if (!browsing || immediate) {
-      horizontalFlight = false
-    }
-    lastYuviIndex = index
-    const spin = browsing && flightCount % 3 === 0 ? (flightCount % 2 === 0 ? -1 : 1) : 0
-    // Advancing is head-first and horizontal; retreating stays upright so
-    // direction is immediately legible without an awkward backward pose.
+    if (browsing && !immediate) flightCount++
+    const spin = browsing && !immediate && flightCount % 3 === 0 ? (flightCount % 2 === 0 ? -1 : 1) : 0
     yuviFlight.retarget(yuviPosition(status, count, index, document.documentElement.dir === 'rtl'), spin, reduceMotion || immediate)
     placeYuvi()
   }
   placeYuvi()
 
-  // ── Dust: static points in a box around the whole road, drifting upward.
-  const DUST_MAX = 700
-  const dustPositions = new Float32Array(DUST_MAX * 3)
-  const last = anchors[anchors.length - 1]
-  for (let i = 0; i < DUST_MAX; i++) {
-    dustPositions[i * 3] = (Math.random() - 0.5) * 60
-    dustPositions[i * 3 + 1] = -6 + Math.random() * (last.y + 22)
-    dustPositions[i * 3 + 2] = 12 - Math.random() * (Math.abs(last.z) + 26)
-  }
-  const dustGeometry = track(new THREE.BufferGeometry())
-  dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3))
-  const dustMaterial = track(new THREE.PointsMaterial({ map: dotTexture, size: 0.22, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, color: 0x9fd8ff, sizeAttenuation: true }))
-  dustMaterial.toneMapped = false
-  const dust = new THREE.Points(dustGeometry, dustMaterial)
-  scene.add(dust)
-
   const applyTheme = (next: Theme) => {
     theme = next
     const palette = SCENE_THEME[next]
     jungleStations.setTheme(next)
-    dustMaterial.color.setHex(palette.dust)
+    spaceStations.setTheme(next)
+    musicStations.setTheme(next)
+    graffitiStations.setTheme(next)
+    snowStations.setTheme(next)
+    background.setTheme(next)
     pads.forEach((pad) => {
       const color = stateColor(pad.state, next)
       pad.ring.color.copy(color)
@@ -493,10 +478,12 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     settings = tierSettings(next, true)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioCap))
     scene.fog = settings.fog ? new THREE.FogExp2(SCENE_THEME[theme].fog, 0.0135) : null
-    const motes = next === 'high' ? DUST_MAX : next === 'medium' ? 300 : 0
-    dust.visible = motes > 0
+    background.setQuality(next)
     jungleStations.setQuality(next)
-    dustGeometry.setDrawRange(0, motes)
+    spaceStations.setQuality(next)
+    musicStations.setQuality(next)
+    graffitiStations.setQuality(next)
+    snowStations.setQuality(next)
     for (const pad of pads) for (const node of pad.items ?? []) if (node.glow) node.glow.visible = next !== 'low'
     container.dataset.renderTier = next
     dirty = true
@@ -682,24 +669,12 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       const ripple = (clock.t * 0.55) % 1
       pulse.scale.setScalar(1 + ripple * 1.5)
       pulseMaterial.opacity = (1 - ripple) * 0.6 * beaconFade
-      // Dust drifts up and wraps.
-      if (dust.visible) {
-        const n = dustGeometry.drawRange.count
-        for (let i = 0; i < n; i++) {
-          dustPositions[i * 3 + 1] += dt * 0.35
-          if (dustPositions[i * 3 + 1] > last.y + 16) dustPositions[i * 3 + 1] = -6
-        }
-        dustGeometry.attributes.position.needsUpdate = true
-      }
     }
     yuviFlight.update(dt)
     placeYuvi()
     if (hovering && !yuviFlight.active && !reduceMotion) yuvi.object.position.y += Math.sin(clock.t * 5.2) * 0.04
-    yuvi.update(
-      clock.t, reduceMotion, yuviFlight.active || hovering,
-      horizontalFlight && yuviFlight.active, leadLeft, dt,
-    )
-    yuvi.object.rotation.set(yuvi.flightPitch, yuviFlight.yaw, yuviFlight.bank)
+    yuvi.update(clock.t, reduceMotion, yuviFlight.active || hovering, dt)
+    yuvi.object.rotation.set(0, yuviFlight.yaw, yuviFlight.bank)
     // Items: bob while up, spin the spark, step the hologram.
     for (let i = Math.max(0, focus - 3); i <= Math.min(count - 1, focus + 3); i++) {
       const pad = pads[i]
@@ -719,13 +694,18 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
     }
     // Pads far from the camera are skipped by the frustum; resting items on
     // reached pads still need their bob only near the focus, done above.
+    background.update(progress, clock.t, camera.aspect, renderer.getPixelRatio())
+    if (scene.fog) scene.fog.color.copy(background.fogColor)
+    renderer.clear()
+    background.render(renderer)
+    renderer.clearDepth()
     renderer.render(scene, camera)
     reportAnchor(false)
     onFrame?.(performance.now() - started, now)
   }
   frame = requestAnimationFrame(tick)
 
-  const onContextLost = (event: Event) => { event.preventDefault(); live = false }
+  const onContextLost = (event: Event) => { event.preventDefault(); live = false; background.resetAstronaut() }
   const onContextRestored = () => { live = true; dirty = true }
   renderer.domElement.addEventListener('webglcontextlost', onContextLost, false)
   renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false)
@@ -792,6 +772,11 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
       g.revert()
       yuvi.dispose()
       jungleStations.dispose()
+      spaceStations.dispose()
+      musicStations.dispose()
+      graffitiStations.dispose()
+      snowStations.dispose()
+      background.dispose()
       for (const pad of pads) for (const node of pad.items ?? []) node.group.traverse((o) => { if (o instanceof THREE.Sprite) o.material.dispose() })
       for (const pad of pads) pad.badge.material.dispose()
       ;[beaconHalo, mark].forEach((s) => s.material.dispose())

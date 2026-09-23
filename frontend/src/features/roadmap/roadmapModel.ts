@@ -33,6 +33,19 @@ export function anchorAt(index: number): Vec3 {
  *  matter most; the prestige tens keep the rhythm going to the cap. */
 export const isMilestone = (level: number) => level % 10 === 0
 
+export function stationDesignLevel(level: number): number {
+  if (level >= 1 && level <= 10) return level + 40
+  if (level >= 41 && level <= 50) return level - 40
+  return level
+}
+
+export function roadmapBackgroundBlend(progress: number): { from: number; to: number; mix: number } {
+  const position = Number.isFinite(progress) ? Math.max(0, Math.min(49, progress)) : 0
+  const from = Math.min(4, Math.floor(position / 10))
+  const fraction = Math.max(0, position - (from * 10 + 9))
+  return { from, to: Math.min(4, from + 1), mix: fraction * fraction * (3 - 2 * fraction) }
+}
+
 export type LevelState = 'reached' | 'current' | 'locked'
 
 export function levelState(level: number, status: ProgressionStatus): LevelState {

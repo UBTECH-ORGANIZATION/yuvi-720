@@ -19,7 +19,7 @@ import { preRenderedThumb } from '../Yuvi-studio/studioThumbs'
 import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramStrip } from '../Yuvi-studio/worldHologramStrips'
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import {
-  focusedIndex, isMilestone, levelState, positionIndex, railVisualPosition, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
+  focusedIndex, isMilestone, levelState, positionIndex, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
 } from './roadmapModel'
 import { createRoadmapScene, type RoadmapScene, type SceneAnchor } from './RoadmapScene'
 import './roadmap.css'
@@ -256,13 +256,6 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     return () => { tween.kill() }
   }, [focus, placeCard, reduceMotion])
 
-  const scrubTo = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(count - 1, Math.round(index)))
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-    gsap.killTweensOf(window)
-    window.scrollTo(0, scrollForIndex(clamped, maxScroll, count))
-  }, [count])
-
   const jumpTo = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(count - 1, Math.round(index)))
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
@@ -308,8 +301,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
             </div>
             <HereChip status={status} onJump={() => jumpTo(meIndex)} />
           </div>
-          <Rail levels={levels} status={status} focus={focus} onJump={jumpTo} onScrub={scrubTo} />
-          {row ? <LevelCard ref={cardRef} row={row} status={status} /> : null}
+          {row ? <LevelCard ref={cardRef} row={row} status={status} total={count} /> : null}
           <p className={`rm-hint${scrolled ? ' is-done' : ''}`} aria-hidden={scrolled}>
             <span className="rm-hint__mouse" aria-hidden="true"><i /></span>
             {t('roadmap.hint')}
@@ -358,65 +350,10 @@ function HereChip({ status, onJump }: { status: ProgressionStatus; onJump: () =>
   )
 }
 
-/* ── The rail: a scrubber down the side ─────────────────────────────────── */
-
-function Rail({ levels, status, focus, onJump, onScrub }: {
-  levels: RoadmapLevel[]; status: ProgressionStatus; focus: number
-  onJump: (index: number) => void; onScrub: (index: number) => void
-}) {
-  const { t } = useI18n()
-  const count = levels.length
-  const litPercent = `${(positionIndex(status, count) / Math.max(1, count - 1)) * 100}%`
-  const focusedIndex = Math.max(0, Math.min(count - 1, focus))
-  const focusedLevel = levels[focusedIndex]?.level ?? 1
-  const focusedPosition = railVisualPosition(focusedIndex, count)
-  return (
-    <nav className="rm-rail" aria-label={t('roadmap.rail.label')}>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.next')} title={t('roadmap.rail.next')} onClick={() => onJump(focus + 1)} disabled={focus >= count - 1}>
-        <Icon name="chevronUp" size={18} />
-      </button>
-      <div className="rm-rail__track" style={{ '--rm-lit': litPercent, '--rm-focus-at': focusedPosition } as React.CSSProperties}>
-        <output className="rm-rail__current" aria-hidden="true">{focusedLevel}</output>
-        {/* Leaves show the route's growth inside the rail. The invisible range
-            remains the control, while the badge at left names the exact level. */}
-        <ol className="rm-rail__marks" aria-hidden="true">
-          {levels.map((row, index) => {
-            const state = levelState(row.level, status)
-            const labelled = row.level === 1 || row.level % 10 === 0 || state === 'current'
-            return (
-              <li
-                key={row.level}
-                className={`rm-rail__dot is-${state}${labelled ? ' is-labelled' : ''}`}
-                style={{ '--rm-at': railVisualPosition(index, count) } as React.CSSProperties}
-              >
-                {labelled ? <span>{row.level}</span> : null}
-              </li>
-            )
-          })}
-        </ol>
-        <input
-          className="rm-rail__range"
-          type="range"
-          min={0}
-          max={count - 1}
-          step={1}
-          value={Math.max(0, focus)}
-          aria-label={t('roadmap.rail.label')}
-          aria-valuetext={t('roadmap.rail.level', { level: String(focusedLevel) })}
-          onChange={(event) => onScrub(Number(event.target.value))}
-        />
-      </div>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.prev')} title={t('roadmap.rail.prev')} onClick={() => onJump(focus - 1)} disabled={focus <= 0}>
-        <Icon name="chevronDown" size={18} />
-      </button>
-    </nav>
-  )
-}
-
 /* ── The card beside a pad ──────────────────────────────────────────────── */
 
-const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: ProgressionStatus }>(
-  function LevelCard({ row, status }, ref) {
+const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: ProgressionStatus; total: number }>(
+  function LevelCard({ row, status, total }, ref) {
     const { t } = useI18n()
     const state = levelState(row.level, status)
     const items = rewardItems(row.reward)
@@ -432,7 +369,7 @@ const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: Progressi
       <article className={`rm-card is-${state}${milestone ? ' is-milestone' : ''}`} ref={ref} key={row.level}>
         <header className="rm-card__head">
           <span className="rm-card__eyebrow">{t('roadmap.card.level')}</span>
-          <h2>{t('roadmap.card.title', { level: String(row.level) })}</h2>
+          <h2>{t('roadmap.card.title', { level: String(row.level), total: String(total) })}</h2>
           <p className="rm-card__status">{statusLine}</p>
           {row.level > 1 ? <p className="rm-card__opens" dir="auto">{t('roadmap.card.opensAt', { xp: String(row.startXp) })}</p> : null}
         </header>
