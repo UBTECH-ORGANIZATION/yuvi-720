@@ -581,8 +581,12 @@
 }
 /* Stage chrome is now two round buttons in one cluster: sound, and out. */
 .ys-stage-tools {
-  position: absolute; inset-block-start: 16px; inset-inline-end: 16px; z-index: 3;
+  position: absolute; inset-block-start: var(--ys-perf-tools-top, 16px); inset-inline-end: 16px; z-index: 3;
   display: flex; gap: 8px;
+}
+.ys-stage .Yuvi-avatar-hud {
+  box-sizing: border-box; max-inline-size: calc(100% - 16px);
+  white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .ys-iconbtn {
   inline-size: 40px; block-size: 40px; border-radius: 50%;

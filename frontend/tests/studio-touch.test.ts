@@ -36,6 +36,17 @@ const studioHelp = read('frontend/src/features/Yuvi-studio/panel/StudioHelp.tsx'
 const css = read('frontend/src/styles/Yuvi-studio.css')
 const he = JSON.parse(read('locales/he.json')) as Record<string, string>
 
+test('performance HUD places room controls below its responsive height only while mounted', () => {
+  assert.match(avatar, /const hudStage = hud \? avatarRoot\?\.closest<HTMLElement>\('\.ys-stage'\) : null/)
+  assert.match(avatar, /if \(hud && hudStage\)/)
+  assert.match(avatar, /hud\.offsetTop \+ hud\.offsetHeight \+ 8/)
+  assert.match(avatar, /new ResizeObserver\(positionToolsBelowHud\)/)
+  assert.match(avatar, /hudObserver\?\.disconnect\(\)/)
+  assert.match(avatar, /hudStage\?\.style\.removeProperty\('--ys-perf-tools-top'\)/)
+  assert.match(css, /inset-block-start: var\(--ys-perf-tools-top, 16px\)/)
+  assert.match(css, /\.ys-stage \.Yuvi-avatar-hud \{[^}]*max-inline-size: calc\(100% - 16px\);[^}]*white-space: pre-wrap; overflow-wrap: anywhere;/)
+})
+
 test('only the studio takes the browser gestures away', () => {
   // The same component draws the floating companion inside scrollable pages.
   // A blanket `touch-action: none` would trap the page under a small robot.
