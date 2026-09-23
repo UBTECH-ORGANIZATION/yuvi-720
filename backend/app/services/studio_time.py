@@ -6,11 +6,16 @@ import os
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from app.core.env import environment_name, is_local, is_production
 from learner_state import get_learner_state, update_learner_state
 
 
 DEFAULT_STUDIO_TIME_LIMIT_SECONDS = 20 * 60
 STUDIO_TIMEZONE = ZoneInfo("Asia/Jerusalem")
+
+
+def studio_time_debug_enabled() -> bool:
+    return not is_production() and (is_local() or environment_name() == "dev")
 
 
 def studio_time_limit_seconds() -> int:
@@ -76,6 +81,7 @@ def _response(data: dict, now: datetime) -> dict:
         "allowed": remaining > 0,
         "remaining_seconds": remaining,
         "available_at": next_hour.astimezone(timezone.utc).isoformat(),
+        "debug_can_expire": studio_time_debug_enabled(),
     }
 
 
@@ -102,5 +108,19 @@ async def leave_studio(learner_id: str) -> dict:
     now = datetime.now(timezone.utc)
     state = await get_learner_state(learner_id)
     data = _apply_elapsed(_state_for_now(state.get("studio_time"), now), now)
+    await update_learner_state(learner_id, {"studio_time": data})
+    return _response(data, now)
+
+
+async def expire_studio_time(learner_id: str) -> dict:
+    if not studio_time_debug_enabled():
+        raise PermissionError("Studio debug actions are disabled")
+    now = datetime.now(timezone.utc)
+    state = await get_learner_state(learner_id)
+    data = _state_for_now(state.get("studio_time"), now)
+    if not _parse_time(data.get("active_started_at")):
+        raise ValueError("No active studio session")
+    data["used_seconds"] = studio_time_limit_seconds()
+    data["active_started_at"] = None
     await update_learner_state(learner_id, {"studio_time": data})
     return _response(data, now)

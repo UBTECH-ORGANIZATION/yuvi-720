@@ -71,5 +71,7 @@
 @media (max-width: 720px) {
   .studio-launch__label { display: none; }
   .studio-launch.is-active .studio-launch__label { display: inline; }
+  .studio-launch.is-active .studio-launch__head { display: none; }
+  .studio-launch.is-active { padding-inline: 8px; }
   .studio-launch { padding-inline: 10px; }
 }

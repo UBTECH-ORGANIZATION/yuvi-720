@@ -1340,6 +1340,8 @@
   "YuviStudio.none": "ללא",
   "YuviStudio.launcher": "עצבו את יובי",
   "YuviStudio.time.remaining": "זמן בסטודיו",
+  "YuviStudio.time.devExpire": "Dev: סיום הזמן בסטודיו ({time})",
+  "YuviStudio.time.devExpireFailed": "לא ניתן לסיים את הזמן כרגע. נסו שוב.",
   "YuviStudio.time.remainingValue": "זמן בסטודיו: {time}",
   "YuviStudio.time.availableIn": "הסטודיו ייפתח בעוד {time}",
   "YuviStudio.time.reminder": "⏳ שימו לב! נשארו לכם עוד {time} בחדר של יובי ✨",

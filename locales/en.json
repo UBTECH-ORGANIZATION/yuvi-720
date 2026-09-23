@@ -1340,6 +1340,8 @@
   "YuviStudio.none": "None",
   "YuviStudio.launcher": "Design Yuvi",
   "YuviStudio.time.remaining": "Studio time",
+  "YuviStudio.time.devExpire": "Dev: end studio time ({time})",
+  "YuviStudio.time.devExpireFailed": "Could not end studio time. Please try again.",
   "YuviStudio.time.remainingValue": "Studio time: {time}",
   "YuviStudio.time.availableIn": "Studio available in {time}",
   "YuviStudio.time.reminder": "⏳ Heads up! You have {time} left in Yuvi's room ✨",

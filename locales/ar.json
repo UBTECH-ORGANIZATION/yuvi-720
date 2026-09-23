@@ -1340,6 +1340,8 @@
   "YuviStudio.none": "بدون",
   "YuviStudio.launcher": "صمّم يوبي",
   "YuviStudio.time.remaining": "وقت الاستوديو",
+  "YuviStudio.time.devExpire": "Dev: إنهاء وقت الاستوديو ({time})",
+  "YuviStudio.time.devExpireFailed": "تعذّر إنهاء وقت الاستوديو. حاولوا مرة أخرى.",
   "YuviStudio.time.remainingValue": "وقت الاستوديو: {time}",
   "YuviStudio.time.availableIn": "سيفتح الاستوديو خلال {time}",
   "YuviStudio.time.reminder": "⏳ انتبهوا! بقي لكم {time} في غرفة يوبي ✨",
