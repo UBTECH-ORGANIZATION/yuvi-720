@@ -407,6 +407,24 @@ class RedoBeyondThePlanTests(unittest.TestCase):
         self.assertEqual(first["progress_evidence"]["event_id"], "c1-third")
         self.assertEqual(repair["progress_evidence"]["event_id"], "c1-third")
 
+    def test_a_failed_redo_after_a_pass_is_the_last_attempt_but_not_the_outcome(self) -> None:
+        """Dev, 22/09/2026 (later that day): ‑01 passed, then a redo beyond the
+        plan FAILED. The pass stays (never taken away), so nothing on the node
+        moved and the lesson page opened no dialog. The node now also says what
+        the learner just did, keyed by its own event."""
+        projected = plan(MIDDLE, [
+            completion(C1, success=True, scaled=1.0, event_id="c1-first"),
+            completion(C1, success=False, scaled=0.82, event_id="c1-redo"),
+        ])
+        first = node(projected, C1, visit=1)
+        self.assertEqual((first["outcome"], first["progress_state"]), ("passed", "completed"))
+        self.assertEqual(first["progress_evidence"]["event_id"], "c1-first")
+        self.assertEqual(first["last_attempt"], {"outcome": "failed", "event_id": "c1-redo", "scaled": 0.82})
+
+    def test_an_unfinished_node_has_no_last_attempt(self) -> None:
+        projected = plan(MIDDLE, [])
+        self.assertIsNone(node(projected, C1, visit=1)["last_attempt"])
+
     def test_a_plain_redo_that_passes_needs_no_repair_round(self) -> None:
         projected = plan(MIDDLE, [
             completion(C1, success=False, scaled=0.9, event_id="c1-first"),

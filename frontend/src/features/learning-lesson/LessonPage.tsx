@@ -24,27 +24,34 @@ import type { CoachPointerFrame } from '../../services/agents'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import './lesson-workspace.css'
 
+/** The key of the attempt a visit currently shows: its latest completion when
+ *  the path reports one — a redo beyond the plan that fails after a pass moves
+ *  nothing settled, yet it IS a new attempt — else the settling evidence. The
+ *  fallback only exists for a node without an event id. */
+function attemptKey(node: LearningComponentDTO, index: number): string {
+  return node.last_attempt?.event_id || node.progress_evidence?.event_id || `${node.outcome}:${index}`
+}
+
 /** One key per settled visit of `componentId` on the roadmap — a redo or a
  *  repair round adds a visit, and a failed visit is settled just like a passed
- *  one. The event id is the key; the fallback only exists for a node without one. */
+ *  one. */
 function settledOutcomeKeys(components: LearningComponentDTO[], componentId: string): Set<string> {
   const keys = new Set<string>()
   components.forEach((node, index) => {
     if (node.id !== componentId || !node.outcome) return
-    keys.add(node.progress_evidence?.event_id || `${node.outcome}:${index}`)
+    keys.add(attemptKey(node, index))
   })
   return keys
 }
 
-/** The visit of `componentId` that settled since `atLaunch` was taken, if any. */
+/** The visit of `componentId` with an attempt made since `atLaunch` was taken, if any. */
 function freshOutcome(
   components: LearningComponentDTO[],
   componentId: string,
   atLaunch: Set<string>,
 ): LearningComponentDTO | null {
   const index = components.findIndex((node, position) => (
-    node.id === componentId && Boolean(node.outcome)
-    && !atLaunch.has(node.progress_evidence?.event_id || `${node.outcome}:${position}`)
+    node.id === componentId && Boolean(node.outcome) && !atLaunch.has(attemptKey(node, position))
   ))
   return index === -1 ? null : components[index]
 }
@@ -280,7 +287,9 @@ export function LessonPage() {
               ? freshOutcome(nextRoadmap.components, session.component.id, outcomesAtLaunchRef.current)
               : null
             if (!nextRoadmap || !settled) continue
-            setCompletionOutcome(settled.outcome)
+            // The dialog answers the attempt just made, not the visit's settled
+            // state: a failed redo of a passed component is told it failed.
+            setCompletionOutcome(settled.last_attempt?.outcome ?? settled.outcome)
 
             setRoadmap(nextRoadmap)
             setProgressionReady(false)

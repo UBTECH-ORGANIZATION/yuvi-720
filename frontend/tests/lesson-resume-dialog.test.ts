@@ -47,7 +47,13 @@ describe('lesson re-entry', () => {
   it('a failed visit still finalizes the lesson: the dialog keys on a visit settled since launch, not on `completed`', () => {
     assert.match(page, /freshOutcome\(nextRoadmap\.components, session\.component\.id, outcomesAtLaunchRef\.current\)/)
     assert.match(page, /freshOutcome\(unit\.components, session\.component\.id, outcomesAtLaunchRef\.current\)/)
-    assert.match(page, /setCompletionOutcome\(settled\.outcome\)/)
+    assert.match(page, /setCompletionOutcome\(settled\.last_attempt\?\.outcome \?\? settled\.outcome\)/)
+  })
+
+  it('a redo beyond the plan is a new attempt even when nothing settled moved: the key is the last attempt, the dialog its outcome', () => {
+    assert.match(dto, /last_attempt: \{ outcome: 'passed' \| 'failed'; event_id\?: string; scaled\?: number \} \| null/)
+    assert.match(page, /node\.last_attempt\?\.event_id \|\| node\.progress_evidence\?\.event_id/)
+    assert.match(page, /!atLaunch\.has\(attemptKey\(node, position\)\)/)
   })
 
   it('a failed visit gets its own copy in both dialogs, in every locale', () => {
