@@ -448,7 +448,7 @@ export function App() {
            than living inside it. */
         <Suspense fallback={<RouteFallback />}><TeacherShell>{routePage}</TeacherShell></Suspense>
       ) : routePage}
-      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && <YuviCompanionDock />}
+      {learnerRoute && !isStudioRoute && !routePath.startsWith('/yuvi-studio') && !isActiveTaskRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
       {learnerRoute && <LearnerMessageToast />}
       {/* Learner-scoped ON PURPOSE (never `user &&`): a teacher must not be

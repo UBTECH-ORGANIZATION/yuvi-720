@@ -790,22 +790,38 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // learner opened themselves on a normal screen is left untouched. Immediate
   // (no travelling animation) since they've already navigated away.
   const wasOnLessonRef = useRef(false)
+  /** Close with no travelling animation — the screen is already changing. */
+  const closeNow = useCallback(() => {
+    if (closingTimer.current) clearTimeout(closingTimer.current)
+    closingTimer.current = null
+    isClosingRef.current = false
+    isOpenRef.current = false
+    setIsOpening(false)
+    setIsClosing(false)
+    setIsOpen(false)
+  }, [])
   useEffect(() => {
     const onLesson = pathname.startsWith('/learning/lesson')
     if (onLesson) {
       open()
     } else if (wasOnLessonRef.current) {
       lessonConversationIdRef.current = null
-      if (closingTimer.current) clearTimeout(closingTimer.current)
-      closingTimer.current = null
-      isClosingRef.current = false
-      isOpenRef.current = false
-      setIsOpening(false)
-      setIsClosing(false)
-      setIsOpen(false)
+      closeNow()
     }
+    // The studio is a full-screen world of its own: the chat never stays open
+    // over it (and its dock is hidden there, so it could not be closed).
+    if (pathname.startsWith('/yuvi-studio') && isOpenRef.current) closeNow()
     wasOnLessonRef.current = onLesson
-  }, [open, pathname])
+  }, [closeNow, open, pathname])
+
+  // Pressing the studio door closes the chat AT ONCE — before the studio-time
+  // check and the navigation, which is what used to leave the panel on screen
+  // through the portal animation.
+  useEffect(() => {
+    const onCloseNow = () => { if (isOpenRef.current || isClosingRef.current) closeNow() }
+    window.addEventListener('yuvilab:companion-close-now', onCloseNow)
+    return () => window.removeEventListener('yuvilab:companion-close-now', onCloseNow)
+  }, [closeNow])
 
   const selectConversation = useCallback(async (conversationId: string) => {
     const request = ++messageRequest.current
