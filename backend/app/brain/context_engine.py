@@ -252,7 +252,19 @@ def _activeness_hints(activeness: dict[str, Any], locale: str) -> list[str]:
     return hints[:2]
 
 
-def _activeness_map_lines(activeness: dict[str, Any], locale: str) -> list[str]:
+_WEEKLY_CHANGE = {
+    "he": {"up": "שינוי בשבוע האחרון: עלייה", "down": "שינוי בשבוע האחרון: ירידה",
+        "stable": "ללא שינוי בשבוע האחרון", "unknown": "אין מספיק ראיות לקבוע שינוי שבועי"},
+    "ar": {"up": "التغيّر في الأسبوع الأخير: ارتفاع", "down": "التغيّر في الأسبوع الأخير: انخفاض",
+        "stable": "لا تغيّر في الأسبوع الأخير", "unknown": "لا توجد أدلة كافية لتحديد التغيّر الأسبوعي"},
+    "en": {"up": "Weekly change: increase", "down": "Weekly change: decline",
+        "stable": "No weekly change", "unknown": "Insufficient evidence to determine weekly change"},
+}
+
+
+def _activeness_map_lines(
+    activeness: dict[str, Any], locale: str, effective: Optional[dict[str, dict[str, Any]]] = None,
+) -> list[str]:
     """The activeness map as the LEARNER sees it, one line per domain.
 
     A learner asked "why is my self-awareness so low?" on the dashboard and
@@ -263,18 +275,27 @@ def _activeness_map_lines(activeness: dict[str, Any], locale: str) -> list[str]:
     coach is given here; the 0–100 score still never leaves the server.
     """
     from app.services.dashboard import BAND_WORDS, COMPETENCY_META, COMPETENCY_ORDER, _t
+    from app.brain.activeness import MIN_CAUSE_CONF
 
     lang = locale if locale in {"he", "ar", "en"} else "he"
     copy = _locale_copy(lang)
     lines: list[str] = []
     for key in COMPETENCY_ORDER:
-        value = (activeness or {}).get(key)
+        row = (effective or {}).get(key) or {}
+        value = row.get("value", (activeness or {}).get(key))
         if not isinstance(value, (int, float)):
             continue
         # Same bands as the dashboard card (`services.dashboard`): the coach
         # and the screen must call the same domain by the same word.
         tone = "strong" if value >= 70 else "steady" if value >= 45 else "support"
         parts = [f"{_t(COMPETENCY_META, key, lang)}: {_t(BAND_WORDS, tone, lang)}"]
+        if effective is not None:
+            prior = row.get("prior_value")
+            confidence = float(row.get("change_confidence", row.get("confidence")) or 0)
+            direction = "unknown"
+            if isinstance(prior, (int, float)) and confidence >= MIN_CAUSE_CONF:
+                direction = "down" if value < prior else "up" if value > prior else "stable"
+            parts.append(_WEEKLY_CHANGE[lang][direction])
         helps = copy.get(f"sdash.skill.{key}.tip")
         action = copy.get(f"actmap.improve.{key}")
         if helps:
@@ -402,7 +423,8 @@ def _movement_lines(drivers: Any, locale: str, lesson_title) -> list[str]:
         name = COMPETENCY_NAMES.get(str(row.get("key")))
         if not hint or not name:
             continue
-        line = f"{name.get(lang, name['he'])}: {hint[lang]}"
+        direction = _locale_copy(lang).get(f"actmap.change.{row['dir']}", row["dir"])
+        line = f"{name.get(lang, name['he'])}: {direction} — {hint[lang]}"
         facts = row.get("facts")
         if isinstance(facts, dict):
             parts = [
@@ -630,12 +652,27 @@ async def build_coach_bundle(
         for line in stance_for(mastery_map, objective_id, objective_title, locale)
     ]
     coaching_hints = _activeness_hints(get_path(brain, "profile.activeness") or {}, locale)
-    activeness_map = _activeness_map_lines(get_path(brain, "profile.activeness") or {}, locale)
-    # Named without the metric it derives from: the prompt must never carry the
-    # internal score's identity, only the verbal reading of it.
-    weekly_movement = _movement_lines(
-        get_path(brain, "profile.activeness_drivers"), locale, localized_objective_title
-    )
+    from app.brain.activeness import MIN_CAUSE_CONF, load_effective_activeness
+
+    base_activeness = get_path(brain, "profile.activeness") or {}
+    effective = {}
+    if base_activeness:
+        try:
+            effective = await load_effective_activeness(learner_id, brain)
+        except Exception:
+            pass
+    activeness_map = _activeness_map_lines({}, locale, effective)
+    movement = []
+    for key, row in effective.items():
+        value, prior = row.get("value"), row.get("prior_value")
+        confidence = float(row.get("change_confidence", row.get("confidence")) or 0)
+        if prior is None or value == prior or confidence < MIN_CAUSE_CONF:
+            continue
+        direction = "up" if value > prior else "down"
+        driver = next((driver for driver in row.get("drivers", []) if driver.get("dir") == direction), None)
+        if driver:
+            movement.append({"key": key, **driver})
+    weekly_movement = _movement_lines(movement, locale, localized_objective_title)
     description_text = safe_text(
         get_path(brain, "student_description.text"), 600
     )

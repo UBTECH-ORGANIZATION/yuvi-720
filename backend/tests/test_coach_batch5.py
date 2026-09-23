@@ -163,6 +163,45 @@ class TheMapTheLearnerSeesReachesTheCoach(unittest.TestCase):
         self.assertEqual(context_engine._activeness_map_lines({}, "he"), [])
         self.assertEqual(context_engine._activeness_map_lines({"self_awareness": None}, "he"), [])
 
+    def test_weekly_evidence_preserves_explicit_decline_in_every_language(self):
+        drivers = [{"key": "growth_mindset", "tag": "quits_on_fail", "dir": "down",
+                    "facts": {"failed_objs": 2, "failed_objs_prior": 1}}]
+        for language in ("he", "ar", "en"):
+            with self.subTest(language=language):
+                lines = context_engine._movement_lines(drivers, language, lambda *_: "")
+                self.assertEqual(len(lines), 1)
+                self.assertIn(context_engine._locale_copy(language)["actmap.change.down"], lines[0])
+                self.assertIn("failed_objs: 2 (was 1)", lines[0])
+
+    def test_good_current_level_does_not_erase_a_weekly_decline(self):
+        effective = {"growth_mindset": {"value": 58, "prior_value": 68, "change_confidence": 1}}
+        for language in ("he", "ar", "en"):
+            with self.subTest(language=language):
+                lines = context_engine._activeness_map_lines({"growth_mindset": 90}, language, effective)
+                self.assertIn(context_engine._WEEKLY_CHANGE[language]["down"], lines[0])
+                self.assertNotIn("58", lines[0])
+                self.assertNotIn("68", lines[0])
+                self.assertNotIn("90", lines[0])
+        self.assertIn("תפיסת צמיחה: מתקדם/ת יפה", context_engine._activeness_map_lines({}, "he", effective)[0])
+
+    def test_thin_evidence_does_not_claim_a_trend(self):
+        effective = {"growth_mindset": {"value": 58, "prior_value": 68, "change_confidence": 0}}
+        lines = context_engine._activeness_map_lines({}, "en", effective)
+        self.assertIn(context_engine._WEEKLY_CHANGE["en"]["unknown"], lines[0])
+
+    def test_map_rule_and_decline_reach_dashboard_and_lesson_model_prompts(self):
+        from tests.test_coach_answer_block import _drive
+
+        bundle = {"locale": "he", "current": {}, "profile": {}, "portrait": {},
+                  "activeness_map": ["תפיסת צמיחה: מתקדם/ת יפה — שינוי בשבוע האחרון: ירידה"],
+                  "weekly_movement": ["תפיסת צמיחה: ירידה — אחרי טעות היה קשה לחזור ולנסות שוב"]}
+        for screen in ("student_dashboard", "learning_lesson"):
+            with self.subTest(screen=screen):
+                _, persisted = _drive(["התחום ירד השבוע."], bundle=bundle, surface_screen=screen)
+                messages = persisted["model_messages"]
+                self.assertIn(coach.ACTIVENESS_MAP_RULE["he"], messages[0]["content"])
+                self.assertIn(bundle["activeness_map"][0], str(messages))
+
 
 class TheLearnerIsAddressedInTheirOwnForm(unittest.TestCase):
     """#522: a girl was addressed as "אתה". The onboarding form knows better."""

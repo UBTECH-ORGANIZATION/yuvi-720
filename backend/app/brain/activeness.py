@@ -483,6 +483,16 @@ def _drivers(
             entry["facts"] = facts
         out.append(entry)
     return out
+async def load_effective_activeness(learner_id: Optional[str], brain: dict) -> dict[str, dict[str, Any]]:
+    from app.agents.tutor_decision import recent_tutor_decisions
+    from app.services.events import get_learner_events
+
+    since = datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+    decisions = await recent_tutor_decisions(learner_id, since=since)
+    events = await get_learner_events(learner_id, since=since)
+    return effective_activeness(brain, events, decisions)
+
+
 def effective_activeness(
     brain: dict,
     events: Optional[list[dict]] = None,
