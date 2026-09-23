@@ -103,7 +103,7 @@ export function AppBar({
             <BrandLogo />
           </div>
         )}
-        {leading}
+        {leading ? <div className="app-bar-leading">{leading}</div> : null}
       </div>
       {typeof activeStep === 'number' && (
         <div className="app-bar-steps app-bar-steps--progress">

@@ -81,6 +81,95 @@
 
 .sp-teacher-shell .app-bar-left { min-inline-size: 0; }
 
+.sp-teacher-shell .app-bar.is-compact {
+  block-size: auto;
+  grid-template-columns: auto 44px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+}
+
+.sp-teacher-shell .app-bar.is-compact .app-bar-left { display: contents; }
+
+.sp-teacher-shell .app-bar.is-compact .app-bar-brand {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
+.sp-teacher-shell .app-bar.is-compact .app-bar-leading {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-scope {
+  inline-size: 100%;
+  padding-inline-end: 0;
+  border-inline-end: 0;
+  flex-wrap: wrap;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-scope__seg:first-child {
+  flex: 1 1 auto;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-scope__seg,
+.sp-teacher-shell .app-bar.is-compact .tch-scope__trigger {
+  max-inline-size: 100%;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-scope__value {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-search__btn {
+  inline-size: 36px;
+  max-inline-size: 36px;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-search__btn > span {
+  display: none;
+}
+
+.sp-teacher-shell .app-bar.is-compact .user-menu__trigger {
+  gap: 0;
+  padding: 4px;
+}
+
+.sp-teacher-shell .app-bar.is-compact .user-menu__name,
+.sp-teacher-shell .app-bar.is-compact .user-menu__chevron {
+  display: none;
+}
+
+.sp-teacher-shell .app-bar.is-compact .tch-scope,
+.sp-teacher-shell .app-bar.is-compact .tch-scope__seg,
+.sp-teacher-shell .app-bar.is-compact .tch-search,
+.sp-teacher-shell .app-bar.is-compact .notif {
+  position: static;
+}
+
+.sp-teacher-shell .app-bar.is-compact .app-bar-menu,
+.sp-teacher-shell .app-bar.is-compact .tch-scope__pop,
+.sp-teacher-shell .app-bar.is-compact .tch-search__panel,
+.sp-teacher-shell .app-bar.is-compact .notif__panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline: 16px;
+  inline-size: auto;
+  min-inline-size: 0;
+  max-inline-size: 360px;
+  margin-inline: auto;
+  max-block-size: calc(100dvh - 220px);
+  overflow-y: auto;
+}
+
+.sp-teacher-shell .app-bar.is-compact .app-bar-menu-backdrop {
+  inset-block-start: 100%;
+}
+
 /* Where the scope ends and the navigation begins. Two groups of pills with
    nothing between them read as one row of eleven things — the rule says which
    of them answer "who am I looking at" and which answer "where am I". */
