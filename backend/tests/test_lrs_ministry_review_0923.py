@@ -122,3 +122,31 @@ class RatingAndMentorTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OwnActivitiesKeepTheirIrisTests(Base):
+    """Live rerun 23/09: the reflection opened after the last screen was sent as
+    `/item/questionnaire/<screen>` and its questions as `/item/question/<screen>/1`
+    — the content IRI rewrite took them for the screen. Report 9 approved them
+    under `/reflection/…`, which is where they stay."""
+
+    def setUp(self):
+        super().setUp()
+        self.h = hierarchy.build(unit=UNIT, component=COMPONENT,
+                                 item={"id": "scr-10", "title": "תרגול", "questions": [{"id": "q1"}]}, level="item")
+
+    def test_the_reflection_questionnaire_keeps_its_own_iri(self):
+        for stmt in (statements.reflection_initialized(IDENTITY, SESSION, "rf-1", "end-of-learning-component", hierarchy=self.h),
+                     statements.reflection_completed(IDENTITY, SESSION, "rf-1", 30, hierarchy=self.h)):
+            self.assertEqual(stmt["object"]["id"], f"{DOMAIN}/reflection/rf-1")
+            self.assertEqual(stmt["object"]["definition"]["type"], f"{ACTIVITY}/questionnaire")
+
+    def test_reflection_questions_keep_their_iris_and_their_parent(self):
+        for stmt in (statements.reflection_answered(IDENTITY, SESSION, "rf-1", 1, score_raw=4, hierarchy=self.h),
+                     statements.reflection_skipped(IDENTITY, SESSION, "rf-1", 3, hierarchy=self.h)):
+            self.assertTrue(stmt["object"]["id"].startswith(f"{DOMAIN}/reflection/question/"), stmt["object"]["id"])
+            self.assertEqual(ids(stmt["context"]["contextActivities"]["parent"]), [f"{DOMAIN}/reflection/rf-1"])
+            # The screen the reflection followed is still in grouping, under its content IRI.
+            grouping = ids(stmt["context"]["contextActivities"]["grouping"])
+            self.assertTrue(any(i.startswith(f"{DOMAIN}/item/") and i.endswith("/scr-10") for i in grouping), grouping)
+            self.assertNotIn(stmt["object"]["id"].replace("/reflection/question/", "/item/question/scr-10/"), grouping)
