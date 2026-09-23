@@ -1318,7 +1318,11 @@ def _canonical_content_iris(statement: dict[str, Any], hierarchy: dict[str, Any]
     across the statement (report 3: grouping's copy == object). An item keeps
     one id per screen whatever verb names it: its kind is the object's own type
     when the object IS the item, else what the catalog knows (media → the
-    media kind, a screen with questions → questionnaire, else item)."""
+    media kind, a screen with questions → questionnaire, else item).
+
+    Our own activities that are not content — the reflection questionnaire
+    and its questions (`…/reflection/…`), the agency questionnaire — share
+    those types but keep their IRIs: they are not the screen."""
     extensions = hierarchy.get("extensions") or {}
     component_id = extensions.get("componentId")
     item_id = extensions.get("itemId")
@@ -1326,8 +1330,13 @@ def _canonical_content_iris(statement: dict[str, Any], hierarchy: dict[str, Any]
         return
     domain = _domain()
     type_of = lambda a: (((a or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+
+    def ours_not_content(activity: Any) -> bool:
+        current = str((activity or {}).get("id") or "") if isinstance(activity, dict) else ""
+        return current.startswith(f"{domain}/") and not current[len(domain) + 1:].startswith(("component/", "item/"))
+
     obj = statement.get("object") or {}
-    obj_type = type_of(obj)
+    obj_type = "" if ours_not_content(obj) else type_of(obj)
     self_type = type_of(hierarchy.get("self"))
     catalog_kind = (self_type if self_type in MEDIA_ACTIVITY_TYPES.values()
                     else "questionnaire" if extensions.get("questions") else "item")
@@ -1338,6 +1347,8 @@ def _canonical_content_iris(statement: dict[str, Any], hierarchy: dict[str, Any]
     def canonical(activity: dict[str, Any]) -> Optional[str]:
         kind = type_of(activity)
         current = str(activity.get("id") or "")
+        if ours_not_content(activity):
+            return None
         if kind == "component" and component_id:
             return f"{domain}/component/{component_id}"
         if kind in _ITEM_LEVEL_TYPES and item_id:
