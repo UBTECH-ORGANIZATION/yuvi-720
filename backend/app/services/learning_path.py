@@ -228,6 +228,16 @@ def _outcome_for(evidence: dict[str, Any], component_id: str, visit: int) -> Opt
     return next((row for row in reversed(since) if row["passed"]), since[-1])
 
 
+def _last_attempt_for(evidence: dict[str, Any], component_id: str, visit: int) -> Optional[dict[str, Any]]:
+    """The most recent completion of a component's Nth visit — what the learner
+    just did, as opposed to what settles the visit. A redo beyond the plan that
+    fails after a pass changes nothing settled (`_outcome_for` keeps the pass),
+    yet it IS a new attempt the lesson page must answer with a dialog; on Dev,
+    22/09/2026, such a redo ended in silence because nothing on the node moved."""
+    rows = (evidence.get("outcomes") or {}).get(component_id) or []
+    return rows[-1] if len(rows) >= visit else None
+
+
 # ── Rules ────────────────────────────────────────────────────────────────────
 def _stages(components: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
     """Group components into ordered stages. Same `order` == pedagogically
@@ -359,6 +369,9 @@ def _node(
         "stage_index": stage_index,
         "progress_state": state,
         "outcome": outcome,
+        # The latest completion of this visit (outcome + event id), settled or
+        # not; None until the learner has finished it at least once.
+        "last_attempt": None,
         "in_progress": False,
         "progress_reason": {"code": code, "evidence": evidence or {}},
         # Legacy shape, one release of overlap.
@@ -614,6 +627,12 @@ def _finalize(
             "kind": "xapi_completed",
             **({"event_id": outcome["event_id"]} if outcome.get("event_id") else {}),
         }
+        latest = _last_attempt_for(evidence, node["component_id"], node["visit"]) or outcome
+        node["last_attempt"] = {
+            "outcome": "passed" if latest["passed"] else "failed",
+            **({"event_id": latest["event_id"]} if latest.get("event_id") else {}),
+            **({"scaled": latest["scaled"]} if latest.get("scaled") is not None else {}),
+        }
 
     pending = [node for node in on_path if node["outcome"] is None]
     # Started and not settled: the learner left mid-way (refresh, back button,
@@ -779,6 +798,10 @@ def _legacy_projection(
             "stage_index": index,
             "progress_state": state,
             "outcome": "passed" if component_id in completed else None,
+            "last_attempt": (
+                {"outcome": "passed", "event_id": completed[component_id]}
+                if component_id in completed else None
+            ),
             "progress_reason": {"code": "linear_fallback", "evidence": {}},
             "progress_evidence": (
                 {"kind": kind, "event_id": completed[component_id]}

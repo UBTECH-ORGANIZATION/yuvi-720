@@ -30,7 +30,7 @@ param minReplicas int = env == 'prod' ? 1 : 0
 param mongoDatabase string = 'yuvi720'
 param sparkEnvironment string = env == 'prod' ? 'production' : 'dev'
 param maxAiCredits string = '300'
-param copilotModel string = 'claude-opus-5' // Opus only (Gal, 2026-09-14)
+param copilotModel string = 'claude-opus-5.5' // Opus only (Gal, 2026-09-14); Opus 5.5 from 2026-09-23
 
 @secure()
 param copilotGithubToken string

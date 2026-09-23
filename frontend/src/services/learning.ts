@@ -54,6 +54,10 @@ export interface LearningComponentDTO {
   path_index: number | null
   stage_index: number | null
   outcome: 'passed' | 'failed' | null
+  /** The latest completion of this visit — what the learner just did, settled
+   *  or not. A redo beyond the plan that fails after a pass leaves `outcome`
+   *  passed (a pass is never taken away) but is still a new attempt here. */
+  last_attempt: { outcome: 'passed' | 'failed'; event_id?: string; scaled?: number } | null
   progress_state: LearningProgressState
   /** Started and not settled: the learner left this one mid-way (refresh,
    *  back button, another day). Re-entry asks "continue or start over". */

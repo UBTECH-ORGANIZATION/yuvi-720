@@ -142,7 +142,7 @@ APIM_BASE_URL: str = os.getenv("APIM_BASE_URL", "")
 APIM_SUBSCRIPTION_KEY: str = os.getenv("APIM_SUBSCRIPTION_KEY", "")
 APIM_API_VERSION: str = os.getenv("APIM_API_VERSION", "2024-10-21")
 
-COPILOT_MODEL: str = os.getenv("COPILOT_MODEL", "claude-sonnet-5")  # bake-off 2026-09-10
+COPILOT_MODEL: str = os.getenv("COPILOT_MODEL", "claude-opus-5.5")  # Opus only; Opus 5.5 from 2026-09-23 (was Sonnet 5 after the 2026-09-10 bake-off)
 
 # Models that must bypass APIM and go through GitHub Copilot directly
 # (not deployed on the Azure APIM gateway).  Any ``claude-*`` also qualifies.
