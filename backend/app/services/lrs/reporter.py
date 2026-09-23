@@ -353,6 +353,26 @@ async def report_conversation_interacted(
     )
 
 
+#: Ministry review 23/09 (TC-CNV-02 rated): three identical `rated` in six
+#: seconds from repeated presses of 👍. The same rating of the same
+#: conversation inside this window is the same act; a changed rating is new.
+_RATING_REPEAT_WINDOW_SECONDS = 30.0
+_recent_ratings: dict[tuple[str, str], tuple[str, float]] = {}
+
+
+def _is_repeated_rating(learner_id: str, conversation_iri_id: str, rating: str) -> bool:
+    import time as _time
+
+    now = _time.monotonic()
+    key = (learner_id, conversation_iri_id)
+    previous = _recent_ratings.get(key)
+    _recent_ratings[key] = (rating, now)
+    if len(_recent_ratings) > 5_000:
+        for stale in list(_recent_ratings)[:1_000]:
+            _recent_ratings.pop(stale, None)
+    return bool(previous and previous[0] == rating and now - previous[1] < _RATING_REPEAT_WINDOW_SECONDS)
+
+
 async def report_conversation_rated(
     learner_id: str,
     session_id: str,
@@ -362,6 +382,8 @@ async def report_conversation_rated(
     item_id: Optional[str] = None,
 ) -> None:
     component_id, item_id = await _position(learner_id, component_id, item_id)
+    if _is_repeated_rating(learner_id, lrs_conversation_id(conversation_id, item_id), rating):
+        return
     await _report(
         statements.conversation_rated, learner_id, session_id,
         lrs_conversation_id(conversation_id, item_id), rating,

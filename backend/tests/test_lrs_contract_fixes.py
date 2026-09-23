@@ -564,10 +564,14 @@ class ContentStatementTests(unittest.TestCase):
         )
         grouping = stmt["context"]["contextActivities"]["grouping"]
         self.assertEqual(grouping[-1], stmt["object"])
-        # The hierarchy's item entry is a VIDEO — exactly the mismatch the
-        # ministry flagged; the object's own `item` type must be what is sent.
-        self.assertEqual(grouping[-1]["definition"]["type"], f"{ACTIVITY}/item")
-        self.assertNotIn(f"{ACTIVITY}/video", _types(grouping))
+        # One screen, one activity: the vendor's generic `item` and the
+        # catalog's VIDEO entry used to arrive as two differently-typed tags
+        # (the mismatch report 3 flagged). Since review 23/09 both collapse
+        # into the supplier's IRI for the screen, typed by its real kind.
+        self.assertEqual(stmt["object"]["definition"]["type"], f"{ACTIVITY}/video")
+        self.assertEqual(stmt["object"]["id"], "https://app.yuvilab.co.il/item/video/methodica-science-mass-measure-01-01-003")
+        self.assertEqual(_types(grouping).count(f"{ACTIVITY}/video"), 1)
+        self.assertNotIn(f"{ACTIVITY}/item", _types(grouping))
 
     # ── Report 6 (25/08): "לא נשלח definition.name בתיוג של video ב-grouping" ──
     def test_media_and_selection_tags_carry_the_items_name(self):

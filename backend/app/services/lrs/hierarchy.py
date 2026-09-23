@@ -61,9 +61,12 @@ def item_activity(
     which is how a video reached the ministry typed `item`.
     """
     resolved = resolve_media_format(media_format, content_type)
+    kind = MEDIA_ACTIVITY_TYPES.get(resolved or "", "item")
+    # The IRI names the kind too, as the spec's examples do (…/item/video/{id});
+    # ministry review 23/09 held every content IRI to the supplier template.
     return activity(
-        _iri("item", item_id),
-        MEDIA_ACTIVITY_TYPES.get(resolved or "", "item"),
+        _iri("item", item_id) if kind == "item" else _iri(f"item/{kind}", item_id),
+        kind,
         name_he,
     )
 
