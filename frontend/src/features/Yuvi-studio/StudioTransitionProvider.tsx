@@ -167,6 +167,8 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
 
   const openStudio = useCallback(async (sourceEl: HTMLElement | null) => {
     if (phase !== 'closed') return
+    // The chat panel leaves with the press, not after the studio has loaded.
+    window.dispatchEvent(new CustomEvent('yuvilab:companion-close-now'))
     const time = await startStudioTime()
     if (!time.allowed) return
     const run = ++runRef.current

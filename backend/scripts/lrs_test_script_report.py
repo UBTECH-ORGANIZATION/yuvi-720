@@ -85,6 +85,34 @@ def has_parent(entry: dict) -> bool:
     return bool(parents and parents[0].get("id"))
 
 
+def grouping_matches_parent(entry: dict) -> bool:
+    """Integration report 9 (22/09), מענה על שאלה: a question the content
+    parents under the COMPONENT carries only "parent, שאלה, רכיב ויחידה" in
+    grouping — no item. Statements filed before the fix (build < 3047665d)
+    still carry the screen and are not evidence for any row."""
+    ctx = (stmt(entry).get("context") or {}).get("contextActivities") or {}
+    parents = ctx.get("parent") or []
+    if isinstance(parents, dict):
+        parents = [parents]
+    type_of = lambda a: str(((a or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    if not parents or type_of(parents[0]) != "component":
+        return True
+    return not any(type_of(g) == "item" for g in ctx.get("grouping") or [])
+
+
+def supplier_iri(entry: dict) -> bool:
+    """Ministry review 23/09: a component / item / question object IRI follows
+    the supplier template (…/component/{id}, …/item/…, …/item/question/…),
+    never the content vendor's URL."""
+    kind = object_type(entry)
+    oid = object_id(entry)
+    if kind == "component":
+        return "/component/" in oid and "cet.ac.il" not in oid and "lomdot" not in oid
+    if kind in {"item", "questionnaire", "question", *MEDIA_TYPES}:
+        return "/item/" in oid and "cet.ac.il" not in oid and "lomdot" not in oid
+    return True
+
+
 def when(entry: dict) -> str:
     return str(stmt(entry).get("timestamp") or entry.get("created_at") or "")
 
@@ -242,6 +270,8 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
         return ok("completion=true ו-duration נשלחו.", valid[-1:]) if valid else fail("חסר completion או duration בסיום השאלון.", found[-1:])
 
     # Mentoring
+    if tc == "TC-MNT-01" and not role.startswith("מורה"):
+        return na("במערכת רק המנטור מתעד מפגש; לתלמיד אין פעולה כזו, והאירוע נשלח מצד המורה (שורת המורה).")
     if tc == "TC-MNT-01":
         found = ev.find(actor=ev.student, activity="mentor-student-meeting", verb="completed")
         if not found:
@@ -274,28 +304,29 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
         # list empty (methodica publishes no `skills`) — that is the catalog's
         # content, not a missing extension, and is noted rather than failed.
         absent = lambda e: sorted(k for k in COMPONENT_META if k not in ext_of(e))
-        valid = [e for e in found if not absent(e) and has_parent(e)]
+        valid = [e for e in found if not absent(e) and has_parent(e) and supplier_iri(e)]
         if not valid:
-            return fail("initialized לרכיב חסר מטא-נתונים או parent.", found[:1])
+            return fail("initialized לרכיב חסר מטא-נתונים, parent או IRI בתבנית הספק.", found[:1])
         empty = sorted(k for k in COMPONENT_META if ext_of(valid[0]).get(k) in ([], "", None))
         note = f" (ריק בקטלוג של ספק התוכן: {', '.join(empty)})" if empty else ""
         return ok("רכיב אותחל עם מטא-נתונים מלאים ו-parent של יחידת הלימוד." + note, valid[:1])
     if tc == "TC-CMP-02":
         found = ev.find(actor=content, activity="component", verb="completed")
         valid = [e for e in found if isinstance(result_of(e).get("success"), bool)
-                 and "scaled" in (result_of(e).get("score") or {}) and result_of(e).get("duration")]
+                 and "scaled" in (result_of(e).get("score") or {}) and result_of(e).get("duration") and supplier_iri(e)]
         if not found:
             return fail("לא נמצא completed לרכיב.")
         return ok("סיום רכיב עם success, score.scaled ו-duration.", valid[-1:]) if valid else fail("סיום רכיב ללא success/score.scaled/duration.", found[-1:])
     # Content — items
     if tc == "TC-ITM-01":
         found = ev.find(actor=content, activity="questionnaire", verb="initialized", where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower())
-        valid = [e for e in found if not missing(e, ITEM_META) and has_parent(e)]
+        valid = [e for e in found if not missing(e, ITEM_META) and has_parent(e) and supplier_iri(e)]
         return ok("שאלון פנימי אותחל עם מטא-נתוני פריט ו-parent של הרכיב.", valid[:1]) if valid else fail("שאלון פנימי אותחל אך חסרים מטא-נתוני פריט.", found[:1])
     if tc == "TC-ITM-02":
         found = ev.find(actor=content, activity="question", verb="answered", where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower())
         valid = [e for e in found if result_of(e).get("response") is not None and isinstance(result_of(e).get("success"), bool)
-                 and "scaled" in (result_of(e).get("score") or {}) and not missing(e, {"questionId", "questionType", "attemptNumber"}) and has_parent(e)]
+                 and "scaled" in (result_of(e).get("score") or {}) and not missing(e, {"questionId", "questionType", "attemptNumber"}) and has_parent(e)
+                 and grouping_matches_parent(e) and supplier_iri(e)]
         outcomes = {result_of(e).get("success") for e in valid}
         if outcomes == {True, False}:
             return ok("תשובות עם response, success (נכון ושגוי), score.scaled, questionId/questionType/attemptNumber ו-parent.", valid)
@@ -317,13 +348,15 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
             return fail(f"לא נמצא {wanted} על פריט מדיה.")
         needs_duration = tc != "TC-ITM-05"
         valid = [e for e in found if object_type(e) in MEDIA_TYPES and ext_of(e).get("mediaFormat") in MEDIA_TYPES
-                 and (not needs_duration or result_of(e).get("duration"))]
+                 and (not needs_duration or result_of(e).get("duration")) and supplier_iri(e)]
         if not valid:
             return fail(f"{wanted} נשלח אך ה-object אינו מסוג מדיה או חסר mediaFormat/duration.", found[-1:])
         return ok(f"{wanted} על אובייקט {object_type(valid[-1])} עם mediaFormat" + (" ו-duration." if needs_duration else "."), valid[-1:])
     if tc == "TC-ITM-08":
         found = ev.find(actor=content, verb="requested", where=lambda e: ext_of(e).get("helpSource") == "content")
-        valid = [e for e in found if ext_of(e).get("helpType") in {"hint", "explanation"}]
+        # Ministry review 23/09: the object is the component or the item, never the question.
+        valid = [e for e in found if ext_of(e).get("helpType") in {"hint", "explanation"}
+                 and object_type(e) in {"component", "item", "questionnaire", *MEDIA_TYPES} and supplier_iri(e)]
         return ok("בקשת עזרה מהתוכן עם helpSource=content ו-helpType.", valid[-1:]) if valid else (fail("requested מהתוכן ללא helpType תקין.", found[-1:]) if found else untested("בריצה זו לא נלחץ כפתור העזרה שבתוך הלומדה."))
     if tc == "TC-ITM-09" and verb_column == "requested":
         found = ev.find(actor=content, verb="requested", where=lambda e: ext_of(e).get("helpSource") == "platform")
@@ -411,14 +444,16 @@ def sequence(row_number: int, ev: Evidence) -> Outcome:
         wanted = [False, True] if row_number == 57 else [False, False]
         for events in by_object.values():
             pass
-        answers = [e for e in ev.entries if e.get("exidentifier") == content and verb_of(e) == "answered" and "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()]
+        answers = [e for e in ev.entries if e.get("exidentifier") == content and verb_of(e) == "answered" and "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower() and grouping_matches_parent(e)]
         by_question: dict[str, list[dict]] = defaultdict(list)
         for e in answers:
             by_question[object_id(e)].append(e)
         for tries in by_question.values():
             successes = [result_of(e).get("success") for e in tries]
             for i in range(len(successes) - 1):
-                if successes[i:i + 2] == wanted:
+                # Two attempts at one question are a sequence only inside one
+                # sitting — a wrong answer yesterday and a right one today are not.
+                if successes[i:i + 2] == wanted and session_of(tries[i]) == session_of(tries[i + 1]):
                     return ok("ניסיון שגוי ואחריו " + ("הצלחה." if wanted[-1] else "שגיאה נוספת."), tries[i:i + 2])
         return untested("לא נמצא רצף ניסיונות מתאים על אותה שאלה.")
     if row_number == 59:
@@ -459,7 +494,7 @@ def contract_evidence(ev: Evidence, kind: str, verb: str) -> list[dict]:
         "video / audio / animation (media)": lambda: ev.find(actor=s, verb=verb, where=lambda e: object_type(e) in MEDIA_TYPES),
         "component / item": lambda: ev.find(actor=s, verb=verb, where=lambda e: object_type(e) in {"component", "item"}),
         "questionnaire": lambda: ev.find(actor=s, activity="questionnaire", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()),
-        "question": lambda: ev.find(actor=s, activity="question", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()),
+        "question": lambda: ev.find(actor=s, activity="question", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower() and grouping_matches_parent(e)),
         "dashboard": lambda: ev.find(activity="dashboard", verb=verb),
         "session": lambda: ev.find(activity="session", verb=verb),
         "mentor-student-meeting": lambda: ev.find(activity="mentor-student-meeting", verb=verb),

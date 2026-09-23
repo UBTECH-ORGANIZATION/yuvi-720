@@ -1152,6 +1152,14 @@ async def _forward_to_moe_lrs(
         # completed". A clip watched to the end is still `played`/`paused`
         # for the ministry; only the completion stays home.
         return
+    if event.get("verb") in {"initialized", "completed"} and event.get("sub_item_id") and not _is_questionnaire_screen(
+        event.get("launch") or launch.get("cmp"), event.get("sub_item_id"), statement
+    ):
+        # Ministry review 23/09 (TC-ITM-01): a screen with only a clip or text
+        # went out as `item/initialized`. The spec defines item-level
+        # initialized/completed for a questionnaire only; a clip speaks through
+        # played/paused, and the component carries the rest.
+        return
     if _is_forward_duplicate(learner_id, statement, event):
         return
     user = await get_user_by_id(learner_id)
@@ -1479,6 +1487,22 @@ def _media_format(component_id: Optional[str], item_id: Optional[str]) -> Option
     return resolve_media_format(
         (profile or {}).get("media_format"), (profile or {}).get("content_type")
     )
+
+
+def _is_questionnaire_screen(component_id: Optional[str], item_id: Optional[str], statement: Optional[dict[str, Any]] = None) -> bool:
+    """A screen that asks questions: the catalog lists some, or the content
+    itself typed the screen a questionnaire."""
+    declared = str((((statement or {}).get("object") or {}).get("definition") or {}).get("type") or "")
+    if declared.rstrip("/").endswith("/questionnaire"):
+        return True
+    try:
+        from app.services import kata_catalog
+
+        if not kata_catalog.get_component(component_id):
+            return True   # a component the catalog does not know: never judged
+        return bool(kata_catalog.questions_for_item(component_id, item_id))
+    except Exception:
+        return True   # unknown: never drop what we cannot judge
 
 
 def _is_media_item(component_id: Optional[str], item_id: Optional[str]) -> bool:

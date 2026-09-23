@@ -22,13 +22,13 @@ import logging
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Optional
 
 from . import modules, prompts
 from .code_utils import validate_and_fix_code
 from .context_pack import ContextPack
-from .copilot_session import HeadlessCopilotSession
+from .copilot_session import CONTENT_FILTERED_ERROR, HeadlessCopilotSession
 from .harness import build_harness, inject_harness
 from .patch_engine import (
     FULL_REWRITE_LINE_THRESHOLD, apply_line_patches, apply_search_replace_patches,
@@ -70,6 +70,10 @@ MAX_SUBMISSIONS = 3
 #: A turn that produced this much output and no game hit the model's
 #: per-turn output cap (32k on claude-opus-5 via Copilot) — the game did not fit.
 OUTPUT_CAP_HINT_TOKENS = 30_000
+#: When the job's model's content filter declines the build (Opus 5.5 blocked
+#: every turn of a legitimate coordinates game on Dev, 2026-09-23), the job is
+#: rebuilt once on this model instead of failing the kid.
+CONTENT_FILTER_FALLBACK_MODEL = os.environ.get("GAME_MODEL_FILTER_FALLBACK", "claude-opus-5").strip() or "claude-opus-5"
 DEFAULT_MODEL = "claude-opus-5.5"  # Opus only, low by default, medium for deep (Gal, 2026-09-14); Opus 5.5 from 2026-09-23
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or "gpt-5.4-mini"
 PLAN_MODEL = os.environ.get("PLAN_MODEL") or "gpt-5.4-mini"
@@ -517,7 +521,7 @@ async def _escalate(state: _State, progress: ProgressFn, totals: UsageTotals, sp
     session = HeadlessCopilotSession(
         model=spec.model,
         reasoning_effort=effort,
-        system_message=prompts.editor_system_message(spec.pack.language, needs=state.needs),
+        system_message=prompts.editor_system_message(spec.pack.language, needs=state.needs, model=spec.model),
         session_id=f"{spec.job_id}-escalate",
         on_progress=progress,
         tools=[],
@@ -526,7 +530,7 @@ async def _escalate(state: _State, progress: ProgressFn, totals: UsageTotals, sp
     )
     prompt = prompts.edit_prompt(
         "The automatic checker found these problems; fix them so the game runs, keeping everything else as it is",
-        number_lines(last), errors_block=findings, language=spec.pack.language,
+        number_lines(last), errors_block=findings, language=spec.pack.language, model=spec.model,
     )
     state.attempt_cap += 1
     try:
@@ -566,7 +570,8 @@ async def _run_plan(spec: JobSpec, totals: UsageTotals, progress: ProgressFn) ->
         await session.start()
         progress({"type": "plan", "status": "start", "model": spec.plan_model})
         timer = _timer()
-        turn = await session.send(prompts.plan_prompt(spec.pack, spec.vibe, spec.inspirations, angle=prompts.angle_for(spec.job_id)))
+        turn = await session.send(prompts.plan_prompt(spec.pack, spec.vibe, spec.inspirations, angle=prompts.angle_for(spec.job_id),
+                                                       model=spec.plan_model))
         totals.add("game.plan", turn.usage, estimate_cost_usd(turn.usage, getattr(session, "model_billing", None)))
         await _ledger(spec, "game.plan", timer, spec.plan_model, turn.usage, turn.error)
         if turn.error:
@@ -700,14 +705,14 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
     if spec.kind == "create":
         state.needs = modules.resolve(spec.needs, modules.parse_needs(design_doc) or modules.infer(spec.inspirations, spec.vibe))
         progress({"type": "plan", "status": "needs", "needs": list(state.needs)})
-        system = prompts.builder_system_message(language, needs=state.needs)
+        system = prompts.builder_system_message(language, needs=state.needs, model=spec.model)
         prompt = prompts.create_prompt(spec.pack, vibe=spec.vibe, inspirations=spec.inspirations,
                                        learner_title=spec.learner_title, design_doc=design_doc,
                                        genre=spec.genre, clarifications=spec.clarifications,
-                                       angle=prompts.angle_for(spec.job_id))
+                                       angle=prompts.angle_for(spec.job_id), model=spec.model)
     else:
         state.needs = modules.resolve(spec.needs, html=spec.current_html)
-        system = prompts.editor_system_message(language, needs=state.needs)
+        system = prompts.editor_system_message(language, needs=state.needs, model=spec.model)
         full_rewrite = len(spec.current_html.splitlines()) > FULL_REWRITE_LINE_THRESHOLD
         numbered = spec.current_html if full_rewrite else number_lines(spec.current_html)
         prompt = prompts.edit_prompt(
@@ -717,6 +722,7 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
             history=spec.history,
             language=language,
             full_rewrite=full_rewrite,
+            model=spec.model,
         )
 
     # Everything is delivered as reply text (see _run_text_delivery /
@@ -771,6 +777,19 @@ async def run_job(spec: JobSpec, progress: Optional[ProgressFn] = None) -> JobRe
         await session.close()
 
     ok = state.accepted_html is not None and error is None
+    if (not ok and error == CONTENT_FILTERED_ERROR and spec.model != CONTENT_FILTER_FALLBACK_MODEL):
+        # The pitch is kept (no second plan pass); everything else is the same job.
+        log.warning("job %s: %s content-filtered the build; rebuilding on %s",
+                    spec.job_id, spec.model, CONTENT_FILTER_FALLBACK_MODEL)
+        progress({"type": "build", "status": "fallback", "from": spec.model, "model": CONTENT_FILTER_FALLBACK_MODEL})
+        fallback = await run_job(replace(spec, model=CONTENT_FILTER_FALLBACK_MODEL, design_doc=design_doc, plan=False), progress)
+        # The blocked turns were billed (input tokens); the job's totals keep them.
+        for op, row in totals.by_operation.items():
+            fallback.usage.add(op, type("U", (), {"input_tokens": row["input"], "output_tokens": row["output"],
+                                                  "cache_read_tokens": row["cache_read"], "calls": 0})(), row["cost_usd"])
+        fallback.timings = {**(fallback.timings or {}), "filtered_model": spec.model,
+                            "filtered_total_s": round(time.perf_counter() - started, 3)}
+        return fallback
     if not ok and error is None:
         error = "no_valid_submission"
     timings["total_s"] = round(time.perf_counter() - started, 3)

@@ -235,6 +235,8 @@ def _base(
     }
     if result:
         statement["result"] = result
+    if hierarchy:
+        _canonical_content_iris(statement, hierarchy)
     return statement
 
 
@@ -1129,6 +1131,18 @@ def enriched_content_statement(
     grouping above the object and becomes the parent, per the ministry's
     answered example."""
     hierarchy = hierarchy or {}
+    raw_verb = str((raw_statement.get("verb") or {}).get("id") or "").rstrip("/").rsplit("/", 1)[-1]
+
+    # A help request made inside a question is about the ITEM holding it
+    # (ministry review 23/09, TC-ITM-08: "Object type בפועל הוא question בעוד
+    # הדרישה מציינת component או item"). Spec §בקשת עזרה: the object is the
+    # component or the item; the question stays in `questionId`.
+    if raw_verb == "requested" and object_below_self and hierarchy.get("self"):
+        screen = copy.deepcopy(hierarchy["self"])
+        screen_type = _infer_object_type(hierarchy)
+        screen.setdefault("definition", {})["type"] = f"{ACTIVITY}/{screen_type}"
+        raw_statement = {**raw_statement, "object": screen}
+        object_below_self = False
 
     # The object is normalized FIRST — typed, named, sanitized — because the
     # exact same dict is also copied into grouping below, and report 3 requires
@@ -1244,6 +1258,17 @@ def enriched_content_statement(
         ctx["extensions"] = _iri_safe_extensions(combined)
         if not ctx["extensions"]:
             ctx.pop("extensions")
+    # Every media event names its format (ministry review 23/09, TC-ITM-05/06:
+    # "mediaFormat=video חסר"). The catalog of a unit may not know the clip's
+    # kind; the object's own media type — already settled above — is the answer.
+    object_kind = (((obj or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1] if isinstance(obj, dict) else ""
+    if object_kind in MEDIA_ACTIVITY_TYPES.values():
+        media_key = f"{EXT}/mediaFormat"
+        extensions_now = dict(ctx.get("extensions") or {})
+        if not extensions_now.get(media_key):
+            extensions_now[media_key] = object_kind
+            ctx["extensions"] = extensions_now
+
     team = build_team(identity["school"], identity["nmm"])
     if team:
         ctx["team"] = team
@@ -1273,7 +1298,93 @@ def enriched_content_statement(
             if not result["extensions"]:
                 result.pop("extensions")
         statement["result"] = result
+    _canonical_content_iris(statement, hierarchy)
     return statement
+
+
+# Content-level activity types whose IRIs are ours to mint (spec examples:
+# …/component/{id}, …/item/{id}, …/item/questionnaire/{id}, …/item/video/{id},
+# …/item/question/{id}).
+_ITEM_LEVEL_TYPES = frozenset({"item", "questionnaire", *MEDIA_ACTIVITY_TYPES.values()})
+
+
+def _canonical_content_iris(statement: dict[str, Any], hierarchy: dict[str, Any]) -> None:
+    """Ministry review 23/09 (TC-CMP-01/02, TC-ITM-02): a component, item or
+    question IRI must follow the supplier's template, not the content vendor's
+    own URL (`https://learning.cet.ac.il/metadata/…`, `https://lomdot…/q1`).
+
+    Every content activity in object, parent and grouping is re-minted from the
+    catalog ids the hierarchy already resolved, so one activity has ONE id
+    across the statement (report 3: grouping's copy == object). An item keeps
+    one id per screen whatever verb names it: its kind is the object's own type
+    when the object IS the item, else what the catalog knows (media → the
+    media kind, a screen with questions → questionnaire, else item)."""
+    extensions = hierarchy.get("extensions") or {}
+    component_id = extensions.get("componentId")
+    item_id = extensions.get("itemId")
+    if not component_id and not item_id:
+        return
+    domain = _domain()
+    type_of = lambda a: (((a or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    obj = statement.get("object") or {}
+    obj_type = type_of(obj)
+    self_type = type_of(hierarchy.get("self"))
+    catalog_kind = (self_type if self_type in MEDIA_ACTIVITY_TYPES.values()
+                    else "questionnaire" if extensions.get("questions") else "item")
+    # A specific type the object already carries (a clip typed video, a
+    # questionnaire) wins; a generic `item` takes the catalog's kind.
+    item_kind = obj_type if obj_type in _ITEM_LEVEL_TYPES and obj_type != "item" else catalog_kind
+
+    def canonical(activity: dict[str, Any]) -> Optional[str]:
+        kind = type_of(activity)
+        current = str(activity.get("id") or "")
+        if kind == "component" and component_id:
+            return f"{domain}/component/{component_id}"
+        if kind in _ITEM_LEVEL_TYPES and item_id:
+            return f"{domain}/item/{item_id}" if item_kind == "item" else f"{domain}/item/{item_kind}/{item_id}"
+        if kind == "question" and item_id and current:
+            question = current.rstrip("/").rsplit("/", 1)[-1]
+            return f"{domain}/item/question/{item_id}/{question}"
+        return None
+
+    def rewrite(activity: Any) -> Any:
+        if not isinstance(activity, dict):
+            return activity
+        new_id = canonical(activity)
+        if not new_id:
+            return activity
+        out = dict(activity)
+        out["id"] = new_id
+        if type_of(activity) in _ITEM_LEVEL_TYPES:
+            definition = dict(out.get("definition") or {})
+            definition["type"] = f"{ACTIVITY}/{item_kind}"
+            out["definition"] = definition
+        return out
+
+    statement["object"] = rewrite(obj)
+    context_activities = ((statement.get("context") or {}).get("contextActivities")) or {}
+    for role in ("parent", "grouping", "category", "other"):
+        entries = context_activities.get(role)
+        if not entries:
+            continue
+        rewritten = [rewrite(entry) for entry in entries]
+        # Two spellings of the same activity (the vendor's and the catalog's)
+        # collapse into one; the object's own copy is the one that stays.
+        seen: set[str] = set()
+        unique: list[Any] = []
+        for entry in reversed(rewritten):
+            key = entry.get("id") if isinstance(entry, dict) else None
+            if key and key in seen:
+                continue
+            if key:
+                seen.add(key)
+            unique.append(entry)
+        context_activities[role] = list(reversed(unique))
+    if role_obj := statement.get("object"):
+        grouping = context_activities.get("grouping") or []
+        for index, entry in enumerate(grouping):
+            if isinstance(entry, dict) and entry.get("id") == role_obj.get("id"):
+                grouping[index] = copy.deepcopy(role_obj)
 
 
 def _iri_safe_extensions(values: dict[str, Any]) -> dict[str, Any]:

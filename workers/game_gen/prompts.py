@@ -43,13 +43,39 @@ INSPIRATIONS = {
 }
 GENRES = INSPIRATIONS  # legacy name kept for callers
 
-IDENTITY = (
+IDENTITY_CORE = (
     "You are Yuvi (יובי), a senior game designer and engineer who ships the kind of browser games "
     "kids show their friends: real mechanics, real polish, never a toy demo. You build for kids in "
-    "grades 7-9. You never reveal your model name or vendor. The kid watches your reasoning stream "
+    "grades 7-9. You never reveal your model name or vendor."
+)
+REASONING_LINE = (
+    "The kid watches your reasoning stream "
     "live, so THINK IN THE KID'S LANGUAGE (see the language rule): plan and weigh options in short, "
     "warm sentences, never in English unless the kid's language is English."
 )
+IDENTITY = f"{IDENTITY_CORE} {REASONING_LINE}"
+
+#: Models whose safety filter blocks any instruction about HOW they reason
+#: (Claude Opus 5.5's `reasoning_extraction` classifier). With either the
+#: identity's reasoning line or the "think in Hebrew" line present, every build
+#: turn came back "blocked by content filtering" with 0 output tokens (Dev,
+#: 2026-09-23). These models get neither line; the kid's live reasoning view
+#: simply shows less.
+_NO_REASONING_STEER_PREFIXES = ("claude-opus-5.5",)
+
+
+def steers_reasoning(model: str | None) -> bool:
+    """Whether the prompts may tell ``model`` how (and in which language) to think."""
+    return not any(str(model or "").startswith(p) for p in _NO_REASONING_STEER_PREFIXES)
+
+
+def _identity(model: str | None) -> str:
+    return IDENTITY if steers_reasoning(model) else IDENTITY_CORE
+
+
+def _think(language: str, model: str | None) -> str:
+    return _THINK_IN.get(language, "") if steers_reasoning(model) else ""
+
 
 _THINK_IN = {
     "he": "חשבו ותכננו בעברית בלבד — הילד/ה רואה את המחשבות שלך בזמן אמת.",
@@ -138,12 +164,12 @@ HOW TO DELIVER AN EDIT
 """.strip()
 
 
-def _common_blocks(needs: Iterable[str] | None = None) -> list[str]:
+def _common_blocks(needs: Iterable[str] | None = None, model: str | None = None) -> list[str]:
     """Fixed order — the prefix is what the model's cache keys on: identity,
     stance, the core kit, then one skill doc per needed module (registry
     order), then ambition and the tech rules. The job's brief comes last, in
     the user turn, so everything before it is shared across jobs."""
-    blocks = [IDENTITY, LEARNING_STANCE, KIT]
+    blocks = [_identity(model), LEARNING_STANCE, KIT]
     for name in modules.resolve(needs):
         doc = modules.skill_text(name)
         if doc:
@@ -152,13 +178,15 @@ def _common_blocks(needs: Iterable[str] | None = None) -> list[str]:
     return blocks
 
 
-def builder_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None) -> str:
+def builder_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None,
+                           model: str | None = None) -> str:
     """`delivery` is accepted for older callers; everything is text delivery."""
-    return "\n\n".join([*_common_blocks(needs), DELIVERY_TEXT, get_language_rule(language)])
+    return "\n\n".join([*_common_blocks(needs, model), DELIVERY_TEXT, get_language_rule(language)])
 
 
-def editor_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None) -> str:
-    return "\n\n".join([*_common_blocks(needs), EDIT_TEXT, get_language_rule(language)])
+def editor_system_message(language: str = "he", delivery: str = "text", needs: Iterable[str] | None = None,
+                          model: str | None = None) -> str:
+    return "\n\n".join([*_common_blocks(needs, model), EDIT_TEXT, get_language_rule(language)])
 
 
 def _inspiration_lines(inspirations: list[str] | None, genre: str = "open") -> str:
@@ -212,7 +240,7 @@ def _learning_block(pack: ContextPack) -> str:
 
 def create_prompt(pack: ContextPack, *, vibe: str = "", inspirations: list[str] | None = None,
                   learner_title: str = "", design_doc: str = "", genre: str = "open",
-                  clarifications: dict[str, str] | None = None, angle: str = "") -> str:
+                  clarifications: dict[str, str] | None = None, angle: str = "", model: str | None = None) -> str:
     """The build request: the kid's brief, the learning paragraph, the pitch
     (when the plan pass ran) — the design itself is the model's call."""
     extra = ""
@@ -224,7 +252,7 @@ def create_prompt(pack: ContextPack, *, vibe: str = "", inspirations: list[str] 
     pitch = ""
     if design_doc.strip():
         pitch = f"\n\nPITCH (a strong starting point, not a spec — you own the final call):\n{design_doc.strip()}"
-    think = _THINK_IN.get(pack.language, "")
+    think = _think(pack.language, model)
     return f"""{think}
 Design and build a learning game for a kid. The design is yours: choose the genre, the world and the engine that make this idea unforgettable.
 
@@ -238,8 +266,9 @@ Settle the design (concept, world, what the kid controls and through which camer
 
 
 def edit_prompt(instruction: str, numbered_html: str, *, errors_block: str = "", history: list[str] | None = None,
-                language: str = "he", delivery: str = "text", full_rewrite: bool = False) -> str:
-    think = _THINK_IN.get(language, "")
+                language: str = "he", delivery: str = "text", full_rewrite: bool = False,
+                model: str | None = None) -> str:
+    think = _think(language, model)
     hist = ""
     if history:
         hist = "\nPrevious requests on this game (most recent last):\n" + "\n".join(f"- {h}" for h in history[-5:])
@@ -281,8 +310,9 @@ def _angle_line(angle: str) -> str:
     return f"\nANGLE for this build (the mechanic's verb — build the loop around it): {angle}" if angle else ""
 
 
-def plan_prompt(pack: ContextPack, vibe: str = "", inspirations: list[str] | None = None, angle: str = "") -> str:
-    think = _THINK_IN.get(pack.language, "")
+def plan_prompt(pack: ContextPack, vibe: str = "", inspirations: list[str] | None = None, angle: str = "",
+                model: str | None = None) -> str:
+    think = _think(pack.language, model)
     return f"""{think}
 Pitch a learning game. Language of the pitch: {pack.language}. Device: {pack.device}.
 
