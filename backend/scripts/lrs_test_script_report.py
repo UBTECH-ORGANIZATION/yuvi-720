@@ -85,6 +85,21 @@ def has_parent(entry: dict) -> bool:
     return bool(parents and parents[0].get("id"))
 
 
+def grouping_matches_parent(entry: dict) -> bool:
+    """Integration report 9 (22/09), מענה על שאלה: a question the content
+    parents under the COMPONENT carries only "parent, שאלה, רכיב ויחידה" in
+    grouping — no item. Statements filed before the fix (build < 3047665d)
+    still carry the screen and are not evidence for any row."""
+    ctx = (stmt(entry).get("context") or {}).get("contextActivities") or {}
+    parents = ctx.get("parent") or []
+    if isinstance(parents, dict):
+        parents = [parents]
+    type_of = lambda a: str(((a or {}).get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    if not parents or type_of(parents[0]) != "component":
+        return True
+    return not any(type_of(g) == "item" for g in ctx.get("grouping") or [])
+
+
 def when(entry: dict) -> str:
     return str(stmt(entry).get("timestamp") or entry.get("created_at") or "")
 
@@ -295,7 +310,8 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     if tc == "TC-ITM-02":
         found = ev.find(actor=content, activity="question", verb="answered", where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower())
         valid = [e for e in found if result_of(e).get("response") is not None and isinstance(result_of(e).get("success"), bool)
-                 and "scaled" in (result_of(e).get("score") or {}) and not missing(e, {"questionId", "questionType", "attemptNumber"}) and has_parent(e)]
+                 and "scaled" in (result_of(e).get("score") or {}) and not missing(e, {"questionId", "questionType", "attemptNumber"}) and has_parent(e)
+                 and grouping_matches_parent(e)]
         outcomes = {result_of(e).get("success") for e in valid}
         if outcomes == {True, False}:
             return ok("תשובות עם response, success (נכון ושגוי), score.scaled, questionId/questionType/attemptNumber ו-parent.", valid)
@@ -411,14 +427,16 @@ def sequence(row_number: int, ev: Evidence) -> Outcome:
         wanted = [False, True] if row_number == 57 else [False, False]
         for events in by_object.values():
             pass
-        answers = [e for e in ev.entries if e.get("exidentifier") == content and verb_of(e) == "answered" and "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()]
+        answers = [e for e in ev.entries if e.get("exidentifier") == content and verb_of(e) == "answered" and "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower() and grouping_matches_parent(e)]
         by_question: dict[str, list[dict]] = defaultdict(list)
         for e in answers:
             by_question[object_id(e)].append(e)
         for tries in by_question.values():
             successes = [result_of(e).get("success") for e in tries]
             for i in range(len(successes) - 1):
-                if successes[i:i + 2] == wanted:
+                # Two attempts at one question are a sequence only inside one
+                # sitting — a wrong answer yesterday and a right one today are not.
+                if successes[i:i + 2] == wanted and session_of(tries[i]) == session_of(tries[i + 1]):
                     return ok("ניסיון שגוי ואחריו " + ("הצלחה." if wanted[-1] else "שגיאה נוספת."), tries[i:i + 2])
         return untested("לא נמצא רצף ניסיונות מתאים על אותה שאלה.")
     if row_number == 59:
@@ -459,7 +477,7 @@ def contract_evidence(ev: Evidence, kind: str, verb: str) -> list[dict]:
         "video / audio / animation (media)": lambda: ev.find(actor=s, verb=verb, where=lambda e: object_type(e) in MEDIA_TYPES),
         "component / item": lambda: ev.find(actor=s, verb=verb, where=lambda e: object_type(e) in {"component", "item"}),
         "questionnaire": lambda: ev.find(actor=s, activity="questionnaire", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()),
-        "question": lambda: ev.find(actor=s, activity="question", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower()),
+        "question": lambda: ev.find(actor=s, activity="question", verb=verb, where=lambda e: "/reflection/" not in object_id(e) and "/agency/" not in object_id(e).lower() and grouping_matches_parent(e)),
         "dashboard": lambda: ev.find(activity="dashboard", verb=verb),
         "session": lambda: ev.find(activity="session", verb=verb),
         "mentor-student-meeting": lambda: ev.find(activity="mentor-student-meeting", verb=verb),
