@@ -16,7 +16,7 @@ test('a community room visit uses the Studio stage without editing hooks', () =>
   assert.match(studio, /onZoneChange=\{visitorRoom \? handleVisitorZoneChange : handleZoneChange\}/)
   assert.match(studio, /onPlaceAt=\{!visitorRoom \? handlePlaceAt : undefined\}/)
   assert.match(studio, /onItemMenu=\{!visitorRoom && !placing \? showPropMenu : undefined\}/)
-  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\)/)
+  assert.match(studio, /lockRoam=\{timeExpired \|\| \(!visitorRoom && mode !== 'roam'\)/)
 })
 
 test('Friends rooms use a named circular avatar button without a visible visit label', () => {
@@ -43,7 +43,7 @@ test('Friends room journeys use the cinematic state machine, swap once, and land
   assert.match(studio, /setVisitorRoom\(null\)[\s\S]{0,200}teleportToMissionPortal\(homeRoomId\)/)
   assert.match(studio, /const handleVisitorZoneChange[\s\S]{0,180}zone === 'mission'[\s\S]{0,100}returnToOwnRoom\(\)/)
   assert.match(studio, /travelPhase=\{travelPhase\}/)
-  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\)[\s\S]{0,100}travelPhase !== 'idle'/)
+  assert.match(studio, /lockRoam=\{timeExpired \|\| \(!visitorRoom && mode !== 'roam'\)[\s\S]{0,120}travelPhase !== 'idle'/)
 })
 
 test('personal world changes use the same capsule transition and save only at world swap', () => {
