@@ -11,6 +11,7 @@ import { ThinkingOrbit } from './ThinkingOrbit'
 import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
+import { focusLabel, pointerMatchesKey } from '../services/pointer'
 import {
   cancelCoachHandoff,
   coachSurfaceForPath,
@@ -193,6 +194,7 @@ export function CompanionChat() {
     canStartNewConversation,
     send,
     requestSupport,
+    showFocus,
     supportUsed,
     questionOrdinals,
     questionParts,
@@ -772,6 +774,27 @@ export function CompanionChat() {
     )
   }
 
+  /** "👀 the table": what this reply was about, as a chip. Tapping shows the
+   *  mark on the lesson again; once the learner has left that screen the chip
+   *  stays as a caption but no longer acts. */
+  const focusChip = (pointer: NonNullable<CoachMessage['pointer']>) => {
+    const label = focusLabel(pointer, language, t)
+    if (!label) return null
+    const live = pointerMatchesKey(pointer.question_key, currentQuestionKey)
+    return (
+      <button
+        type="button"
+        className="sp-companion__focus-chip"
+        aria-disabled={!live}
+        title={live ? t('focus.chip_show') : t('focus.chip_stale')}
+        onClick={() => { if (live) showFocus(pointer) }}
+      >
+        <span aria-hidden="true">👀</span>
+        <span dir="auto">{label}</span>
+      </button>
+    )
+  }
+
   const assistantMessage = (
     text: string,
     key?: string,
@@ -785,6 +808,7 @@ export function CompanionChat() {
     attribution?: CoachMessage['attribution'],
     actions?: CoachMessage['actions'],
     toolTrace?: CoachMessage['toolTrace'],
+    pointer?: CoachMessage['pointer'],
   ) => (
     <div
       className="sp-companion__message-row sp-companion__message-row--assistant"
@@ -892,6 +916,7 @@ export function CompanionChat() {
               onRequest={(mode: VisualMode) => void requestVisual(key, mode)}
             />
           )}
+          {isComplete && isTaskMode && pointer && focusChip(pointer)}
           {isComplete && actions?.map((action) => {
             const path = validatedActionPath(action)
             if (!path) return null
@@ -951,7 +976,7 @@ export function CompanionChat() {
 
   const renderMessage = (m: CoachMessage) => (
     m.role === 'assistant'
-      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution, m.actions, m.toolTrace)
+      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution, m.actions, m.toolTrace, m.pointer)
       : (
         <div key={m.id} className="sp-companion__message-row sp-companion__message-row--user">
           <div className="sp-companion__message-stack sp-companion__message-stack--user">

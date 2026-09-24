@@ -2174,6 +2174,31 @@
   color: #b9a5ff;
 }
 
+/* "👀 the table" — what this reply is about; taps re-show the lesson mark. */
+.sp-companion__focus-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-inline-size: 100%;
+  margin-block-start: 8px;
+  margin-inline-end: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--sp-focus-mark);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-focus-mark-fill);
+  color: var(--sp-ink-700);
+  font: 700 var(--sp-fs-chat-meta)/1.25 var(--sp-font);
+  cursor: pointer;
+}
+.sp-companion__focus-chip:hover {
+  background: var(--sp-focus-mark-halo);
+}
+.sp-companion__focus-chip[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+  border-style: dashed;
+}
+
 .sp-companion__action {
   display: inline-flex;
   align-items: center;

@@ -1,19 +1,26 @@
-/** The overlay through which Yuvi points at the lomda. Sits above the
+/** The overlay through which Yuvi shows what to look at. Sits above the
  *  cross-origin iframe inside `.learning-player-frame-wrap` (already
  *  position:relative) and draws only what the pointer model deems
- *  trustworthy: a pixel-perfect region highlight interpolated from the
- *  nightly multi-width capture, a bottom-edge "look lower" chevron when the
- *  target is below the fold of a screen that scrolls inside the iframe, a
- *  whole-frame glow otherwise. The layer itself never intercepts input —
- *  only the dismiss chip does: a pointer stays until the learner closes it
- *  or the screen moves. The chip rides WITH the highlight (a control that
- *  belongs to the mark, not to the frame corner), falling back above it at
- *  the bottom of the box.
+ *  trustworthy (services/pointer.ts):
+ *
+ *  - rect: the object's own highlight, interpolated from the nightly capture,
+ *    with its NAME on a badge ("המאזניים") — dashed when a whole region
+ *    stands in for a finer target;
+ *  - edge: "scroll to: <name>" at the bottom edge, when the target sits below
+ *    the fold of a screen that scrolls inside the iframe;
+ *  - callout: a labeled pill when the target can be named but not placed.
+ *
+ *  The layer never intercepts input — only the dismiss chip does: a mark
+ *  stays until the learner closes it or the screen moves. The chip rides
+ *  with the badge (a control that belongs to the mark, not to the frame).
+ *  The name is announced politely to screen readers once per mark.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import type { CoachPointerFrame } from '../../services/agents'
-import { presentPointer } from '../../services/pointer'
+import { focusKind, focusLabel, presentPointer } from '../../services/pointer'
+import { trackEvent } from '../../services/telemetry'
+import { useI18n } from '../../i18n/I18nProvider'
 
 interface LessonPointLayerProps {
   pointer: CoachPointerFrame | null
@@ -22,21 +29,11 @@ interface LessonPointLayerProps {
   onDismiss: () => void
 }
 
-const DISMISS_LABEL: Record<string, string> = {
-  he: 'הבנתי',
-  ar: 'فهمت',
-  en: 'Got it',
-}
-const SCROLL_HINT: Record<string, string> = {
-  he: 'גללו למטה',
-  ar: 'مرّروا لأسفل',
-  en: 'Scroll down',
-}
-
-const CHIP_HALF_WIDTH = 64
-const CHIP_HEIGHT = 44
+/** Room the badge row needs above a rect before it flips below it. */
+const BADGE_ROW_HEIGHT = 44
 
 export function LessonPointLayer({ pointer, playback, language, onDismiss }: LessonPointLayerProps) {
+  const { t } = useI18n()
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
 
@@ -51,71 +48,98 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
   }, [])
 
   const presentation = presentPointer(pointer, playback, box.w, box.h)
-  if (presentation.mode === 'none') {
+  const label = focusLabel(pointer, language, t)
+
+  // One render record per mark (not per resize): which presentation the
+  // learner actually got, and why — the number that says whether marks land.
+  const reported = useRef<CoachPointerFrame | null>(null)
+  useEffect(() => {
+    if (!pointer || presentation.mode === 'none' || reported.current === pointer || !box.w) return
+    reported.current = pointer
+    trackEvent('coach.focus.render', {
+      mode: presentation.mode,
+      reason: presentation.reason,
+      precision: pointer.precision || 'v1',
+      kind: focusKind(pointer) || 'none',
+      box: `${Math.round(box.w)}x${Math.round(box.h)}`,
+    })
+  }, [pointer, presentation, box.w, box.h])
+
+  if (presentation.mode === 'none' || (presentation.mode === 'callout' && !label)) {
     return <div ref={layerRef} className="lesson-point-layer" aria-hidden="true" />
   }
 
-  const dismissChip = (style: React.CSSProperties) => (
+  const dismiss = (
     <button
       type="button"
       className="lesson-point-dismiss"
-      style={style}
       onClick={onDismiss}
-      aria-label={DISMISS_LABEL[language] || DISMISS_LABEL.he}
+      aria-label={t('focus.dismiss')}
     >
-      {DISMISS_LABEL[language] || DISMISS_LABEL.he} ✓
+      {t('focus.dismiss')} ✓
     </button>
+  )
+  const announce = (
+    <span className="lesson-point-sr" aria-live="polite">{t('focus.look_at', { label })}</span>
   )
 
   if (presentation.mode === 'rect') {
     const { rect } = presentation
-    // The chip sits in the MIDDLE of the highlight — the mark and its
-    // control are one thing — clamped inside the box for slivers at the
-    // frame's edge.
-    const chipLeft = Math.max(
-      CHIP_HALF_WIDTH + 6,
-      Math.min(box.w - CHIP_HALF_WIDTH - 6, rect.x + rect.w / 2),
-    )
-    const chipTop = Math.max(
-      CHIP_HEIGHT / 2 + 6,
-      Math.min(box.h - CHIP_HEIGHT / 2 - 6, rect.y + rect.h / 2),
-    )
+    // The badge row sits on the rect's top edge — above it when there is
+    // room, else just inside its bottom — never over the middle of what the
+    // learner is supposed to read.
+    const above = rect.y >= BADGE_ROW_HEIGHT
+    const rowTop = above ? rect.y - BADGE_ROW_HEIGHT + 4 : Math.min(box.h - BADGE_ROW_HEIGHT, rect.y + rect.h + 4)
+    const rowCenter = Math.max(12, Math.min(box.w - 12, rect.x + rect.w / 2))
     return (
-      <div ref={layerRef} className="lesson-point-layer">
+      <div
+        ref={layerRef}
+        className="lesson-point-layer"
+        data-mode="rect"
+        data-reason={presentation.reason}
+      >
         <div
-          className="lesson-point-highlight"
+          className={`lesson-point-highlight${presentation.approx ? ' is-approx' : ''}`}
           style={{
             left: `${rect.x}px`, top: `${rect.y}px`,
             width: `${rect.w}px`, height: `${rect.h}px`,
           }}
         />
-        {dismissChip({
-          left: `${chipLeft}px`, top: `${chipTop}px`,
-          transform: 'translate(-50%, -50%)',
-        })}
+        <div
+          className="lesson-point-badge-row"
+          style={{ left: `${rowCenter}px`, top: `${Math.max(4, rowTop)}px` }}
+        >
+          <span className="lesson-point-badge" dir="auto">{label}</span>
+          {dismiss}
+        </div>
+        {announce}
+      </div>
+    )
+  }
+
+  if (presentation.mode === 'edge') {
+    return (
+      <div ref={layerRef} className="lesson-point-layer" data-mode="edge" data-reason={presentation.reason}>
+        <div className="lesson-point-edge" style={{ left: `${presentation.x * 100}%` }}>
+          <span className="lesson-point-edge__hint" dir="auto">
+            {t('focus.scroll_to', { label })}
+          </span>
+          <span className="lesson-point-edge__chevron" aria-hidden="true">⌄</span>
+        </div>
+        <div className="lesson-point-corner">{dismiss}</div>
+        {announce}
       </div>
     )
   }
 
   return (
-    <div ref={layerRef} className="lesson-point-layer">
-      {presentation.mode === 'glow' && <div className="lesson-point-glow" />}
-      {presentation.mode === 'edge' && (
-        <div
-          className="lesson-point-edge"
-          style={{ left: `${presentation.x * 100}%` }}
-        >
-          <span className="lesson-point-edge__hint" dir="auto">
-            {SCROLL_HINT[language] || SCROLL_HINT.he}
-          </span>
-          <span className="lesson-point-edge__chevron" aria-hidden="true">⌄</span>
-        </div>
-      )}
-      {dismissChip(
-        presentation.mode === 'edge'
-          ? { insetBlockEnd: '14px', insetInlineEnd: '16px' }
-          : { insetBlockEnd: '14px', insetInlineStart: '50%', transform: 'translateX(-50%)' },
-      )}
+    <div ref={layerRef} className="lesson-point-layer" data-mode="callout" data-reason={presentation.reason}>
+      <div className="lesson-point-callout">
+        <span className="lesson-point-callout__eyes" aria-hidden="true">👀</span>
+        <span className="lesson-point-callout__label" dir="auto">{label}</span>
+        {dismiss}
+      </div>
+      {announce}
     </div>
   )
 }

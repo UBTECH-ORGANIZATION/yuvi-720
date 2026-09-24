@@ -32,7 +32,7 @@ import {
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
-import { pointerMatchesKey } from '../services/pointer'
+import { pointerMatchesKey, sameMark } from '../services/pointer'
 import { useAuth } from './AuthProvider'
 import { useRewards } from './RewardsProvider'
 import { pollLosesScreen } from './questionKey'
@@ -57,6 +57,8 @@ export interface CoachMessage {
   teacherSuggestion?: CoachTeacherSuggestion
   /** In-memory development trace, available only for the active streamed reply. */
   toolTrace?: CoachToolTraceStep[]
+  /** The focus mark this reply carried — the chat's chip re-shows it. */
+  pointer?: CoachPointerFrame
   isComplete: boolean
   createdAt?: string
   /** The question (component|item|question) this message belongs to, so the
@@ -209,6 +211,8 @@ interface CompanionContextValue {
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
+  /** Re-show a reply's focus mark on the lesson (the chat's focus chip). */
+  showFocus: (pointer: CoachPointerFrame) => void
   /** Support used on the active question. Hints remain available through the
    *  server-approved ladder; explanation is one-shot. */
   supportUsed: {
@@ -307,6 +311,7 @@ function historyMessage(message: CoachHistoryMessage): CoachMessage {
     visual: message.visual,
     actions: message.meta?.actions,
     teacherSuggestion: message.meta?.teacher_suggestion,
+    pointer: message.meta?.pointer,
     isComplete: true,
     createdAt: message.at,
     questionKey: message.question_key ?? null,
@@ -329,6 +334,12 @@ function mergeUnique<T extends { id: string }>(current: T[], incoming: T[]): T[]
 function broadcastPointer(detail: CoachPointerFrame | null, currentKey?: string | null) {
   if (detail && !pointerMatchesKey(detail.question_key, currentKey ?? null)) return
   window.dispatchEvent(new CustomEvent('yuvilab:coach-point', { detail }))
+}
+
+/** One mark = one screen + one object; the learner's "got it" is remembered
+ *  per mark, so the next reply about the same thing does not re-flash it. */
+function markId(frame: CoachPointerFrame): string {
+  return `${frame.question_key}#${frame.object_id || frame.region || ''}`
 }
 
 function introParts(key: string | null | undefined): { item: string; question: string } {
@@ -510,6 +521,41 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // filters rather than deletes — so coming back restores that question's
   // thread. The ref mirrors the state for tagging inside async callbacks.
   const currentQuestionKeyRef = useRef<string | null>(null)
+  // The mark on the lesson right now, and the marks the learner dismissed —
+  // a later reply about the same thing neither re-flashes nor re-opens it.
+  const shownMarkRef = useRef<CoachPointerFrame | null>(null)
+  const dismissedMarksRef = useRef<Set<string>>(new Set())
+  /** Every player's stream handler routes its `pointer` frame here: kept on
+   *  the reply (for the chat chip), then shown on the lesson — unless the same
+   *  mark is already up or the learner already said "got it" to it. */
+  const applyFocusEvent = useCallback((event: Record<string, unknown>, assistantId: string) => {
+    const frame = event.pointer
+    if (!frame || typeof frame !== 'object') return
+    const pointer = frame as CoachPointerFrame
+    setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, pointer } : m)))
+    if (sameMark(shownMarkRef.current, pointer)) return
+    if (dismissedMarksRef.current.has(markId(pointer))) return
+    if (!pointerMatchesKey(pointer.question_key, currentQuestionKeyRef.current)) return
+    shownMarkRef.current = pointer
+    broadcastPointer(pointer, currentQuestionKeyRef.current)
+  }, [])
+  /** The chat chip: show a reply's mark again, even one dismissed before —
+   *  the learner asked for it. Refused for a screen they have left. */
+  const showFocus = useCallback((pointer: CoachPointerFrame) => {
+    if (!pointerMatchesKey(pointer.question_key, currentQuestionKeyRef.current)) return
+    dismissedMarksRef.current.delete(markId(pointer))
+    shownMarkRef.current = pointer
+    broadcastPointer(pointer, currentQuestionKeyRef.current)
+  }, [])
+  useEffect(() => {
+    const onDismissed = (event: Event) => {
+      const detail = (event as CustomEvent<CoachPointerFrame | null>).detail
+      if (detail) dismissedMarksRef.current.add(markId(detail))
+      shownMarkRef.current = null
+    }
+    window.addEventListener('yuvilab:coach-point-dismissed', onDismissed)
+    return () => window.removeEventListener('yuvilab:coach-point-dismissed', onDismissed)
+  }, [])
   // Mirrors activeConversationId so a serial queue turn reuses the id the
   // previous turn created without waiting for a re-render.
   const activeConversationIdRef = useRef<string | null>(null)
@@ -1118,9 +1164,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
         onEvent: (event) => {
-          if (event.pointer && typeof event.pointer === 'object') {
-            broadcastPointer(event.pointer as CoachPointerFrame, currentQuestionKeyRef.current)
-          }
+          applyFocusEvent(event, assistantId)
           const actions = event.actions
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
@@ -1230,6 +1274,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
         onEvent: (event) => {
+          applyFocusEvent(event, assistantId)
           if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           setMessages((prev) => prev.map((m) => (
@@ -1331,6 +1376,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
         onEvent: (event) => {
+          applyFocusEvent(event, assistantId)
           if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           setMessages((prev) => prev.map((m) => (
@@ -1392,7 +1438,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     // are waiting for that answer, wherever they have navigated to since.
     if (movedScreen) screenSeqRef.current += 1
     // The pointer describes a screen; the screen just changed. Clear it.
-    if (movedScreen) broadcastPointer(null)
+    if (movedScreen) {
+      shownMarkRef.current = null
+      broadcastPointer(null)
+    }
     const inFlight = inFlightRef.current
     if (movedScreen && inFlight && diesWithScreen(inFlight.action)) {
       inFlight.controller.abort()
@@ -1567,9 +1616,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
         onEvent: (event) => {
-          if (event.pointer && typeof event.pointer === 'object') {
-            broadcastPointer(event.pointer as CoachPointerFrame, currentQuestionKeyRef.current)
-          }
+          applyFocusEvent(event, assistantId)
           if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           setMessages((current) => current.map((m) => (
@@ -1713,6 +1760,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
         onEvent: (event) => {
+          applyFocusEvent(event, assistantId)
           if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           setMessages((prev) => prev.map((m) => (
@@ -1853,6 +1901,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         // The learner moved to a new screen — re-key instantly (schedules intro).
         if (trigger.type === 'screen_change') {
           applyQuestionKeyRef.current?.(trigger.question_key ?? null, 'push')
+          return
+        }
+        // …to a page the server cannot name: whatever is marked belongs to the
+        // screen they left. Drop it now, not at the next support-state poll.
+        if (trigger.type === 'position_lost') {
+          shownMarkRef.current = null
+          broadcastPointer(null)
           return
         }
         // A teacher just sent praise while the child is in the app: fetch the
@@ -2025,6 +2080,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           && !isLoadingConversations,
         send,
         requestSupport,
+        showFocus,
         supportUsed: displayedSupportUsed,
         questionOrdinals,
         questionParts,

@@ -701,7 +701,12 @@ export function LessonPage() {
                     pointer={coachPointer}
                     playback={playback}
                     language={language}
-                    onDismiss={() => setCoachPointer(null)}
+                    onDismiss={() => {
+                      // The companion remembers the "got it" per mark, so the
+                      // next reply about the same thing does not re-open it.
+                      window.dispatchEvent(new CustomEvent('yuvilab:coach-point-dismissed', { detail: coachPointer }))
+                      setCoachPointer(null)
+                    }}
                   />
                 </>
               )}
