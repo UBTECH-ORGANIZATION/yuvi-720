@@ -15,3 +15,6 @@ workers/game_gen/runs/
 workers/game_gen/fixtures/
 backend/.runtime/
 frontend/dist/
+# Local run output (audit screenshots, eval transcripts) never ships.
+backend/artifacts/
+artifacts/

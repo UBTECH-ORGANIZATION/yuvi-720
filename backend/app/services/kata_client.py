@@ -44,10 +44,17 @@ _MAX_PAGE_LIMIT = 200
 class KataError(RuntimeError):
     """A safe Kata-integration error that never exposes upstream details."""
 
-    def __init__(self, code: str, status_code: int = 502) -> None:
+    def __init__(
+        self, code: str, status_code: int = 502,
+        upstream_status: Optional[int] = None,
+    ) -> None:
         super().__init__(code)
         self.code = code
         self.status_code = status_code
+        # Kata's own HTTP status when it answered (None = it never did). Lets a
+        # caller tell "Kata refused this id" (4xx) from "Kata is down" (5xx /
+        # network) without ever seeing Kata's error body.
+        self.upstream_status = upstream_status
 
 
 # Kept as an alias so existing ``except content_provider.ContentProviderError``
@@ -482,7 +489,9 @@ async def _post_json(path: str, body: dict[str, Any]) -> Any:
             response = await client.post(path, json=body)
             if response.status_code >= 400:
                 # Surface a stable code; never leak Kata's error body.
-                raise KataError("kata_launch_rejected", 502)
+                print(f"⚠️ Kata launcher HTTP {response.status_code}")
+                raise KataError("kata_launch_rejected", 502,
+                                upstream_status=response.status_code)
             return response.json()
     except KataError:
         raise

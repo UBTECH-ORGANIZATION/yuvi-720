@@ -133,6 +133,10 @@ async def fetch_catalog_model() -> dict[str, dict[str, Any]]:
                             if q.get("questionId") and q_texts[index]],
                     })
                 model[component_id] = {
+                    # Kata's own id — what its launcher expects since the
+                    # 09/2026 URL ids (`component_id` is the slug Yuvi keys
+                    # everything by). In memory only: never written.
+                    "launch_id": str(component.get("launch_id") or component_id),
                     "subject": subject,
                     "objective_id": objective_id,
                     "objective_title_he": objective_title,
@@ -184,11 +188,14 @@ def load_backlog(out_dir: Path) -> list[str]:
 
 # ── Stage C: read what the learner actually sees ─────────────────────────────
 
-async def _launch_url(component_id: str) -> str:
+async def _launch_url(component_id: str, launch_id: str = "") -> str:
+    """A sink-LRS launch of the lomda. Kata's launcher wants ITS id (a URL
+    since 09/2026), not the slug the catalog is keyed by — sending the slug
+    is what turned every browse into a launch failure from 2026-09-17."""
     from app.services import kata_client
 
     context = await kata_client.create_launch_context(
-        component_id=component_id,
+        component_id=launch_id or component_id,
         # Unique per mint: the player resumes per (student, component), so a
         # reused id would drop a retry into the middle of last night's walk.
         student_id=f"pipeline-{uuid4().hex[:12]}",
@@ -199,6 +206,28 @@ async def _launch_url(component_id: str) -> str:
         lrs_auth="Basic cGlwZWxpbmU=",
     )
     return context["launch_url"]
+
+
+def launch_failure_verdict(exc: Exception) -> str:
+    """Kata said no (4xx) vs Kata could not answer (5xx / network). The first
+    is about the id and waits for the catalog to change; the second is
+    weather and retries tomorrow — one bucket for both hid a week-long id
+    regression behind "404"."""
+    upstream = getattr(exc, "upstream_status", None)
+    if isinstance(upstream, int) and 400 <= upstream < 500:
+        return "launch_rejected"
+    if getattr(exc, "status_code", None) == 404:
+        return "launch_rejected"
+    return "launch_unavailable"
+
+
+#: Verdicts worth another try on a later night even when the content did not
+#: change. A rejected launch is included: the rejection may be ours (the id
+#: regression of 2026-09-17), and the browse planner backs it off anyway.
+RETRY_VERDICTS = frozenset({
+    "driver_error", "timeout", "frame_blocked", "launch_rejected",
+    "launch_unavailable", "launch_404",
+})
 
 
 def _run_driver(launch_url: str, dump_path: Path) -> tuple[str, Optional[dict]]:
@@ -392,9 +421,9 @@ async def browse_component(
 
     probed_at = _now_iso()
     try:
-        launch_url = await _launch_url(component_id)
+        launch_url = await _launch_url(component_id, model.get("launch_id") or "")
     except KataError as exc:
-        verdict = "launch_404" if exc.status_code in (404, 502) else "driver_error"
+        verdict = launch_failure_verdict(exc)
         return {"verdict": verdict, "probed_at": probed_at,
                 "player_host": "", "screens_seen": 0, "screens_mapped": 0}
     except Exception:
@@ -818,7 +847,8 @@ def build_shards(
                 "role": slide["role"],
                 "position": slide["position"],
                 "fingerprint": slide["fingerprint"],
-                "information_to_bot": slide["information_to_bot"],
+                # information_to_bot is NOT written: it carries answers
+                # ("סימני שליטה") and the runtime reads it live from Kata.
                 "texts": _texts(f"{cid}|{slide['item_id']}|",
                                 ci.ITEM_TEXT_KINDS,
                                 old_slide.get("texts") or {},
@@ -929,6 +959,33 @@ def write_output(
     return changed
 
 
+# ── migrations over the committed shards (no network) ───────────────────────
+
+def _strip_banned(value: Any) -> Any:
+    """Drop every key the contract bans (answers, answer-bearing notes)."""
+    if isinstance(value, dict):
+        return {k: _strip_banned(v) for k, v in value.items()
+                if k not in ci.FORBIDDEN_KEYS}
+    if isinstance(value, list):
+        return [_strip_banned(v) for v in value]
+    return value
+
+
+def migrate_committed_shards(out_dir: Path) -> int:
+    """Rewrite the committed shards through today's contract without touching
+    the catalog: banned keys go, the serializer re-orders. Returns the number
+    of files rewritten. Idempotent — a second run rewrites nothing."""
+    rewritten = 0
+    for path in ci.shard_paths(out_dir):
+        original = path.read_text(encoding="utf-8")
+        shard = _strip_banned(json.loads(original))
+        payload = ci.dump_shard(shard)
+        if payload != original:
+            path.write_text(payload, encoding="utf-8")
+            rewritten += 1
+    return rewritten
+
+
 # ── orchestration ────────────────────────────────────────────────────────────
 
 async def run(args: argparse.Namespace) -> int:
@@ -970,8 +1027,11 @@ async def run(args: argparse.Namespace) -> int:
     extractions: dict[str, dict[str, Any]] = {}
     backlog = [c for c in load_backlog(out_dir) if c in model]
     recapture = components_needing_recapture(model, committed)
+    # A component named on the command line is browsed whether or not the
+    # queue wanted it — that is what a person debugging one lomda means.
+    forced = [args.component] if args.component in model else []
     queue = [cid for cid in dict.fromkeys(
-        backlog + diff["new"] + diff["changed"] + recapture) if cid in scope]
+        forced + backlog + diff["new"] + diff["changed"] + recapture) if cid in scope]
     to_browse = [] if args.skip_browser else queue[:args.max_browse]
     backlog_left = [c for c in queue if c not in to_browse] \
         + [c for c in backlog if c not in scope]   # out-of-scope stays queued
@@ -982,8 +1042,8 @@ async def run(args: argparse.Namespace) -> int:
         print(f"  verdict: {extraction['verdict']} "
               f"({extraction['screens_mapped']}/{len(model[cid]['slides'])} mapped)")
         extractions[cid] = extraction
-        if extraction["verdict"] in ("driver_error", "timeout", "frame_blocked"):
-            backlog_left.append(cid)   # transient — try again next night
+        if extraction["verdict"] in RETRY_VERDICTS:
+            backlog_left.append(cid)   # try again on a later night
 
     # ── describe the captured graphics, then drop the bytes ──
     if to_browse and not args.skip_llm:
@@ -1032,8 +1092,9 @@ async def run(args: argparse.Namespace) -> int:
               f"stats {json.dumps(stats, ensure_ascii=False)}")
         return 0
     changed = write_output(out_dir, shards, backlog_left, stats)
-    dump_dir.mkdir(parents=True, exist_ok=True)
-    (dump_dir / "report.md").write_text(
+    report_dir = Path(args.report_dir)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    (report_dir / "report.md").write_text(
         "# Content pipeline run\n\n"
         f"- generated_at: {_now_iso()}\n"
         + "".join(f"- {k}: {json.dumps(v, ensure_ascii=False)}\n"
@@ -1054,6 +1115,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--verify", action="store_true",
                         help="run twice; fail unless the second pass is a no-op")
+    parser.add_argument("--rewrite-only", action="store_true",
+                        help="migrate the committed shards to the current "
+                             "contract (no catalog, no browser, no model)")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--component")
     parser.add_argument("--skip-browser", action="store_true")
@@ -1062,9 +1126,17 @@ def main() -> int:
     parser.add_argument("--max-llm-calls", type=int, default=40)
     parser.add_argument("--max-vision-calls", type=int, default=30)
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
+    # Walker dumps hold vendor text and base64 crops — CI points this OUTSIDE
+    # the uploaded artifact folder (a public repo's artifacts are public).
     parser.add_argument("--browser-dump-dir", default=str(DEFAULT_DUMP_DIR))
+    parser.add_argument("--report-dir", default=str(DEFAULT_DUMP_DIR),
+                        help="where the run's own reports go (uploaded by CI)")
     args = parser.parse_args()
 
+    if args.rewrite_only:
+        count = migrate_committed_shards(Path(args.out_dir))
+        print(f"→ rewrote {count} shard(s) in {args.out_dir}")
+        return 0
     if args.verify:
         code = asyncio.run(run(args))
         if code:

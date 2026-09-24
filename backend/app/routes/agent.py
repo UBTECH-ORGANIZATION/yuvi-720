@@ -389,8 +389,10 @@ class CoachStreamRequest(BaseModel):
 
 class CoachProactiveRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    # `partial` was published by the trigger engine and queued by the client
+    # but missing here, so every partial-credit nudge died as a silent 422.
     trigger: Literal[
-        "idle", "misconception", "mistake", "slow_progress", "success",
+        "idle", "misconception", "mistake", "partial", "slow_progress", "success",
         "rapid_guessing", "wheel_spinning", "question_intro", "lesson_step_intro",
         "lesson_welcome",
     ] = "idle"

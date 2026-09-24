@@ -25,7 +25,9 @@ const TEXT_KINDS: Record<string, string[]> = {
 // KEYS, not substrings: vendor-authored notes legitimately mention the field
 // name in prose ("correctAnswers ריק כי…"). What must never exist is a key
 // that CARRIES answers — the same rule the backend's find_forbidden_key walks.
-const FORBIDDEN_KEYS = new Set(['correctAnswers', 'correct_answers', 'correct'])
+// `information_to_bot` too: vendor notes state what the learner answers
+// ("סימני שליטה"), and the runtime reads them live from Kata — never commit them.
+const FORBIDDEN_KEYS = new Set(['correctAnswers', 'correct_answers', 'correct', 'information_to_bot'])
 
 function findForbiddenKey(node: unknown, trail: string): string | null {
   if (Array.isArray(node)) {

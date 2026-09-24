@@ -151,6 +151,27 @@ class TheWriteIsIdempotent(unittest.TestCase):
         pipeline.write_output(self.out, {}, [], {})
         self.assertEqual(ci.shard_paths(self.out), [])
 
+    def test_authored_notes_never_reach_the_disk(self):
+        """They state what the learner answers ("סימני שליטה"); the runtime
+        reads them live from Kata, so the public shard never carries them."""
+        written = self._write(_model())
+        self.assertNotIn("information_to_bot", "".join(written.values()))
+        self.assertNotIn("מסך על מדידת מסה", "".join(written.values()))
+
+    def test_the_rewrite_migration_strips_banned_keys_once(self):
+        path = self.out / "MOE.SCI" / "MOE.SCI.X.json"
+        path.parent.mkdir(parents=True)
+        legacy = {"schema_version": ci.SCHEMA_VERSION, "subject": "MOE.SCI",
+                  "objective_id": "MOE.SCI.X", "lomdot": [{
+                      "component_id": "comp-1", "component_fingerprint": "f",
+                      "slides": [{"item_id": "i", "fingerprint": "g",
+                                  "information_to_bot": "סימני שליטה: הלומד בוחר ב-D",
+                                  "questions": []}]}]}
+        path.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(pipeline.migrate_committed_shards(self.out), 1)
+        self.assertNotIn("information_to_bot", path.read_text(encoding="utf-8"))
+        self.assertEqual(pipeline.migrate_committed_shards(self.out), 0)
+
     def test_no_correct_answers_reach_the_disk(self):
         self._write(_model())
         for path in ci.shard_paths(self.out):
@@ -285,14 +306,69 @@ class GenerationTrustsNothing(unittest.TestCase):
 
 
 class BrowsingFailuresBecomeVerdicts(unittest.TestCase):
-    def test_a_launcher_404_is_a_verdict_not_a_crash(self):
+    def _browse_with(self, error: Exception) -> dict:
+        with mock.patch.object(pipeline, "_launch_url",
+                               mock.AsyncMock(side_effect=error)):
+            return asyncio.run(pipeline.browse_component(
+                "comp-1", _model()["comp-1"], Path(tempfile.mkdtemp())))
+
+    def test_a_launcher_refusal_is_rejected_not_a_crash(self):
         from app.services.kata_client import KataError
 
-        with mock.patch.object(pipeline, "_launch_url",
-                               mock.AsyncMock(side_effect=KataError("kata_launch_rejected", 502))):
-            extraction = asyncio.run(pipeline.browse_component(
+        extraction = self._browse_with(
+            KataError("kata_launch_rejected", 502, upstream_status=404))
+        self.assertEqual(extraction["verdict"], "launch_rejected")
+
+    def test_kata_being_down_is_unavailable_not_rejected(self):
+        from app.services.kata_client import KataError
+
+        self.assertEqual(self._browse_with(
+            KataError("kata_launch_rejected", 502, upstream_status=503))["verdict"],
+            "launch_unavailable")
+        self.assertEqual(self._browse_with(
+            KataError("kata_unavailable"))["verdict"], "launch_unavailable")
+
+    def test_every_launch_failure_is_retried_on_a_later_night(self):
+        for verdict in ("launch_rejected", "launch_unavailable", "launch_404"):
+            self.assertIn(verdict, pipeline.RETRY_VERDICTS)
+            self.assertIn(verdict, ci.EXTRACTION_VERDICTS)
+
+    def test_the_launch_uses_katas_own_id_not_the_slug(self):
+        """The 2026-09-17 regression: Yuvi keys lomdot by slug, Kata's
+        launcher only knows its own (URL) id — every browse 404'd for a week."""
+        model = _model()["comp-1"]
+        model["launch_id"] = "https://learning.cet.ac.il/metadata/comp-1"
+        seen = {}
+
+        async def fake_create(**kwargs):
+            seen.update(kwargs)
+            return {"launch_url": "https://player.invalid/x"}
+
+        with mock.patch("app.services.kata_client.create_launch_context",
+                        side_effect=fake_create), \
+                mock.patch.object(pipeline, "_run_driver",
+                                  return_value=("driver_error", None)):
+            asyncio.run(pipeline.browse_component(
+                "comp-1", model, Path(tempfile.mkdtemp())))
+        self.assertEqual(seen["component_id"],
+                         "https://learning.cet.ac.il/metadata/comp-1")
+        self.assertTrue(seen["student_id"].startswith("pipeline-"))
+        self.assertIn("pipeline.invalid", seen["lrs_endpoint"])
+
+    def test_a_model_without_a_launch_id_falls_back_to_the_slug(self):
+        seen = {}
+
+        async def fake_create(**kwargs):
+            seen.update(kwargs)
+            return {"launch_url": "https://player.invalid/x"}
+
+        with mock.patch("app.services.kata_client.create_launch_context",
+                        side_effect=fake_create), \
+                mock.patch.object(pipeline, "_run_driver",
+                                  return_value=("driver_error", None)):
+            asyncio.run(pipeline.browse_component(
                 "comp-1", _model()["comp-1"], Path(tempfile.mkdtemp())))
-        self.assertEqual(extraction["verdict"], "launch_404")
+        self.assertEqual(seen["component_id"], "comp-1")
 
     def test_an_unexpected_explosion_is_contained(self):
         with mock.patch.object(pipeline, "_launch_url",

@@ -74,7 +74,13 @@ TEXT_LENGTH_CAPS = {
 }
 
 #: Keys that must never appear anywhere in a committed shard, at any depth.
-FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
+#: ``information_to_bot`` joined on 2026-09-24: the vendors' authored notes
+#: carry "סימני שליטה" sections that state what the learner answers (299/559
+#: slides), and the runtime reads them live from Kata anyway — the shard copy
+#: served nobody and published answers in a world-readable repo.
+FORBIDDEN_KEYS = frozenset({
+    "correctAnswers", "correct_answers", "correct", "information_to_bot",
+})
 
 #: Version of the browser-capture format inside ``enrichment``. Bump when the
 #: extractor's capture changes shape (e.g. anchors added): carry-over then
@@ -122,9 +128,12 @@ ENRICHMENT_MEDIA_LABEL_CAP = 220  # room for the vision description
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG_DIR = _REPO_ROOT / "content" / "context"
 
+#: ``launch_rejected`` = Kata answered 4xx for the id (wrong id, unpublished);
+#: ``launch_unavailable`` = 5xx or no answer at all. ``launch_404`` is the
+#: pre-2026-09-24 catch-all for both, kept so committed rows stay valid.
 EXTRACTION_VERDICTS = (
-    "extracted", "partial", "launch_404", "frame_blocked",
-    "driver_error", "timeout", "not_attempted",
+    "extracted", "partial", "launch_rejected", "launch_unavailable",
+    "launch_404", "frame_blocked", "driver_error", "timeout", "not_attempted",
 )
 
 

@@ -35,7 +35,7 @@ on:
       max_llm_calls:
         description: "Max generation batches"
         required: false
-        default: "40"
+        default: "120"
       dry_run:
         description: "Compute only — write and commit nothing"
         type: boolean
@@ -102,10 +102,15 @@ jobs:
           # JSON fallback, and the database guard sees an explicit choice.
           SPARK_STORAGE: json
           SPARK_ENVIRONMENT: test
+          # Without it every log line lands in one flush with one timestamp.
+          PYTHONUNBUFFERED: "1"
+        # Walker dumps carry vendor text and base64 crops: they go to the
+        # runner's temp dir, never into the uploaded (public) artifact.
         run: |
           python backend/scripts/content_pipeline.py \
+            --browser-dump-dir "$RUNNER_TEMP/content-dumps" \
             --max-browse "${{ inputs.max_browse || '10' }}" \
-            --max-llm-calls "${{ inputs.max_llm_calls || '40' }}" \
+            --max-llm-calls "${{ inputs.max_llm_calls || '120' }}" \
             ${{ inputs.dry_run && '--dry-run' || '' }}
 
       - name: Upload run artifacts
@@ -113,7 +118,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: content-pipeline-run
-          path: backend/artifacts/content-pipeline/
+          # Named files only — this repo is public, and so are its artifacts.
+          path: |
+            backend/artifacts/content-pipeline/report.md
+            backend/artifacts/content-pipeline/usage.json
+            backend/artifacts/content-pipeline/guard.json
+            backend/artifacts/content-pipeline/pr_body.md
+            backend/artifacts/content-pipeline/pr_summary.json
           retention-days: 14
           if-no-files-found: ignore
 
