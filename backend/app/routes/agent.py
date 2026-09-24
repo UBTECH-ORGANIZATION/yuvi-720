@@ -865,7 +865,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
 
     async def event_generator():
         # First event carries the mandatory AI-use disclosure.
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language)}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         response_parts = []
         action_offers: list[dict[str, object]] = []
         visual_requests: list[dict[str, str]] = []
@@ -1120,7 +1120,7 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
         # streaming (and its stall-watchdog is armed). A transient DB blip in the
         # reporter below would otherwise block before a single byte and freeze the
         # panel with no way for the client to recover.
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'proactive': trigger}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'proactive': trigger, 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         # MoE 720: a bot-initiated turn — helpType=bot-help-offer, trigger mapped
         # to the closed conversationTrigger enum. Report-and-forget: never break
         # the nudge if reporting fails.
@@ -1383,7 +1383,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         hint_level = reservation.hint_level
 
     async def event_generator():
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support, 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         if request.support == "video_visual":
             try:
                 yield f"data: {json.dumps({'phase': 'thinking', 'visual_status': 'planning'}, ensure_ascii=False)}\n\n"

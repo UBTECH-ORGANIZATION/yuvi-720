@@ -1113,8 +1113,11 @@ async def run_coach_stream(
         endpoint=endpoint,
         feature="feature_3_learning_companion",
         operation=(
+            # Per trigger: `coach.proactive` alone hid which nudges cost what
+            # (1,061 of 1,776 dev calls could not be attributed on 09-24).
             f"coach.support.{support_mode}" if support_mode in SUPPORT_PROMPTS
-            else "coach.proactive" if trigger is not None else "coach.reply"
+            else f"coach.proactive.{trigger}" if trigger is not None
+            else "coach.reply"
         ),
         source="coach_agent",
         session_id=session_id,

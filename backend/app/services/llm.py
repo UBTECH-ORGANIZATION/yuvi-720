@@ -4,8 +4,9 @@ import asyncio
 import json
 import os
 import re
+import time
 from pathlib import Path
-from typing import AsyncGenerator, Literal
+from typing import Any, AsyncGenerator, Callable, Literal
 
 import httpx
 
@@ -31,6 +32,42 @@ from app.core.env import ensure_env_loaded, load_env_file  # noqa: E402,F401
 ensure_env_loaded()
 
 LlmModelTier = Literal["strong", "mini"]
+
+#: Provider parameters a caller may pass through ``extra``. An allow-list, not
+#: a pass-through: these three only steer caching/reasoning and never change
+#: what the request is about. Anything else is dropped silently.
+EXTRA_PARAMS = frozenset({"prompt_cache_retention", "prompt_cache_key",
+                          "reasoning_effort"})
+
+#: In-process observers of every provider call — the coach eval registers one
+#: to read raw model text and exact usage per turn. Production registers NONE
+#: (a test pins that): an observer sees prompts, which nothing may persist.
+_OBSERVERS: list[Callable[[dict[str, Any]], None]] = []
+
+
+def register_observer(observer: Callable[[dict[str, Any]], None]) -> Callable[[], None]:
+    """Add an observer; returns the function that removes it."""
+    _OBSERVERS.append(observer)
+
+    def _remove() -> None:
+        if observer in _OBSERVERS:
+            _OBSERVERS.remove(observer)
+
+    return _remove
+
+
+def _notify(event: dict[str, Any]) -> None:
+    for observer in list(_OBSERVERS):
+        try:
+            observer(event)
+        except Exception:  # pragma: no cover - an observer never breaks a call
+            pass
+
+
+def _apply_extra(body: dict, extra: dict | None) -> None:
+    for key, value in (extra or {}).items():
+        if key in EXTRA_PARAMS and value is not None:
+            body[key] = value
 
 
 class LlmError(Exception):
@@ -113,6 +150,7 @@ async def call_llm(
     tool_choice: str | dict | None = None,
     raise_on_error: bool = False,
     timeout: float = 30,
+    extra: dict | None = None,
 ):
     """Call the shared Azure OpenAI model through the APIM gateway.
 
@@ -160,12 +198,15 @@ async def call_llm(
         body["tools"] = tools
         if tool_choice is not None:
             body["tool_choice"] = tool_choice
+    _apply_extra(body, extra)
 
     response = None
     error = None
     status = "failed"
     usage = None
     finish_reason = None
+    observed: dict[str, Any] = {"text": None, "tool_calls": None}
+    started = time.monotonic()
     try:
         # Non-streaming: nothing arrives until the whole completion is done, so
         # the read timeout must cover the full generation. Callers asking for
@@ -179,6 +220,8 @@ async def call_llm(
                 choice = (data.get("choices") or [{}])[0]
                 finish_reason = choice.get("finish_reason")
                 message = choice.get("message", {}) or {}
+                observed["text"] = message.get("content")
+                observed["tool_calls"] = message.get("tool_calls")
                 if tools:
                     # A tool turn legitimately has `content: null`, so emptiness
                     # is not a failure here — the caller inspects `tool_calls`.
@@ -227,6 +270,17 @@ async def call_llm(
             model_tier=model_tier,
             finish_reason=finish_reason,
         )
+        if _OBSERVERS:
+            _notify({
+                "operation": usage_context.operation,
+                "exchange_id": usage_context.exchange_id,
+                "model_tier": model_tier, "deployment": deployment,
+                "streaming": False, "status": status,
+                "messages": messages, "tools": bool(tools),
+                "text": observed["text"], "tool_calls": observed["tool_calls"],
+                "usage": usage, "finish_reason": finish_reason,
+                "latency_ms": round((time.monotonic() - started) * 1000),
+            })
 
 
 def _merge_tool_call_deltas(
@@ -264,6 +318,7 @@ async def call_llm_stream_tools(
     model_tier: LlmModelTier = "mini",
     tools: list | None = None,
     tool_choice: str | dict | None = None,
+    extra: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Stream a tool-calling round, yielding tagged events.
 
@@ -319,6 +374,7 @@ async def call_llm_stream_tools(
         body["tools"] = tools
         if tool_choice is not None:
             body["tool_choice"] = tool_choice
+    _apply_extra(body, extra)
 
     status = "cancelled"
     usage = None
@@ -328,6 +384,7 @@ async def call_llm_stream_tools(
     stream_termination = None
     text_parts: list[str] = []
     tool_calls: dict[int, dict] = {}
+    started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             async with client.stream("POST", url, json=body, headers=headers) as response:
@@ -400,6 +457,18 @@ async def call_llm_stream_tools(
             await asyncio.shield(write)
         except asyncio.CancelledError:
             pass
+        if _OBSERVERS:
+            _notify({
+                "operation": usage_context.operation,
+                "exchange_id": usage_context.exchange_id,
+                "model_tier": model_tier, "deployment": deployment,
+                "streaming": True, "status": status,
+                "messages": messages, "tools": bool(tools),
+                "text": "".join(text_parts),
+                "tool_calls": [tool_calls[i] for i in sorted(tool_calls)] or None,
+                "usage": usage, "finish_reason": finish_reason,
+                "latency_ms": round((time.monotonic() - started) * 1000),
+            })
 
 
 async def call_llm_stream(
@@ -408,6 +477,7 @@ async def call_llm_stream(
     usage_context: UsageContext,
     max_tokens: int = 4000,
     model_tier: LlmModelTier = "mini",
+    extra: dict | None = None,
 ) -> AsyncGenerator[str, None]:
     """Stream tokens from the Azure OpenAI model."""
     timer = UsageTimer.start()
@@ -442,6 +512,7 @@ async def call_llm_stream(
         "stream": True,
         "stream_options": {"include_usage": True},
     }
+    _apply_extra(body, extra)
 
     status = "cancelled"
     usage = None
@@ -449,6 +520,9 @@ async def call_llm_stream(
     error = None
     finish_reason = None
     stream_termination = None
+    text_parts: list[str] = []
+    first_token_ms: int | None = None
+    started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             async with client.stream("POST", url, json=body, headers=headers) as response:
@@ -476,6 +550,11 @@ async def call_llm_stream(
                         delta = choice.get("delta", {})
                         content = delta.get("content")
                         if content:
+                            if first_token_ms is None:
+                                first_token_ms = round(
+                                    (time.monotonic() - started) * 1000)
+                            if _OBSERVERS:
+                                text_parts.append(content)
                             yield content
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
@@ -513,3 +592,15 @@ async def call_llm_stream(
             await asyncio.shield(write)
         except asyncio.CancelledError:
             pass
+        if _OBSERVERS:
+            _notify({
+                "operation": usage_context.operation,
+                "exchange_id": usage_context.exchange_id,
+                "model_tier": model_tier, "deployment": deployment,
+                "streaming": True, "status": status,
+                "messages": messages, "tools": False,
+                "text": "".join(text_parts), "tool_calls": None,
+                "usage": usage, "finish_reason": finish_reason,
+                "first_token_ms": first_token_ms,
+                "latency_ms": round((time.monotonic() - started) * 1000),
+            })

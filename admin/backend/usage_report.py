@@ -16,6 +16,10 @@ class UsageBucket(BaseModel):
     input_tokens: int
     output_tokens: int
     total_tokens: int
+    # Provider-reported prompt-cache hits (billed at the cached rate) and
+    # hidden reasoning (billed as output). Zero when a provider omits them.
+    cached_input_tokens: int = 0
+    reasoning_tokens: int = 0
     characters: int
     cost_usd: Optional[float]
     unpriced_requests: int
@@ -40,6 +44,7 @@ class UsageEvent(BaseModel):
     status: str
     usage_status: str
     input_tokens: Optional[int]
+    cached_input_tokens: Optional[int] = None
     output_tokens: Optional[int]
     reasoning_tokens: Optional[int]
     total_tokens: Optional[int]
@@ -130,6 +135,8 @@ def _new_bucket(label: str) -> dict[str, Any]:
         "input_tokens": 0,
         "output_tokens": 0,
         "total_tokens": 0,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0,
         "characters": 0,
         "cost_usd": None,
         "unpriced_requests": 0,
@@ -146,6 +153,8 @@ def _add(bucket: dict[str, Any], event: dict[str, Any]) -> None:
     bucket["input_tokens"] += _number(event.get("input_tokens"))
     bucket["output_tokens"] += _number(event.get("output_tokens"))
     bucket["total_tokens"] += _number(event.get("total_tokens"))
+    bucket["cached_input_tokens"] += _number(event.get("cached_input_tokens"))
+    bucket["reasoning_tokens"] += _number(event.get("reasoning_tokens"))
     if event.get("meter") == "characters":
         bucket["characters"] += _number(event.get("quantity"))
     event_cost = _cost(event.get("cost_usd"))
@@ -181,6 +190,7 @@ def _recent_event(event: dict[str, Any]) -> UsageEvent:
         status=_text(event.get("status")),
         usage_status=_text(event.get("usage_status")),
         input_tokens=_optional_number(event.get("input_tokens")),
+        cached_input_tokens=_optional_number(event.get("cached_input_tokens")),
         output_tokens=_optional_number(event.get("output_tokens")),
         reasoning_tokens=_optional_number(event.get("reasoning_tokens")),
         total_tokens=_optional_number(event.get("total_tokens")),

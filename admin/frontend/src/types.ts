@@ -25,6 +25,8 @@ export interface UsageBucket {
   input_tokens: number
   output_tokens: number
   total_tokens: number
+  cached_input_tokens?: number
+  reasoning_tokens?: number
   characters: number
   cost_usd: number | null
   unpriced_requests: number
@@ -47,6 +49,7 @@ export interface UsageEvent {
   status: string
   usage_status: string
   input_tokens: number | null
+  cached_input_tokens?: number | null
   output_tokens: number | null
   reasoning_tokens: number | null
   total_tokens: number | null
