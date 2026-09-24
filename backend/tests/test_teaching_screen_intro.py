@@ -56,7 +56,7 @@ def _drive(
     """Run the real proactive path with a stubbed model; return (streamed, instructions)."""
     seen: dict = {}
 
-    async def fake_stream(messages, usage_context):
+    async def fake_stream(messages, usage_context, **_):
         seen["messages"] = messages
         for chunk in model_output:
             yield chunk

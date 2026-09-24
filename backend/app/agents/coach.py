@@ -19,7 +19,9 @@ from typing import AsyncGenerator, Optional
 from app.agents import answer_guard
 from app.agents import coach_calendar
 from app.agents import coach_focus
+from app.agents import coach_lean
 from app.agents import coach_planning
+from app.agents import focus_tag
 from app.agents.coach_modes import (
     CoachMode,
     GENERAL_COMPANION_INSTRUCTIONS,
@@ -1044,17 +1046,18 @@ async def _plan_coach_tools(
 
 
 async def _stream_coach_model(
-    messages: list[dict[str, str]], usage_context: UsageContext
+    messages: list[dict[str, str]], usage_context: UsageContext,
+    max_tokens: int = 800,
 ) -> AsyncGenerator[str, None]:
     """Stream through Agent Framework without bypassing the tracked APIM lane."""
     tier = _coach_tier()
-    client = build_chat_client(usage_context, model_tier=tier, max_tokens=800)
+    client = build_chat_client(usage_context, model_tier=tier, max_tokens=max_tokens)
     if client is None:
         async for chunk in call_llm_stream(
             messages,
             usage_context=usage_context,
             model_tier=tier,
-            max_tokens=800,
+            max_tokens=max_tokens,
         ):
             yield chunk
         return
@@ -1080,7 +1083,7 @@ async def _stream_coach_model(
                 messages,
                 usage_context=usage_context,
                 model_tier=tier,
-                max_tokens=800,
+                max_tokens=max_tokens,
             ):
                 yield chunk
 
@@ -1302,6 +1305,8 @@ async def run_coach_stream(
     # pregen, proactive, support or typed — carries one mark, so the child
     # sees WHAT the sentence is about. The prompt is untouched.
     focus_mode = coach_focus.mode() if coach_mode is CoachMode.LESSON else "off"
+    focus_decision: Optional[coach_focus.FocusDecision] = None
+    _focus_current: dict = {}
     if focus_mode != "off":
         _focus_current = bundle.get("current") or {}
         _referenced = (
@@ -1600,7 +1605,30 @@ async def run_coach_stream(
         pointer_requests=pointer_requests,
         teacher_suggestions=teacher_suggestions if teacher_suggestions is not None else [],
     )
-    messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
+    context_block = _render_context(bundle, prompt_text)
+    prompt_history = history
+    reply_max_tokens = coach_lean.DEFAULT_MAX_TOKENS
+    # A nudge is a one-line reaction to THIS screen: same instructions (the
+    # cached prefix), a compact context, a short history, a small cap.
+    if coach_lean.applies(trigger, lesson=coach_mode is CoachMode.LESSON,
+                          typed=user_message is not None,
+                          support=support_mode in SUPPORT_PROMPTS):
+        context_block = coach_lean.compact_context(context_block)
+        prompt_history = coach_lean.trim_history(history)
+        reply_max_tokens = coach_lean.max_tokens(trigger)
+        coach_debug_trace.append(debug_trace, "lean_nudge")
+    # The model's own say in the mark: the screen's objects under short names,
+    # and one hidden tag at the start of its reply (focus_tag).
+    tag_parser: Optional[focus_tag.FocusTagParser] = None
+    tag_names: dict = {}
+    if focus_mode == "on" and focus_decision is not None and coach_focus.tag_enabled():
+        tag_lines, tag_names = coach_focus.prompt_lines(focus_decision, _focus_current)
+        if tag_lines:
+            instructions = f"{instructions}\n- {focus_tag.RULE[lang]}"
+            context_block = context_block.replace(
+                "</learner_context>", "\n".join(tag_lines) + "\n</learner_context>")
+            tag_parser = focus_tag.FocusTagParser(set(tag_names))
+    messages = _build_messages(instructions, context_block, prompt_history, prompt_text)
     plan_turn = True
     if coach_mode is CoachMode.LESSON:
         # A planning call re-sends the whole prompt; in a lesson the only
@@ -1679,12 +1707,41 @@ async def run_coach_stream(
     # end of the preceding sentence is no longer at the start of a line, so the
     # client read "…השוואה. | מונח | הסבר |" as prose with pipes in it.
     pending_gap = " "
+    def apply_tag() -> None:
+        """Once the tag is read: the model's pick replaces the resolver's —
+        only while nothing has been yielded, since the route flushes the mark
+        with the first word."""
+        result = tag_parser.result
+        if collected or result.outcome not in ("ok", "none"):
+            return
+        target = tag_names.get(result.alias) if result.outcome == "ok" else None
+        frame = coach_focus.override(focus_decision, _focus_current, target,
+                                     client_version=pointer_version)
+        pointer_requests.clear()
+        if frame is not None:
+            pointer_requests.append(frame)
+
     async def reply_chunks():
         if query_intent == "calendar_clarification":
             yield coach_calendar.calendar_clarification(lang)
             return
-        async for model_chunk in _stream_coach_model(messages, usage_context):
+        tag_applied = False
+        async for model_chunk in _stream_coach_model(
+                messages, usage_context, max_tokens=reply_max_tokens):
+            if tag_parser is not None:
+                model_chunk = tag_parser.feed(model_chunk)
+                if not tag_applied and tag_parser.decided:
+                    tag_applied = True
+                    apply_tag()
+                if not model_chunk:
+                    continue
             yield model_chunk
+        if tag_parser is not None:
+            rest = tag_parser.finish()
+            if rest:
+                yield rest
+            if diagnostics_out is not None:
+                diagnostics_out["focus_tag"] = tag_parser.result.outcome
 
     async for chunk in reply_chunks():
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
@@ -1729,7 +1786,7 @@ async def run_coach_stream(
                     sentence_cap_hit = True
                 continue
 
-            delivered_sentence = sentence
+            delivered_sentence = focus_tag.strip_stray(sentence) if tag_parser else sentence
             if pending_list_marker:
                 delivered_sentence = (
                     pending_list_marker + pending_list_marker_gap + delivered_sentence
@@ -1762,6 +1819,8 @@ async def run_coach_stream(
 
     if not blocked and pending_output.strip():
         stripped_remainder = pending_output.strip()
+        if tag_parser is not None:
+            stripped_remainder = focus_tag.strip_stray(stripped_remainder).strip()
         starts_list_item = _starts_list_item(stripped_remainder)
         if starts_list_item and not in_structural_list:
             in_structural_list = True

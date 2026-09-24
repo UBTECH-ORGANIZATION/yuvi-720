@@ -36,7 +36,7 @@ def _drive(trigger: str, brain: dict, language: str = "he"):
     (streamed text, the messages the model was shown, the persisted turn)."""
     seen: dict = {}
 
-    async def fake_stream(messages, usage_context):
+    async def fake_stream(messages, usage_context, **_):
         seen["messages"] = messages
         yield MODEL_TEXT
 

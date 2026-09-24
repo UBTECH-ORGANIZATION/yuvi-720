@@ -291,15 +291,18 @@ LESSON_BUNDLE = {"current": {**CURRENT, "informationToBot": "מסך על מסה"
 
 
 def _drive(*, trigger=None, support_mode=None, user_message=None, pregen=None,
-           pointer_version=2, plan_calls=None):
+           pointer_version=2, plan_calls=None, model_stream=None, history=None):
     """(streamed, pointer_requests, persisted) from one run_coach_stream pass,
     recording the pointer list's state at the FIRST yielded chunk."""
     persisted: dict = {}
     pointer_requests: list = []
     at_first_chunk: list = []
 
-    async def fake_stream(messages, usage_context):
+    async def fake_stream(messages, usage_context, **_):
         yield "תשובה חיה."
+
+    async def recent(*a, **k):
+        return list(history or [])
 
     async def fake_bundle(*a, **k):
         return copy.deepcopy(LESSON_BUNDLE)
@@ -353,7 +356,7 @@ def _drive(*, trigger=None, support_mode=None, user_message=None, pregen=None,
     from app.agents import tutor_decision
 
     catalog = {"objects": copy.deepcopy(V8_OBJECTS), "layout": {}}
-    with mock.patch.object(coach, "_stream_coach_model", fake_stream), \
+    with mock.patch.object(coach, "_stream_coach_model", model_stream or fake_stream), \
          mock.patch.object(coach, "build_coach_bundle", fake_bundle), \
          mock.patch.object(coach, "welcome_greeting", greeting), \
          mock.patch.object(coach, "_tool_calling_enabled", lambda: True), \
@@ -367,7 +370,7 @@ def _drive(*, trigger=None, support_mode=None, user_message=None, pregen=None,
          mock.patch.object(content_intelligence, "record_pregen_hit", async_none), \
          mock.patch.object(content_intelligence, "enrichment", lambda *a: None), \
          mock.patch.object(coach.sessions, "conversation_needs_title", async_false), \
-         mock.patch.object(coach.sessions, "get_recent", async_list), \
+         mock.patch.object(coach.sessions, "get_recent", recent), \
          mock.patch.object(coach.sessions, "get_conversation_memory", async_dict), \
          mock.patch.object(coach.sessions, "append_turn", fake_append_turn), \
          mock.patch("app.brain.consolidator.capture_and_consolidate", async_none), \

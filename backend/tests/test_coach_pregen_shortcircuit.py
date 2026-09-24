@@ -72,7 +72,7 @@ def _drive(
     persisted: dict = {}
     counters = {"model": 0}
 
-    async def fake_stream(messages, usage_context):
+    async def fake_stream(messages, usage_context, **_):
         counters["model"] += 1
         persisted["model_messages"] = messages
         for chunk in model_output:

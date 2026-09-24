@@ -431,3 +431,65 @@ def resolve(
                       referenced_option=referenced_option)
     decision = finalize(decision, current)
     return to_frame(decision, current, client_version=client_version), decision
+
+
+# ── the model's say (COACH_FOCUS_TAG_ENABLED) ────────────────────────────────
+
+def tag_enabled() -> bool:
+    return (os.environ.get("COACH_FOCUS_TAG_ENABLED") or "off").strip().lower() in {
+        "1", "on", "true", "yes"}
+
+
+def aliases(decision: FocusDecision, current: dict[str, Any]) -> dict[str, FocusObject]:
+    """Short per-turn names for what the model may point at: ``q`` (the
+    question), ``opts`` (the answers), ``o1``…``o10`` in screen order. Single
+    options are listed only where the leak policy would let them be marked —
+    a name the model can see is a name it can say."""
+    qid = str(current.get("question_id") or "")
+    may_name_options = solved(current)
+    chosen = chosen_option(current)
+    out: dict[str, FocusObject] = {}
+    stem = _stem(decision.objects, qid)
+    if stem:
+        out["q"] = stem
+    group = _first(decision.objects, ("options",), qid)
+    if group:
+        out["opts"] = group
+    n = 0
+    for obj in _for_question(decision.objects, qid):
+        if obj in out.values() or obj.kind in ("stem", "options"):
+            continue
+        if obj.kind == "option" and not (may_name_options or obj.option_index == chosen):
+            continue
+        if n >= 10:
+            break
+        n += 1
+        out[f"o{n}"] = obj
+    return out
+
+
+def prompt_lines(decision: FocusDecision, current: dict[str, Any]) -> tuple[list[str], dict[str, FocusObject]]:
+    """Context lines naming the screen's objects and the resolver's pick."""
+    names = aliases(decision, current)
+    if not names:
+        return [], {}
+    listed = " | ".join(f"[{alias}] {obj.kind}: {obj.label or _KIND_LABEL_HE.get(obj.kind, '')}"
+                        for alias, obj in names.items())
+    suggestion = next((alias for alias, obj in names.items()
+                       if decision.target is not None and obj.id == decision.target.id), "-")
+    return [f"current_screen_objects: {listed}",
+            f"current_focus_suggestion: {suggestion}"], names
+
+
+def override(
+    decision: FocusDecision, current: dict[str, Any], target: Optional[FocusObject],
+    *, client_version: int,
+) -> Optional[dict[str, Any]]:
+    """The frame for the model's own pick — through the same leak policy and
+    honesty caps as the resolver's. None target = the model said "nothing"."""
+    chosen = FocusDecision(target, "model", objects=decision.objects)
+    chosen = finalize(chosen, current)
+    frame = to_frame(chosen, current, client_version=client_version)
+    if frame is not None and client_version >= 2:
+        frame["source"] = "model"
+    return frame

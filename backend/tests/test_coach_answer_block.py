@@ -46,7 +46,7 @@ def _drive(
     persisted: dict = {}
     model_calls = 0
 
-    async def fake_stream(messages, usage_context):
+    async def fake_stream(messages, usage_context, **_):
         nonlocal model_calls
         persisted["model_messages"] = messages
         outputs = (

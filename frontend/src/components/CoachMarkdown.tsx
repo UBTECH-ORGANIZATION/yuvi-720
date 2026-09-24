@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { mapProse, trimIncompleteBlocks } from './richText/blocks.ts'
 import { renderRichText } from './richText/RichText'
+import { stripFocusTags } from '../services/focusTag'
 
 /* Yuvi's replies on the learner side (the floating companion and the
    learning-map topic chat).
@@ -121,6 +122,7 @@ function stripForeignScripts(md: string): string {
  * `streaming` holds back a table or a diagram payload the model has not
  * finished writing, so neither ever flashes as raw syntax on its way in. */
 export function CoachMarkdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  text = stripFocusTags(text, streaming)
   // Every clean-up below rewrites prose and would happily edit the JSON inside
   // a diagram fence — so the fences are held out of their way.
   const safeText = mapProse(
