@@ -72,14 +72,27 @@ def plan_turns(screens, scenarios, *, quick: bool, only_screens: set[str]) -> li
     return turns
 
 
-async def run_variant(variant: str, turns, facts, concurrency: int) -> list[dict]:
+async def run_variant(variant: str, turns, facts, concurrency: int,
+                      turn_timeout: float = 120.0) -> list[dict]:
     for key, value in harness.VARIANTS[variant].items():
         os.environ[key] = value
     gate = asyncio.Semaphore(concurrency)
 
     async def one(screen, scenario, persona):
         async with gate:
-            turn = await harness.run_turn(screen, facts[screen["id"]], scenario, persona, variant)
+            try:
+                turn = await asyncio.wait_for(
+                    harness.run_turn(screen, facts[screen["id"]], scenario, persona, variant),
+                    timeout=turn_timeout)
+            except asyncio.TimeoutError:
+                # A hung stream is a finding (it counts as a crash), never a
+                # stalled run: the other turns and the report still land.
+                turn = {"screen": screen["id"], "scenario": scenario["id"], "persona": persona,
+                        "variant": variant, "lang": scenario.get("lang") or harness.PERSONAS[persona]["lang"],
+                        "kind": scenario["kind"], "text": "", "mark": None, "mark_before_text": False,
+                        "teacher": False, "flags": [], "diagnostics": {}, "trace": [], "calls": [],
+                        "first_text_ms": None, "total_ms": int(turn_timeout * 1000),
+                        "error": f"timeout after {turn_timeout:.0f}s"}
             turn["check"] = harness.check_turn(turn, scenario, facts[screen["id"]], variant)
             turn["cost_usd"] = harness.turn_cost(turn)
             status = "✗ " + ",".join(turn["check"]["hard"]) if turn["check"]["hard"] else "✓"
@@ -164,16 +177,21 @@ async def judge(pairs: list[tuple[dict, dict, dict]]) -> dict[str, int]:
             usage_context=usage, max_tokens=8, model_tier="strong")
         return str(raw or "").strip().upper()[:3]
 
-    for base, cand, facts in pairs:
-        turn = base["scenario"]
-        first = await verdict(facts.get("question_text"), turn, base["text"], cand["text"])
-        second = await verdict(facts.get("question_text"), turn, cand["text"], base["text"])
+    gate = asyncio.Semaphore(6)
+
+    async def one(base, cand, facts):
+        async with gate:
+            turn = base["scenario"]
+            first = await verdict(facts.get("question_text"), turn, base["text"], cand["text"])
+            second = await verdict(facts.get("question_text"), turn, cand["text"], base["text"])
         if first.startswith("B") and second.startswith("A"):
             tally["candidate"] += 1
         elif first.startswith("A") and second.startswith("B"):
             tally["baseline"] += 1
         else:
             tally["tie_or_disagree"] += 1
+
+    await asyncio.gather(*(one(*pair) for pair in pairs))
     return dict(tally)
 
 
@@ -217,8 +235,14 @@ async def main_async(args) -> int:
     variants = [v.strip() for v in args.variants.split(",") if v.strip()]
     print(f"→ {len(turns)} turns × {len(variants)} variants")
     results: dict[str, list[dict]] = {}
+    out = Path(args.out or ROOT / "artifacts" / "coach-eval"
+               / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+    out.mkdir(parents=True, exist_ok=True)
     for variant in variants:
-        results[variant] = await run_variant(variant, turns, facts, args.concurrency)
+        results[variant] = await run_variant(variant, turns, facts, args.concurrency, args.turn_timeout)
+        # Saved as each variant lands: a later failure never loses the earlier ones.
+        (out / f"partial-{variant}.json").write_text(
+            json.dumps(results[variant], ensure_ascii=False, default=str), encoding="utf-8")
     summaries = {v: summarize(r) for v, r in results.items()}
     judged: dict[str, dict] = {}
     if args.judge and "baseline" in results:
@@ -236,9 +260,7 @@ async def main_async(args) -> int:
             judged[variant] = await judge(pairs)
             for b, _, _ in pairs:
                 b["scenario"] = next(k[1] for k in base if base[k] is b)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out = Path(args.out or ROOT / "artifacts" / "coach-eval" / stamp)
-    out.mkdir(parents=True, exist_ok=True)
+    stamp = out.name
     if not args.include_text:
         for turns_ in results.values():
             for t in turns_:
@@ -261,6 +283,8 @@ def main() -> int:
     parser.add_argument("--judge", action="store_true")
     parser.add_argument("--screens", help="comma-separated screen ids to restrict to")
     parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--turn-timeout", type=float, default=120.0,
+                        help="seconds before a hung turn is recorded as a crash")
     parser.add_argument("--config-dir", help="content shards to serve instead of content/context")
     parser.add_argument("--include-text", action="store_true",
                         help="keep reply texts in results.json (local review only)")
