@@ -405,7 +405,13 @@ function GoalCard({ goal, conversation, language, updating, helping, flash, onSt
 }) {
   const { t } = useI18n()
   const status = goalStatus(goal)
-  const isDone = status === 'done'
+  const isMeasured = Boolean(goal.progress)
+  const metBySystem = Boolean(goal.progress?.met)
+  const recordedComplete = goal.progress_stage === 'summarized' || Boolean(goal.approved_by)
+  const isDone = recordedComplete || metBySystem
+  const displayedCount = goal.progress
+    ? (isDone ? goal.progress.target : goal.progress.count)
+    : 0
   const overdue = isOverdue(goal)
   // The title may already be the step itself, and then there is nothing to add.
   const step = goal.title && goal.next_steps ? goal.next_steps : ''
@@ -442,15 +448,40 @@ function GoalCard({ goal, conversation, language, updating, helping, flash, onSt
             <Icon name="spark" size={12} />{t('rewards.goal.worth', { count: worth })}
           </span>
         )}
-        <button
-          className={`mt-dgoal__advance${isDone ? ' is-quiet' : ''}`}
-          type="button"
-          disabled={updating}
-          onClick={() => onStatus(advance)}
-        >
-          {advanceLabel}
-        </button>
+        {isMeasured ? (
+          isDone ? (
+            <span className="mt-dgoal__measured-status is-met">
+              <Icon name="check" size={14} />
+              {t('mentoring.student.goal.completed')}
+            </span>
+          ) : null
+        ) : (
+          <button
+            className={`mt-dgoal__advance${isDone ? ' is-quiet' : ''}`}
+            type="button"
+            disabled={updating}
+            onClick={() => onStatus(advance)}
+          >
+            {advanceLabel}
+          </button>
+        )}
       </div>
+      {goal.progress && (
+        <div className="mt-dgoal__measure" aria-label={t('mentoring.student.goal.progress', {
+          count: displayedCount, target: goal.progress.target,
+        })}>
+          <div className="mt-dgoal__measure-head">
+            <span>{t('mentoring.student.goal.progressLabel')}</span>
+            <strong dir="ltr">{t('mentoring.student.goal.progress', {
+              count: displayedCount, target: goal.progress.target,
+            })}</strong>
+          </div>
+          <span className="mt-dgoal__measure-bar" aria-hidden="true">
+            <span style={{ inlineSize: `${Math.min(100, (displayedCount / goal.progress.target) * 100)}%` }} />
+          </span>
+          {metBySystem && !recordedComplete && <p className="mt-dgoal__approval">{t('mentoring.student.goal.waitingApproval')}</p>}
+        </div>
+      )}
       <div className="mt-dgoal__foot">
         {goal.from_yuvi && <YuviTag />}
         {!isDone && (goal.needs_help

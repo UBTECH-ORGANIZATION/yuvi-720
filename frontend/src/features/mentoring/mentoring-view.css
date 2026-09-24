@@ -255,6 +255,14 @@
 .mt-dgoal__advance:disabled { opacity: .55; cursor: default; }
 .mt-dgoal__advance.is-quiet { background: transparent; border: 1px solid var(--sp-border-strong); color: var(--sp-ink-600); }
 .mt-dgoal__advance.is-quiet:hover:not(:disabled) { background: color-mix(in srgb, var(--sp-primary-500) 10%, transparent); border-color: var(--sp-primary-500); color: var(--sp-primary-700); }
+.mt-dgoal__measured-status { flex: none; display: inline-flex; align-items: center; gap: 6px; min-block-size: 36px; padding-inline: var(--sp-3); border-radius: var(--sp-radius-md); background: color-mix(in srgb, var(--sp-primary-500) 10%, var(--sp-surface)); color: var(--sp-primary-700); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); }
+.mt-dgoal__measured-status.is-met { background: color-mix(in srgb, var(--sp-success-600) 13%, var(--sp-surface)); color: var(--sp-success-700); }
+.mt-dgoal__measure { display: grid; gap: 6px; padding-block-start: var(--sp-2); border-block-start: 1px solid var(--sp-border); }
+.mt-dgoal__measure-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
+.mt-dgoal__measure-head strong { color: var(--sp-ink-700); font-weight: var(--sp-fw-semibold); unicode-bidi: isolate; }
+.mt-dgoal__measure-bar { display: block; inline-size: min(100%, 220px); block-size: 7px; overflow: hidden; border-radius: var(--sp-radius-pill); background: var(--sp-border); }
+.mt-dgoal__measure-bar > span { display: block; block-size: 100%; border-radius: inherit; background: var(--sp-primary-500); transition: inline-size 180ms ease; }
+.mt-dgoal__approval { margin: 0; color: var(--sp-success-700); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); }
 .mt-dgoal__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
 .mt-dgoal__help { color: #a52d3a; }
 .mt-dgoal__help > svg { color: #a52d3a; }

@@ -1,5 +1,6 @@
 """Mentoring (F5) + feedback (F7) routes. Thin: validate + delegate."""
 
+import asyncio
 import json
 import uuid
 from datetime import date, datetime, timezone
@@ -72,6 +73,15 @@ async def list_mentoring(learner_id: str = Depends(require_learner)):
     through `GET /api/teacher/students/{id}/goals`, behind `_guard_learner`.
     """
     rows = await mentoring.list_conversations(learner_id, "learner")
+    # Action-based goals are measured from durable learning activity. The
+    # learner sees the same evidence count as the teacher, but cannot alter it.
+    try:
+        await asyncio.wait_for(
+            goal_progress.enrich_conversations(learner_id, rows), timeout=2,
+        )
+    except TimeoutError:
+        # Evidence can be delayed by storage; do not block the learner's goals.
+        pass
     return JSONResponse(content={"conversations": rows})
 
 

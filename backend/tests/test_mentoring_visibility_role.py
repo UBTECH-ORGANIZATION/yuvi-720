@@ -58,6 +58,17 @@ class LearnerCannotForceTheTeacherViewTest(unittest.TestCase):
         listed = self._get("/api/mentoring?learner_id=kid-b&role=teacher")
         listed.assert_awaited_once_with("kid-a", "learner")
 
+    def test_the_learner_response_is_enriched_with_measured_progress(self):
+        rows = [{"id": "ment_1", "goals": [{"id": "goal_1"}]}]
+        enriched = AsyncMock()
+        with (
+            patch.object(routes.mentoring, "list_conversations", AsyncMock(return_value=rows)),
+            patch.object(routes.goal_progress, "enrich_conversations", enriched),
+        ):
+            response = TestClient(_app()).get("/api/mentoring")
+        self.assertEqual(response.status_code, 200)
+        enriched.assert_awaited_once_with("kid-a", rows)
+
 
 class TeacherOnlyNoteIsStrippedTest(unittest.IsolatedAsyncioTestCase):
     """End to end through the real service: the note never reaches a learner."""
