@@ -52,8 +52,16 @@ SCHEMA_VERSION = 1
 # paraphrase the question/screen or foreshadow the answer (the balloon-intro
 # feedback) — and every kind may now use light markdown emphasis, matching
 # what the live coach writes and what the chat renders.
+# cp-v3 (2026-09-24), intros only: they were written from the vendor's
+# authored note, whose "סימני שליטה" section states what the learner answers.
+# The note now reaches generation without its answer sections, and every text
+# passes the runtime AnswerGuard — the old intros are regenerated, first in
+# the nightly's queue (content_pipeline.GENERATION_PRIORITY).
 PROMPT_VERSION = "cp-v2"
-PROMPT_VERSIONS: dict[str, str] = {}
+PROMPT_VERSIONS: dict[str, str] = {
+    "question_intro": "cp-v3",
+    "lesson_step_intro": "cp-v3",
+}
 
 
 def prompt_version_for(kind: str) -> str:

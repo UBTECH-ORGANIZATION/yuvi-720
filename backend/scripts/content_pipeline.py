@@ -39,6 +39,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -53,9 +54,13 @@ ensure_env_loaded()
 from app.services import content_intelligence as ci  # noqa: E402
 from app.services.ai_usage import UsageContext  # noqa: E402
 
+from app.agents import answer_guard  # noqa: E402
+
 try:  # imported as `scripts.content_pipeline` (tests) or run as a script
+    from scripts import content_browse as browse_lib  # noqa: E402
     from scripts import content_objects as objects_lib  # noqa: E402
 except ImportError:  # pragma: no cover - direct script execution
+    import content_browse as browse_lib  # noqa: E402
     import content_objects as objects_lib  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -180,15 +185,124 @@ def load_committed(out_dir: Path) -> dict[str, dict[str, Any]]:
     return committed
 
 
-def load_backlog(out_dir: Path) -> list[str]:
+def load_index(out_dir: Path) -> dict[str, Any]:
     index_path = out_dir / "index.json"
     if not index_path.exists():
-        return []
+        return {}
     try:
-        index = json.loads(index_path.read_text(encoding="utf-8"))
-        return [str(c) for c in (index.get("backlog") or {}).get("browse") or []]
+        return json.loads(index_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return []
+        return {}
+
+
+def load_backlog(out_dir: Path) -> list[str]:
+    return [str(c) for c in (load_index(out_dir).get("backlog") or {}).get("browse") or []]
+
+
+def _newest_stamp(lomda: dict[str, Any]) -> str:
+    """The latest thing the pipeline did to a lomda (browse or generation)."""
+    stamps = [str((lomda.get("extraction") or {}).get("probed_at") or "")]
+
+    def _collect(texts: Any) -> None:
+        for block in (texts or {}).values():
+            if isinstance(block, dict):
+                stamps.append(str(block.get("generated_at") or ""))
+
+    _collect(lomda.get("texts"))
+    for slide in lomda.get("slides") or []:
+        _collect(slide.get("texts"))
+        for q in slide.get("questions") or []:
+            _collect(q.get("texts"))
+    return max(stamps)
+
+
+def _fill_texts(into: dict[str, Any], other: dict[str, Any]) -> None:
+    for kind, block in (other.get("texts") or {}).items():
+        into.setdefault("texts", {}).setdefault(kind, block)
+
+
+def merge_carried(
+    main: dict[str, dict[str, Any]], carried: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """The committed state to build tonight on: main, plus the work of every
+    earlier night whose pull request is still open.
+
+    The nightly branch is rebuilt from main each night; without this, an
+    unmerged PR's generated texts and captures were thrown away and paid for
+    again (≈380 texts a night for 8 nights). Per lomda the side the pipeline
+    touched last wins; texts and captures the winner lacks are filled from
+    the other side. Nothing here is trusted blindly: build_shards still keeps
+    a text only when its fingerprint and prompt version are current, and a
+    capture only when it re-verifies."""
+    merged = {cid: json.loads(json.dumps(lomda)) for cid, lomda in main.items()}
+    for cid, lomda in carried.items():
+        base = merged.get(cid)
+        if base is None:
+            merged[cid] = json.loads(json.dumps(lomda))
+            continue
+        winner, other = (json.loads(json.dumps(lomda)), base) \
+            if _newest_stamp(lomda) >= _newest_stamp(base) else (base, lomda)
+        _fill_texts(winner, other)
+        other_slides = {s.get("item_id"): s for s in other.get("slides") or []}
+        for slide in winner.get("slides") or []:
+            twin = other_slides.get(slide.get("item_id"))
+            if not twin:
+                continue
+            _fill_texts(slide, twin)
+            if not slide.get("enrichment") and twin.get("enrichment") \
+                    and twin.get("fingerprint") == slide.get("fingerprint"):
+                slide["enrichment"] = twin["enrichment"]
+            twin_questions = {q.get("question_id"): q for q in twin.get("questions") or []}
+            for q in slide.get("questions") or []:
+                if q.get("question_id") in twin_questions:
+                    _fill_texts(q, twin_questions[q["question_id"]])
+        merged[cid] = winner
+    return merged
+
+
+class UsageLedger:
+    """Every model call of this run, from llm.py's observer hook, priced with
+    the same table the usage report uses. Written to usage.json and read by
+    ``--max-usd`` before each batch."""
+
+    def __init__(self) -> None:
+        self.events: list[dict[str, Any]] = []
+
+    def __call__(self, event: dict[str, Any]) -> None:
+        usage = event.get("usage") or {}
+        self.events.append({
+            "operation": event.get("operation"),
+            "deployment": event.get("deployment"),
+            "model_tier": event.get("model_tier"),
+            "status": event.get("status"),
+            "input_tokens": usage.get("input_tokens"),
+            "cached_input_tokens": usage.get("cached_input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+            "reasoning_tokens": usage.get("reasoning_tokens"),
+            "latency_ms": event.get("latency_ms"),
+            "finish_reason": event.get("finish_reason"),
+        })
+
+    @property
+    def total_usd(self) -> float:
+        from app.services.ai_usage_rollup import event_cost
+        return sum(event_cost(e)[0] for e in self.events)
+
+    def summary(self) -> dict[str, Any]:
+        from app.services.ai_usage_rollup import event_cost
+        by_op: dict[str, dict[str, Any]] = {}
+        for e in self.events:
+            row = by_op.setdefault(str(e["operation"] or "—"), {
+                "calls": 0, "input": 0, "cached": 0, "output": 0, "usd": 0.0})
+            row["calls"] += 1
+            row["input"] += int(e["input_tokens"] or 0)
+            row["cached"] += int(e["cached_input_tokens"] or 0)
+            row["output"] += int(e["output_tokens"] or 0)
+            row["usd"] += event_cost(e)[0]
+        for row in by_op.values():
+            row["usd"] = round(row["usd"], 4)
+        return {"calls": len(self.events), "usd": round(self.total_usd, 4),
+                "by_operation": dict(sorted(by_op.items()))}
 
 
 # ── Stage C: read what the learner actually sees ─────────────────────────────
@@ -760,18 +874,39 @@ _GENERATION_PROMPT = """אתה כותב טקסטים קצרים בעברית ע�
 """
 
 
-def _normalized(text: str) -> str:
-    # Markdown emphasis must not hide an echoed answer ("**12.1**" or a bolded
-    # word inside the answer phrase), so strip it before comparing.
-    stripped = re.sub(r"[*_`]", "", str(text or ""))
-    return " ".join(stripped.split()).strip().lower()
+_SENTENCES = re.compile(r"(?<=[.!?…])\s+|\n+")
 
 
-def _echoes_an_answer(text: str, correct: list[str]) -> bool:
-    normalized = _normalized(text)
-    return any(
-        len(_normalized(answer)) >= 2 and _normalized(answer) in normalized
-        for answer in correct)
+def _singles_out(question: dict[str, Any]) -> bool:
+    """Can naming an option give this question away? Not when there is no
+    distractor to tell it from (one option, or most options correct), and
+    not for matching/drag answers stored as structured pairs — there the
+    option words are the lesson's own vocabulary (ברוטו/נטו/טרה), and a
+    text that names them teaches, it does not answer. Measured on the
+    committed texts 2026-09-24: these three shapes were 3 of the 4 hits."""
+    correct = [str(c) for c in question.get("correct") or []]
+    options = [str(a) for a in question.get("answers") or []]
+    if not correct or any(c.lstrip()[:1] in "{[" for c in correct):
+        return False
+    distractors = [o for o in options if o not in correct]
+    return len(distractors) >= len(correct)
+
+
+def leaks_an_answer(text: str, questions: list[dict[str, Any]]) -> bool:
+    """The runtime's own answer guard, sentence by sentence, against every
+    question the text could be about — plus "the answer is…" in any form.
+    One check for generation, the carried texts and graphic descriptions:
+    the weaker substring test it replaces let "**12.1**" and a reworded
+    correct option through."""
+    if answer_guard.asserts_an_answer(text):
+        return True
+    guards = [answer_guard.AnswerGuard(
+        [str(c) for c in q.get("correct") or []],
+        [str(a) for a in q.get("answers") or []]) for q in questions if _singles_out(q)]
+    guards = [g for g in guards if g.active]
+    return any(g.reveals(sentence)
+               for sentence in _SENTENCES.split(str(text or "")) if sentence.strip()
+               for g in guards)
 
 
 #: Sections of a vendor's authored note that describe the ANSWER, not the
@@ -811,6 +946,9 @@ def collect_generation_targets(
             targets.append({
                 "id": f"{cid}|||lesson_welcome", "kind": "lesson_welcome",
                 "fingerprint": comp["component_fingerprint"], "correct": [],
+                # A welcome speaks about the whole lesson: only "the answer
+                # is…" is checked — its vocabulary IS the options' vocabulary.
+                "questions": [],
                 "context": {
                     "objective": comp["objective_title_he"],
                     "lesson_title": comp["title"],
@@ -841,6 +979,7 @@ def collect_generation_targets(
                     targets.append({
                         "id": f"{cid}|{slide['item_id']}||{kind}", "kind": kind,
                         "fingerprint": slide["fingerprint"], "correct": [],
+                        "questions": slide["questions"],
                         "context": base_context,
                     })
             old_questions = {q.get("question_id"): q
@@ -856,6 +995,7 @@ def collect_generation_targets(
                             "kind": kind,
                             "fingerprint": question["fingerprint"],
                             "correct": question["correct"],
+                            "questions": [question],
                             "context": {
                                 **base_context,
                                 "question_text": question["question_text"],
@@ -868,11 +1008,57 @@ def collect_generation_targets(
     return targets
 
 
+#: When the budget cannot cover every stale row, the ones a learner meets
+#: first go first: an arrival text saves a live model call on EVERY visit.
+GENERATION_PRIORITY = ("question_intro", "lesson_step_intro", "lesson_welcome",
+                       "video_summary", "hint_l1", "explanation")
+
+
+def order_targets(targets: list[dict[str, Any]], rotation: int) -> list[dict[str, Any]]:
+    """Priority by kind, then a nightly rotation inside each kind — a row the
+    model keeps rejecting cannot hold the head of the queue night after
+    night and starve the rows behind it."""
+    by_kind: dict[str, list[dict[str, Any]]] = {}
+    for target in sorted(targets, key=lambda t: t["id"]):
+        by_kind.setdefault(target["kind"], []).append(target)
+    ordered: list[dict[str, Any]] = []
+    for kind in sorted(by_kind, key=lambda k: (
+            GENERATION_PRIORITY.index(k) if k in GENERATION_PRIORITY else 99, k)):
+        rows = by_kind[kind]
+        shift = rotation % len(rows)
+        ordered.extend(rows[shift:] + rows[:shift])
+    return ordered
+
+
+def vet_generated(text: str, target: dict[str, Any]) -> Optional[str]:
+    """None when the text may be stored, else the rejection reason."""
+    if not text:
+        return "empty"
+    if len(text) > ci.TEXT_LENGTH_CAPS[target["kind"]]:
+        return "too_long"
+    if not _HEBREW.search(text):
+        return "not_hebrew"
+    if leaks_an_answer(text, target.get("questions") or []):
+        return "answer_guard"   # a hint that says the answer is not a hint
+    return None
+
+
 async def generate_texts(
     targets: list[dict[str, Any]], max_calls: int,
+    rejections: Optional[dict[str, int]] = None,
+    should_stop: Any = None,
 ) -> dict[str, dict[str, Any]]:
-    """target id → generation block, for every row that survived validation."""
+    """target id → generation block, for every row that survived validation.
+
+    ``rejections`` (mutated) counts why rows were refused — the PR body shows
+    it, so a prompt that stopped working is a number, not a mystery.
+    ``should_stop()`` is asked before every call (the run's spend cap)."""
     from app.services.llm import call_llm
+
+    rejections = rejections if rejections is not None else {}
+
+    def _reject(reason: str, count: int = 1) -> None:
+        rejections[reason] = rejections.get(reason, 0) + count
 
     generated: dict[str, dict[str, Any]] = {}
     calls = 0
@@ -883,7 +1069,7 @@ async def generate_texts(
         operation="content.pregen_texts", source="content_pipeline",
     )
     for start in range(0, len(targets), BATCH):
-        if calls >= max_calls:
+        if calls >= max_calls or (should_stop and should_stop()):
             break
         batch = targets[start:start + BATCH]
         rows = "\n\n".join(
@@ -905,20 +1091,22 @@ async def generate_texts(
             payload = json.loads(raw or "{}")
         except (TypeError, ValueError):
             print("  ⚠️ unparseable generation batch, rows stay pending")
+            _reject("unparseable_batch", len(batch))
             continue
         wanted = {t["id"]: t for t in batch}
+        answered: set[str] = set()
         for entry in payload.get("rows") or []:
             if not isinstance(entry, dict):
                 continue
             target = wanted.get(str(entry.get("id") or ""))
             if target is None:
                 continue  # a renamed row cannot be matched back — drop it
+            answered.add(target["id"])
             text = str(entry.get("text") or "").strip()
-            cap = ci.TEXT_LENGTH_CAPS[target["kind"]]
-            if not text or len(text) > cap or not _HEBREW.search(text):
+            reason = vet_generated(text, target)
+            if reason:
+                _reject(reason)
                 continue
-            if _echoes_an_answer(text, target["correct"]):
-                continue  # a hint that says the answer is not a hint
             generated[target["id"]] = {
                 "he": text,
                 "prompt_version": ci.prompt_version_for(target["kind"]),
@@ -926,7 +1114,58 @@ async def generate_texts(
                 "generated_at": generated_at,
                 "model": "mini",
             }
+        if len(answered) < len(batch):
+            _reject("missing_row", len(batch) - len(answered))
     return generated
+
+
+def scan_leaks(
+    model: dict[str, dict[str, Any]], shards: dict[Path, dict[str, Any]],
+    decisions: list[dict[str, Any]],
+) -> int:
+    """Remove every committed text and graphic description that gives an
+    answer away, whenever it was written. The catalog's correct answers are
+    in memory here and nowhere else; each removal is recorded (reason code
+    only) so the guard can tell it from a silent loss. Returns the count."""
+    removed = 0
+    for shard in shards.values():
+        for lomda in shard.get("lomdot") or []:
+            cid = lomda["component_id"]
+            live = {s["item_id"]: s for s in (model.get(cid) or {}).get("slides") or []}
+            for kind in list((lomda.get("texts") or {})):
+                if leaks_an_answer(str(lomda["texts"][kind].get("he") or ""), []):
+                    del lomda["texts"][kind]
+                    decisions.append({"cid": cid, "iid": "", "what": f"text::{kind}",
+                                      "action": "removed", "reason": "answer_guard"})
+                    removed += 1
+            for slide in lomda.get("slides") or []:
+                iid = slide["item_id"]
+                questions = (live.get(iid) or {}).get("questions") or []
+                for kind in list(slide.get("texts") or {}):
+                    if leaks_an_answer(str(slide["texts"][kind].get("he") or ""), questions):
+                        del slide["texts"][kind]
+                        decisions.append({"cid": cid, "iid": iid, "what": f"text::{kind}",
+                                          "action": "removed", "reason": "answer_guard"})
+                        removed += 1
+                by_id = {q["question_id"]: q for q in questions}
+                for question in slide.get("questions") or []:
+                    qid = question["question_id"]
+                    mine = [by_id[qid]] if qid in by_id else questions
+                    for kind in list(question.get("texts") or {}):
+                        if leaks_an_answer(str(question["texts"][kind].get("he") or ""), mine):
+                            del question["texts"][kind]
+                            decisions.append({"cid": cid, "iid": iid,
+                                              "what": f"text:{qid}:{kind}",
+                                              "action": "removed", "reason": "answer_guard"})
+                            removed += 1
+                for media in (slide.get("enrichment") or {}).get("media") or []:
+                    if isinstance(media, dict) and media.get("description") and \
+                            leaks_an_answer(str(media["description"]), questions):
+                        media.pop("description", None)
+                        decisions.append({"cid": cid, "iid": iid, "what": "media",
+                                          "action": "removed", "reason": "answer_guard"})
+                        removed += 1
+    return removed
 
 
 # ── Stage E: write the shards ────────────────────────────────────────────────
@@ -1074,6 +1313,7 @@ def _materially_equal(existing: str, payload: str) -> bool:
 def write_output(
     out_dir: Path, shards: dict[Path, dict[str, Any]],
     backlog_browse: list[str], stats: dict[str, Any],
+    browse_state: Optional[dict[str, dict[str, Any]]] = None,
 ) -> bool:
     """Write shards + index; prune shards for objectives that vanished.
     Returns True when anything other than a timestamp changed — a file whose
@@ -1103,6 +1343,9 @@ def write_output(
             "lomdot": len(shard["lomdot"]),
         } for rel_path, shard in sorted(shards.items())],
         "backlog": {"browse": sorted(set(backlog_browse))},
+        # Day-granular browse outcomes (content_browse.record_attempt): the
+        # backoff that stops one failing lomda from heading every night.
+        "browse_state": browse_state or {},
         "stats": stats,
     }
     index_path = out_dir / "index.json"
@@ -1137,14 +1380,36 @@ def _strip_banned(value: Any) -> Any:
     return value
 
 
+def _honest_captures(shard: dict[str, Any]) -> None:
+    """Captures the runtime cannot read, or that fail re-verification (the
+    screen they show is not their slide), go; every extraction record then
+    counts what is really written. Needs no catalog: a shard slide carries
+    its title and question texts."""
+    for lomda in shard.get("lomdot") or []:
+        slides = lomda.get("slides") or []
+        for slide in slides:
+            enrichment = slide.get("enrichment")
+            if not isinstance(enrichment, dict):
+                continue
+            if enrichment.get("capture_version") not in ci.CAPTURE_COMPAT \
+                    or not objects_lib.reverify_capture(slide, enrichment)[0]:
+                del slide["enrichment"]
+        extraction = lomda.get("extraction")
+        if isinstance(extraction, dict):
+            extraction["screens_mapped"] = sum(
+                1 for s in slides if isinstance(s.get("enrichment"), dict))
+
+
 def migrate_committed_shards(out_dir: Path) -> int:
     """Rewrite the committed shards through today's contract without touching
-    the catalog: banned keys go, the serializer re-orders. Returns the number
-    of files rewritten. Idempotent — a second run rewrites nothing."""
+    the catalog: banned keys go, unverifiable captures go, extraction records
+    turn honest, the serializer re-orders. Returns the number of files
+    rewritten. Idempotent — a second run rewrites nothing."""
     rewritten = 0
     for path in ci.shard_paths(out_dir):
         original = path.read_text(encoding="utf-8")
         shard = _strip_banned(json.loads(original))
+        _honest_captures(shard)
         payload = ci.dump_shard(shard)
         if payload != original:
             path.write_text(payload, encoding="utf-8")
@@ -1173,6 +1438,14 @@ async def run(args: argparse.Namespace) -> int:
         scope = set(sorted(scope)[:args.limit])
 
     committed = load_committed(out_dir)
+    index = load_index(out_dir)
+    carry_dir = Path(args.carry_dir) if args.carry_dir else None
+    if carry_dir and carry_dir.is_dir():
+        carried = load_committed(carry_dir)
+        committed = merge_carried(committed, carried)
+        # The open PR's index knows tonight's queue and backoff better.
+        index = load_index(carry_dir) or index
+        print(f"  carrying forward {len(carried)} lomdot from {carry_dir}")
     diff = ci.diff_components(
         {cid: c["component_fingerprint"] for cid, c in model.items()},
         {cid: str(l.get("component_fingerprint") or "")
@@ -1189,40 +1462,94 @@ async def run(args: argparse.Namespace) -> int:
             print(f"  removed from catalog: {verdict_only}")
         return 0
 
-    # ── browse ──
+    from app.services.llm import register_observer
+
+    ledger = UsageLedger()
+    unregister = register_observer(ledger)
+    try:
+        return await _run_stages(args, out_dir, dump_dir, model, scope,
+                                 committed, index, diff, ledger)
+    finally:
+        unregister()
+
+
+async def _run_stages(
+    args: argparse.Namespace, out_dir: Path, dump_dir: Path,
+    model: dict[str, dict[str, Any]], scope: set[str],
+    committed: dict[str, dict[str, Any]], index: dict[str, Any],
+    diff: dict[str, list[str]], ledger: UsageLedger,
+) -> int:
+    today = datetime.now(timezone.utc).date()
+    decisions: list[dict[str, Any]] = []
+
+    def _over_budget() -> bool:
+        return bool(args.max_usd) and ledger.total_usd >= args.max_usd
+
+    # ── plan the browse ──
     extractions: dict[str, dict[str, Any]] = {}
-    backlog = [c for c in load_backlog(out_dir) if c in model]
-    recapture = components_needing_recapture(model, committed)
+    backlog = [str(c) for c in (index.get("backlog") or {}).get("browse") or []
+               if str(c) in model]
+    browse_state = {cid: dict(entry) for cid, entry in
+                    (index.get("browse_state") or {}).items() if isinstance(entry, dict)}
     # A component named on the command line is browsed whether or not the
     # queue wanted it — that is what a person debugging one lomda means.
     forced = [args.component] if args.component in model else []
-    queue = [cid for cid in dict.fromkeys(
-        forced + backlog + diff["new"] + diff["changed"] + recapture) if cid in scope]
-    to_browse = [] if args.skip_browser else queue[:args.max_browse]
-    backlog_left = [c for c in queue if c not in to_browse] \
+    plan = browse_lib.plan_browse(
+        live={cid: {"provider": c.get("provider")} for cid, c in model.items()},
+        committed=committed, diff=diff,
+        recapture=components_needing_recapture(model, committed),
+        state=browse_state, today=today,
+        budget=0 if args.skip_browser else args.max_browse,
+        scope=scope, forced=forced, queued=backlog)
+    backlog_left = list(plan["waiting"]) \
         + [c for c in backlog if c not in scope]   # out-of-scope stays queued
-    for cid in to_browse:
-        print(f"→ browsing {cid}…")
-        extraction = await browse_component(
-            cid, model[cid], dump_dir, committed.get(cid))
-        print(f"  verdict: {extraction['verdict']} "
-              f"({extraction['screens_mapped']}/{len(model[cid]['slides'])} mapped)")
-        extractions[cid] = extraction
-        if extraction["verdict"] in RETRY_VERDICTS:
-            backlog_left.append(cid)   # try again on a later night
+    if plan["browse"] or plan["backed_off"]:
+        by_class: dict[str, int] = {}
+        for reason in plan["reasons"].values():
+            by_class[reason] = by_class.get(reason, 0) + 1
+        print(f"→ browse plan: {len(plan['browse'])} "
+              f"({', '.join(f'{k} {v}' for k, v in by_class.items())}) · "
+              f"waiting {len(plan['waiting'])} · backed off {len(plan['backed_off'])}")
+
+    # ── browse (bounded concurrency, a per-provider breaker, a time budget) ──
+    breaker = browse_lib.ProviderBreaker()
+    deadline = time.monotonic() + args.time_budget_min * 60
+    gate = asyncio.Semaphore(max(1, args.browse_concurrency))
+    skipped: list[str] = []
+
+    async def _browse_one(cid: str) -> None:
+        async with gate:
+            provider = str(model[cid].get("provider") or "")
+            if time.monotonic() > deadline or breaker.open(provider):
+                skipped.append(cid)   # no attempt recorded: due again tomorrow
+                return
+            print(f"→ browsing {cid} ({plan['reasons'].get(cid)})…")
+            extraction = await browse_component(
+                cid, model[cid], dump_dir, committed.get(cid))
+            breaker.record(provider, extraction["verdict"])
+            browse_lib.record_attempt(browse_state, cid, extraction["verdict"], today)
+            print(f"  {cid}: {extraction['verdict']} "
+                  f"({extraction['screens_mapped']}/{len(model[cid]['slides'])} mapped)")
+            extractions[cid] = extraction
+
+    await asyncio.gather(*(_browse_one(cid) for cid in plan["browse"]))
+    browsed = [cid for cid in plan["browse"] if cid in extractions]
+    if skipped:
+        print(f"  ⚠️ {len(skipped)} browse(s) skipped (time budget or provider breaker)")
+        backlog_left.extend(skipped)
 
     # ── describe the captured graphics, then drop the bytes ──
-    if to_browse and not args.skip_llm:
+    if browsed and not args.skip_llm and not _over_budget():
         vision_calls = await describe_graphics(
-            model, to_browse, args.max_vision_calls)
+            model, browsed, args.max_vision_calls)
         if vision_calls:
             print(f"→ described graphics in {vision_calls} vision calls")
-        apply_graphic_labels(model, to_browse)
+    apply_graphic_labels(model, browsed)
     # A crop that never met the vision model (budget cut, --skip-llm, a
     # rejected row) would otherwise be stamped current and stay blind forever
     # — the bytes are about to be stripped. Re-queue its component: the next
     # browse re-crops and retries.
-    for cid in to_browse:
+    for cid in browsed:
         if any(m.get("shot_b64") and not m.get("description")
                for slide in model.get(cid, {}).get("slides") or []
                for m in (slide.get("enrichment") or {}).get("media") or []
@@ -1233,18 +1560,27 @@ async def run(args: argparse.Namespace) -> int:
 
     # ── generate ──
     generated: dict[str, dict[str, Any]] = {}
-    targets = [t for t in collect_generation_targets(model, committed)
-               if t["id"].split("|", 1)[0] in scope]
+    rejections: dict[str, int] = {}
+    targets = order_targets(
+        [t for t in collect_generation_targets(model, committed)
+         if t["id"].split("|", 1)[0] in scope],
+        rotation=today.toordinal())
     if targets and not args.skip_llm:
         print(f"→ generating {len(targets)} stale texts "
-              f"(≤{args.max_llm_calls} calls)…")
-        generated = await generate_texts(targets, args.max_llm_calls)
-        print(f"  {len(generated)}/{len(targets)} accepted")
+              f"(≤{args.max_llm_calls} calls"
+              + (f", ≤${args.max_usd:g}" if args.max_usd else "") + ")…")
+        generated = await generate_texts(targets, args.max_llm_calls,
+                                         rejections, should_stop=_over_budget)
+        print(f"  {len(generated)}/{len(targets)} accepted"
+              + (f" · rejected {json.dumps(rejections)}" if rejections else ""))
     elif targets:
         print(f"  {len(targets)} stale texts left pending (--skip-llm)")
 
-    # ── write ──
-    shards = build_shards(model, committed, extractions, generated)
+    # ── build, then take out anything that gives an answer away ──
+    shards = build_shards(model, committed, extractions, generated, decisions)
+    leaks = scan_leaks(model, shards, decisions)
+    if leaks:
+        print(f"  ⚠️ removed {leaks} text(s)/description(s) that gave an answer away")
     stats = {
         "lomdot": len(model),
         "slides": sum(len(c["slides"]) for c in model.values()),
@@ -1254,22 +1590,37 @@ async def run(args: argparse.Namespace) -> int:
         "texts_pending": len(targets) - len(generated),
         "removed": diff["removed"],
     }
-    if args.dry_run:
-        print(f"→ dry run: would write {len(shards)} shards; "
-              f"stats {json.dumps(stats, ensure_ascii=False)}")
-        return 0
-    changed = write_output(out_dir, shards, backlog_left, stats)
+    usage = ledger.summary()
     report_dir = Path(args.report_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
+    # Reports hold counts, ids and reason codes — never vendor text or an
+    # answer: CI uploads them from a public repo.
+    (report_dir / "decisions.json").write_text(
+        json.dumps(decisions, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (report_dir / "usage.json").write_text(
+        json.dumps(usage, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (report_dir / "report.md").write_text(
         "# Content pipeline run\n\n"
         f"- generated_at: {_now_iso()}\n"
         + "".join(f"- {k}: {json.dumps(v, ensure_ascii=False)}\n"
                   for k, v in {**stats, **diff}.items())
-        + "".join(f"- extraction {cid}: {e['verdict']}\n"
-                  for cid, e in extractions.items()),
+        + f"- rejections: {json.dumps(rejections)}\n"
+        + f"- leaks_removed: {leaks}\n"
+        + f"- usage: {usage['calls']} calls, ${usage['usd']}\n"
+        + "".join(f"- browse {cid} ({plan['reasons'].get(cid)}): {e['verdict']}\n"
+                  for cid, e in extractions.items())
+        + (f"- skipped: {len(skipped)}\n" if skipped else "")
+        + f"- backed_off: {len(plan['backed_off'])}\n",
         encoding="utf-8")
-    print(f"→ {'wrote changes' if changed else 'nothing changed'} in {out_dir}")
+    if args.dry_run:
+        print(f"→ dry run: would write {len(shards)} shards; "
+              f"stats {json.dumps(stats, ensure_ascii=False)} · "
+              f"${usage['usd']} over {usage['calls']} calls")
+        return 0
+    changed = write_output(out_dir, shards, backlog_left, stats,
+                           browse_lib.prune_state(browse_state, model))
+    print(f"→ {'wrote changes' if changed else 'nothing changed'} in {out_dir} "
+          f"· ${usage['usd']} over {usage['calls']} calls")
 
     from app.services import ai_usage
     await ai_usage.flush_pending()
@@ -1292,6 +1643,14 @@ def main() -> int:
     parser.add_argument("--max-browse", type=int, default=10)
     parser.add_argument("--max-llm-calls", type=int, default=40)
     parser.add_argument("--max-vision-calls", type=int, default=30)
+    parser.add_argument("--browse-concurrency", type=int, default=3)
+    parser.add_argument("--time-budget-min", type=float, default=60,
+                        help="stop starting browses after this many minutes")
+    parser.add_argument("--max-usd", type=float, default=15,
+                        help="stop model calls once the run has spent this (0 = no cap)")
+    parser.add_argument("--carry-dir",
+                        help="an earlier night's unmerged shards (the open PR's "
+                             "content/context) to build on instead of redoing")
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
     # Walker dumps hold vendor text and base64 crops — CI points this OUTSIDE
     # the uploaded artifact folder (a public repo's artifacts are public).

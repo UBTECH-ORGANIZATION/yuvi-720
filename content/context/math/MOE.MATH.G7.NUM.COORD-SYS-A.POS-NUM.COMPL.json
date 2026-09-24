@@ -350,7 +350,7 @@
         "probed_at": "2026-09-15T01:42:59Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 2,
-        "screens_mapped": 2
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -460,7 +460,7 @@
         "probed_at": "2026-09-01T11:43:34Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 2,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -528,7 +528,7 @@
         "probed_at": "2026-09-01T11:44:07Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -873,7 +873,7 @@
         "probed_at": "2026-09-01T11:44:34Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -1255,7 +1255,7 @@
         "probed_at": "2026-09-01T11:45:00Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 2,
-        "screens_mapped": 2
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -1731,7 +1731,7 @@
         "probed_at": "2026-09-01T11:45:48Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2204,7 +2204,7 @@
         "probed_at": "2026-09-08T01:41:49Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2461,7 +2461,7 @@
         "probed_at": "2026-09-01T11:46:16Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
-        "screens_mapped": 3
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2774,7 +2774,7 @@
         "probed_at": "2026-09-01T11:46:52Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
-        "screens_mapped": 3
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {

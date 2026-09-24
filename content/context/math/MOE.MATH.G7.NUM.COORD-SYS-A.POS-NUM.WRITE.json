@@ -16,7 +16,7 @@
         "probed_at": "2026-09-01T11:51:17Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 4,
-        "screens_mapped": 4
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -350,7 +350,7 @@
         "probed_at": "2026-09-01T11:53:03Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -432,7 +432,7 @@
         "probed_at": "2026-09-01T12:21:46Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -536,7 +536,7 @@
         "probed_at": "2026-09-01T11:54:17Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -671,7 +671,7 @@
         "probed_at": "2026-09-01T11:54:41Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -813,7 +813,7 @@
         "probed_at": "2026-09-01T12:22:43Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
-        "screens_mapped": 1
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [
@@ -937,7 +937,7 @@
         "probed_at": "2026-09-01T11:55:41Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
-        "screens_mapped": 3
+        "screens_mapped": 1
       },
       "texts": {},
       "slides": [
@@ -1871,7 +1871,7 @@
         "probed_at": "2026-09-01T11:56:17Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 3,
-        "screens_mapped": 3
+        "screens_mapped": 0
       },
       "texts": {},
       "slides": [

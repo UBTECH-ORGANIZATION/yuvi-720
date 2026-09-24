@@ -1,19 +1,30 @@
 # Nightly content intelligence: keep content/context/ in step with the live
-# Kata catalog. Fetch → fingerprint diff → browse changed lomdot → regenerate
-# stale texts → open a pull request. A quiet catalog opens nothing, and
-# neither does a night whose only news is timestamps: the pipeline's writer
-# (content_pipeline.write_output) leaves a file alone when it differs from the
-# committed one in probed_at / captured_at / kata_updated_at / generated_at
-# and nothing else, so `git diff` below is empty and the step exits early.
+# Kata catalog. Fetch → fingerprint diff → plan the browse → browse → describe
+# graphics → regenerate stale texts → scan for answer leaks → guard → propose
+# a pull request → (when allowed) merge it and deploy the Dev slot. A quiet
+# catalog opens nothing, and neither does a night whose only news is
+# timestamps: the pipeline's writer (content_pipeline.write_output) leaves a
+# file alone when it differs from the committed one in probed_at /
+# captured_at / kata_updated_at / generated_at and nothing else.
 #
 # A PR, not a push: `main` only accepts pull requests with the three CI checks
-# green (repository rule), so a direct push from here is rejected. The change
-# lands on a rolling `content/nightly` branch; the PR is created once and then
-# updated in place on later nights until someone merges it. Merging by hand
-# fires the normal push→main dev-slot deploy — the explicit deploy dispatch this
-# job used to make is gone with the direct push.
+# green (repository rule). The change lands on a rolling `content/nightly`
+# branch rebuilt from main each night. While its PR is open, the next night
+# CARRIES ITS WORK FORWARD (--carry-dir): texts and captures an unmerged PR
+# already paid for are not generated again.
 #
-# Two things GITHUB_TOKEN cannot do on its own, and how they are handled:
+# Merging on its own. `scripts/content_guard.py` compares tonight's shards
+# with main: invariants (schema, banned keys, capture formats, honest counts,
+# no stated answers, size) and regression (every lost text or capture must
+# have a reason). The merge happens only when the guard passed, the
+# dispatched CI run on the PR's exact head commit is green, and the repo
+# variable CONTENT_AUTOMERGE is `on` (`shadow` logs what it would do; unset or
+# `off` leaves the PR for a person). The merge is explicit
+# (`gh pr merge --match-head-commit`): repo auto-merge is disabled, and a
+# GITHUB_TOKEN merge fires no push event, so the Dev-slot deploy is
+# dispatched here — unless only index.json (queue bookkeeping) changed.
+#
+# Things GITHUB_TOKEN cannot do on its own, and how they are handled:
 # - a PR it opens never fires `pull_request`, so CI is dispatched explicitly
 #   on the branch (ci.yml has `workflow_dispatch` for exactly this);
 # - opening a PR at all needs the repo setting "Allow GitHub Actions to create
@@ -36,6 +47,10 @@ on:
         description: "Max generation batches"
         required: false
         default: "120"
+      max_usd:
+        description: "Stop model calls once the run has spent this many USD"
+        required: false
+        default: "15"
       dry_run:
         description: "Compute only — write and commit nothing"
         type: boolean
@@ -59,6 +74,10 @@ jobs:
     outputs:
       branch: ${{ steps.propose.outputs.branch }}
       pushed: ${{ steps.propose.outputs.pushed }}
+      head_sha: ${{ steps.propose.outputs.head_sha }}
+      pr_number: ${{ steps.propose.outputs.pr_number }}
+      deploy_needed: ${{ steps.propose.outputs.deploy_needed }}
+      guard_ok: ${{ steps.guard.outputs.ok }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,6 +112,21 @@ jobs:
       - name: Install Playwright chromium
         run: npx --prefix frontend playwright install --with-deps chromium
 
+      # Only an OPEN pull request's work is carried: a closed-unmerged one was
+      # a person's "no", and a merged one is already on main.
+      - name: Carry forward the open nightly PR
+        id: carry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open="$(gh pr list --head content/nightly --state open --json number --jq '.[0].number')"
+          if [ -n "$open" ] && git fetch --depth=1 origin "refs/heads/content/nightly:refs/remotes/origin/content/nightly"; then
+            mkdir -p "$RUNNER_TEMP/carry"
+            git archive origin/content/nightly content/context | tar -x -C "$RUNNER_TEMP/carry"
+            echo "dir=$RUNNER_TEMP/carry/content/context" >> "$GITHUB_OUTPUT"
+            echo "carrying forward PR #$open"
+          fi
+
       - name: Run the pipeline
         env:
           KATA_API_KEY: ${{ secrets.KATA_API_KEY }}
@@ -104,6 +138,7 @@ jobs:
           SPARK_ENVIRONMENT: test
           # Without it every log line lands in one flush with one timestamp.
           PYTHONUNBUFFERED: "1"
+          CARRY_DIR: ${{ steps.carry.outputs.dir }}
         # Walker dumps carry vendor text and base64 crops: they go to the
         # runner's temp dir, never into the uploaded (public) artifact.
         run: |
@@ -111,7 +146,29 @@ jobs:
             --browser-dump-dir "$RUNNER_TEMP/content-dumps" \
             --max-browse "${{ inputs.max_browse || '10' }}" \
             --max-llm-calls "${{ inputs.max_llm_calls || '120' }}" \
+            --max-usd "${{ inputs.max_usd || '15' }}" \
+            --browse-concurrency 3 --time-budget-min 60 \
+            ${CARRY_DIR:+--carry-dir "$CARRY_DIR"} \
             ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # The merge gate. Its verdict is an output, not a failed step: the PR is
+      # still proposed for a person to read — only the merge is withheld, and
+      # the run goes red at the end.
+      - name: Guard tonight's shards against main
+        id: guard
+        if: ${{ !inputs.dry_run }}
+        env:
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
+        run: |
+          set +e
+          python backend/scripts/content_guard.py --base-ref HEAD \
+            --decisions backend/artifacts/content-pipeline/decisions.json \
+            --out backend/artifacts/content-pipeline/guard.json \
+            --markdown-out backend/artifacts/content-pipeline/guard.md
+          code=$?
+          set -e
+          if [ "$code" = "0" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
 
       - name: Upload run artifacts
         if: always()
@@ -119,10 +176,13 @@ jobs:
         with:
           name: content-pipeline-run
           # Named files only — this repo is public, and so are its artifacts.
+          # Each holds counts, ids and reason codes; none holds vendor text.
           path: |
             backend/artifacts/content-pipeline/report.md
             backend/artifacts/content-pipeline/usage.json
+            backend/artifacts/content-pipeline/decisions.json
             backend/artifacts/content-pipeline/guard.json
+            backend/artifacts/content-pipeline/guard.md
             backend/artifacts/content-pipeline/pr_body.md
             backend/artifacts/content-pipeline/pr_summary.json
           retention-days: 14
@@ -152,16 +212,28 @@ jobs:
             exit 0
           fi
           echo "pushed=true" >> "$GITHUB_OUTPUT"
+          # index.json alone is queue bookkeeping (backlog, backoff): worth
+          # merging, not worth rebuilding and redeploying the Dev slot.
+          if git diff --cached --quiet -- content/context ':(exclude)content/context/index.json'; then
+            echo "deploy_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
+          fi
           stamp="$(date -u +%F)"
           # What changed and why, per file — from the staged shards, before
           # the commit so the index still holds both sides. Falls back to a
-          # plain rendering of the same diff if the model is unavailable.
+          # plain rendering of the same diff if the model is unavailable. The
+          # Guard and Usage sections are appended by code, not the model.
           python backend/scripts/content_pr_summary.py --staged \
+            --guard-md backend/artifacts/content-pipeline/guard.md \
+            --usage backend/artifacts/content-pipeline/usage.json \
             --out backend/artifacts/content-pipeline/pr_body.md \
             --summary-out backend/artifacts/content-pipeline/pr_summary.json
           git commit -m "content: nightly context refresh ${stamp}"
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           # Force, on purpose: the branch is rebuilt from tonight's main every
-          # run, so an unmerged PR simply moves forward to the newest refresh.
+          # run (with the open PR's work carried in), so an unmerged PR simply
+          # moves forward to the newest refresh.
           git push --force origin "HEAD:refs/heads/${BRANCH}"
 
           existing="$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')"
@@ -169,6 +241,7 @@ jobs:
             gh pr create --base main --head "${BRANCH}" \
               --title "content: nightly context refresh ${stamp}" \
               --body-file backend/artifacts/content-pipeline/pr_body.md
+            existing="$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number')"
           else
             # The branch was rebuilt from tonight's main, so the old body no
             # longer describes the diff: title and body follow the refresh.
@@ -176,13 +249,20 @@ jobs:
               --title "content: nightly context refresh ${stamp}" \
               --body-file backend/artifacts/content-pipeline/pr_body.md
           fi
+          echo "pr_number=${existing}" >> "$GITHUB_OUTPUT"
+
+      - name: Fail the run when the guard failed
+        if: ${{ !inputs.dry_run && steps.guard.outputs.ok != 'true' }}
+        run: |
+          echo "::error::content guard failed — see guard.md in the run artifacts; the PR was not merged"
+          exit 1
 
   # The checks the branch rule requires. A GITHUB_TOKEN-made PR does not fire
   # them, so ask for them on this exact commit — with a token that can do
   # nothing else.
   request-checks:
     needs: refresh
-    if: needs.refresh.outputs.pushed == 'true'
+    if: ${{ always() && needs.refresh.outputs.pushed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -191,3 +271,101 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref "${{ needs.refresh.outputs.branch }}"
+
+  # Merge only a green, guarded, exact commit. `shadow` rehearses every step
+  # except the merge itself.
+  automerge:
+    needs: [refresh, request-checks]
+    if: >-
+      needs.refresh.outputs.pushed == 'true'
+      && needs.refresh.outputs.guard_ok == 'true'
+      && (vars.CONTENT_AUTOMERGE == 'on' || vars.CONTENT_AUTOMERGE == 'shadow')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+    steps:
+      - name: Wait for CI on the PR's head commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.refresh.outputs.head_sha }}
+          BRANCH: ${{ needs.refresh.outputs.branch }}
+        run: |
+          run_id=""
+          for _ in $(seq 1 30); do
+            run_id="$(gh run list --repo "${{ github.repository }}" --workflow ci.yml \
+              --branch "$BRANCH" --json databaseId,headSha \
+              --jq "map(select(.headSha == \"$SHA\")) | .[0].databaseId // empty")"
+            [ -n "$run_id" ] && break
+            sleep 20
+          done
+          if [ -z "$run_id" ]; then
+            echo "::error::no CI run appeared for $SHA"
+            exit 1
+          fi
+          gh run watch "$run_id" --repo "${{ github.repository }}" --exit-status --interval 30
+
+      - name: Merge
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.refresh.outputs.head_sha }}
+          PR: ${{ needs.refresh.outputs.pr_number }}
+          MODE: ${{ vars.CONTENT_AUTOMERGE }}
+        run: |
+          if [ "$MODE" != "on" ]; then
+            echo "shadow: would merge PR #$PR at $SHA"
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # --match-head-commit: if anything moved the branch since CI ran,
+          # the merge is refused rather than landing an untested commit.
+          gh pr merge "$PR" --repo "${{ github.repository }}" --squash \
+            --match-head-commit "$SHA" --delete-branch
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+  # A GITHUB_TOKEN merge fires no push event, so the Dev-slot deploy that a
+  # person's merge would have triggered is asked for here — Dev only.
+  deploy:
+    needs: [refresh, automerge]
+    if: needs.automerge.outputs.merged == 'true' && needs.refresh.outputs.deploy_needed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the Dev-slot deploy of main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-spark.yml --repo "${{ github.repository }}" --ref main -f promote=false
+
+  # One standing issue while the nightly is unhealthy; closed when it recovers.
+  health:
+    needs: [refresh, request-checks, automerge, deploy]
+    if: ${{ always() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the health issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ contains(needs.*.result, 'failure') }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Content nightly needs attention"
+          issue="$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search "in:title \"$title\"" --json number --jq '.[0].number')"
+          if [ "$FAILED" = "true" ]; then
+            body="The content nightly failed on $(date -u +%F): $RUN_URL — the run's guard.md and report.md artifacts say why."
+            if [ -n "$issue" ]; then
+              gh issue comment "$issue" --repo "${{ github.repository }}" --body "$body"
+            else
+              gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue close "$issue" --repo "${{ github.repository }}" --comment "Recovered: $RUN_URL"
+          fi

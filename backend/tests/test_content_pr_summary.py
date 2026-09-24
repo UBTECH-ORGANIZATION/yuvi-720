@@ -135,5 +135,27 @@ class RenderingTest(unittest.TestCase):
             self.assertIsNone(asyncio.run(prs.render_with_model(summary)))
 
 
+
+class TheRunSections(unittest.TestCase):
+    def test_the_backlog_counts_queued_ids_not_mapping_keys(self):
+        out = prs.diff_index({"backlog": {"browse": ["a"]}},
+                             {"backlog": {"browse": ["a", "b", "c"]}})
+        self.assertEqual(out["backlog"]["from"], 1)
+        self.assertEqual(out["backlog"]["to"], 3)
+        legacy = prs.diff_index({"backlog": ["a", "b"]}, {"backlog": {"browse": []}})
+        self.assertEqual((legacy["backlog"]["from"], legacy["backlog"]["to"]), (2, 0))
+
+    def test_guard_and_usage_are_appended_verbatim(self):
+        usage = {"calls": 3, "usd": 0.4213, "by_operation": {
+            "content.pregen_texts.batch": {"calls": 3, "input": 900, "cached": 0,
+                                           "output": 300, "usd": 0.4213}}}
+        body = prs.append_sections("גוף", "### Guard: ✅ passed\n", usage)
+        self.assertTrue(body.startswith("גוף"))
+        self.assertIn("### Guard: ✅ passed", body)
+        self.assertIn("### Usage: 3 model calls · $0.42", body)
+        self.assertIn("| content.pregen_texts.batch | 3 | 900 | 0 | 300 | 0.421 |", body)
+        self.assertEqual(prs.append_sections("גוף", None, None), "גוף")
+
+
 if __name__ == "__main__":
     unittest.main()

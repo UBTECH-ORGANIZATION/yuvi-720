@@ -13,7 +13,7 @@ comments describe each one in detail; this is the map.
 | Push to `main` touching `admin/` | `deploy-admin.yml` | yes | Admin web app (**production**, no dev slot) | branch rule |
 | Manual, `confirm=ADMIN-PRODUCTION`, **from `main`** | `deploy-admin.yml` | yes | Admin web app | typed confirm + `github.ref == main` |
 | Manual, any ref, `confirm=DEPLOY-PRODUCTION` | `deploy-production-ref.yml` | yes (on that ref) | **Production** slot directly, Dev untouched | break-glass hotfix; typed confirm, `production` environment |
-| Nightly schedule | `content-nightly.yml` | dispatches `ci.yml` | opens a PR to `main` | nothing deploys |
+| Nightly schedule | `content-nightly.yml` | dispatches `ci.yml` and waits for it on the PR's head commit | opens/updates a PR to `main`; with repo variable `CONTENT_AUTOMERGE=on`, merges it and dispatches `deploy-spark.yml` (`promote=false`, **Dev slot only**) | `content_guard.py` must pass, CI green on the exact SHA (`--match-head-commit`); `shadow` rehearses without merging; unset/`off` leaves the PR to a person. No deploy when only `index.json` changed |
 
 ## Rules of thumb
 
