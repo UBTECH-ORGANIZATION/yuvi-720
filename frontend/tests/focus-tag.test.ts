@@ -8,10 +8,12 @@ test('a whole tag is removed wherever it sits', () => {
   assert.equal(stripFocusTags('⟦o3⟧ הסתכלו על הטבלה'), ' הסתכלו על הטבלה')
   assert.equal(stripFocusTags('ראו [[q]] שוב'), 'ראו  שוב')
   assert.equal(stripFocusTags('【opts】'), '')
+  assert.equal(stripFocusTags('⟦השאלה⟧ מה שואלים?'), ' מה שואלים?')
 })
 
 test('a half-streamed tag waits instead of flashing', () => {
   assert.equal(stripFocusTags('הסתכלו ⟦o', true), 'הסתכלו ')
+  assert.equal(stripFocusTags('⟦השא', true), '')
   assert.equal(stripFocusTags('הסתכלו ⟦o', false), 'הסתכלו ⟦o')
 })
 

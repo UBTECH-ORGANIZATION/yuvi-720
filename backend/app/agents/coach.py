@@ -1643,7 +1643,10 @@ async def run_coach_stream(
             instructions = f"{instructions}\n- {focus_tag.RULE[lang]}"
             context_block = context_block.replace(
                 "</learner_context>", "\n".join(tag_lines) + "\n</learner_context>")
-            tag_parser = focus_tag.FocusTagParser(set(tag_names))
+            tag_parser = focus_tag.FocusTagParser(
+                set(tag_names),
+                names={**{obj.kind: alias for alias, obj in reversed(list(tag_names.items()))},
+                       **{obj.label: alias for alias, obj in tag_names.items() if obj.label}})
     messages = _build_messages(instructions, context_block, prompt_history, prompt_text)
     plan_turn = True
     if coach_mode is CoachMode.LESSON:

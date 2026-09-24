@@ -57,6 +57,19 @@ class TheParser(unittest.TestCase):
         out, result = _parse(["[חשוב] קראו שוב"])
         self.assertEqual((result.outcome, out), ("absent", "[חשוב] קראו שוב"))
 
+    def test_a_label_or_kind_in_the_brackets_still_counts(self):
+        parser = focus_tag.FocusTagParser(ALIASES, names={"השאלה": "q", "table": "o2"})
+        out = parser.feed("⟦השאלה⟧ מה שואלים?") + parser.finish()
+        self.assertEqual((out, parser.result.alias), ("מה שואלים?", "q"))
+        parser = focus_tag.FocusTagParser(ALIASES, names={"table": "o2"})
+        self.assertEqual(parser.feed("⟦Table⟧ הנה.") + parser.finish(), "הנה.")
+        self.assertEqual(parser.result.alias, "o2")
+
+    def test_an_unknown_word_in_tag_brackets_is_never_shown(self):
+        out, result = _parse(["⟦שאלה⟧ על המסך יש שאלה."])
+        self.assertEqual((out, result.outcome), ("על המסך יש שאלה.", "unknown"))
+        self.assertEqual(focus_tag.strip_stray("ראו ⟦הטבלה⟧ כאן"), "ראו  כאן")
+
     def test_a_tag_only_reply_leaves_nothing_to_show(self):
         out, result = _parse(["⟦q⟧"])
         self.assertEqual((out, result.outcome), ("", "ok"))

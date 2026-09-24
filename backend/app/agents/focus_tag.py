@@ -46,8 +46,12 @@ class FocusTagParser:
     tag is still open it holds the characters back (at most ``_MAX_TAG``
     plus the lead). ``finish`` flushes whatever is held."""
 
-    def __init__(self, aliases: set[str]) -> None:
+    def __init__(self, aliases: set[str], names: Optional[dict[str, str]] = None) -> None:
+        """``names``: other words the model may use for an object — its label
+        or its kind ("השאלה", "table") → the alias. Measured 2026-09-24: 25 of
+        111 tagged replies wrote ⟦השאלה⟧ or ⟦table⟧ instead of ⟦q⟧/⟦o2⟧."""
         self.aliases = {a.lower() for a in aliases}
+        self.names = {k.strip().lower(): v.lower() for k, v in (names or {}).items() if k.strip()}
         self._buffer = ""
         self._decided = False
         # After a stripped tag, the space that separated it from the reply
@@ -92,7 +96,10 @@ class FocusTagParser:
         inner = body[len(opener):end].strip()
         rest = body[end + len(closer):]
         self._buffer = ""
-        if not _ALIAS.match(inner):
+        # ⟦ ⟧ and 【 】 never occur in a child's Hebrew reply: whatever short
+        # token they hold at the start is a tag attempt and never shown.
+        # "[[ ]]" can be ordinary text, so it counts only with an alias inside.
+        if opener == "[[" and not _ALIAS.match(inner):
             self._decide("unknown")
             return lead + body                # not our tag — leave it as written
         name = inner.lower()
@@ -100,8 +107,10 @@ class FocusTagParser:
             self._decide("none")
         elif name in self.aliases:
             self._decide("ok", name)
+        elif name in self.names:
+            self._decide("ok", self.names[name])
         else:
-            self._decide("unknown", name)
+            self._decide("unknown", name[:_MAX_TAG])
         rest = rest.lstrip(" ")
         self._trim_next = not rest
         return rest
@@ -115,7 +124,8 @@ class FocusTagParser:
         return out
 
 
-_ANYWHERE = re.compile(r"(⟦|\[\[|【)\s*(o\d{1,2}|q|opts|none|-)\s*(⟧|\]\]|】)", re.IGNORECASE)
+_ANYWHERE = re.compile(
+    r"⟦[^⟧\n]{0,24}⟧|【[^】\n]{0,24}】|\[\[\s*(?:o\d{1,2}|q|opts|none|-)\s*\]\]", re.IGNORECASE)
 
 
 def strip_stray(text: str) -> str:
