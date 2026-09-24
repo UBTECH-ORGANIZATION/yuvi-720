@@ -1,8 +1,7 @@
-"""Grounded Feature 2 profile summary and learner-verification checks."""
+"""Feature 2 profile summary (fixed insights) and learner-verification checks."""
 
 from __future__ import annotations
 
-import json
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -12,6 +11,10 @@ from app.services.profile_summary import (
     build_profile_sources,
     generate_profile_summary,
 )
+
+
+def _measures(average: float = 3.5) -> list[dict]:
+    return [{"measure": number, "average": average, "level": 3} for number in range(1, 8)]
 
 
 def _brain() -> dict:
@@ -73,42 +76,50 @@ class ProfileSourceTests(unittest.TestCase):
 
 
 class ProfileSummaryTests(unittest.IsolatedAsyncioTestCase):
-    async def test_model_can_phrase_but_cannot_add_claims(self) -> None:
-        brain = _brain()
-        sources = build_profile_sources(brain, "he")
-        allowed = sources[0]
-        model_payload = {
-            "hero_message": "חיברתי את מה שסיפרת לתמונה ראשונה.",
-            "claims": [
-                {
-                    "source_id": allowed["source_id"],
-                    "title": "כותרת מדויקת",
-                    "description": "ניסוח שמסביר את המקור בלי להוסיף עובדה.",
-                    "icon_key": "spark",
-                },
-                {
-                    "source_id": "invented:unknown",
-                    "title": "אוהב כדורגל",
-                    "description": "תכונה שלא הופיעה במקורות.",
-                    "icon_key": "interest",
-                },
-            ],
-        }
-        model = AsyncMock(return_value=json.dumps(model_payload, ensure_ascii=False))
+    async def test_summary_is_five_fixed_insights_without_llm(self) -> None:
+        brain = {"profile": {"mapping_measures": _measures(), "insight_feedback": {"a1": {"verdict": "accurate"}}}}
         with (
             patch("app.services.profile_summary.get_brain", new=AsyncMock(return_value=brain)),
-            patch("app.services.profile_summary.call_llm", new=model),
+            patch("app.services.profile_summary.get_learner_state", new=AsyncMock(return_value={"gender": "female"})),
+            patch("app.services.llm.call_llm", new=AsyncMock()) as model,
         ):
             summary = await generate_profile_summary("learner-pseudonym", "he")
+            again = await generate_profile_summary("learner-pseudonym", "ar")
 
-        returned_ids = {claim["source_id"] for claim in summary["claims"]}
-        self.assertEqual(returned_ids, {source["source_id"] for source in sources})
-        self.assertNotIn("invented:unknown", returned_ids)
-        self.assertNotIn("כדורגל", str(summary))
-        model.assert_awaited_once()
-        usage = model.await_args.kwargs["usage_context"]
-        self.assertEqual(usage.endpoint, "/api/profile-summary")
-        self.assertEqual(usage.feature, "feature_2_mapping")
+        self.assertEqual(summary["version"], 2)
+        self.assertEqual(len(summary["claims"]), 5)
+        self.assertTrue(all(claim["source_id"].startswith("insight:") for claim in summary["claims"]))
+        self.assertEqual(
+            [claim["source_id"] for claim in summary["claims"]],
+            [claim["source_id"] for claim in again["claims"]],
+        )
+        by_id = {claim["source_id"]: claim for claim in summary["claims"]}
+        if "insight:a1" in by_id:
+            self.assertEqual(by_id["insight:a1"]["feedback_status"], "accurate")
+        model.assert_not_awaited()
+
+    async def test_summary_falls_back_to_learner_state_measures(self) -> None:
+        state = {"mapping_results": {"measure_results": _measures(2.0)}}
+        with (
+            patch("app.services.profile_summary.get_brain", new=AsyncMock(return_value={"profile": {}})),
+            patch("app.services.profile_summary.get_learner_state", new=AsyncMock(return_value=state)),
+        ):
+            summary = await generate_profile_summary("learner-pseudonym", "en")
+
+        self.assertEqual(len(summary["claims"]), 5)
+
+    async def test_insight_feedback_is_stored_with_its_measures(self) -> None:
+        apply_updates = AsyncMock()
+        with patch("app.services.profile_summary.apply_brain_updates", new=apply_updates):
+            applied = await apply_profile_feedback("learner-pseudonym", "insight:b3", "inaccurate", "he")
+            unknown = await apply_profile_feedback("learner-pseudonym", "insight:zz", "accurate", "he")
+
+        self.assertTrue(applied)
+        self.assertFalse(unknown)
+        updates = apply_updates.await_args.args[1]
+        entry = updates["profile.insight_feedback.b3"]
+        self.assertEqual(entry["verdict"], "inaccurate")
+        self.assertEqual(entry["measures"], [2, 4])
 
     async def test_inaccurate_feedback_contradicts_memory_and_projection(self) -> None:
         brain = _brain()

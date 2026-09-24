@@ -1,16 +1,15 @@
-"""Grounded onboarding-profile summary and learner verification.
+"""Onboarding-profile summary and learner verification.
 
-The results experience presents a small, child-friendly projection of the Shared
-Learning Brain. The model may phrase only the supplied evidence-backed sources;
-it cannot add traits. Learner feedback is written back to Memory v1 so disputed
-claims stop influencing future agent behavior.
+The results screen shows five fixed insights selected deterministically from the
+learner's official MoE measure averages (`profile_insights`) — no LLM. Learner
+feedback is written back to the Brain. The legacy claim lookup below only serves
+verdicts on summaries generated before the fixed catalog existed.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from hashlib import sha256
-import json
 import re
 from typing import Any
 
@@ -23,26 +22,12 @@ from app.brain.memory import (
 )
 from app.brain.repository import apply_brain_updates, get_brain
 from app.core.localization import normalize_language
-from app.services.ai_usage import UsageContext
-from app.services.llm import call_llm
+from app.services import profile_insights
+from learner_state import get_learner_state
 
 
-ALLOWED_ICON_KEYS = {
-    "curiosity",
-    "focus",
-    "independence",
-    "organization",
-    "persistence",
-    "self_awareness",
-    "belonging",
-    "technology",
-    "visual",
-    "feedback",
-    "environment",
-    "interest",
-    "growth",
-    "spark",
-}
+SUMMARY_VERSION = 2
+_INSIGHT_PREFIX = "insight:"
 
 _CATEGORY_TO_MEMORY_KIND = {
     "strength": "characteristic",
@@ -69,52 +54,6 @@ _EVIDENCE_LABELS = {
         "profile": "بناءً على الطريقة التي وصفت بها ما يناسبك في التعلّم",
     },
 }
-
-_FALLBACK_COPY = {
-    "he": {
-        "hero": "חיברתי את התשובות והבחירות שלך לתמונה ראשונה של הדרך שנוחה לך ללמוד.",
-        "strength": "זו חוזקה שאפשר להיעזר בה גם במשימות חדשות.",
-        "characteristic": "זה משהו שסיפרת על הדרך שבה נוח לך לפעול וללמוד.",
-        "preference": "כך אוכל לבחור הסברים וצעדים שמתאימים לך יותר.",
-        "interest": "אפשר לחבר דוגמאות ופעילויות לעולם הזה כשזה מתאים.",
-        "support": "כאן כדאי להציע צעד קטן, הסבר אחר או עזרה בזמן הנכון.",
-    },
-    "en": {
-        "hero": "I connected your answers and choices into a first picture of how you prefer to learn.",
-        "strength": "This is a strength you can use in new tasks too.",
-        "characteristic": "This is something you shared about how you prefer to work and learn.",
-        "preference": "This helps me choose explanations and steps that fit you better.",
-        "interest": "When it fits, examples and activities can connect to this world.",
-        "support": "Here it can help to offer a small step, another explanation, or support at the right time.",
-    },
-    "ar": {
-        "hero": "ربطت إجاباتك واختياراتك في صورة أولى للطريقة التي تفضّل أن تتعلّم بها.",
-        "strength": "هذه نقطة قوة يمكنك الاستفادة منها في مهام جديدة أيضًا.",
-        "characteristic": "هذا شيء شاركته عن الطريقة التي تفضّل أن تعمل وتتعلّم بها.",
-        "preference": "يساعدني هذا على اختيار شروحات وخطوات تلائمك بصورة أفضل.",
-        "interest": "عندما يكون ذلك مناسبًا، يمكن ربط الأمثلة والأنشطة بهذا المجال.",
-        "support": "هنا قد يفيد تقديم خطوة صغيرة أو شرح مختلف أو دعم في الوقت المناسب.",
-    },
-}
-
-_SUMMARY_PROMPTS = {
-    "he": """אתה סוכן ההיכרות של יובי. לפניך מקורות מאומתים בלבד מתוך תשובות המיפוי והבחירות הנוספות של הלומד/ת.
-נסח תמונת למידה קצרה וחמה בעברית. אסור להוסיף תכונה, תחביב, קושי או העדפה שלא מופיעים במקורות.
-לכל מקור החזר כרטיס אחד ושמור בדיוק על source_id. title הוא שם קצר של התובנה, description הוא משפט אחד שמסביר איך הדבר עשוי להשפיע על הלמידה בלי לקבוע עובדה מעבר למקור.
-בחר icon_key רק מהרשימה המותרת. אין להזכיר ציונים, מספרים, זיכרון, מסד נתונים או מערכת פנימית. אל תשתמש באימוג'י.
-החזר JSON בלבד: {\"hero_message\":\"משפט אחד\",\"claims\":[{\"source_id\":\"...\",\"title\":\"...\",\"description\":\"...\",\"icon_key\":\"...\"}]}""",
-    "en": """You are Yuvi's onboarding agent. The sources below are the only verified facts from the learner's mapping answers and follow-up choices.
-Write a short, warm learning portrait in English. Do not add any trait, hobby, difficulty, or preference that is not present in the sources.
-Return one card per source and preserve each source_id exactly. The title is a short insight label; the description is one sentence about how it may affect learning without claiming more than the source supports.
-Choose icon_key only from the allowed list. Do not mention scores, numbers, memory, databases, or internal systems. Do not use emoji.
-Return JSON only: {\"hero_message\":\"one sentence\",\"claims\":[{\"source_id\":\"...\",\"title\":\"...\",\"description\":\"...\",\"icon_key\":\"...\"}]}""",
-    "ar": """أنت وكيل التعرّف الخاص بيوفي. المصادر أدناه هي الحقائق الموثقة الوحيدة من إجابات التقييم والاختيارات الإضافية للمتعلم/ة.
-اكتب صورة تعليمية قصيرة ودافئة بالعربية. لا تضف أي صفة أو هواية أو صعوبة أو تفضيل غير موجود في المصادر.
-أعد بطاقة واحدة لكل مصدر وحافظ على source_id كما هو تمامًا. العنوان اسم قصير للفكرة، والوصف جملة واحدة تشرح كيف قد تؤثر في التعلّم من دون تجاوز ما يدعمه المصدر.
-اختر icon_key فقط من القائمة المسموحة. لا تذكر الدرجات أو الأرقام أو الذاكرة أو قواعد البيانات أو الأنظمة الداخلية. لا تستخدم الرموز التعبيرية.
-أعد JSON فقط: {\"hero_message\":\"جملة واحدة\",\"claims\":[{\"source_id\":\"...\",\"title\":\"...\",\"description\":\"...\",\"icon_key\":\"...\"}]}""",
-}
-
 
 def _safe_text(value: object, limit: int = 180) -> str:
     text, _ = strip_pii(str(value or ""))
@@ -276,120 +215,38 @@ def build_profile_sources(
     return sources
 
 
-def _fallback_icon(category: str) -> str:
-    return {
-        "strength": "spark",
-        "characteristic": "self_awareness",
-        "preference": "visual",
-        "interest": "interest",
-        "support": "growth",
-    }.get(category, "spark")
-
-
-def fallback_profile_summary(sources: list[dict[str, Any]], language: str) -> dict[str, Any]:
-    lang = normalize_language(language)
-    copy = _FALLBACK_COPY[lang]
-    return {
-        "hero_message": copy["hero"],
-        "claims": [
-            {
-                "id": source["source_id"],
-                "source_id": source["source_id"],
-                "category": source["category"],
-                "title": source["value"],
-                "description": copy[source["category"]],
-                "icon_key": _fallback_icon(source["category"]),
-                "evidence_label": source["evidence_label"],
-                "feedback_status": source.get("feedback_status"),
-            }
-            for source in sources
-        ],
-    }
-
-
-def _validated_summary(
-    payload: dict[str, Any],
-    sources: list[dict[str, Any]],
-    language: str,
-) -> dict[str, Any]:
-    fallback = fallback_profile_summary(sources, language)
-    source_by_id = {source["source_id"]: source for source in sources}
-    raw_claims = payload.get("claims") if isinstance(payload, dict) else None
-    raw_by_source = {
-        str(item.get("source_id")): item
-        for item in raw_claims or []
-        if isinstance(item, dict) and str(item.get("source_id")) in source_by_id
-    }
-
-    claims: list[dict[str, Any]] = []
-    fallback_by_id = {item["source_id"]: item for item in fallback["claims"]}
-    for source in sources:
-        source_id = source["source_id"]
-        raw = raw_by_source.get(source_id) or {}
-        title = _safe_text(raw.get("title"), 80) or fallback_by_id[source_id]["title"]
-        description = _safe_text(raw.get("description"), 220) or fallback_by_id[source_id]["description"]
-        icon_key = str(raw.get("icon_key") or "")
-        if icon_key not in ALLOWED_ICON_KEYS:
-            icon_key = fallback_by_id[source_id]["icon_key"]
-        claims.append({
-            "id": source_id,
-            "source_id": source_id,
-            "category": source["category"],
-            "title": title,
-            "description": description,
-            "icon_key": icon_key,
-            "evidence_label": source["evidence_label"],
-            "feedback_status": source.get("feedback_status"),
-        })
-
-    hero = _safe_text(payload.get("hero_message") if isinstance(payload, dict) else "", 220)
-    return {"hero_message": hero or fallback["hero_message"], "claims": claims}
-
-
 async def generate_profile_summary(learner_id: str, language: str) -> dict[str, Any]:
-    """Phrase the current Brain as a grounded, learner-reviewable profile."""
+    """Five fixed insights chosen from the learner's official measure averages."""
     lang = normalize_language(language)
     brain = await get_brain(learner_id)
-    sources = build_profile_sources(brain, lang)
-    fallback = fallback_profile_summary(sources, lang)
-    if not sources:
-        return fallback
+    state = await get_learner_state(learner_id)
+    profile = brain.get("profile") or {}
+    measures = profile.get("mapping_measures") or (state.get("mapping_results") or {}).get("measure_results")
+    gender = "female" if state.get("gender") == "female" else "male"
+    feedback = profile.get("insight_feedback") or {}
 
-    model_sources = [
-        {
-            "source_id": source["source_id"],
-            "category": source["category"],
-            "verified_value": source["value"],
-        }
-        for source in sources
-    ]
-    prompt = (
-        f"{_SUMMARY_PROMPTS[lang]}\n\n"
-        f"Allowed icon keys: {sorted(ALLOWED_ICON_KEYS)}\n"
-        f"Verified sources: {json.dumps(model_sources, ensure_ascii=False)}"
-    )
-    result = await call_llm(
-        [{"role": "user", "content": prompt}],
-        usage_context=UsageContext(
-            actor_id=learner_id,
-            actor_type="learner",
-            endpoint="/api/profile-summary",
-            feature="feature_2_mapping",
-            operation="onboarding.profile_summary",
-            source="profile_summary_service",
-        ),
-        max_tokens=1800,
-        json_mode=True,
-        model_tier="strong",
-    )
-    if not result:
-        return fallback
-    try:
-        parsed = json.loads(result)
-    except json.JSONDecodeError:
-        print("⚠️ profile summary returned invalid JSON; using grounded fallback")
-        return fallback
-    return _validated_summary(parsed, sources, lang)
+    claims = []
+    values = profile_insights.measure_values(measures)
+    for insight, opening in profile_insights.select_insights(values, learner_id):
+        claim = profile_insights.render_claim(insight, opening, lang, gender)
+        verdict = (feedback.get(insight.id) or {}).get("verdict")
+        claim["feedback_status"] = verdict if verdict in {"accurate", "unsure", "inaccurate"} else None
+        claims.append(claim)
+    return {"version": SUMMARY_VERSION, "hero_message": "", "claims": claims}
+
+
+async def _apply_insight_feedback(learner_id: str, insight_id: str, verdict: str) -> bool:
+    insight = profile_insights.CATALOG_BY_ID.get(insight_id)
+    if insight is None:
+        return False
+    await apply_brain_updates(learner_id, {
+        f"profile.insight_feedback.{insight.id}": {
+            "verdict": verdict,
+            "measures": profile_insights.insight_measures(insight),
+            "at": datetime.now(timezone.utc).isoformat(),
+        },
+    })
+    return True
 
 
 async def apply_profile_feedback(
@@ -401,6 +258,8 @@ async def apply_profile_feedback(
     """Apply learner verification so future agents stop using disputed claims."""
     if verdict not in {"accurate", "unsure", "inaccurate"}:
         return False
+    if source_id.startswith(_INSIGHT_PREFIX):
+        return await _apply_insight_feedback(learner_id, source_id[len(_INSIGHT_PREFIX):], verdict)
 
     brain = await get_brain(learner_id)
     sources = build_profile_sources(
