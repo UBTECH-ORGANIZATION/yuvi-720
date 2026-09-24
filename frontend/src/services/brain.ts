@@ -96,7 +96,7 @@ export function getBrain(learnerId: string, signal?: AbortSignal) {
 
 /** F4 dashboard DTO projected from the brain (real numbers; UI verbalizes them). */
 export interface DashboardSubject {
-  key: 'math' | 'science'
+  key: 'math' | 'science' | 'other'
   name: string
   icon: string
   iconBg: string
