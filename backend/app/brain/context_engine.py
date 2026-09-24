@@ -749,6 +749,10 @@ async def build_coach_bundle(
             "effortful": e.get("effortful"),
             "misconception": safe_text(e.get("misconception"), 120),
             "question_id": safe_text(e.get("question_id"), 100),
+            # Question ids repeat per screen (every screen has a `q1`): the
+            # focus mark's "already solved / your own choice" evidence must
+            # come from THIS screen. Not rendered into the prompt.
+            "item_id": safe_text(e.get("sub_item_id"), 180),
             "object_id": safe_text(e.get("object_id"), 180),
             "component_id": safe_text(e.get("launch"), 160),
             "elapsed_seconds": (e.get("timing") or {}).get("elapsed_since_previous_seconds"),

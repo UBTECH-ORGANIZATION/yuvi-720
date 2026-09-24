@@ -107,10 +107,24 @@ def _worth_visual_planning(message: str, response_text: str) -> bool:
 
 
 def _auto_visual_for_coach(message: str, language: str, screen: str) -> bool:
-    return (
-        screen != "learning_lesson"
-        and classify_query_intent(message, language) != "calendar_query"
-    )
+    if screen == "learning_lesson":
+        # A lesson draws only on an explicit ask ("תצייר לי"). That ask used
+        # to reach the visual tool through the planning call; with planning
+        # gated (coach_planning) it is recognized here, deterministically.
+        from app.agents import coach_planning, manim_visual
+
+        return (coach_planning.lesson_planning_mode() != "full"
+                and manim_visual.is_explicit_visual_request(message, language))
+    return classify_query_intent(message, language) != "calendar_query"
+
+
+def _pointer_event(pointer_requests: list, sent: list) -> str | None:
+    """The turn's mark as one SSE frame, at most once, always before the first
+    text frame — the highlight and the sentence about it land together."""
+    if pointer_requests and not sent:
+        sent.append(True)
+        return f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+    return None
 
 
 async def _current_question_context(learner_id: str) -> str:
@@ -385,6 +399,9 @@ class CoachStreamRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class CoachProactiveRequest(BaseModel):
@@ -404,6 +421,9 @@ class CoachProactiveRequest(BaseModel):
     # written about content the learner has not seen. Sent by the client from the
     # trigger it is playing; absent, we fall back to the live pointer.
     question_key: Optional[str] = Field(default=None, max_length=400)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class CoachSupportRequest(BaseModel):
@@ -412,6 +432,9 @@ class CoachSupportRequest(BaseModel):
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
     question_key: Optional[str] = Field(default=None, max_length=400)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class VisualizeRequest(BaseModel):
@@ -871,7 +894,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         visual_requests: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
         teacher_suggestions: list[dict[str, object]] = []
-        pointer_sent = False
+        pointer_sent: list[bool] = []
         debug_trace: list[dict[str, str]] = []
         query_intent: list[str] = []
         async for chunk in _guarded_reply(run_coach_stream(
@@ -890,13 +913,12 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             teacher_suggestions=teacher_suggestions,
             debug_trace=debug_trace,
             intent_out=query_intent,
+            pointer_version=request.pointer_version,
         ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
-            # Tool planning finishes before the first text chunk, so the
-            # pointer lands as Yuvi starts talking — the highlight and the
-            # sentence about it arrive together.
-            if pointer_requests and not pointer_sent:
-                pointer_sent = True
-                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+            # The focus mark is decided before the first text chunk, so it
+            # lands as Yuvi starts talking.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             response_parts.append(chunk)
             # Forward every model chunk immediately. The frontend already
             # appends text events, so Yuvi visibly speaks while generating.
@@ -1136,6 +1158,8 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             except Exception:
                 pass
         debug_trace: list[dict[str, str]] = []
+        pointer_requests: list[dict[str, object]] = []
+        pointer_sent: list[bool] = []
         async for chunk in run_coach_stream(
             learner_id,
             trigger=trigger,
@@ -1145,8 +1169,13 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             endpoint="/api/agent/coach/proactive",
             surface_context=request.surface.model_dump(),
             pinned_question_key=request.question_key,
+            pointer_requests=pointer_requests,
             debug_trace=debug_trace,
+            pointer_version=request.pointer_version,
         ):
+            # Arrivals and nudges mark too: "here is the question" shows it.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
         await coach_debug_trace.record(exchange_id, debug_trace)
         yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
@@ -1421,7 +1450,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         response_parts = []
         debug_trace: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
-        pointer_sent = False
+        pointer_sent: list[bool] = []
         async for chunk in _guarded_reply(run_coach_stream(
             learner_id,
             language=language,
@@ -1433,12 +1462,11 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             hint_level=hint_level,
             pointer_requests=pointer_requests,
             debug_trace=debug_trace,
+            pointer_version=request.pointer_version,
         ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
-            # A hint that concerns one part of the screen highlights it while
-            # the hint streams (tool planning completes before the first chunk).
-            if pointer_requests and not pointer_sent:
-                pointer_sent = True
-                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+            # A hint highlights what it is about while it streams.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             response_parts.append(chunk)
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 

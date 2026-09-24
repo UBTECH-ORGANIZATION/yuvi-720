@@ -18,6 +18,8 @@ from typing import AsyncGenerator, Optional
 
 from app.agents import answer_guard
 from app.agents import coach_calendar
+from app.agents import coach_focus
+from app.agents import coach_planning
 from app.agents.coach_modes import (
     CoachMode,
     GENERAL_COMPANION_INSTRUCTIONS,
@@ -993,7 +995,7 @@ async def _plan_coach_tools(
     output is never shown directly, so an unavailable provider/tool preserves
     the existing Coach fallback path.
     """
-    available_schemas = coach_tool_registry.schemas(context.mode)
+    available_schemas = coach_tool_registry.schemas(context.mode, context.allowed_tools)
     if not _tool_calling_enabled() or not available_schemas:
         coach_debug_trace.append(debug_trace, "tool_plan", "skipped")
         return messages
@@ -1102,9 +1104,17 @@ async def run_coach_stream(
     debug_trace: Optional[list[dict[str, str]]] = None,
     intent_out: Optional[list[str]] = None,
     diagnostics_out: Optional[dict[str, object]] = None,
+    pointer_version: int = 1,
 ) -> AsyncGenerator[str, None]:
-    """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
+    """Stream a Coach reply (chat or proactive), Safety-gated, then persist it.
+
+    ``pointer_version``: what the client can draw. 2 = focus-mark frames
+    (object id, label, precision — semantic marks included); 1 = the old
+    region frame, sent only when it has geometry."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
+    # One list for the whole turn: the focus resolver commits the mark here
+    # before the first word, and the route flushes it ahead of the text.
+    pointer_requests = pointer_requests if pointer_requests is not None else []
     coach_mode = resolve_mode(surface_context)
     coach_role = coach_mode.value
     usage_context = UsageContext(
@@ -1287,6 +1297,36 @@ async def run_coach_stream(
     if language not in COACH_INSTRUCTIONS:
         lang = bundle.get("locale") or lang
 
+    # ── the focus mark: what to look at, decided before the first word ───────
+    # Deterministic and free (coach_focus): every on-task lesson reply —
+    # pregen, proactive, support or typed — carries one mark, so the child
+    # sees WHAT the sentence is about. The prompt is untouched.
+    focus_mode = coach_focus.mode() if coach_mode is CoachMode.LESSON else "off"
+    if focus_mode != "off":
+        _focus_current = bundle.get("current") or {}
+        _referenced = (
+            _referenced_option(prompt_text, (_focus_current.get("question") or {}).get("options"))
+            if user_message is not None else None
+        )
+        focus_frame, focus_decision = coach_focus.resolve(
+            _focus_current,
+            trigger=trigger,
+            support_mode=support_mode,
+            message=prompt_text if user_message is not None and support_mode is None else None,
+            query_intent=query_intent,
+            referenced_option=(_referenced[0] - 1) if _referenced else None,
+            client_version=pointer_version,
+        )
+        if focus_frame is not None and focus_mode == "on" and not pointer_requests:
+            pointer_requests.append(focus_frame)
+        coach_debug_trace.append(debug_trace, "focus_mark")
+        if focus_mode == "shadow":
+            # Server log only: the rule and any lift reason never reach the
+            # learner (tool trace, assistant_meta, the wire).
+            print(f"🎯 focus shadow rule={focus_decision.rule} "
+                  f"target={getattr(focus_decision.target, 'id', None)} "
+                  f"precision={focus_decision.precision} lifted={focus_decision.lifted}")
+
     # ── content-intelligence short-circuit ───────────────────────────────────
     # Arrival messages (question/step intros, the welcome, a video summary) are
     # content-determined: the nightly pipeline pre-writes them per slide, and
@@ -1367,6 +1407,10 @@ async def run_coach_stream(
                         (surface_context or {}).get("component_id"),
                     ),
                     query_intent=query_intent,
+                    # The mark rides with the stored turn, as on the live
+                    # path, so the chat can re-show it after a reload.
+                    assistant_meta=({"pointer": pointer_requests[0]}
+                                    if pointer_requests else None),
                 )
                 coach_debug_trace.append(debug_trace, "persist_conversation_turn")
                 await content_intelligence.record_pregen_hit(
@@ -1553,11 +1597,24 @@ async def run_coach_stream(
         bundle=bundle,
         action_offers=action_offers if action_offers is not None else [],
         visual_requests=visual_requests if visual_requests is not None else [],
-        pointer_requests=pointer_requests if pointer_requests is not None else [],
+        pointer_requests=pointer_requests,
         teacher_suggestions=teacher_suggestions if teacher_suggestions is not None else [],
     )
     messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
-    messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
+    plan_turn = True
+    if coach_mode is CoachMode.LESSON:
+        # A planning call re-sends the whole prompt; in a lesson the only
+        # judgement still worth it is "should a teacher join?" (coach_planning).
+        tool_context.allowed_tools = coach_planning.lesson_tools(
+            cue=(user_message is not None and support_mode is None
+                 and coach_planning.teacher_help_cue(prompt_text, history, query_intent)),
+            focus_marks_on=focus_mode == "on",
+        )
+        plan_turn = tool_context.allowed_tools is not None
+    if plan_turn:
+        messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
+    else:
+        coach_debug_trace.append(debug_trace, "tool_plan", "skipped")
     if coach_mode is CoachMode.GENERAL and tool_context.action_offers:
         messages.append({
             "role": "system",

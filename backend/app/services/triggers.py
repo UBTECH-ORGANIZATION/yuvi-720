@@ -600,6 +600,18 @@ def publish_screen_change(
     })
 
 
+def publish_position_lost(learner_id: str, *, component_id: Optional[str] = None) -> None:
+    """The learner moved to a page we cannot name (unmapped vendor page id):
+    tell the companion to drop any focus mark NOW — it describes a screen the
+    learner has left — instead of after its ~2.5s support-state poll.
+
+    Direct-published like `screen_change`, and it forgets the last screen key
+    so the learner's next MAPPED screen is announced even if it is the one
+    they just left."""
+    _last_screen_key.pop(learner_id, None)
+    _publish(learner_id, {"type": "position_lost", "component_id": component_id})
+
+
 def subscriber_count(learner_id: str) -> int:
     """How many live connections this learner currently holds.
 
