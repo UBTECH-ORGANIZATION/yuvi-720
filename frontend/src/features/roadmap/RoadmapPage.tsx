@@ -19,7 +19,8 @@ import { preRenderedThumb } from '../Yuvi-studio/studioThumbs'
 import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramStrip } from '../Yuvi-studio/worldHologramStrips'
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import {
-  focusedIndex, isMilestone, levelState, positionIndex, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
+  focusedIndex, isMilestone, levelState, positionIndex, roadmapWorld, scrollForIndex, xpAway, SEGMENT_PX,
+  type LevelState, type RoadmapWorld,
 } from './roadmapModel'
 import { createRoadmapScene, type RoadmapScene, type SceneAnchor } from './RoadmapScene'
 import './roadmap.css'
@@ -301,6 +302,7 @@ function RoadmapStage({ roadmap, status }: StageProps) {
             </div>
             <HereChip status={status} onJump={() => jumpTo(meIndex)} />
           </div>
+          {row ? <WorldBadge key={roadmapWorld(row.level)} world={roadmapWorld(row.level)} /> : null}
           {row ? <LevelCard ref={cardRef} row={row} status={status} total={count} /> : null}
           <p className={`rm-hint${scrolled ? ' is-done' : ''}`} aria-hidden={scrolled}>
             <span className="rm-hint__mouse" aria-hidden="true"><i /></span>
@@ -311,6 +313,34 @@ function RoadmapStage({ roadmap, status }: StageProps) {
           </span>
         </>
       )}
+    </div>
+  )
+}
+
+/* ── The world Yuvi is flying through ──────────────────────────────────── */
+
+const WORLD_EMBLEMS: Record<RoadmapWorld, React.ReactNode> = {
+  snow: <><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" /><path d="M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5" /></>,
+  space: <><circle cx="12" cy="12" r="5" /><ellipse cx="12" cy="12" rx="10" ry="3.5" transform="rotate(-20 12 12)" /></>,
+  music: <><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></>,
+  street: <><rect x="7" y="9" width="8" height="12" rx="2" /><path d="M9 9V6h4v3M11 6V4M17 5h.01M19 3h.01M19 7h.01" /></>,
+  jungle: <><path d="M20 4C12 4 5 8 5 14c0 3 2 5 5 5 6 0 10-7 10-15Z" /><path d="M5 20c2-5 6-8 11-11" /></>,
+}
+
+function WorldBadge({ world }: { world: RoadmapWorld }) {
+  const { t } = useI18n()
+  const name = t(`roadmap.world.${world}`)
+  return (
+    <div className="rm-world" data-world={world} title={name}>
+      <span className="rm-world__emblem" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {WORLD_EMBLEMS[world]}
+        </svg>
+      </span>
+      <span className="rm-world__text">
+        <small>{t('roadmap.world.eyebrow')}</small>
+        <strong>{name}</strong>
+      </span>
     </div>
   )
 }
@@ -418,9 +448,6 @@ function RewardRow({ item, state }: { item: RewardItem; state: LevelState }) {
   } else if (item.kind === 'hint') {
     label = t('roadmap.item.hint')
     picture = <Icon name="lightbulb" size={22} />
-  } else if (item.kind === 'frame') {
-    label = rewardLabel(t, item.id)
-    picture = <span className="rm-frame-glyph" aria-hidden="true">{item.id.match(/(\d+)$/)?.[1]}</span>
   } else if (item.kind === 'mood') {
     label = rewardLabel(t, item.id)
     picture = <Icon name="palette" size={22} />

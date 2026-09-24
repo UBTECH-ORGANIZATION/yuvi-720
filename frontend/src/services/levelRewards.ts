@@ -42,21 +42,20 @@ const REWARD_LABEL_KEYS: Record<string, string> = {
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
-/** The reward's name in the current language. Frames are a family named by
- *  their level; everything else is looked up in the table, then under the
+/** The reward's name in the current language is looked up in the table, then under the
  *  catalogue's own room and avatar names (a trophy shelf, a laurel, the
  *  prestige crystals), so a reward the table does not spell out still reads
  *  as the thing it is. `t()` hands back the key itself when a key is missing,
  *  which is how a miss is told from a hit. */
 export function rewardLabel(t: Translate, assetId: string): string {
-  const profileFrameLevel = assetId.match(/^(?:profile|prestige)_level_frame_(\d+)$/)
-  if (profileFrameLevel) return t('progression.reward.profileFrame', { level: profileFrameLevel[1] })
   const keys = [REWARD_LABEL_KEYS[assetId], `YuviStudio.room.item.${assetId}`, `YuviStudio.item.${assetId}`]
   for (const key of keys) {
     if (!key) continue
     const label = t(key)
     if (label !== key) return label
   }
+  const prestigeFurnitureLevel = assetId.match(/^prestige_level_furniture_(\d+)$/)
+  if (prestigeFurnitureLevel) return t('progression.reward.prestigeFurniture', { level: prestigeFurnitureLevel[1] })
   const prestigeObjectLevel = assetId.match(/^prestige_room_object_(\d+)$/)
   if (prestigeObjectLevel) return t('progression.reward.prestigeObject', { level: prestigeObjectLevel[1] })
   return t('progression.reward.item')
@@ -67,7 +66,6 @@ export type RewardKind =
   | 'sparks'   // a spark grant
   | 'hint'     // an extra hint token
   | 'world'    // a whole studio world (`layout:*`)
-  | 'frame'    // a profile frame (level or prestige)
   | 'mood'     // a room ambience / theme, not a placeable prop
   | 'sound'    // a room sound set
   | 'room'     // a placeable prop with a catalogue thumbnail
@@ -100,7 +98,7 @@ export function rewardItems(reward: XpLevelReward): RewardItem[] {
     items.push({ kind: MOOD_IDS.has(id) ? 'mood' : SOUND_IDS.has(id) ? 'sound' : 'room', id })
   }
   for (const id of reward.avatarUnlocks) {
-    items.push({ kind: /_level_frame_\d+$/.test(id) ? 'frame' : 'avatar', id })
+    items.push({ kind: 'avatar', id })
   }
   if (reward.sparks > 0) items.push({ kind: 'sparks', id: `sparks:${reward.level}`, amount: reward.sparks })
   if (reward.extraHintTokens > 0) items.push({ kind: 'hint', id: `hint:${reward.level}`, amount: reward.extraHintTokens })

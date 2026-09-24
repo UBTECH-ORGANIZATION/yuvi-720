@@ -78,6 +78,8 @@ UNLOCKS: dict[str, dict[str, Any]] = {
                            "requirementKey": "YuviStudio.unlock.level.9"},
     "layout:sportsArena": {"kind": "prop", "rule": {"type": "xp_level", "level": 10},
                            "requirementKey": "YuviStudio.unlock.level.10"},
+    "level_furniture_11": {"kind": "prop", "rule": {"type": "xp_level", "level": 11},
+                           "requirementKey": "YuviStudio.unlock.level.11"},
     "level_furniture_14": {"kind": "prop", "rule": {"type": "xp_level", "level": 14},
                            "requirementKey": "YuviStudio.unlock.level.14"},
     "telescope": {"kind": "prop", "rule": {"type": "xp_level", "level": 15},
@@ -90,6 +92,8 @@ UNLOCKS: dict[str, dict[str, Any]] = {
                           "requirementKey": "YuviStudio.unlock.level.20"},
     "starProjector": {"kind": "prop", "rule": {"type": "xp_level", "level": 20},
                       "requirementKey": "YuviStudio.unlock.level.20"},
+    "level_furniture_22": {"kind": "prop", "rule": {"type": "xp_level", "level": 22},
+                           "requirementKey": "YuviStudio.unlock.level.22"},
     "trophies": {"kind": "prop", "rule": {"type": "xp_level", "level": 23},
                  "requirementKey": "YuviStudio.unlock.level.23"},
     "level_furniture_24": {"kind": "prop", "rule": {"type": "xp_level", "level": 24},
@@ -103,10 +107,8 @@ for _level, _item_id in {
     6: "room_ambient_lights_06",
     8: "studio_desk_accessory_08",
     10: "room_audio_theme_10",
-    11: "profile_level_frame_11",
     13: "studio_posters_13",
     20: "room_theme_20",
-    22: "profile_level_frame_22",
     23: "studio_display_shelf_23",
     27: "premium_room_ambience_27",
     29: "personal_journey_monument_29",
@@ -123,8 +125,8 @@ for _level, _item_id in {
     }
 
 for _level in range(30, 51):
-    UNLOCKS[f"prestige_level_frame_{_level}"] = {
-        "kind": "avatar",
+    UNLOCKS[f"prestige_level_furniture_{_level}"] = {
+        "kind": "prop",
         "rule": {"type": "xp_level", "level": _level},
         "requirementKey": f"YuviStudio.unlock.level.{_level}",
     }

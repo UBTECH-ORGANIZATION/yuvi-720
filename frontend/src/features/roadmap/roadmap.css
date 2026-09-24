@@ -140,6 +140,116 @@
 .rm-here__jump:hover { background: rgba(119, 244, 255, .2); transform: translateY(-1px); }
 .rm-here__jump:focus-visible { outline: 2px solid var(--rm-cyan); outline-offset: 2px; }
 
+/* ── The world badge: top centre, dressed as the world Yuvi is in ─────── */
+.rm-world {
+  --w-bg: #0b1030;
+  --w-ink: #fff;
+  --w-accent: var(--rm-cyan);
+  --w-line: rgba(255, 255, 255, .3);
+  --w-glow: rgba(119, 244, 255, .35);
+  position: fixed;
+  z-index: 5;
+  inset-block-start: calc(var(--rm-bar) + 18px);
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px 7px 8px;
+  border: 1px solid var(--w-line);
+  border-radius: 999px;
+  background: var(--w-bg);
+  color: var(--w-ink);
+  box-shadow: 0 12px 32px rgba(2, 4, 20, .35), 0 0 26px var(--w-glow);
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: rm-world-in .5s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+[dir='rtl'] .rm-world { padding: 7px 8px 7px 18px; }
+.rm-world::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .7; }
+.rm-world__emblem {
+  inline-size: 38px;
+  block-size: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--w-accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--w-accent) 70%, transparent);
+  color: var(--w-accent);
+}
+.rm-world__text { display: flex; flex-direction: column; line-height: 1.1; white-space: nowrap; }
+.rm-world__text small { font-size: 11px; font-weight: 700; opacity: .78; }
+.rm-world__text strong { font-size: 19px; font-weight: 800; letter-spacing: .01em; }
+@keyframes rm-world-in { from { opacity: 0; transform: translate(-50%, -10px) scale(.92); } }
+
+.rm-world[data-world='snow'] {
+  --w-bg: linear-gradient(135deg, #f1faff, #b8dcf0);
+  --w-ink: #123a52;
+  --w-accent: #2f86bd;
+  --w-line: rgba(255, 255, 255, .95);
+  --w-glow: rgba(185, 225, 245, .6);
+}
+.rm-world[data-world='snow']::before { background: radial-gradient(circle, #fff 1.3px, transparent 1.8px) 0 0 / 13px 13px, radial-gradient(circle, #fff 1px, transparent 1.4px) 6px 7px / 17px 17px; }
+
+.rm-world[data-world='space'] {
+  --w-bg: radial-gradient(circle at 18% 30%, #33307a, #080b22 72%);
+  --w-ink: #f3efff;
+  --w-accent: #f4c95d;
+  --w-line: rgba(159, 122, 254, .6);
+  --w-glow: rgba(159, 122, 254, .45);
+}
+.rm-world[data-world='space']::before { background: radial-gradient(circle, #fff .9px, transparent 1.3px) 0 0 / 19px 15px, radial-gradient(circle, rgba(244, 201, 93, .9) .8px, transparent 1.2px) 9px 5px / 27px 21px; }
+
+.rm-world[data-world='music'] {
+  --w-bg: linear-gradient(120deg, #2a1033, #45184f);
+  --w-ink: #fff;
+  --w-accent: #ff5fa2;
+  --w-line: rgba(255, 95, 162, .75);
+  --w-glow: rgba(255, 95, 162, .5);
+}
+.rm-world[data-world='music']::before {
+  inset-block-start: auto;
+  block-size: 45%;
+  opacity: .35;
+  background: repeating-linear-gradient(90deg, #47e3d6 0 3px, transparent 3px 7px);
+  mask: linear-gradient(to top, #000, transparent);
+  animation: rm-world-eq 1.4s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+.rm-world[data-world='music'] .rm-world__text strong { text-shadow: 0 0 10px rgba(255, 95, 162, .8); }
+@keyframes rm-world-eq { to { transform: scaleY(.45); } }
+
+.rm-world[data-world='street'] {
+  --w-bg: #7c3a2c;
+  --w-ink: #fff;
+  --w-accent: #ffd23f;
+  --w-line: transparent;
+  --w-glow: rgba(232, 71, 111, .4);
+  border: 2px dashed rgba(255, 210, 63, .85);
+  border-radius: 14px;
+}
+.rm-world[data-world='street']::before {
+  opacity: .5;
+  background:
+    linear-gradient(rgba(0, 0, 0, .28) 1px, transparent 1px) 0 0 / 100% 12px,
+    linear-gradient(90deg, rgba(0, 0, 0, .28) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(0, 0, 0, .28) 1px, transparent 1px) 12px 12px / 24px 24px;
+}
+.rm-world[data-world='street'] .rm-world__text strong { font-style: italic; text-shadow: 2px 2px 0 #e8476f; }
+
+.rm-world[data-world='jungle'] {
+  --w-bg: linear-gradient(135deg, #25694a, #0f3526);
+  --w-ink: #f5f0d2;
+  --w-accent: #e0c36e;
+  --w-line: rgba(224, 195, 110, .6);
+  --w-glow: rgba(90, 170, 110, .45);
+}
+.rm-world[data-world='jungle']::before { background: radial-gradient(ellipse 14px 7px at 20% 110%, #3f9a66, transparent), radial-gradient(ellipse 18px 8px at 85% -10%, #3f9a66, transparent), radial-gradient(ellipse 10px 5px at 60% 115%, #58b07a, transparent); }
+
+[data-theme='light'] .rm-world { box-shadow: 0 12px 28px rgba(38, 61, 88, .24), 0 0 20px var(--w-glow); }
+
 /* ── The card ────────────────────────────────────────────────────────────── */
 .rm-card {
   position: fixed;
@@ -212,18 +322,6 @@
 .rm-item--world .rm-item__picture { inline-size: 64px; background: transparent; }
 .rm-item__label { flex: 1 1 auto; min-inline-size: 0; }
 .rm-item > svg:last-child { color: var(--rm-ink-soft); }
-.rm-frame-glyph {
-  inline-size: 28px;
-  block-size: 28px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--rm-gold);
-  border-radius: 8px;
-  color: var(--rm-gold);
-  font-size: 12px;
-  font-weight: 800;
-  box-shadow: 0 0 10px rgba(244, 201, 93, .5);
-}
 /* A world: one frame of its baked spin strip, stepped like the studio picker. */
 .rm-holo {
   display: block;
@@ -312,7 +410,15 @@
   .rm-hint { display: none; }
 }
 
+/* Without room beside the HUD, the badge keeps only its emblem, at the far side. */
+@media (max-width: 1023px) {
+  .rm-world { left: auto; inset-inline-end: 12px; padding: 4px; transform: none; animation-name: rm-world-in-side; }
+  [dir='rtl'] .rm-world { padding: 4px; }
+  .rm-world__text { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+@keyframes rm-world-in-side { from { opacity: 0; transform: translateY(-10px) scale(.92); } }
+
 @media (prefers-reduced-motion: reduce) {
-  .rm-here__medal, .rm-hint__mouse i, .rm-holo { animation: none; }
+  .rm-here__medal, .rm-hint__mouse i, .rm-holo, .rm-world, .rm-world::before { animation: none; }
   .rm-here__bar i, .rm-here__jump, .rm-card__cta, .rm-item { transition: none; }
 }

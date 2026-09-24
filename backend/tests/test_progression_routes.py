@@ -71,7 +71,8 @@ class ProgressionRouteTests(unittest.TestCase):
         self.assertEqual(twenty["extraHintTokens"], 1)
         self.assertIn("layout:creatorLoft", twenty["roomUnlocks"])
         self.assertIsNone(body["levels"][-1]["xpToNext"])
-        self.assertEqual(body["levels"][-1]["reward"]["avatarUnlocks"], ["prestige_level_frame_50"])
+        self.assertEqual(body["levels"][-1]["reward"]["roomUnlocks"], ["prestige_level_furniture_50", "prestige_room_object_50"])
+        self.assertEqual(body["levels"][-1]["reward"]["avatarUnlocks"], [])
 
     def test_no_public_grant_route_exists(self) -> None:
         response = TestClient(_app()).post("/api/progression/grant", json={"amount": 9999})

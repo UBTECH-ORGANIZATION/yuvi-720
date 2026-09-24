@@ -19,7 +19,7 @@ import * as THREE from 'three'
 import {
   anchorAt, focusedIndex, isMilestone, itemSlots, levelState, litFraction, positionIndex,
   progressForScroll, railVisualPosition, scrollForIndex, trackHeight, xpAway, SEGMENT_PX, SWAY,
-  yuviPosition, idleBreakerPose, createYuviFlight, stationDesignLevel, roadmapBackgroundBlend,
+  yuviPosition, idleBreakerPose, createYuviFlight, stationDesignLevel, roadmapBackgroundBlend, roadmapWorld, ROADMAP_WORLDS,
 } from '../src/features/roadmap/roadmapModel.ts'
 import { createJungleStationAssets, stationArchetype, stationDetailProfile, stationFlowerVariant } from '../src/features/roadmap/RoadmapJungleStation.ts'
 import { createSpaceStationAssets, spaceStationArchetype } from '../src/features/roadmap/RoadmapSpaceStation.ts'
@@ -631,6 +631,25 @@ describe('snow stations', () => {
     for (const progress of [40, 45, 49, 100]) assert.deepEqual(roadmapBackgroundBlend(progress), { from: 4, to: 4, mix: 0 })
   })
 
+  it('names the world of a level the same way the background draws it', () => {
+    for (let level = 1; level <= 50; level += 1) {
+      assert.equal(roadmapWorld(level), ROADMAP_WORLDS[roadmapBackgroundBlend(level - 1).from])
+    }
+    assert.equal(roadmapWorld(1), 'snow')
+    assert.equal(roadmapWorld(11), 'space')
+    assert.equal(roadmapWorld(30), 'music')
+    assert.equal(roadmapWorld(31), 'street')
+    assert.equal(roadmapWorld(50), 'jungle')
+    assert.equal(roadmapWorld(0), 'snow')
+    assert.equal(roadmapWorld(99), 'jungle')
+    for (const world of ROADMAP_WORLDS) {
+      for (const lang of ['he', 'en', 'ar']) {
+        const locale = JSON.parse(readFileSync(new URL(`../../locales/${lang}.json`, import.meta.url), 'utf8'))
+        assert.ok(locale[`roadmap.world.${world}`], `${lang} names the ${world} world`)
+      }
+    }
+  })
+
   it('renders environments behind the road using the same renderer and eased progress', () => {
     const scene = read('features/roadmap/RoadmapScene.ts')
     const background = read('features/roadmap/RoadmapBackground.ts')
@@ -1013,22 +1032,26 @@ describe('reward naming (shared with the level-up popup)', () => {
   const t = (key: string, params?: Record<string, string | number>) => {
     const known: Record<string, string> = {
       'progression.reward.globe': 'globe',
-      'progression.reward.profileFrame': `frame ${params?.level}`,
+      'progression.reward.milestoneFurniture': 'milestone furniture',
+      'progression.reward.prestigeFurniture': `prestige furniture ${params?.level}`,
       'progression.reward.prestigeObject': `sculpture ${params?.level}`,
       'progression.reward.item': 'a new item',
       'YuviStudio.item.laurel': 'Laurel wreath',
       'YuviStudio.room.item.trophyShelf': 'Medal shelf',
+      'YuviStudio.room.item.level_furniture_11': 'Warm armchair',
+      'YuviStudio.room.item.prestige_level_furniture_40': 'Gallery bench',
       'YuviStudio.room.item.prestige_room_object_30': 'Green crystal',
     }
     return known[key] ?? key
   }
 
-  it('reads the table first, then the catalogue, then the level families', () => {
+  it('reads the table first, then the concrete catalogue item, then furniture families', () => {
     assert.equal(rewardLabel(t, 'globe'), 'globe')
     assert.equal(rewardLabel(t, 'laurel'), 'Laurel wreath')
     assert.equal(rewardLabel(t, 'trophyShelf'), 'Medal shelf')
-    assert.equal(rewardLabel(t, 'profile_level_frame_11'), 'frame 11')
-    assert.equal(rewardLabel(t, 'prestige_level_frame_40'), 'frame 40')
+    assert.equal(rewardLabel(t, 'level_furniture_11'), 'Warm armchair')
+    assert.equal(rewardLabel(t, 'prestige_level_furniture_40'), 'Gallery bench')
+    assert.equal(rewardLabel(t, 'prestige_level_furniture_45'), 'prestige furniture 45', 'the family name covers a missing catalogue key')
     assert.equal(rewardLabel(t, 'prestige_room_object_30'), 'Green crystal', 'the catalogue name beats the generic family name')
     assert.equal(rewardLabel(t, 'prestige_room_object_35'), 'sculpture 35', 'and the family name covers a missing catalogue key')
     assert.equal(rewardLabel(t, 'something_new'), 'a new item')
@@ -1041,8 +1064,8 @@ describe('reward naming (shared with the level-up popup)', () => {
     assert.equal(items[3].amount, 25)
     const twenty = rewardItems(reward({ level: 20, extraHintTokens: 1, roomUnlocks: ['room_theme_20', 'layout:creatorLoft', 'starProjector'] }))
     assert.deepEqual(twenty.map((item) => item.kind), ['world', 'mood', 'room', 'hint'])
-    const frames = rewardItems(reward({ level: 11, avatarUnlocks: ['profile_level_frame_11', 'laurel'] }))
-    assert.deepEqual(frames.map((item) => item.kind), ['frame', 'avatar'])
+    const furniture = rewardItems(reward({ level: 11, roomUnlocks: ['level_furniture_11'], avatarUnlocks: ['laurel'] }))
+    assert.deepEqual(furniture.map((item) => item.kind), ['room', 'avatar'])
     assert.deepEqual(rewardItems(reward()), [])
   })
 

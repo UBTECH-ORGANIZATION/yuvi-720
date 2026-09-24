@@ -39,6 +39,15 @@ export function stationDesignLevel(level: number): number {
   return level
 }
 
+/** The five worlds the road climbs through, ten levels each, in background order. */
+export const ROADMAP_WORLDS = ['snow', 'space', 'music', 'street', 'jungle'] as const
+export type RoadmapWorld = typeof ROADMAP_WORLDS[number]
+
+export function roadmapWorld(level: number): RoadmapWorld {
+  const index = Number.isFinite(level) ? Math.floor((Math.round(level) - 1) / 10) : 0
+  return ROADMAP_WORLDS[Math.max(0, Math.min(ROADMAP_WORLDS.length - 1, index))]
+}
+
 export function roadmapBackgroundBlend(progress: number): { from: number; to: number; mix: number } {
   const position = Number.isFinite(progress) ? Math.max(0, Math.min(49, progress)) : 0
   const from = Math.min(4, Math.floor(position / 10))

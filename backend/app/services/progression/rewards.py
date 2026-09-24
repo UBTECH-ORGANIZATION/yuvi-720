@@ -23,7 +23,7 @@ LEVEL_REWARDS: dict[int, dict[str, Any]] = {
     8: {"room": ["studio_desk_accessory_08", "globe"]},
     9: {"room": ["level_furniture_09", "parkCarousel"]},
     10: {"sparks": 25, "room": ["room_audio_theme_10", "layout:sportsArena", "rocketModel"]},
-    11: {"avatar": ["profile_level_frame_11"]},
+    11: {"room": ["level_furniture_11"]},
     12: {"sparks": 60, "room": ["podium"]},
     13: {"room": ["studio_posters_13", "parkTree"]},
     14: {"room": ["level_furniture_14"]},
@@ -37,7 +37,7 @@ LEVEL_REWARDS: dict[int, dict[str, Any]] = {
         "extra_hint_tokens": 1,
     },
     21: {"sparks": 90, "room": ["mathBoard"]},
-    22: {"avatar": ["profile_level_frame_22"]},
+    22: {"room": ["level_furniture_22"]},
     23: {"room": ["studio_display_shelf_23", "trophies"]},
     24: {"room": ["level_furniture_24"]},
     25: {"sparks": 50, "avatar": ["dragonwings"]},
@@ -57,10 +57,10 @@ def reward_for_level(level: int) -> dict[str, Any]:
     if 30 <= normalized <= 50:
         reward: dict[str, Any] = {
             "sparks": 100,
-            "avatar": [f"prestige_level_frame_{normalized}"],
+            "room": [f"prestige_level_furniture_{normalized}"],
         }
         if normalized in PRESTIGE_ROOM_LEVELS:
-            reward["room"] = [f"prestige_room_object_{normalized}"]
+            reward["room"].append(f"prestige_room_object_{normalized}")
         return reward
     return {}
 
