@@ -93,10 +93,24 @@ Azure OpenAI streams request terminal usage metadata with `stream_options.includ
 | F3 companion | `/api/agent/coach/stream` | `coach.title` | Azure OpenAI through APIM | tokens |
 | F3 companion | `/api/agent/coach/stream` | `coach.visual_plan` | Azure OpenAI through APIM | tokens |
 | F3 companion | `/api/agent/coach/stream` | `onboarding.interest_extraction` | Azure OpenAI through APIM | tokens |
-| F3 companion | `/api/agent/coach/proactive` | `coach.proactive` | Azure OpenAI through APIM | tokens |
+| F3 companion | `/api/agent/coach/proactive` | `coach.proactive.<trigger>` (e.g. `coach.proactive.success`) | Azure OpenAI through APIM | tokens |
 | F3 companion | `/api/agent/coach/tts` | `coach.speech` | Azure Speech REST | characters |
 
 Speech records the normalized text submitted for synthesis as a character count and may record response bytes for operations analysis. It never stores the text or SSML.
+
+## Reading the numbers
+
+- `backend/scripts/ai_usage_report.py` is the read-only report: cost by
+  operation (or any field), cache-hit share, p50/p95 latency, and a
+  `--before START..END --after START..END` mode normalized per day. It reads a
+  projection of metering fields only. Rows written without pricing are priced
+  from `app/services/ai_usage_rollup.PRICES` and marked `~`.
+- `backend/scripts/llm_param_probe.py` checks which optional provider
+  parameters (`prompt_cache_key`, `prompt_cache_retention`, `reasoning_effort`)
+  the APIM lane accepts. On 2026-09-24 all were accepted on api-version
+  2024-10-21 for both tiers.
+- Every SSE turn's first frame carries `exchange_id`, the join key between a
+  learner turn and every provider call it caused.
 
 ## Administration and security
 

@@ -46,6 +46,34 @@ class UsageReportTests(unittest.TestCase):
         self.assertEqual(summary.by_deployment[0].key, "gpt-5-mini")
         self.assertEqual(summary.by_feature[0].key, "F3")
 
+    def test_cache_hits_and_reasoning_are_summed_not_dropped(self) -> None:
+        """The dashboard could not show the prompt-cache hit rate: the
+        projection never read cached_input_tokens or reasoning_tokens."""
+        now = datetime(2026, 9, 24, tzinfo=timezone.utc)
+        base = {
+            "started_at": now, "actor_id": "learner-opaque-3",
+            "operation": "coach.proactive.success", "deployment": "gpt-5.4-mini",
+            "meter": "tokens", "status": "completed", "usage_status": "exact",
+            "latency_ms": 100,
+        }
+        summary = build_usage_summary(
+            events=[
+                {**base, "event_id": "e-1", "input_tokens": 4000,
+                 "cached_input_tokens": 2600, "output_tokens": 40,
+                 "reasoning_tokens": 0, "total_tokens": 4040},
+                {**base, "event_id": "e-2", "input_tokens": 1000,
+                 "cached_input_tokens": None, "output_tokens": 60,
+                 "reasoning_tokens": 12, "total_tokens": 1060},
+            ],
+            days=30, start=now, end=now, actor_id=None, endpoint=None,
+        )
+        self.assertEqual(summary.totals.cached_input_tokens, 2600)
+        self.assertEqual(summary.totals.reasoning_tokens, 12)
+        self.assertEqual(summary.by_operation[0].cached_input_tokens, 2600)
+        cached = {row.event_id: row.cached_input_tokens for row in summary.recent}
+        self.assertEqual(cached["e-1"], 2600)
+        self.assertIsNone(cached["e-2"])
+
     def test_speech_uses_character_quantity_not_tokens(self) -> None:
         now = datetime(2026, 7, 1, tzinfo=timezone.utc)
         summary = build_usage_summary(

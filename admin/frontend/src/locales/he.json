@@ -59,6 +59,8 @@
   "usage.tokens": "טוקנים",
   "usage.inputTokens": "טוקנים נכנסים",
   "usage.outputTokens": "טוקנים יוצאים",
+  "usage.cachedShare": "מהמטמון",
+  "usage.reasoningShare": "חשיבה פנימית",
   "usage.characters": "תווים להקראה",
   "usage.cost": "עלות מחושבת",
   "usage.completed": "בקשות שהושלמו",

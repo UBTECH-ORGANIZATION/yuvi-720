@@ -211,6 +211,33 @@ def diff_shard(old: Optional[dict[str, Any]], new: Optional[dict[str, Any]]) -> 
     return out
 
 
+def _queued_ids(backlog: Any) -> list[str]:
+    if isinstance(backlog, dict):
+        return [str(cid) for ids in backlog.values() for cid in (ids or [])]
+    return [str(cid) for cid in backlog or []]
+
+
+def render_usage(usage: dict[str, Any]) -> str:
+    """The PR body's Usage section: what tonight's model calls cost."""
+    lines = [f"### Usage: {usage.get('calls', 0)} model calls · ${usage.get('usd', 0):.2f}", ""]
+    rows = (usage.get("by_operation") or {}).items()
+    if rows:
+        lines += ["| operation | calls | input | cached | output | USD |",
+                  "|---|---:|---:|---:|---:|---:|"]
+        lines += [f"| {op} | {r['calls']} | {r['input']} | {r['cached']} | {r['output']} "
+                  f"| {r['usd']:.3f} |" for op, r in rows]
+    return "\n".join(lines) + "\n"
+
+
+def append_sections(body: str, guard_md: Optional[str], usage: Optional[dict[str, Any]]) -> str:
+    """Code-written sections after the prose — never through the model, so the
+    merge gate's verdict and the spend are stated exactly."""
+    extra = [section for section in (guard_md, render_usage(usage) if usage else None) if section]
+    if not extra:
+        return body
+    return body.rstrip() + "\n\n" + "\n".join(extra)
+
+
 def diff_index(old: Optional[dict[str, Any]], new: Optional[dict[str, Any]]) -> dict[str, Any]:
     old = old or {}
     new = new or {}
@@ -222,8 +249,10 @@ def diff_index(old: Optional[dict[str, Any]], new: Optional[dict[str, Any]]) -> 
     # indexes had a list. Both read as "ids still waiting for a browser pass".
     ob, nb = old.get("backlog") or {}, new.get("backlog") or {}
     if ob != nb:
-        queued = [cid for ids in nb.values() for cid in (ids or [])] if isinstance(nb, dict) else list(nb)
-        out["backlog"] = {"from": len(ob), "to": len(nb), "still_queued": queued[:8]}
+        # Count the queued ids, not the mapping's keys: len({"browse": [...]})
+        # is 1 however long the queue, so every PR said "backlog 1 → 1".
+        before, queued = _queued_ids(ob), _queued_ids(nb)
+        out["backlog"] = {"from": len(before), "to": len(queued), "still_queued": queued[:8]}
     if new.get("generated_at"):
         out["generated_at"] = new["generated_at"]
     return out
@@ -393,6 +422,11 @@ async def main_async(args: argparse.Namespace) -> int:
         body = None if args.no_llm else await render_with_model(summary)
         if body is None:
             body = render_fallback(summary)
+    guard_md = Path(args.guard_md).read_text(encoding="utf-8") \
+        if args.guard_md and Path(args.guard_md).exists() else None
+    usage = json.loads(Path(args.usage).read_text(encoding="utf-8")) \
+        if args.usage and Path(args.usage).exists() else None
+    body = append_sections(body, guard_md, usage)
     if args.summary_out:
         Path(args.summary_out).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     if args.out:
@@ -415,6 +449,8 @@ def main() -> int:
     parser.add_argument("--out", help="write the Markdown body here instead of stdout")
     parser.add_argument("--summary-out", help="also write the structured diff as JSON")
     parser.add_argument("--no-llm", action="store_true", help="render the structured diff directly")
+    parser.add_argument("--guard-md", help="content_guard.py's Markdown section to append")
+    parser.add_argument("--usage", help="the pipeline's usage.json to append as a section")
     args = parser.parse_args()
     return asyncio.run(main_async(args))
 

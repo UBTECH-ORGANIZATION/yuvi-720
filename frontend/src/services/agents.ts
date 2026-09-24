@@ -4,6 +4,7 @@
 
 import { apiDelete, apiGet, apiPost } from './api'
 import { subscribe as subscribeStream } from './realtime'
+import type { ScreenFrames } from './tallFrame'
 
 /** Solved label positions, in renderer CANVAS units (x -7.1..7.1, y -4..4).
  *  Produced by the backend's visual_layout solver and shared by every
@@ -103,16 +104,40 @@ export interface PointerBreakpoint {
   rect: { x: number; y: number; w: number; h: number }
 }
 
-/** A server-resolved "look here" directive: geometry from the nightly capture,
- *  never from the model. `region` null / empty `breakpoints` = attention on
- *  the lesson as a whole (the frontend renders its whole-frame glow). The
- *  runtime interpolates the breakpoints to its live box width; valid only for
- *  `question_key`'s screen. */
+/** What a focus mark points at (capture v8 object kinds). */
+export type FocusKind =
+  | 'stem' | 'options' | 'option' | 'input' | 'image' | 'video' | 'diagram'
+  | 'diagram_part' | 'table' | 'table_row' | 'table_col' | 'text' | 'formula'
+
+/** A server-resolved "look here" directive — the focus mark. Decided by the
+ *  server's resolver, never by the model; geometry comes from the nightly
+ *  capture. The runtime interpolates the breakpoints to its live box; valid
+ *  only for `question_key`'s screen.
+ *
+ *  v1 fields (`region`, `breakpoints`, `question_key`) are all an old client
+ *  reads. v2 (sent when the request says `pointer_version: 2`) adds WHAT is
+ *  marked: `precision` `exact` = one object's own rect; `approx` = a whole
+ *  region (a finer target was withheld or the screen has look-alike
+ *  versions); `semantic` = no geometry we can trust — the mark is named, not
+ *  drawn over the frame. */
 export interface CoachPointerFrame {
   region: string | null
   breakpoints: PointerBreakpoint[]
   question_key: string
+  v?: 2
+  object_id?: string
+  kind?: FocusKind
+  /** Hebrew label from the capture ("המאזניים"); other languages use the
+   *  generic kind label from the locale files. */
+  label?: string
+  precision?: 'exact' | 'approx' | 'semantic'
+  source?: 'resolver' | 'model'
+  /** 1-based option number, for an `option` mark. */
+  ordinal?: number
 }
+
+/** The pointer frame version this client draws (see CoachPointerFrame). */
+export const POINTER_VERSION = 2
 
 /** Content-free, development-only record of a registered Coach tool call. */
 export interface CoachToolTraceStep {
@@ -147,7 +172,7 @@ export interface CoachHistoryMessage {
   question_key?: string | null
   /** Server-classified intent of the learner request that produced this turn. */
   query_intent?: string | null
-  meta?: { actions?: CoachActionOffer[]; teacher_suggestion?: CoachTeacherSuggestion }
+  meta?: { actions?: CoachActionOffer[]; teacher_suggestion?: CoachTeacherSuggestion; pointer?: CoachPointerFrame }
 }
 
 /** The lesson coach opened the raise-hand button on this reply (reason only —
@@ -403,7 +428,7 @@ export function streamCoach(
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/stream',
-    { conversation_id: conversationId, message, language, surface },
+    { conversation_id: conversationId, message, language, surface, pointer_version: POINTER_VERSION },
     handlers,
     STREAM_STALL_MS,
   )
@@ -422,7 +447,7 @@ export function streamProactive(
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/proactive',
-    { conversation_id: conversationId, trigger, language, surface, question_key: questionKey || null },
+    { conversation_id: conversationId, trigger, language, surface, question_key: questionKey || null, pointer_version: POINTER_VERSION },
     handlers,
     // Proactive nudges and question intros are a few short sentences of text —
     // no inline visual render, so tokens arrive within ~1s of each other. If the
@@ -497,6 +522,15 @@ export function getCoachSupportState(
   )
 }
 
+/** Per-screen layouts for the tall-frame experiment (flag + host gated on
+ *  the server). Fetched once per lesson. */
+export function getScreenFrames(componentId: string, signal?: AbortSignal): Promise<ScreenFrames> {
+  return apiGet<ScreenFrames>(
+    `/api/agent/coach/screen-frames?component_id=${encodeURIComponent(componentId)}`,
+    { cache: 'no-store', signal },
+  )
+}
+
 /** Learner rates the coach conversation (MoE `conversation/rated`). */
 export function rateCoachConversation(
   conversationId: string,
@@ -532,7 +566,7 @@ export function streamCoachSupport(
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/support',
-    { conversation_id: conversationId, support, language, surface, question_key: questionKey },
+    { conversation_id: conversationId, support, language, surface, question_key: questionKey, pointer_version: POINTER_VERSION },
     handlers,
     // ONE worker owns Yuvi's voice, so a stream that never ends never ends the
     // queue either: every intro, nudge and reaction behind it is stranded, and
@@ -619,6 +653,8 @@ export interface Trigger {
     // The raise-hand gate: Yuvi or a detector opened the button for this
     // question; the teacher marked the request handled.
     | 'hand_unlock' | 'hand_resolved'
+    // The learner moved to a page the server cannot name: clear focus marks.
+    | 'position_lost'
     | '_heartbeat'
   /** `hand_unlock` only: why the button opened and who decided. */
   reason?: string | null

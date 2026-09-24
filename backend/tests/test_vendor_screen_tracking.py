@@ -139,6 +139,35 @@ class UnmappedEntriesInsideTheLoadBurst(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(sets.get("current_state.item_id", "untouched"))
 
+    async def _fold_state(self, event: dict, prior_state: dict) -> dict:
+        with mock.patch.object(events, "get_brain",
+                               new=mock.AsyncMock(return_value={"current_state": prior_state, "mastery": {}})), \
+             mock.patch.object(events, "apply_brain_operators", new=mock.AsyncMock()), \
+             mock.patch.object(events, "is_component_completion", return_value=False):
+            return await events._apply_event_to_brain(event)
+
+    async def test_leaving_a_known_screen_for_an_unknown_one_reports_the_loss(self):
+        """The focus mark on the old screen must go now, not at the next poll."""
+        state = await self._fold_state(
+            self._unmapped_entry("2026-09-02T12:50:20.000Z"),
+            self._on_question_one("2026-09-02T12:49:57.362Z"))
+        self.assertTrue(state["position_lost"])
+        burst = await self._fold_state(
+            self._unmapped_entry("2026-09-02T12:49:58.103Z"),
+            self._on_question_one("2026-09-02T12:49:57.362Z"))
+        self.assertFalse(burst["position_lost"])
+
+    def test_the_push_clears_marks_and_re_arms_the_screen_key(self):
+        from app.services import triggers
+        published: list = []
+        triggers._last_screen_key["gal"] = "c|i|q1"
+        with mock.patch.object(triggers, "_publish",
+                               side_effect=lambda lid, t: published.append(t)):
+            triggers.publish_position_lost("gal", component_id="c")
+            triggers.publish_screen_change("gal", "c|i|q1", component_id="c")
+        self.assertEqual([t["type"] for t in published], ["position_lost", "screen_change"])
+        triggers._last_screen_key.pop("gal", None)
+
     async def test_another_lesson_is_never_the_same_screen_loading(self):
         sets = await self._fold(
             self._unmapped_entry("2026-09-02T12:49:58.103Z"),

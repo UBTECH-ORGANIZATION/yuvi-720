@@ -232,7 +232,7 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
         action_offers: list[dict[str, object]] = []
         debug_trace: list[dict[str, str]] = []
 
-        async def fake_stream(messages, _usage_context):
+        async def fake_stream(messages, _usage_context, **_):
             captured_messages.extend(messages)
             if model_text:
                 yield model_text

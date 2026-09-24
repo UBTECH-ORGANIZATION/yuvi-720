@@ -20,7 +20,9 @@ import { optionalExtra as findOptionalExtra, previousStation, whatNowKey } from 
 import { noteLoad, playbackMode } from '../learning/embedGuard'
 import { LessonPointLayer } from './LessonPointLayer'
 import { ReflectionPanel } from './ReflectionPanel'
-import type { CoachPointerFrame } from '../../services/agents'
+import { getScreenFrames, type CoachPointerFrame } from '../../services/agents'
+import { itemOfKey, mayAutoScroll, scrollTargetFor, tallCanvasHeight, type ScreenFrames } from '../../services/tallFrame'
+import { useCompanion } from '../../providers/CompanionProvider'
 import { playCelebrationCheer } from '../../services/celebrationAudio'
 import './lesson-workspace.css'
 
@@ -125,6 +127,15 @@ export function LessonPage() {
   // outlive its moment: the screen it describes, the session it arrived in, or
   // a few seconds of attention.
   const [coachPointer, setCoachPointer] = useState<CoachPointerFrame | null>(null)
+  // The tall-frame experiment (server-gated per host): on a screen whose
+  // layout ignores the viewport height, the iframe is as tall as its content
+  // and the PAGE scrolls — readable, so every focus mark can be drawn.
+  const { currentQuestionKey } = useCompanion()
+  const [screenFrames, setScreenFrames] = useState<ScreenFrames | null>(null)
+  const frameWrapRef = useRef<HTMLDivElement | null>(null)
+  const [wrapBox, setWrapBox] = useState({ w: 0, h: 0 })
+  const userScrollAtRef = useRef(0)
+  const programmaticScrollRef = useRef(false)
   // The outcomes this component already had when the launch found it. The
   // completion POLL below only reads catalog STATE, so on re-entry it would see
   // the old outcome and throw the dialog up over a lesson the learner merely
@@ -399,6 +410,45 @@ export function LessonPage() {
   }, [session?.session_id])
 
   useEffect(() => {
+    const componentId = session?.component.id
+    setScreenFrames(null)
+    if (!componentId) return
+    const controller = new AbortController()
+    getScreenFrames(componentId, controller.signal)
+      .then((frames) => setScreenFrames(frames.tall_frame ? frames : null))
+      .catch(() => { /* the experiment is optional: the normal frame stands */ })
+    return () => controller.abort()
+  }, [session?.component.id])
+  useEffect(() => {
+    const el = frameWrapRef.current
+    if (!el) return
+    const measure = () => setWrapBox({ w: el.clientWidth, h: el.clientHeight })
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [session?.session_id])
+  const currentItem = itemOfKey(currentQuestionKey)
+  const tallHeight = screenFrames
+    ? tallCanvasHeight(screenFrames.items[currentItem], wrapBox.w, wrapBox.h)
+    : null
+  // A new screen starts at its top.
+  useEffect(() => {
+    const el = frameWrapRef.current
+    if (el) el.scrollTop = 0
+  }, [currentItem])
+  const scrollMarkIntoView = (rect: { y: number; h: number }) => {
+    const el = frameWrapRef.current
+    if (!el || tallHeight === null || !mayAutoScroll(userScrollAtRef.current, Date.now())) return
+    const top = scrollTargetFor(rect, el.scrollTop, el.clientHeight)
+    if (top === null) return
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    programmaticScrollRef.current = true
+    el.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
+    window.setTimeout(() => { programmaticScrollRef.current = false }, 800)
+  }
+
+  useEffect(() => {
     if (!completed) return
     if (progressionReady) completionActionRef.current?.focus()
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -629,7 +679,12 @@ export function LessonPage() {
                 <span>{t('learning.language.fallback')}</span>
               </div>
             )}
-            <div className="learning-player-frame-wrap">
+            <div
+              ref={frameWrapRef}
+              className={`learning-player-frame-wrap${tallHeight !== null ? ' is-tall' : ''}`}
+              data-tall-frame={tallHeight !== null ? 'on' : undefined}
+              onScroll={() => { if (!programmaticScrollRef.current) userScrollAtRef.current = Date.now() }}
+            >
               {/* This provider's player cannot live in a frame, so it gets a tab
                   of its own. Nothing else moves: the route, the coach and the
                   completion signal are unchanged, because completion reaches us
@@ -684,6 +739,10 @@ export function LessonPage() {
                       </button>
                     </div>
                   )}
+                  <div
+                    className="learning-player-canvas"
+                    style={tallHeight !== null ? { blockSize: `${tallHeight}px` } : undefined}
+                  >
                   <iframe
                     key={session.session_id}
                     className="learning-provider-frame"
@@ -701,8 +760,15 @@ export function LessonPage() {
                     pointer={coachPointer}
                     playback={playback}
                     language={language}
-                    onDismiss={() => setCoachPointer(null)}
+                    onDismiss={() => {
+                      // The companion remembers the "got it" per mark, so the
+                      // next reply about the same thing does not re-open it.
+                      window.dispatchEvent(new CustomEvent('yuvilab:coach-point-dismissed', { detail: coachPointer }))
+                      setCoachPointer(null)
+                    }}
+                    onRect={scrollMarkIntoView}
                   />
+                  </div>
                 </>
               )}
               {reentryMode === 'in-progress' && (

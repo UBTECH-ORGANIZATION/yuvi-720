@@ -1,28 +1,39 @@
-/** How a coach pointer frame becomes something drawable — or deliberately
- *  doesn't. The lomda iframe is cross-origin: we cannot read its layout or
- *  scroll, so geometry is authored by the nightly capture, which measures the
- *  same screen on a grid of viewport SIZES (widths × heights): the CET player
- *  transform-scales and centers by width, methodica FITS the viewport
- *  (scale = min(width-fit, height-fit)) — one size's coordinates land wrong
- *  at any other. The runtime bilinear-interpolates its live box between the
- *  surrounding samples and draws in pixels; a height-constant screen makes
- *  the height axis a natural no-op. Anything less trustworthy degrades to a
- *  whole-frame glow; no iframe at all means nothing is drawn. Wrong geometry
- *  is worse than none.
+/** How a coach focus mark becomes something the learner can see. The lomda
+ *  iframe is cross-origin: we cannot read its layout or scroll, so geometry
+ *  is authored by the nightly capture, which measures the same screen on a
+ *  grid of viewport SIZES (widths × heights): the CET player transform-scales
+ *  and centers by width, methodica FITS the viewport (scale = min(width-fit,
+ *  height-fit)) — one size's coordinates land wrong at any other. The runtime
+ *  bilinear-interpolates its live box between the surrounding samples and
+ *  draws in pixels; a height-constant screen makes the height axis a natural
+ *  no-op.
+ *
+ *  Anything less trustworthy than a rect is NAMED, not drawn: a labeled
+ *  callout ("מסתכלים על: הטבלה") instead of the whole-frame glow this
+ *  replaces — a glow said "look somewhere", and children learned to ignore
+ *  it. No iframe at all means nothing is drawn. Wrong geometry is worse than
+ *  none. Every outcome carries its `reason`, exposed on the layer as a data
+ *  attribute and in telemetry.
  */
 
-import type { CoachPointerFrame, PointerBreakpoint } from './agents'
+import type { CoachPointerFrame, FocusKind, PointerBreakpoint } from './agents'
+
+export type PresentReason =
+  | 'exact' | 'approx' | 'semantic' | 'no_geometry' | 'box_too_small'
+  | 'out_of_range' | 'overflow' | 'below_fold'
 
 export type PointerPresentation =
   /** Pixel rect relative to the frame box — the capture was measured at (or
-   *  interpolated to) exactly this box width, so pixels map one-to-one. */
-  | { mode: 'rect'; rect: { x: number; y: number; w: number; h: number } }
+   *  interpolated to) exactly this box width, so pixels map one-to-one.
+   *  `approx`: a whole region stands in for a finer target — drawn dashed. */
+  | { mode: 'rect'; rect: { x: number; y: number; w: number; h: number }; approx: boolean; reason: PresentReason }
   /** The target lives below the internal fold of a screen that scrolls
-   *  inside the iframe (whose scroll we cannot read) — show a "look lower"
-   *  chevron at the frame's bottom edge, horizontally near the target.
-   *  `x` is a fraction of the box width. */
-  | { mode: 'edge'; x: number }
-  | { mode: 'glow' }
+   *  inside the iframe (whose scroll we cannot read) — "scroll to: label"
+   *  at the frame's bottom edge, horizontally near the target. `x` is a
+   *  fraction of the box width. */
+  | { mode: 'edge'; x: number; reason: PresentReason }
+  /** Named, not drawn: a labeled pill over the frame. */
+  | { mode: 'callout'; reason: PresentReason }
   | { mode: 'none' }
 
 /** Below this the lomda has reflowed too far from any capture for geometry
@@ -128,22 +139,28 @@ export function presentPointer(
   boxH: number,
 ): PointerPresentation {
   if (!pointer || playback !== 'frame') return { mode: 'none' }
-  if (!pointer.region || !pointer.breakpoints?.length) return { mode: 'glow' }
-  if (boxW < MIN_BOX_W || boxH < MIN_BOX_H) return { mode: 'glow' }
+  if (pointer.precision === 'semantic') return { mode: 'callout', reason: 'semantic' }
+  if (!pointer.breakpoints?.length) return { mode: 'callout', reason: 'no_geometry' }
+  if (boxW < MIN_BOX_W || boxH < MIN_BOX_H) return { mode: 'callout', reason: 'box_too_small' }
   const placed = placeAt(pointer.breakpoints, boxW, boxH)
-  if (!placed) return { mode: 'glow' }
+  if (!placed) return { mode: 'callout', reason: 'out_of_range' }
   const { rect, contentH } = placed
-  if (rect.w <= 0 || rect.h <= 0) return { mode: 'glow' }
+  if (rect.w <= 0 || rect.h <= 0) return { mode: 'callout', reason: 'no_geometry' }
   if (contentH > boxH * 1.05) {
     // The content overflows the live box, so the iframe scrolls internally —
     // and that scroll is unreadable from outside. A target below the first
-    // viewport gets the honest directional cue; one above it could still be
-    // scrolled away, so the whole-frame glow is as precise as truth allows.
+    // viewport gets the directional cue; one above it could still be
+    // scrolled away, so it is named rather than drawn.
     if (rect.y > boxH * 0.92) {
-      return { mode: 'edge', x: Math.min(1, Math.max(0, (rect.x + rect.w / 2) / boxW)) }
+      return {
+        mode: 'edge',
+        x: Math.min(1, Math.max(0, (rect.x + rect.w / 2) / boxW)),
+        reason: 'below_fold',
+      }
     }
-    return { mode: 'glow' }
+    return { mode: 'callout', reason: 'overflow' }
   }
+  const approx = pointer.precision === 'approx'
   return {
     mode: 'rect',
     rect: {
@@ -152,7 +169,44 @@ export function presentPointer(
       w: Math.min(boxW, rect.w),
       h: Math.min(boxH, rect.h),
     },
+    approx,
+    reason: approx ? 'approx' : 'exact',
   }
+}
+
+/** Legacy (v1) frames name a region, not a kind. */
+const REGION_KIND: Record<string, FocusKind> = {
+  question: 'stem', options: 'options', input: 'input', image: 'image',
+  video: 'video', diagram: 'diagram', table: 'table', instruction: 'text',
+}
+
+export function focusKind(pointer: CoachPointerFrame | null): FocusKind | null {
+  if (!pointer) return null
+  return pointer.kind || (pointer.region ? REGION_KIND[pointer.region] || null : null)
+}
+
+/** What the mark is called, in the learner's language. Hebrew uses the
+ *  capture's own label ("המאזניים"); Arabic and English — and any frame
+ *  without a label — the generic name of its kind. An option is always
+ *  "option N" by its number on screen. */
+export function focusLabel(
+  pointer: CoachPointerFrame | null,
+  language: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const kind = focusKind(pointer)
+  if (!pointer || !kind) return ''
+  if (kind === 'option' && pointer.ordinal) return t('focus.kind.option', { n: pointer.ordinal })
+  if (language === 'he' && pointer.label) return pointer.label
+  return t(`focus.kind.${kind}`)
+}
+
+/** Two frames that mark the same thing on the same screen — the second is
+ *  not re-flashed. */
+export function sameMark(a: CoachPointerFrame | null, b: CoachPointerFrame | null): boolean {
+  if (!a || !b) return false
+  return a.question_key === b.question_key
+    && (a.object_id || a.region || '') === (b.object_id || b.region || '')
 }
 
 /** A pointer belongs to one screen. Either key can be partial — the arrival

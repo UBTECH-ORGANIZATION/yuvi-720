@@ -36,6 +36,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -51,8 +52,16 @@ SCHEMA_VERSION = 1
 # paraphrase the question/screen or foreshadow the answer (the balloon-intro
 # feedback) — and every kind may now use light markdown emphasis, matching
 # what the live coach writes and what the chat renders.
+# cp-v3 (2026-09-24), intros only: they were written from the vendor's
+# authored note, whose "סימני שליטה" section states what the learner answers.
+# The note now reaches generation without its answer sections, and every text
+# passes the runtime AnswerGuard — the old intros are regenerated, first in
+# the nightly's queue (content_pipeline.GENERATION_PRIORITY).
 PROMPT_VERSION = "cp-v2"
-PROMPT_VERSIONS: dict[str, str] = {}
+PROMPT_VERSIONS: dict[str, str] = {
+    "question_intro": "cp-v3",
+    "lesson_step_intro": "cp-v3",
+}
 
 
 def prompt_version_for(kind: str) -> str:
@@ -74,7 +83,13 @@ TEXT_LENGTH_CAPS = {
 }
 
 #: Keys that must never appear anywhere in a committed shard, at any depth.
-FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
+#: ``information_to_bot`` joined on 2026-09-24: the vendors' authored notes
+#: carry "סימני שליטה" sections that state what the learner answers (299/559
+#: slides), and the runtime reads them live from Kata anyway — the shard copy
+#: served nobody and published answers in a world-readable repo.
+FORBIDDEN_KEYS = frozenset({
+    "correctAnswers", "correct_answers", "correct", "information_to_bot",
+})
 
 #: Version of the browser-capture format inside ``enrichment``. Bump when the
 #: extractor's capture changes shape (e.g. anchors added): carry-over then
@@ -98,13 +113,40 @@ FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 #: opaque id that exists NOWHERE in the DOM or catalog). Maps live
 #: navigation/resume events to catalog items, so the position pointer moves
 #: when the learner pages, not only when they answer.
-CAPTURE_VERSION = 7
+#: v8: the OBJECT catalog. Each slide carries `grid` (the measured viewport
+#: sizes, rows of [w, h, content_w, content_h], now including height 480 for a
+#: Chromebook box) and `objects` — every thing a coach could mean (the question
+#: text, each answer option matched to the catalog, inputs, pictures, video,
+#: table rows/columns, drawing parts), each with a role, a Hebrew label and one
+#: rect per grid row. Visibility is clip- and occlusion-aware and the content
+#: extent is honest (v7 floored it at the viewport and invented overflow).
+#: `layout` says how the screen reacts to the viewport height. Legacy regions
+#: are DERIVED from objects, so the pointer wire shape is unchanged.
+CAPTURE_VERSION = 8
 
 #: Capture formats the runtime still trusts. Serving is compatible one
 #: version back so a format bump does not blind every screen while the
-#: nightly walk backfills the new fields (v6 geometry is valid v7 geometry;
-#: v6 merely lacks vendor_page_id).
-CAPTURE_COMPAT = frozenset({6, CAPTURE_VERSION})
+#: nightly walk backfills the new fields.
+CAPTURE_COMPAT = frozenset({7, CAPTURE_VERSION})
+
+#: What an object can be, and what it is FOR. The role drives the coach's
+#: default mark (a hint points at `data`, never at an `answer_area` part).
+OBJECT_KINDS = frozenset({
+    "stem", "options", "option", "input", "image", "video", "diagram",
+    "diagram_part", "table", "table_row", "table_col", "text", "formula",
+})
+OBJECT_ROLES = frozenset({"stem", "answer_area", "data", "teaching", "instruction"})
+
+#: Legacy region per object kind — v8 captures derive the v7 region map (the
+#: pointer wire shape older clients read) from their objects.
+KIND_TO_REGION = {
+    "stem": "question", "options": "options", "input": "input",
+    "image": "image", "video": "video", "diagram": "diagram",
+    "table": "table", "text": "instruction",
+}
+#: Children that become a region's `parts`.
+PART_KINDS = {"options": "option", "diagram": "diagram_part", "table": "table_row"}
+OBJECT_LABEL_CAP = 40
 
 #: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
 #: import time, and geometry resolution happens server-side per slide. Rects
@@ -122,9 +164,12 @@ ENRICHMENT_MEDIA_LABEL_CAP = 220  # room for the vision description
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG_DIR = _REPO_ROOT / "content" / "context"
 
+#: ``launch_rejected`` = Kata answered 4xx for the id (wrong id, unpublished);
+#: ``launch_unavailable`` = 5xx or no answer at all. ``launch_404`` is the
+#: pre-2026-09-24 catch-all for both, kept so committed rows stay valid.
 EXTRACTION_VERDICTS = (
-    "extracted", "partial", "launch_404", "frame_blocked",
-    "driver_error", "timeout", "not_attempted",
+    "extracted", "partial", "launch_rejected", "launch_unavailable",
+    "launch_404", "frame_blocked", "driver_error", "timeout", "not_attempted",
 )
 
 
@@ -325,6 +370,8 @@ def _index_shard(shard: dict[str, Any], records: dict[str, dict[str, Any]]) -> N
             "scope": "component",
             "fingerprint": lomda.get("component_fingerprint"),
             "texts": lomda.get("texts") or {},
+            "player_host": str((lomda.get("extraction") or {}).get("player_host") or ""),
+            "item_ids": [str(s.get("item_id")) for s in lomda.get("slides") or [] if s.get("item_id")],
         }
         for slide in lomda.get("slides") or []:
             iid = str(slide.get("item_id") or "")
@@ -645,29 +692,35 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
         {"regions": {region: [{"w", "h", "content_w", "content_h",
                                "rect": {x,y,w,h}, "parts"?: [rect, …]}, …]}}
     """
-    if not enabled():
+    raw = _fresh_capture(component_id, item_id)
+    if not raw:
         return None
-    _ensure_loaded()
-    key = record_key(component_id, item_id)
-    record = _STATE["records"].get(key)
-    if not record:
-        return None
-    raw = record.get("enrichment")
-    if not isinstance(raw, dict) or raw.get("capture_version") not in CAPTURE_COMPAT:
-        return None
-    if not is_fresh(key, record):
-        return None  # stale geometry points at the wrong thing — worse than none
+    if raw.get("capture_version") == 8:
+        if validate_objects(raw):
+            return None
+        regions = _v8_regions(raw)
+        return {"regions": regions} if regions else None
 
-    def _pixel_rect(rect: Any) -> Optional[dict[str, float]]:
+    def _pixel_rect(rect: Any, content_w: int = 0,
+                    content_h: int = 0) -> Optional[dict[str, float]]:
+        """A sane document-pixel rect, or None. REJECTS what v7 used to clamp:
+        a negative or out-of-content rect (measured on 4 slides, 389 of 1,254
+        rects) was clamped to 0 and then looked right while pointing wrong."""
         if not isinstance(rect, dict):
             return None
         try:
-            out = {axis: min(float(_ANCHOR_PIXEL_MAX),
-                             max(0.0, float(rect[axis])))
-                   for axis in ("x", "y", "w", "h")}
+            out = {axis: float(rect[axis]) for axis in ("x", "y", "w", "h")}
         except (KeyError, TypeError, ValueError):
             return None
-        return out if out["w"] > 0 and out["h"] > 0 else None
+        if out["w"] <= 0 or out["h"] <= 0:
+            return None
+        if out["x"] < -2 or out["y"] < -2 or max(out.values()) > _ANCHOR_PIXEL_MAX:
+            return None
+        if content_w and content_h and (
+                out["x"] + out["w"] > content_w + 2
+                or out["y"] + out["h"] > content_h + 2):
+            return None
+        return {axis: max(0.0, value) for axis, value in out.items()}
 
     regions: dict[str, list[dict[str, Any]]] = {}
     for bp in raw.get("anchor_breakpoints") or []:
@@ -688,15 +741,17 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
             if not isinstance(anchor, dict):
                 continue
             region = str(anchor.get("region") or "")
-            rect = _pixel_rect(anchor.get("rect"))
+            rect = _pixel_rect(anchor.get("rect"), content_w, content_h)
             if region not in ANCHOR_REGIONS or rect is None:
                 continue
+            if rect["w"] * rect["h"] > 0.9 * content_w * content_h:
+                continue  # a union that covers the page is the whole frame again
             entry: dict[str, Any] = {
                 "w": width, "h": height,
                 "content_w": content_w, "content_h": content_h,
                 "rect": rect,
             }
-            parts = [p for p in (_pixel_rect(part)
+            parts = [p for p in (_pixel_rect(part, content_w, content_h)
                                  for part in anchor.get("parts") or [])
                      if p is not None][:8]
             if parts:
@@ -713,6 +768,192 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     if not regions:
         return None
     return {"regions": regions}
+
+
+# ── v8 objects: one validator for pipeline, runtime and CI ──────────────────
+
+_OBJECT_ID = re.compile(r"^[a-z]{2,5}(?::[A-Za-z0-9_.-]{1,40}){0,3}$")
+
+
+def _rect_problem(rect: Any, row: list[Any]) -> Optional[str]:
+    """Why a stored rect is untrustworthy at its grid row, else None.
+    Reject, never clamp: a clamped rect LOOKS right and points wrong."""
+    if rect is None:
+        return None
+    if not (isinstance(rect, list) and len(rect) == 4
+            and all(isinstance(v, (int, float)) for v in rect)):
+        return "rect is not [x, y, w, h]"
+    x, y, w, h = rect
+    _, _, content_w, content_h = row
+    if w < 4 or h < 4:
+        return "degenerate rect"
+    if x < -2 or y < -2 or x + w > content_w + 2 or y + h > content_h + 2:
+        return "rect outside the content"
+    if w * h > 0.9 * content_w * max(content_h, 1):
+        return "rect covers the whole content"
+    return None
+
+
+def validate_objects(enrichment: Any) -> list[str]:
+    """Structural problems with a v8 capture's grid/objects; [] when sound."""
+    if not isinstance(enrichment, dict) or enrichment.get("capture_version") != 8:
+        return []
+    problems: list[str] = []
+    grid = enrichment.get("grid")
+    if not (isinstance(grid, list) and grid and all(
+            isinstance(row, list) and len(row) == 4
+            and all(isinstance(v, (int, float)) and v > 0 for v in row)
+            for row in grid)):
+        return ["grid missing or malformed"]
+    seen: set[str] = set()
+    for obj in enrichment.get("objects") or []:
+        if not isinstance(obj, dict):
+            problems.append("object is not a dict")
+            continue
+        oid = str(obj.get("id") or "")
+        if not _OBJECT_ID.match(oid) or oid in seen:
+            problems.append(f"bad or duplicate object id {oid!r}")
+        seen.add(oid)
+        if obj.get("kind") not in OBJECT_KINDS:
+            problems.append(f"{oid}: unknown kind {obj.get('kind')!r}")
+        if obj.get("role") not in OBJECT_ROLES:
+            problems.append(f"{oid}: unknown role {obj.get('role')!r}")
+        label = obj.get("label_he")
+        if not (isinstance(label, str) and 0 < len(label) <= OBJECT_LABEL_CAP):
+            problems.append(f"{oid}: label missing or over {OBJECT_LABEL_CAP} chars")
+        rects = obj.get("r")
+        if not (isinstance(rects, list) and len(rects) == len(grid)):
+            problems.append(f"{oid}: needs one rect per grid row")
+            continue
+        for rect, row in zip(rects, grid):
+            problem = _rect_problem(rect, row)
+            if problem:
+                problems.append(f"{oid}: {problem}")
+                break
+    return problems
+
+
+def _fresh_capture(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
+    """The slide's capture when it is current-format and fresh, else None."""
+    if not enabled():
+        return None
+    _ensure_loaded()
+    key = record_key(component_id, item_id)
+    record = _STATE["records"].get(key)
+    if not record:
+        return None
+    raw = record.get("enrichment")
+    if not isinstance(raw, dict) or raw.get("capture_version") not in CAPTURE_COMPAT:
+        return None
+    if not is_fresh(key, record):
+        return None  # stale geometry points at the wrong thing — worse than none
+    return raw
+
+
+def _object_geometry(obj: dict[str, Any], grid: list[list[Any]]) -> list[dict[str, Any]]:
+    """An object's rects on the pointer wire shape, bad samples dropped."""
+    out = []
+    for rect, row in zip(obj.get("r") or [], grid):
+        if rect is None or _rect_problem(rect, row):
+            continue
+        w, h, content_w, content_h = (int(v) for v in row)
+        out.append({"w": w, "h": h, "content_w": content_w, "content_h": content_h,
+                    "rect": {"x": float(rect[0]), "y": float(rect[1]),
+                             "w": float(rect[2]), "h": float(rect[3])}})
+    return out
+
+
+def screen_objects(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
+    """The slide's object catalog (capture v8) for the coach's focus marks, or
+    None. Same trust rules as the pointer: fresh, current-format, every rect
+    sane. An object keeps its entry even when no rect survived — the coach can
+    still NAME it (a semantic mark); only drawing needs geometry."""
+    raw = _fresh_capture(component_id, item_id)
+    if not raw or raw.get("capture_version") != 8 or validate_objects(raw):
+        return None
+    grid = raw.get("grid") or []
+    objects = []
+    for obj in raw.get("objects") or []:
+        objects.append({
+            "id": obj["id"], "kind": obj["kind"], "role": obj["role"],
+            "q": [str(q) for q in obj.get("q") or []],
+            "parent": obj.get("parent"),
+            "option_index": obj.get("option_index"),
+            "label": obj["label_he"],
+            "geometry": _object_geometry(obj, grid),
+        })
+    return {"objects": objects, "layout": raw.get("layout") or {}}
+
+
+def screen_layout(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
+    """How the fresh v8 capture reacts to the viewport height, or None."""
+    raw = _fresh_capture(component_id, item_id)
+    if not raw or raw.get("capture_version") != 8:
+        return None
+    layout = raw.get("layout")
+    return layout if isinstance(layout, dict) else None
+
+
+def component_layouts(component_id: str) -> dict[str, Any]:
+    """{"player_host", "items": {item_id: {"kind", "natural_h"}}} for the
+    lesson's fresh v8 captures — what the tall-frame experiment sizes its
+    canvas from. Items without a fresh v8 capture are simply absent."""
+    if not enabled():
+        return {"player_host": "", "items": {}}
+    _ensure_loaded()
+    component = _STATE["records"].get(record_key(component_id)) or {}
+    items: dict[str, Any] = {}
+    for item_id in component.get("item_ids") or []:
+        layout = screen_layout(component_id, item_id)
+        if layout and layout.get("kind"):
+            items[item_id] = {"kind": layout["kind"], "natural_h": layout.get("natural_h")}
+    return {"player_host": component.get("player_host") or "", "items": items}
+
+
+def _v8_regions(raw: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Legacy region map derived from v8 objects (union rect per grid row, the
+    region's children as `parts`)."""
+    grid = raw.get("grid") or []
+    objects = raw.get("objects") or []
+    by_id = {o["id"]: o for o in objects if isinstance(o, dict) and o.get("id")}
+    regions: dict[str, list[dict[str, Any]]] = {}
+    for kind, region in KIND_TO_REGION.items():
+        members = [o for o in objects if isinstance(o, dict) and o.get("kind") == kind]
+        if not members:
+            continue
+        child_kind = PART_KINDS.get(kind)
+        for index, row in enumerate(grid):
+            rects = [o["r"][index] for o in members
+                     if o.get("r") and o["r"][index] is not None
+                     and not _rect_problem(o["r"][index], row)]
+            if not rects:
+                continue
+            left = min(r[0] for r in rects)
+            top = min(r[1] for r in rects)
+            right = max(r[0] + r[2] for r in rects)
+            bottom = max(r[1] + r[3] for r in rects)
+            union = [left, top, right - left, bottom - top]
+            if _rect_problem(union, row):
+                continue  # a union that swallows the screen means nothing
+            w, h, content_w, content_h = (int(v) for v in row)
+            entry: dict[str, Any] = {
+                "w": w, "h": h, "content_w": content_w, "content_h": content_h,
+                "rect": {"x": union[0], "y": union[1], "w": union[2], "h": union[3]},
+            }
+            if child_kind:
+                parts = [
+                    {"x": c["r"][index][0], "y": c["r"][index][1],
+                     "w": c["r"][index][2], "h": c["r"][index][3]}
+                    for c in objects
+                    if isinstance(c, dict) and c.get("kind") == child_kind
+                    and by_id.get(str(c.get("parent") or "")) in members
+                    and c.get("r") and c["r"][index] is not None
+                    and not _rect_problem(c["r"][index], row)
+                ][:8]
+                if len(parts) > 1:
+                    entry["parts"] = parts
+            regions.setdefault(region, []).append(entry)
+    return regions
 
 
 async def record_pregen_hit(usage_context: Any, kind: str, text: str) -> None:

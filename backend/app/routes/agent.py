@@ -107,10 +107,24 @@ def _worth_visual_planning(message: str, response_text: str) -> bool:
 
 
 def _auto_visual_for_coach(message: str, language: str, screen: str) -> bool:
-    return (
-        screen != "learning_lesson"
-        and classify_query_intent(message, language) != "calendar_query"
-    )
+    if screen == "learning_lesson":
+        # A lesson draws only on an explicit ask ("תצייר לי"). That ask used
+        # to reach the visual tool through the planning call; with planning
+        # gated (coach_planning) it is recognized here, deterministically.
+        from app.agents import coach_planning, manim_visual
+
+        return (coach_planning.lesson_planning_mode() != "full"
+                and manim_visual.is_explicit_visual_request(message, language))
+    return classify_query_intent(message, language) != "calendar_query"
+
+
+def _pointer_event(pointer_requests: list, sent: list) -> str | None:
+    """The turn's mark as one SSE frame, at most once, always before the first
+    text frame — the highlight and the sentence about it land together."""
+    if pointer_requests and not sent:
+        sent.append(True)
+        return f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+    return None
 
 
 async def _current_question_context(learner_id: str) -> str:
@@ -160,6 +174,7 @@ async def _stream_visual_tail(
     on_lesson_screen: bool,
     auto_visual: bool = True,
     debug_trace: list[dict[str, str]] | None = None,
+    learner_text: str | None = None,
 ):
     """SSE tail shared by chat + hint/explanation replies: the optional visual.
 
@@ -217,6 +232,7 @@ async def _stream_visual_tail(
                 exchange_id=exchange_id,
             ),
             force_visual=asked_to_see,
+            learner_text=learner_text,
             text_filter=lambda text: safety.screen_output(text, language).text,
             question_context=question_context,
         )
@@ -385,12 +401,17 @@ class CoachStreamRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class CoachProactiveRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    # `partial` was published by the trigger engine and queued by the client
+    # but missing here, so every partial-credit nudge died as a silent 422.
     trigger: Literal[
-        "idle", "misconception", "mistake", "slow_progress", "success",
+        "idle", "misconception", "mistake", "partial", "slow_progress", "success",
         "rapid_guessing", "wheel_spinning", "question_intro", "lesson_step_intro",
         "lesson_welcome",
     ] = "idle"
@@ -402,6 +423,9 @@ class CoachProactiveRequest(BaseModel):
     # written about content the learner has not seen. Sent by the client from the
     # trigger it is playing; absent, we fall back to the live pointer.
     question_key: Optional[str] = Field(default=None, max_length=400)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class CoachSupportRequest(BaseModel):
@@ -410,6 +434,9 @@ class CoachSupportRequest(BaseModel):
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
     question_key: Optional[str] = Field(default=None, max_length=400)
+    # What the client can draw: 2 = focus-mark frames (object, label,
+    # precision; semantic marks included), 1 = the old region frame only.
+    pointer_version: int = Field(default=1, ge=1, le=2)
 
 
 class VisualizeRequest(BaseModel):
@@ -863,13 +890,13 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
 
     async def event_generator():
         # First event carries the mandatory AI-use disclosure.
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language)}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         response_parts = []
         action_offers: list[dict[str, object]] = []
         visual_requests: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
         teacher_suggestions: list[dict[str, object]] = []
-        pointer_sent = False
+        pointer_sent: list[bool] = []
         debug_trace: list[dict[str, str]] = []
         query_intent: list[str] = []
         async for chunk in _guarded_reply(run_coach_stream(
@@ -888,13 +915,12 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             teacher_suggestions=teacher_suggestions,
             debug_trace=debug_trace,
             intent_out=query_intent,
+            pointer_version=request.pointer_version,
         ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
-            # Tool planning finishes before the first text chunk, so the
-            # pointer lands as Yuvi starts talking — the highlight and the
-            # sentence about it arrive together.
-            if pointer_requests and not pointer_sent:
-                pointer_sent = True
-                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+            # The focus mark is decided before the first text chunk, so it
+            # lands as Yuvi starts talking.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             response_parts.append(chunk)
             # Forward every model chunk immediately. The frontend already
             # appends text events, so Yuvi visibly speaks while generating.
@@ -958,6 +984,30 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/coach/screen-frames")
+async def coach_screen_frames(
+    component_id: str = Query(..., min_length=1, max_length=400),
+    _: str = Depends(require_learner),
+):
+    """The tall-frame experiment's input, fetched once per lesson: per screen,
+    how its layout reacts to the viewport height and its natural content
+    height. ``tall_frame`` is true only with ``LESSON_TALL_FRAME_ENABLED`` on
+    AND the lesson's player host on ``LESSON_TALL_FRAME_HOSTS`` — a host is
+    added only after tall-frame-validate.mjs and a human review pass."""
+    import os
+    from app.services import content_intelligence
+
+    layouts = content_intelligence.component_layouts(component_id)
+    enabled = (os.environ.get("LESSON_TALL_FRAME_ENABLED") or "").strip().lower() in {"1", "on", "true", "yes"}
+    hosts = {h.strip().lower() for h in (os.environ.get("LESSON_TALL_FRAME_HOSTS") or "").split(",") if h.strip()}
+    host = str(layouts.get("player_host") or "").lower()
+    return {
+        "tall_frame": bool(enabled and host and host in hosts),
+        "player_host": host,
+        "items": layouts.get("items") or {},
+    }
 
 
 @router.get("/coach/debug-traces/{exchange_id}")
@@ -1118,7 +1168,7 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
         # streaming (and its stall-watchdog is armed). A transient DB blip in the
         # reporter below would otherwise block before a single byte and freeze the
         # panel with no way for the client to recover.
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'proactive': trigger}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'proactive': trigger, 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         # MoE 720: a bot-initiated turn — helpType=bot-help-offer, trigger mapped
         # to the closed conversationTrigger enum. Report-and-forget: never break
         # the nudge if reporting fails.
@@ -1134,6 +1184,8 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             except Exception:
                 pass
         debug_trace: list[dict[str, str]] = []
+        pointer_requests: list[dict[str, object]] = []
+        pointer_sent: list[bool] = []
         async for chunk in run_coach_stream(
             learner_id,
             trigger=trigger,
@@ -1143,8 +1195,13 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             endpoint="/api/agent/coach/proactive",
             surface_context=request.surface.model_dump(),
             pinned_question_key=request.question_key,
+            pointer_requests=pointer_requests,
             debug_trace=debug_trace,
+            pointer_version=request.pointer_version,
         ):
+            # Arrivals and nudges mark too: "here is the question" shows it.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
         await coach_debug_trace.record(exchange_id, debug_trace)
         yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
@@ -1381,7 +1438,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         hint_level = reservation.hint_level
 
     async def event_generator():
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support, 'exchange_id': exchange_id}, ensure_ascii=False)}\n\n"
         if request.support == "video_visual":
             try:
                 yield f"data: {json.dumps({'phase': 'thinking', 'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
@@ -1419,7 +1476,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         response_parts = []
         debug_trace: list[dict[str, str]] = []
         pointer_requests: list[dict[str, object]] = []
-        pointer_sent = False
+        pointer_sent: list[bool] = []
         async for chunk in _guarded_reply(run_coach_stream(
             learner_id,
             language=language,
@@ -1431,12 +1488,11 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             hint_level=hint_level,
             pointer_requests=pointer_requests,
             debug_trace=debug_trace,
+            pointer_version=request.pointer_version,
         ), language=language, exchange_id=exchange_id, debug_trace=debug_trace):
-            # A hint that concerns one part of the screen highlights it while
-            # the hint streams (tool planning completes before the first chunk).
-            if pointer_requests and not pointer_sent:
-                pointer_sent = True
-                yield f"data: {json.dumps({'pointer': pointer_requests[0]}, ensure_ascii=False)}\n\n"
+            # A hint highlights what it is about while it streams.
+            if (event := _pointer_event(pointer_requests, pointer_sent)):
+                yield event
             response_parts.append(chunk)
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 
@@ -1451,6 +1507,9 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
                 exchange_id=exchange_id,
                 endpoint="/api/agent/coach/support",
                 user_message=support_prompt.get(language) or support_prompt["he"],
+                # The button's prompt is OUR wording, not the learner's: no
+                # learner words, so no "they want a picture" cue from it.
+                learner_text="",
                 response_text=response_text,
                 language=language,
                 on_lesson_screen=request.surface.screen == "learning_lesson",

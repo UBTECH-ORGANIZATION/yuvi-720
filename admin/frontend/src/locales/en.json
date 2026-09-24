@@ -59,6 +59,8 @@
   "usage.tokens": "Tokens",
   "usage.inputTokens": "Input tokens",
   "usage.outputTokens": "Output tokens",
+  "usage.cachedShare": "cached",
+  "usage.reasoningShare": "reasoning",
   "usage.characters": "Speech characters",
   "usage.cost": "Calculated cost",
   "usage.completed": "Completed requests",

@@ -37,6 +37,9 @@ class CoachToolContext:
     pointer_requests: list[dict[str, Any]] = field(default_factory=list)
     # Filled by `suggest_teacher_help` (lesson mode): at most one per turn.
     teacher_suggestions: list[dict[str, Any]] = field(default_factory=list)
+    # When set, the only tools this TURN may run (coach_planning.lesson_tools)
+    # — narrower than the mode. Dispatch enforces it, whatever the model asks.
+    allowed_tools: frozenset[str] | None = None
     calls_made: int = 0
     started_at: float = field(default_factory=time.monotonic)
 
@@ -77,13 +80,18 @@ def register(tool: CoachTool) -> CoachTool:
     return tool
 
 
-def schemas(mode: CoachMode) -> list[dict[str, Any]]:
-    """Return only provider schemas the active Coach mode may select."""
+def schemas(mode: CoachMode, only: frozenset[str] | None = None) -> list[dict[str, Any]]:
+    """Return only provider schemas the active Coach mode (and, with
+    ``only``, this turn) may select."""
     return [
         tool.as_openai_schema()
         for tool in _REGISTRY.values()
-        if mode in tool.allowed_modes
+        if mode in tool.allowed_modes and (only is None or tool.name in only)
     ]
+
+
+def names(mode: CoachMode) -> list[str]:
+    return [tool.name for tool in _REGISTRY.values() if mode in tool.allowed_modes]
 
 
 def is_registered_name(name: str) -> bool:
@@ -123,6 +131,8 @@ async def dispatch(
         return {"error": "unknown_tool"}
     if context.mode not in tool.allowed_modes:
         return {"error": "tool_not_allowed_for_mode"}
+    if context.allowed_tools is not None and name not in context.allowed_tools:
+        return {"error": "tool_not_allowed_for_turn"}
     arguments = dict(args or {})
     invalid = _validate_arguments(tool, arguments)
     if invalid:

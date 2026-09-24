@@ -225,7 +225,7 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
     def _anchored_shard(self, **enrichment_overrides) -> dict:
         shard = _shard()
         shard["lomdot"][0]["slides"][0]["enrichment"].update({
-            "capture_version": ci.CAPTURE_VERSION,
+            "capture_version": 7,  # the anchor format; v8 is objects
             "capture_viewport": {"w": 1280, "h": 860,
                                  "scroll_w": 1280, "scroll_h": 860},
             "no_internal_scroll": True,
@@ -292,11 +292,32 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
             ]},  # a heightless (pre-v6) row is refused, not guessed at
             "not-a-breakpoint",
         ]))
+        # Every row above is junk — including the off-page options rect v7
+        # used to CLAMP into a plausible-looking box. Nothing survives.
+        self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
+
+    def test_a_rect_outside_the_content_is_rejected_not_clamped(self):
+        """Measured on 4 methodica slides: 389 of 1,254 rects sat at negative
+        y (a scrolled table); clamped to 0 they looked right and pointed at
+        the wrong thing."""
+        self.write_shard(self._anchored_shard(anchor_breakpoints=[
+            {"w": 1280, "h": 860, "content_w": 1280, "content_h": 860,
+             "anchors": [
+                 {"region": "table", "rect": {"x": 316, "y": -1433, "w": 407, "h": 671}},
+                 {"region": "image", "rect": {"x": 40, "y": 300, "w": 300, "h": 900}},
+                 {"region": "question", "rect": {"x": 150, "y": 150, "w": 500, "h": 112}},
+             ]},
+        ]))
         anchors = ci.screen_anchors(COMPONENT, ITEM)
-        self.assertEqual(set(anchors["regions"]), {"options"})
-        rect = anchors["regions"]["options"][0]["rect"]
-        self.assertEqual(rect["x"], 0.0)
-        self.assertEqual(rect["w"], 8000.0)
+        self.assertEqual(set(anchors["regions"]), {"question"})
+
+    def test_a_union_that_covers_the_page_is_refused(self):
+        self.write_shard(self._anchored_shard(anchor_breakpoints=[
+            {"w": 1280, "h": 860, "content_w": 1280, "content_h": 860, "anchors": [
+                {"region": "image", "rect": {"x": 0, "y": 0, "w": 1280, "h": 850}},
+            ]},
+        ]))
+        self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
 
     def test_no_usable_regions_means_none(self):
         self.write_shard(self._anchored_shard(anchor_breakpoints=[]))
@@ -387,6 +408,82 @@ class TheHitIsMeasured(ContentIntelWorld):
         context.for_operation.side_effect = RuntimeError("meter down")
         asyncio.run(ci.record_pregen_hit(context, "question_intro", "טקסט"))
 
+
+
+class ObjectCatalogV8(ContentIntelWorld):
+    GRID = [[820, 640, 820, 600], [1280, 860, 1280, 780]]
+
+    def _v8_shard(self, objects=None, **overrides) -> dict:
+        shard = _shard()
+        shard["lomdot"][0]["slides"][0]["enrichment"] = {
+            "visible_text": "מהי מסה?",
+            "media": [],
+            "capture_version": 8,
+            "mapping": {"method": "text", "screen": 1},
+            "layout": {"kind": "fit_viewport", "natural_h": None, "tall": []},
+            "grid": self.GRID,
+            "objects": objects if objects is not None else [
+                {"id": "stem:q1", "kind": "stem", "role": "stem", "q": ["q1"],
+                 "label_he": "השאלה", "r": [[40, 60, 700, 50], [100, 80, 900, 60]]},
+                {"id": "opts:q1", "kind": "options", "role": "answer_area",
+                 "q": ["q1"], "label_he": "התשובות",
+                 "r": [[40, 200, 700, 120], [100, 240, 900, 150]]},
+                {"id": "opt:q1:0", "kind": "option", "role": "answer_area",
+                 "q": ["q1"], "parent": "opts:q1", "option_index": 0,
+                 "label_he": "אפשרות 1",
+                 "r": [[40, 200, 700, 56], [100, 240, 900, 70]]},
+                {"id": "opt:q1:1", "kind": "option", "role": "answer_area",
+                 "q": ["q1"], "parent": "opts:q1", "option_index": 1,
+                 "label_he": "אפשרות 2",
+                 "r": [[40, 264, 700, 56], [100, 320, 900, 70]]},
+                {"id": "img:32fe1e32", "kind": "image", "role": "data",
+                 "label_he": "המאזניים", "r": [None, [980, 80, 250, 250]]},
+            ],
+            "vendor_page_id": "",
+            "captured_at": "2026-09-24T01:00:00Z",
+            **overrides,
+        }
+        return shard
+
+    def test_objects_serve_with_wire_geometry(self):
+        self.write_shard(self._v8_shard())
+        catalog = ci.screen_objects(COMPONENT, ITEM)
+        ids = [o["id"] for o in catalog["objects"]]
+        self.assertEqual(ids, ["stem:q1", "opts:q1", "opt:q1:0", "opt:q1:1", "img:32fe1e32"])
+        image = catalog["objects"][-1]
+        self.assertEqual([(g["w"], g["h"]) for g in image["geometry"]], [(1280, 860)])
+        self.assertEqual(image["geometry"][0]["rect"],
+                         {"x": 980.0, "y": 80.0, "w": 250.0, "h": 250.0})
+        self.assertEqual(catalog["objects"][2]["option_index"], 0)
+        self.assertEqual(ci.screen_layout(COMPONENT, ITEM)["kind"], "fit_viewport")
+
+    def test_regions_are_derived_from_objects_for_older_clients(self):
+        self.write_shard(self._v8_shard())
+        regions = ci.screen_anchors(COMPONENT, ITEM)["regions"]
+        self.assertEqual(set(regions), {"question", "options", "image"})
+        options = regions["options"][1]
+        self.assertEqual(options["rect"], {"x": 100, "y": 240, "w": 900, "h": 150})
+        self.assertEqual(len(options["parts"]), 2)
+
+    def test_stale_or_broken_captures_are_refused(self):
+        self.write_shard(self._v8_shard())
+        self.catalog.update(_catalog_component("שאלה חדשה לגמרי"))
+        self.assertIsNone(ci.screen_objects(COMPONENT, ITEM))
+
+    def test_the_validator_names_what_is_wrong(self):
+        bad = self._v8_shard(objects=[
+            {"id": "stem:q1", "kind": "stem", "role": "stem", "label_he": "השאלה",
+             "r": [[40, -300, 700, 50], None]},
+            {"id": "stem:q1", "kind": "nonsense", "role": "stem", "label_he": "x" * 41,
+             "r": [None]},
+        ])
+        problems = ci.validate_objects(bad["lomdot"][0]["slides"][0]["enrichment"])
+        self.assertTrue(any("outside the content" in p for p in problems))
+        self.assertTrue(any("duplicate" in p for p in problems))
+        self.assertTrue(any("unknown kind" in p for p in problems))
+        self.assertTrue(any("one rect per grid row" in p for p in problems))
+        self.write_shard(bad)
+        self.assertIsNone(ci.screen_objects(COMPONENT, ITEM))
 
 if __name__ == "__main__":
     unittest.main()

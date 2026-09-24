@@ -39,7 +39,7 @@ class CoachNavigationReplyTests(unittest.TestCase):
             })
             return messages
 
-        async def stream_reply(messages, _usage_context):
+        async def stream_reply(messages, _usage_context, **_):
             captured_messages.extend(messages)
             yield "הוספתי כפתור שיוביל אותך ליעדים שלך. הנה הסבר נוסף שלא צריך להופיע."
 
@@ -98,7 +98,7 @@ class CoachNavigationReplyTests(unittest.TestCase):
             })
             return messages
 
-        async def stream_reply(messages, _usage_context):
+        async def stream_reply(messages, _usage_context, **_):
             captured_messages.extend(messages)
             yield "אני לא יכול לקבוע שיעור במקומך, אבל הוספתי דרך ליצור קשר עם המורה."
 

@@ -226,6 +226,18 @@ async def capture_and_consolidate(
     unsafe = await safety.screen_memory_values(
         [c["value"] for c in candidates] + [c.get("replaces_value") for c in candidates if c.get("replaces_value")],
         language,
+        # Attributed to the learner and the turn — without it the guardian's
+        # spend was logged as actor "unknown" and joined to nothing.
+        usage_context=UsageContext(
+            actor_id=learner_id,
+            actor_type="learner",
+            endpoint="/api/agent/coach/stream",
+            feature="feature_3_learning_companion",
+            operation="safety.memory_content",
+            source="coach_memory_curator",
+            session_id=session_id,
+            exchange_id=exchange_id,
+        ),
     )
     if unsafe:
         candidates = [

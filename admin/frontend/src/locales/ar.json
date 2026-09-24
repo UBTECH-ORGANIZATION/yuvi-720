@@ -59,6 +59,8 @@
   "usage.tokens": "الرموز",
   "usage.inputTokens": "رموز الإدخال",
   "usage.outputTokens": "رموز الإخراج",
+  "usage.cachedShare": "من الذاكرة المؤقتة",
+  "usage.reasoningShare": "تفكير داخلي",
   "usage.characters": "أحرف القراءة",
   "usage.cost": "التكلفة المحسوبة",
   "usage.completed": "الطلبات المكتملة",

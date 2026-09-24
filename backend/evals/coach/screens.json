@@ -1,0 +1,12 @@
+{
+  "_doc": "Real lesson screens the coach eval runs on. Ids only — the questions, options and answers are read live from the Kata catalog at run time and never written here (public repo). tags: q = a choice question, input = a typed/numeric answer, teach = a teaching screen, video = a video screen.",
+  "screens": [
+    {"id": "mass-image-choice", "component_id": "methodica-science-mass-measure-02-01", "item_id": "methodica-science-mass-measure-02-01-001", "tags": ["q"]},
+    {"id": "ratio-image-choice", "component_id": "methodica-math-ratio-01-01", "item_id": "methodica-math-ratio-01-01-001", "tags": ["q"]},
+    {"id": "ratio-teaching-diagram", "component_id": "methodica-math-ratio-02-01", "item_id": "methodica-math-ratio-02-01-002", "tags": ["teach", "q"]},
+    {"id": "cet-grid-performance", "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00008", "item_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00008-item-00002", "tags": ["input"]},
+    {"id": "mass-teaching-text", "component_id": "methodica-science-mass-measure-02-03", "item_id": "methodica-science-mass-measure-02-03-001", "tags": ["teach"]},
+    {"id": "cet-video", "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00001", "item_id": "mptti9na1c802zgwy", "tags": ["video"]},
+    {"id": "cet-numeric", "component_id": "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00002", "item_id": "msfvj10i2n83gce1j", "tags": ["input"]}
+  ]
+}

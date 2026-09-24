@@ -119,6 +119,15 @@
 
   /* ── Motion ── */
   --sp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Focus marks over the lesson iframe (LessonPointLayer): a warm
+     highlighter, translucent so it reads over any vendor's content in either
+     theme — which is why dark mode keeps the same values. */
+  --sp-focus-mark:      rgba(255, 187, 26, 0.9);
+  --sp-focus-mark-fill: rgba(255, 214, 64, 0.2);
+  --sp-focus-mark-halo: rgba(255, 187, 26, 0.22);
+  --sp-focus-mark-pill: rgba(255, 214, 64, 0.95);
+  --sp-focus-mark-ink:  #3b2a00;
   --sp-dur-fast: 120ms;
   --sp-dur: 200ms;
   --sp-dur-slow: 320ms;

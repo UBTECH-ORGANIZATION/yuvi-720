@@ -1009,6 +1009,9 @@ async def ingest_statement(
                     component_id=event.get("launch"),
                     unit_id=event.get("unit_id"),
                 )
+            elif (effective_state or {}).get("position_lost"):
+                triggers.publish_position_lost(
+                    event["learner_id"], component_id=event.get("launch"))
             await triggers.evaluate(event["learner_id"], event)
         except Exception as exc:  # never block ingest on trigger evaluation
             print(f"⚠️ trigger evaluation failed: {exc}")
@@ -1717,6 +1720,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     set_updates: dict[str, Any] = {}
     inc_updates: dict[str, float] = {}
     objective_achieved_now = False
+    position_lost = False
 
     # Read prior state once (reused by the scoring block below) so the sticky
     # question rule can compare against where the learner just was.
@@ -1882,6 +1886,7 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
             and (event_at - pointer_at).total_seconds() <= _SCREEN_LOAD_BURST_SECONDS
         )
         if not in_load_burst:
+            position_lost = bool(prior_state.get("item_id"))
             set_updates["current_state.item_id"] = None
             set_updates["current_state.question_id"] = None
             if event_at:
@@ -2012,6 +2017,9 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         "item_id": set_updates.get("current_state.item_id", prior_state.get("item_id")),
         "question_id": set_updates.get("current_state.question_id", prior_state.get("question_id")),
         "objective_achieved_now": objective_achieved_now,
+        # The learner provably left the screen we knew, for one we cannot
+        # name: whatever the lesson overlay marks is now about the wrong page.
+        "position_lost": position_lost,
     }
 
 

@@ -13,11 +13,22 @@
  * first visible option picked purely to move on (harmless against a sink,
  * recorded per screen as `advanced_by_answering`). Never backwards; the run
  * stops the moment a click changes nothing.
+ *
+ * Capture v8 adds the OBJECT census (`atoms`): every thing on the screen a
+ * coach could mean — each answer row, input, picture, video, table (+ rows,
+ * columns), formula, text block and the inner parts of an SVG drawing —
+ * measured, clip-aware, at every grid size. Atom TEXT lives only in this dump
+ * (a local/runner temp file): the pipeline matches it against the catalog
+ * and writes ids, kinds and roles to the shard, never the vendor's words.
+ *
+ *   --audit-dir <dir>   also save, per screen, a clean screenshot and one with
+ *                       every atom's number drawn on it (local review only)
  */
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { chromium } from 'playwright'
+import { classifyLayout, gridRows, sameRect } from './lib/content-geometry.mjs'
 
 const argv = new Map()
 for (let i = 2; i < process.argv.length; i += 2) {
@@ -26,6 +37,7 @@ for (let i = 2; i < process.argv.length; i += 2) {
 const url = argv.get('url')
 const outPath = argv.get('out') || 'content-extract.json'
 const maxScreens = Number(argv.get('max-screens') || 40)
+const auditDir = argv.get('audit-dir') || ''
 if (!url) {
   console.error('usage: node scripts/content-extract.mjs --url <launchUrl> --out <dump.json>')
   process.exit(2)
@@ -97,10 +109,17 @@ await page.waitForTimeout(8_000) // players hydrate well after `load`
 
 // The player may live on the page itself or inside a nested frame — read from
 // whichever frame carries the most visible text.
+// Embedded media players are never the lesson: a CET video page embeds
+// YouTube, whose frame can out-text the player and then every "next" click
+// lands inside YouTube (PLOT-00001 stopped at page 3 of 9 on 2026-09-24).
+const MEDIA_EMBED = /(^|\.)(youtube(-nocookie)?\.com|youtu\.be|vimeo\.com|ytimg\.com)$/i
 const readingFrame = async () => {
   let best = page.mainFrame()
   let bestLength = 0
   for (const frame of page.frames()) {
+    let host = ''
+    try { host = new URL(frame.url()).host } catch { /* about:blank etc. */ }
+    if (host && MEDIA_EMBED.test(host)) continue
     const length = await frame.evaluate(() => document.body?.innerText?.length || 0)
       .catch(() => 0)
     if (length > bestLength) { best = frame; bestLength = length }
@@ -326,6 +345,257 @@ const measureAnchors = (frame, markShots) => frame.evaluate((withShotMarks) => {
   }
 }, markShots)
 
+/* The object census (capture v8), measured in DOCUMENT PIXELS.
+ *
+ * `tag: true` (the primary size) enumerates the atoms and tags each element
+ * `data-yx-obj=<n>`; every later call re-measures the SAME elements by tag, so
+ * an atom's rect at 820px and at 1920px are provably the same thing.
+ *
+ * Visibility is clip-aware: an element counts only when ≥60% of it survives
+ * every overflow-clipping ancestor and CSS says it is visible (opacity and
+ * visibility included). That is what kept inactive tabs, collapsed feedback
+ * panels and off-canvas slides out — they produced the negative coordinates
+ * and the 177%-of-the-viewport "image" unions of capture v7.
+ */
+const measureObjects = (frame, tag) => frame.evaluate((withTags) => {
+  const root = document.scrollingElement || document.documentElement
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const sx = window.scrollX
+  const sy = window.scrollY
+  const intersect = (a, b) => {
+    const box = {
+      left: Math.max(a.left, b.left), top: Math.max(a.top, b.top),
+      right: Math.min(a.right, b.right), bottom: Math.min(a.bottom, b.bottom),
+    }
+    return box.right > box.left && box.bottom > box.top ? box : null
+  }
+  const area = (b) => Math.max(0, b.right - b.left) * Math.max(0, b.bottom - b.top)
+  const clipped = (el) => {
+    const r = el.getBoundingClientRect()
+    if (r.width < 2 || r.height < 2) return null
+    let box = { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+    for (let node = el.parentElement; node && node !== document.body && node !== root;
+      node = node.parentElement) {
+      const style = getComputedStyle(node)
+      if (/(hidden|clip|auto|scroll)/.test(style.overflow + style.overflowX + style.overflowY)) {
+        box = intersect(box, node.getBoundingClientRect())
+        if (!box) return null
+      }
+    }
+    return { box, raw: r.width * r.height }
+  }
+  const shown = (el) => {
+    const style = getComputedStyle(el)
+    if (style.visibility === 'hidden' || style.display === 'none') return null
+    if (typeof el.checkVisibility === 'function'
+      && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return null
+    const c = clipped(el)
+    if (!c || area(c.box) < 0.6 * c.raw) return null
+    return c.box
+  }
+  const docRect = (box) => ({
+    x: Math.round((box.left + sx) * 10) / 10, y: Math.round((box.top + sy) * 10) / 10,
+    w: Math.round((box.right - box.left) * 10) / 10,
+    h: Math.round((box.bottom - box.top) * 10) / 10,
+  })
+  // Honest extent: what is painted and not fixed to the viewport, with no
+  // floor at the viewport height (v7 floored it and invented overflow).
+  const extent = () => {
+    let right = 0
+    let bottom = 0
+    for (const el of document.querySelectorAll('body *')) {
+      const style = getComputedStyle(el)
+      if (style.position === 'fixed' || style.display === 'none'
+        || style.visibility === 'hidden') continue
+      const c = clipped(el)
+      if (!c) continue
+      right = Math.max(right, c.box.right + sx)
+      bottom = Math.max(bottom, c.box.bottom + sy)
+    }
+    return { content_w: Math.round(Math.max(right, Math.min(root.scrollWidth, vw))),
+      content_h: Math.round(bottom) }
+  }
+
+  if (!withTags) {
+    const rects = {}
+    for (const el of document.querySelectorAll('[data-yx-obj]')) {
+      const box = shown(el)
+      rects[el.getAttribute('data-yx-obj')] = box ? docRect(box) : null
+    }
+    return { w: vw, h: vh, ...extent(), rects,
+      inner_scroll: Math.max(0, root.scrollHeight - vh) }
+  }
+
+  // A new screen re-tags from scratch: lomdot keep earlier screens in the
+  // DOM, and their stale numbers would collide with this screen's.
+  for (const el of document.querySelectorAll('[data-yx-obj]')) el.removeAttribute('data-yx-obj')
+  const OPTION = '.h5p-answer, .h5p-alternative, [role="option"], [role="radio"], '
+    + 'label:has(input[type="radio"]), label:has(input[type="checkbox"]), '
+    + '[class*="answer" i][class*="style" i]'
+  const INPUT = 'select, [role="combobox"], textarea, input[type="text"], '
+    + 'input[type="number"], [class*="combobox" i], [class*="cloze" i]'
+  const TEXT = 'p, li, h1, h2, h3, h4, blockquote, legend, figcaption, label, '
+    + '[class*="question" i], [class*="instruction" i]'
+  const FAMILIES = [
+    ['option', OPTION], ['input', INPUT], ['image', 'img'], ['video', 'video'],
+    ['diagram', 'canvas, svg, embed, object, iframe'], ['table', 'table'],
+    ['formula', 'mjx-container, .katex, math'], ['text', TEXT],
+  ]
+  // Area floors (fraction of the viewport) keep icons and the mascot out.
+  const FLOOR = { image: 0.015, video: 0.02, diagram: 0.03 }
+  const textOf = (el) => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
+  // Occlusion: a flip card's back face is "visible" to CSS while the picture
+  // on its front covers it (measured on mass-measure-02-01: three hidden
+  // captions sat on the photos). What is on top at the atom's centre must be
+  // the atom itself, something inside it, or something it sits inside.
+  const onTop = (el, box) => {
+    const cx = (box.left + box.right) / 2
+    const cy = (box.top + box.bottom) / 2
+    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return true // cannot test off-screen
+    const hit = document.elementFromPoint(cx, cy)
+    return !hit || hit === el || el.contains(hit) || hit.contains(el)
+  }
+  const OCCLUDABLE = new Set(['text', 'formula', 'table', 'table_row', 'table_col',
+    'table_cell'])
+  const atoms = []
+  const claimed = new Set()
+  const add = (el, kind, extra = {}) => {
+    if (claimed.has(el) || atoms.length >= 60) return null
+    const box = shown(el)
+    if (!box) return null
+    if (OCCLUDABLE.has(kind) && !onTop(el, box)) return null
+    claimed.add(el)
+    const atom = { n: atoms.length + 1, kind, el, rect: docRect(box),
+      text: textOf(el).slice(0, 300), ...extra }
+    atoms.push(atom)
+    return atom
+  }
+  for (const [kind, selector] of FAMILIES) {
+    let elements = [...document.querySelectorAll(selector)]
+    if (FLOOR[kind]) {
+      elements = elements.filter((el) => {
+        const r = el.getBoundingClientRect()
+        return (r.width * r.height) / (vw * vh || 1) >= FLOOR[kind]
+      })
+    }
+    // Svgs nested in a bigger svg are parts, handled below.
+    if (kind === 'diagram') elements = elements.filter((el) => !el.parentElement?.closest('svg'))
+    if (kind === 'option' || kind === 'input') {
+      // outermost only: an option row contains its label, input, text span
+      elements = elements.filter((el) => !elements.some((o) => o !== el && o.contains(el)))
+    }
+    if (kind === 'text') {
+      // leaf text blocks (plus question/instruction containers), never text
+      // that already belongs to an option row
+      elements = elements.filter((el) => {
+        const t = textOf(el)
+        if (t.length < 3 || t.length > 600) return false
+        if ([...claimed].some((c) => c.contains(el))) return false
+        const named = /question|instruction/i.test(el.className?.baseVal ?? el.className ?? '')
+        return named || !el.querySelector(TEXT)
+      })
+    }
+    for (const el of elements) {
+      const extra = {}
+      if (kind === 'image') extra.src = el.currentSrc || el.src || ''
+      if (kind === 'option' || kind === 'input') extra.interactive = true
+      add(el, kind, extra)
+    }
+  }
+  // Tables: rows (≤12) and, when the grid is regular, columns (≤8).
+  for (const table of atoms.filter((a) => a.kind === 'table').map((a) => a.el)) {
+    const rows = [...table.querySelectorAll('tr')].slice(0, 12)
+    for (const row of rows) add(row, 'table_row')
+    const regular = rows.length > 1 && rows.every((r) =>
+      [...r.children].every((c) => (c.colSpan || 1) === 1 && (c.rowSpan || 1) === 1)
+      && r.children.length === rows[0].children.length)
+    if (regular) {
+      for (let k = 0; k < Math.min(rows[0].children.length, 8); k += 1) {
+        // A column is not one element: tag its header cell, carry the member
+        // cells so the pipeline can union them per size.
+        const cells = rows.map((r) => r.children[k]).filter(Boolean)
+        const head = add(cells[0], 'table_col')
+        if (head) {
+          head.members = cells.slice(1).map((cell) => {
+            const member = add(cell, 'table_cell')
+            return member ? member.n : null
+          }).filter(Boolean)
+        }
+      }
+    }
+  }
+  // SVG drawings: labelled points, texts and small groups (≤40 per drawing).
+  for (const svg of atoms.filter((a) => a.kind === 'diagram' && a.el.tagName.toLowerCase() === 'svg')
+    .map((a) => a.el)) {
+    const parts = [...svg.querySelectorAll('circle, ellipse, text, g')]
+      .filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.width * r.height < 0.25 * vw * vh
+      }).slice(0, 40)
+    for (const el of parts) {
+      const style = getComputedStyle(el)
+      add(el, 'svg_part', { tag: el.tagName.toLowerCase(),
+        interactive: style.cursor === 'pointer' || el.hasAttribute('onclick') })
+    }
+  }
+  // Parent = the smallest other atom that contains this one in the DOM.
+  for (const atom of atoms) {
+    let best = null
+    for (const other of atoms) {
+      if (other === atom || !other.el.contains(atom.el)) continue
+      if (!best || best.el.contains(other.el)) best = other
+    }
+    atom.parent = best ? best.n : null
+    atom.el.setAttribute('data-yx-obj', String(atom.n))
+  }
+  const order = [...document.querySelectorAll('[data-yx-obj]')]
+  return {
+    w: vw, h: vh, ...extent(), inner_scroll: Math.max(0, root.scrollHeight - vh),
+    atoms: atoms.map(({ el, ...rest }) => ({
+      ...rest, order: order.indexOf(el), tag: rest.tag || el.tagName.toLowerCase(),
+      draggable: el.getAttribute('draggable') === 'true',
+    })),
+  }
+}, tag)
+
+// Local review only: draw every atom's number where it sits, screenshot,
+// remove. Never runs in CI — the flag is only passed by content_audit.py.
+const auditShots = async (frame, index, atoms) => {
+  if (!auditDir) return null
+  mkdirSync(auditDir, { recursive: true })
+  const stem = join(auditDir, `screen-${String(index).padStart(2, '0')}`)
+  let offset = { x: 0, y: 0 }
+  if (frame !== page.mainFrame()) {
+    const handle = await frame.frameElement().catch(() => null)
+    const box = handle ? await handle.boundingBox().catch(() => null) : null
+    if (box) offset = { x: box.x, y: box.y }
+  }
+  const scroll = await frame.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+    .catch(() => ({ x: 0, y: 0 }))
+  await page.screenshot({ path: `${stem}-clean.png` }).catch(() => {})
+  await frame.evaluate((list) => {
+    const layer = document.createElement('div')
+    layer.id = '__yx_audit'
+    layer.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;z-index:2147483647'
+    for (const a of list) {
+      const box = document.createElement('div')
+      box.style.cssText = `position:absolute;left:${a.rect.x}px;top:${a.rect.y}px;`
+        + `width:${a.rect.w}px;height:${a.rect.h}px;outline:2px solid rgba(220,30,90,.8)`
+      const label = document.createElement('span')
+      label.textContent = String(a.n)
+      label.style.cssText = 'position:absolute;left:0;top:0;background:#dc1e5a;color:#fff;'
+        + 'font:bold 11px/14px sans-serif;padding:0 3px;border-radius:3px'
+      box.appendChild(label)
+      layer.appendChild(box)
+    }
+    document.body.appendChild(layer)
+  }, atoms.map((a) => ({ n: a.n, rect: a.rect }))).catch(() => {})
+  await page.screenshot({ path: `${stem}-marks.png` }).catch(() => {})
+  await frame.evaluate(() => document.getElementById('__yx_audit')?.remove()).catch(() => {})
+  return { offset, scroll, clean: `${stem}-clean.png`, marks: `${stem}-marks.png` }
+}
+
 // Element screenshots for the marked graphic surfaces — small jpeg crops the
 // nightly vision pass turns into Hebrew descriptions. Keyed back onto media
 // entries by src digest (images) or in diagram order. Never committed: the
@@ -367,6 +637,37 @@ const clickVisible = async (frame, selectors, { limit = 1 } = {}) => {
 const textHash = async (frame) =>
   digest(await frame.evaluate(() => document.body?.innerText || '').catch(() => ''))
 
+/** Answer every visible dropdown so a gated screen lets the walk move on
+ *  (CET gates pages behind `CustomSelect` comboboxes — measured 2026-09-24:
+ *  PLOT-00001 stopped at page 2 of 9 because only radios were ever clicked).
+ *  Native <select>: pick the first real option. Custom combobox: open it, then
+ *  click the first option its listbox shows. Any answer will do — the launch
+ *  is a sink, nothing is graded against a learner. */
+const fillDropdowns = async (frame) => {
+  const natives = frame.locator('select')
+  for (let i = 0; i < Math.min(await natives.count().catch(() => 0), 8); i += 1) {
+    const select = natives.nth(i)
+    if (!await select.isVisible().catch(() => false)) continue
+    const value = await select.evaluate((el) =>
+      [...el.options].find((o) => o.value && !o.disabled)?.value || '').catch(() => '')
+    if (value) await select.selectOption(value).catch(() => {})
+  }
+  const customs = frame.locator('[role="combobox"], [class*="combobox" i]')
+  for (let i = 0; i < Math.min(await customs.count().catch(() => 0), 8); i += 1) {
+    const box = customs.nth(i)
+    if (!await box.isVisible().catch(() => false)) continue
+    if (!await box.click({ timeout: 1_500 }).then(() => true).catch(() => false)) continue
+    await page.waitForTimeout(300)
+    const options = frame.locator('[role="option"], [role="listbox"] li, [class*="option" i]')
+    for (let k = 0; k < Math.min(await options.count().catch(() => 0), 12); k += 1) {
+      const option = options.nth(k)
+      if (await option.isVisible().catch(() => false)
+        && await option.click({ timeout: 1_000 }).then(() => true).catch(() => false)) break
+    }
+    await page.waitForTimeout(250)
+  }
+}
+
 /** Try to leave the current screen; true when the visible text changed. */
 const advance = async (screen) => {
   let { frame } = await readingFrame()
@@ -406,6 +707,7 @@ const advance = async (screen) => {
       await page.waitForTimeout(400)
     }
   }
+  await fillDropdowns(frame)
   await clickVisible(frame, OPTION_TARGETS, { limit: 4 })
   await page.waitForTimeout(600)
   await clickVisible(frame, COMMIT_BUTTONS)
@@ -414,6 +716,43 @@ const advance = async (screen) => {
   if (await changed()) {
     screen.advanced_by_answering = true
     return true
+  }
+  // Explore-gated: "לחצו על התמונות" pages unlock their continue button only
+  // after each card/picture was opened (mass-measure-02-01 stopped at screen
+  // 4 of 14 on 2026-09-24). Open every large picture, close what pops up,
+  // then continue.
+  const pictures = frame.locator('img, figure, [class*="card" i]')
+  const count = Math.min(await pictures.count().catch(() => 0), 12)
+  let opened = 0
+  for (let i = 0; i < count && opened < 6; i += 1) {
+    const picture = pictures.nth(i)
+    const box = await picture.boundingBox().catch(() => null)
+    if (!box || box.width * box.height < 0.02 * 1280 * 860) continue
+    if (await picture.click({ timeout: 1_500 }).then(() => true).catch(() => false)) {
+      opened += 1
+      await page.waitForTimeout(700)
+      await page.keyboard.press('Escape').catch(() => {})
+      await clickVisible(frame, ['[aria-label*="סגור"]', '[aria-label*="Close" i]',
+        'button:has-text("סגירה")', 'button:has-text("×")'])
+    }
+  }
+  if (opened) {
+    await clickVisible(frame, NEXT_BUTTONS)
+    if (await changed()) {
+      screen.advanced_by_answering = true
+      return true
+    }
+  }
+  if (process.env.DEBUG_ADVANCE) {
+    const controls = await frame.evaluate(() => [...document.querySelectorAll(
+      'button, [role="button"], a, [class*="card" i], img')].filter((el) => {
+      const r = el.getBoundingClientRect()
+      return r.width > 4 && r.height > 4 && getComputedStyle(el).visibility !== 'hidden'
+    }).slice(0, 40).map((el) => `${el.tagName}.${String(el.className?.baseVal ?? el.className).slice(0, 60)}`
+      + ` "${(el.innerText || el.alt || '').trim().slice(0, 30)}"`
+      + `${el.disabled || el.getAttribute('aria-disabled') === 'true' ? ' [disabled]' : ''}`))
+      .catch(() => [])
+    console.error(`stuck on screen "${screen.title.slice(0, 40)}":\n  ${controls.join('\n  ')}`)
   }
   return false
 }
@@ -436,12 +775,28 @@ if (first.textLength < 40) {
 // between the four surrounding samples — no vendor detection anywhere.
 // 1280×860 is the primary capture size (screenshots, text, media read there).
 const ANCHOR_WIDTHS = [820, 1024, 1280, 1440, 1680, 1920]
-const ANCHOR_HEIGHTS = [640, 860]
+// 480: a Chromebook lesson box with the chat open is ~890×475, below 640's
+// interpolation tolerance — every mark there fell back to a whole-frame glow.
+const ANCHOR_HEIGHTS = [480, 640, 860]
+// Tall probes for height-independent screens: does a frame as tall as the
+// content show the same geometry with no inner scroll? (The tall-frame
+// experiment needs a yes per slide before it may size the frame.)
+const TALL_WIDTHS = [1024, 1440]
+const TALL_MAX = 2400
 const PRIMARY_WIDTH = 1280
 const PRIMARY_HEIGHT = 860
 
 for (let index = 0; index < maxScreens; index += 1) {
   const { frame } = await readingFrame()
+  // A gate the walker just filled (a dropdown, a combobox) can leave its list
+  // OPEN: that popup is not the screen, and measuring it recorded transient
+  // "options" over the inputs (09-24 audit, CET PLOT-00001 page 2). Close it.
+  await page.keyboard.press('Escape').catch(() => {})
+  await frame.evaluate(() => {
+    const active = document.activeElement
+    if (active && active !== document.body && typeof active.blur === 'function') active.blur()
+  }).catch(() => {})
+  await page.waitForTimeout(150)
   const captured = await captureScreen(frame).catch(() => null)
   if (!captured) break
   const hash = digest(captured.visible_text)
@@ -456,6 +811,17 @@ for (let index = 0; index < maxScreens; index += 1) {
   // for element screenshots), then the other widths, then restore — the
   // advance clicks below must land on the primary layout.
   const primary = await measureAnchors(frame, true).catch(() => null)
+  const census = await measureObjects(frame, true).catch(() => null)
+  const samples = []
+  if (census) {
+    captured.atoms = census.atoms.map(({ src, ...atom }) => ({
+      ...atom, src_digest: src ? digest(src) : null,
+    }))
+    samples.push({ w: census.w, h: census.h, content_w: census.content_w,
+      content_h: census.content_h, inner_scroll: census.inner_scroll,
+      rects: Object.fromEntries(census.atoms.map((a) => [String(a.n), a.rect])) })
+    captured.audit = await auditShots(frame, index, census.atoms)
+  }
   captured.shot_marks = primary?.shot_marks || []
   // Diagram surfaces are not <img> and never made it into `media` — add them
   // so the vision description has a row to live on.
@@ -476,16 +842,47 @@ for (let index = 0; index < maxScreens; index += 1) {
         await page.setViewportSize({ width, height })
         await page.waitForTimeout(450)
         const measured = await measureAnchors(frame, false).catch(() => null)
-        if (measured?.anchors?.length) {
+        if (measured?.anchors?.length && height !== 480) {
+          // v7 anchors keep their 640/860 grid (older runtimes read it)
           breakpoints.push({
             w: measured.w, h: measured.h, content_w: measured.content_w,
             content_h: measured.content_h, anchors: measured.anchors,
           })
         }
+        if (census) {
+          const sample = await measureObjects(frame, false).catch(() => null)
+          if (sample) samples.push(sample)
+        }
       }
     }
     await page.setViewportSize({ width: PRIMARY_WIDTH, height: PRIMARY_HEIGHT })
     await page.waitForTimeout(450)
+  }
+  if (census) {
+    const layout = classifyLayout(samples)
+    captured.layout = { kind: layout.kind, natural_h: layout.natural_h, tall: [] }
+    if (layout.kind === 'height_independent') {
+      for (const width of TALL_WIDTHS) {
+        const natural = (layout.natural_h || []).find(([w]) => w === width)?.[1]
+        const base = samples.find((s) => s.w === width)
+        if (!natural || !base || natural <= base.h) continue
+        const height = Math.min(TALL_MAX, natural + 40)
+        await page.setViewportSize({ width, height })
+        await page.waitForTimeout(600)
+        const tall = await measureObjects(frame, false).catch(() => null)
+        if (tall) {
+          const same = Object.entries(base.rects).every(([id, rect]) =>
+            sameRect(rect || null, tall.rects[id] || null))
+          captured.layout.tall.push({ w: width, h: height, same_geometry: same,
+            inner_scroll: tall.inner_scroll > 2 })
+        }
+      }
+      await page.setViewportSize({ width: PRIMARY_WIDTH, height: PRIMARY_HEIGHT })
+      await page.waitForTimeout(450)
+    }
+    captured.object_samples = samples.map(({ w, h, content_w, content_h, rects }) =>
+      ({ w, h, content_w, content_h, rects }))
+    captured.grid = gridRows(samples, layout.kind)
   }
   breakpoints.sort((a, b) => (a.w - b.w) || (a.h - b.h))
   captured.anchors = primary?.anchors || []
