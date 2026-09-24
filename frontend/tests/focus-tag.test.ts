@@ -17,6 +17,10 @@ test('a half-streamed tag waits instead of flashing', () => {
   assert.equal(stripFocusTags('הסתכלו ⟦o', false), 'הסתכלו ⟦o')
 })
 
+test('an opener that never closed is dropped with its token', () => {
+  assert.equal(stripFocusTags('⟦التص|> هذه الشاشة'), 'هذه الشاشة')
+})
+
 test('ordinary brackets are text', () => {
   assert.equal(stripFocusTags('[חשוב] קראו [[שוב]]'), '[חשוב] קראו [[שוב]]')
 })

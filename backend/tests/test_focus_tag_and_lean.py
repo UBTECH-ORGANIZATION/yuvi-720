@@ -54,6 +54,11 @@ class TheParser(unittest.TestCase):
         out, result = _parse(["⟦ this is not a tag at all, it goes on"])
         self.assertEqual(result.outcome, "malformed")
         self.assertIn("this is not a tag", out)
+        self.assertNotIn("⟦", out)
+        out, result = _parse(["⟦التص|> هذه الشاشة تعرض درسًا عن النسبة."])
+        self.assertEqual((result.outcome, out), ("malformed", "هذه الشاشة تعرض درسًا عن النسبة."))
+        out, result = _parse(["[[ ordinary brackets that never close go on"])
+        self.assertTrue(out.startswith("[[ ordinary"))
         out, result = _parse(["[חשוב] קראו שוב"])
         self.assertEqual((result.outcome, out), ("absent", "[חשוב] קראו שוב"))
 

@@ -90,8 +90,12 @@ class FocusTagParser:
         if end < 0:
             if len(body) - len(opener) > _MAX_TAG:
                 self._decide("malformed")
-                out, self._buffer = self._buffer, ""
-                return out
+                self._buffer = ""
+                if opener == "[[":
+                    return lead + body        # ordinary brackets: leave as written
+                # ⟦/【 never occur in prose: an unclosed one is a broken tag
+                # ("⟦التص|> …", 09-24 eval) — drop it and the token stuck to it.
+                return _BROKEN_TAG.sub("", body, count=1)
             return ""                         # still inside the tag: wait
         inner = body[len(opener):end].strip()
         rest = body[end + len(closer):]
@@ -124,6 +128,7 @@ class FocusTagParser:
         return out
 
 
+_BROKEN_TAG = re.compile(r"^(?:⟦|【)[^\s⟧】]{0,24}[\s⟧】]*")
 _ANYWHERE = re.compile(
     r"⟦[^⟧\n]{0,24}⟧|【[^】\n]{0,24}】|\[\[\s*(?:o\d{1,2}|q|opts|none|-)\s*\]\]", re.IGNORECASE)
 
