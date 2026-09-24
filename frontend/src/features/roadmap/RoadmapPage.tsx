@@ -19,7 +19,8 @@ import { preRenderedThumb } from '../Yuvi-studio/studioThumbs'
 import { WORLD_HOLOGRAM_FRAME, WORLD_HOLOGRAM_FRAMES, worldHologramStrip } from '../Yuvi-studio/worldHologramStrips'
 import type { RoomLayoutId } from '../Yuvi-studio/RoomLayouts'
 import {
-  focusedIndex, isMilestone, levelState, positionIndex, railVisualPosition, scrollForIndex, xpAway, SEGMENT_PX, type LevelState,
+  focusedIndex, isMilestone, levelState, positionIndex, roadmapWorld, scrollForIndex, xpAway, SEGMENT_PX,
+  type LevelState, type RoadmapWorld,
 } from './roadmapModel'
 import { createRoadmapScene, type RoadmapScene, type SceneAnchor } from './RoadmapScene'
 import './roadmap.css'
@@ -256,13 +257,6 @@ function RoadmapStage({ roadmap, status }: StageProps) {
     return () => { tween.kill() }
   }, [focus, placeCard, reduceMotion])
 
-  const scrubTo = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(count - 1, Math.round(index)))
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-    gsap.killTweensOf(window)
-    window.scrollTo(0, scrollForIndex(clamped, maxScroll, count))
-  }, [count])
-
   const jumpTo = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(count - 1, Math.round(index)))
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
@@ -308,8 +302,8 @@ function RoadmapStage({ roadmap, status }: StageProps) {
             </div>
             <HereChip status={status} onJump={() => jumpTo(meIndex)} />
           </div>
-          <Rail levels={levels} status={status} focus={focus} onJump={jumpTo} onScrub={scrubTo} />
-          {row ? <LevelCard ref={cardRef} row={row} status={status} /> : null}
+          {row ? <WorldBadge key={roadmapWorld(row.level)} world={roadmapWorld(row.level)} /> : null}
+          {row ? <LevelCard ref={cardRef} row={row} status={status} total={count} /> : null}
           <p className={`rm-hint${scrolled ? ' is-done' : ''}`} aria-hidden={scrolled}>
             <span className="rm-hint__mouse" aria-hidden="true"><i /></span>
             {t('roadmap.hint')}
@@ -319,6 +313,34 @@ function RoadmapStage({ roadmap, status }: StageProps) {
           </span>
         </>
       )}
+    </div>
+  )
+}
+
+/* ── The world Yuvi is flying through ──────────────────────────────────── */
+
+const WORLD_EMBLEMS: Record<RoadmapWorld, React.ReactNode> = {
+  snow: <><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" /><path d="M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5" /></>,
+  space: <><circle cx="12" cy="12" r="5" /><ellipse cx="12" cy="12" rx="10" ry="3.5" transform="rotate(-20 12 12)" /></>,
+  music: <><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></>,
+  street: <><rect x="7" y="9" width="8" height="12" rx="2" /><path d="M9 9V6h4v3M11 6V4M17 5h.01M19 3h.01M19 7h.01" /></>,
+  jungle: <><path d="M20 4C12 4 5 8 5 14c0 3 2 5 5 5 6 0 10-7 10-15Z" /><path d="M5 20c2-5 6-8 11-11" /></>,
+}
+
+function WorldBadge({ world }: { world: RoadmapWorld }) {
+  const { t } = useI18n()
+  const name = t(`roadmap.world.${world}`)
+  return (
+    <div className="rm-world" data-world={world} title={name}>
+      <span className="rm-world__emblem" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {WORLD_EMBLEMS[world]}
+        </svg>
+      </span>
+      <span className="rm-world__text">
+        <small>{t('roadmap.world.eyebrow')}</small>
+        <strong>{name}</strong>
+      </span>
     </div>
   )
 }
@@ -358,65 +380,10 @@ function HereChip({ status, onJump }: { status: ProgressionStatus; onJump: () =>
   )
 }
 
-/* ── The rail: a scrubber down the side ─────────────────────────────────── */
-
-function Rail({ levels, status, focus, onJump, onScrub }: {
-  levels: RoadmapLevel[]; status: ProgressionStatus; focus: number
-  onJump: (index: number) => void; onScrub: (index: number) => void
-}) {
-  const { t } = useI18n()
-  const count = levels.length
-  const litPercent = `${(positionIndex(status, count) / Math.max(1, count - 1)) * 100}%`
-  const focusedIndex = Math.max(0, Math.min(count - 1, focus))
-  const focusedLevel = levels[focusedIndex]?.level ?? 1
-  const focusedPosition = railVisualPosition(focusedIndex, count)
-  return (
-    <nav className="rm-rail" aria-label={t('roadmap.rail.label')}>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.next')} title={t('roadmap.rail.next')} onClick={() => onJump(focus + 1)} disabled={focus >= count - 1}>
-        <Icon name="chevronUp" size={18} />
-      </button>
-      <div className="rm-rail__track" style={{ '--rm-lit': litPercent, '--rm-focus-at': focusedPosition } as React.CSSProperties}>
-        <output className="rm-rail__current" aria-hidden="true">{focusedLevel}</output>
-        {/* Leaves show the route's growth inside the rail. The invisible range
-            remains the control, while the badge at left names the exact level. */}
-        <ol className="rm-rail__marks" aria-hidden="true">
-          {levels.map((row, index) => {
-            const state = levelState(row.level, status)
-            const labelled = row.level === 1 || row.level % 10 === 0 || state === 'current'
-            return (
-              <li
-                key={row.level}
-                className={`rm-rail__dot is-${state}${labelled ? ' is-labelled' : ''}`}
-                style={{ '--rm-at': railVisualPosition(index, count) } as React.CSSProperties}
-              >
-                {labelled ? <span>{row.level}</span> : null}
-              </li>
-            )
-          })}
-        </ol>
-        <input
-          className="rm-rail__range"
-          type="range"
-          min={0}
-          max={count - 1}
-          step={1}
-          value={Math.max(0, focus)}
-          aria-label={t('roadmap.rail.label')}
-          aria-valuetext={t('roadmap.rail.level', { level: String(focusedLevel) })}
-          onChange={(event) => onScrub(Number(event.target.value))}
-        />
-      </div>
-      <button className="rm-rail__step" type="button" aria-label={t('roadmap.rail.prev')} title={t('roadmap.rail.prev')} onClick={() => onJump(focus - 1)} disabled={focus <= 0}>
-        <Icon name="chevronDown" size={18} />
-      </button>
-    </nav>
-  )
-}
-
 /* ── The card beside a pad ──────────────────────────────────────────────── */
 
-const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: ProgressionStatus }>(
-  function LevelCard({ row, status }, ref) {
+const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: ProgressionStatus; total: number }>(
+  function LevelCard({ row, status, total }, ref) {
     const { t } = useI18n()
     const state = levelState(row.level, status)
     const items = rewardItems(row.reward)
@@ -432,7 +399,7 @@ const LevelCard = forwardRef<HTMLElement, { row: RoadmapLevel; status: Progressi
       <article className={`rm-card is-${state}${milestone ? ' is-milestone' : ''}`} ref={ref} key={row.level}>
         <header className="rm-card__head">
           <span className="rm-card__eyebrow">{t('roadmap.card.level')}</span>
-          <h2>{t('roadmap.card.title', { level: String(row.level) })}</h2>
+          <h2>{t('roadmap.card.title', { level: String(row.level), total: String(total) })}</h2>
           <p className="rm-card__status">{statusLine}</p>
           {row.level > 1 ? <p className="rm-card__opens" dir="auto">{t('roadmap.card.opensAt', { xp: String(row.startXp) })}</p> : null}
         </header>
@@ -481,9 +448,6 @@ function RewardRow({ item, state }: { item: RewardItem; state: LevelState }) {
   } else if (item.kind === 'hint') {
     label = t('roadmap.item.hint')
     picture = <Icon name="lightbulb" size={22} />
-  } else if (item.kind === 'frame') {
-    label = rewardLabel(t, item.id)
-    picture = <span className="rm-frame-glyph" aria-hidden="true">{item.id.match(/(\d+)$/)?.[1]}</span>
   } else if (item.kind === 'mood') {
     label = rewardLabel(t, item.id)
     picture = <Icon name="palette" size={22} />

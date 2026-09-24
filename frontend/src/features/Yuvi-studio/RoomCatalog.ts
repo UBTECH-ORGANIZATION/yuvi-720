@@ -68,6 +68,7 @@ export interface RoomKit {
   setLabels: (translate: LoftTranslator) => void
   model: (id: 'gamepad' | 'gaming_console' | 'rubber_duck_toy' | 'digital_wrist_watch', size: readonly [number, number, number]) => THREE.Group
   mat: (kind: MatKind, color?: THREE.ColorRepresentation) => THREE.Material
+  furniture: (finish: 'walnut' | 'upholstery' | 'marble' | 'rattan', color?: THREE.ColorRepresentation) => THREE.Material
   box: (w: number, h: number, d: number, mat: THREE.Material) => THREE.Mesh
   rbox: (w: number, h: number, d: number, r: number, mat: THREE.Material) => THREE.Mesh
   cyl: (rTop: number, rBot: number, h: number, mat: THREE.Material, seg?: number, open?: boolean) => THREE.Mesh
@@ -144,6 +145,42 @@ export function createRoomKit(
     return cached
   }
 
+  const furniture: RoomKit['furniture'] = (finish, color = 0xffffff) => {
+    const hex = new THREE.Color(color).getHexString()
+    const key = `furniture|${finish}|${hex}`
+    const cached = matCache.get(key)
+    if (cached) return cached
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 128
+    const context = canvas.getContext('2d')!
+    context.fillStyle = `#${hex}`
+    context.fillRect(0, 0, 128, 128)
+    for (let line = 0; line < 128; line += finish === 'upholstery' ? 6 : 11) {
+      context.strokeStyle = finish === 'marble'
+        ? 'rgba(255,255,255,0.28)'
+        : finish === 'rattan' ? 'rgba(54,32,17,0.27)' : 'rgba(28,17,12,0.22)'
+      context.lineWidth = finish === 'marble' ? 1.5 : 2
+      context.beginPath()
+      context.moveTo(0, line)
+      context.bezierCurveTo(38, line - 8, 82, line + 8, 128, line + (line % 3 - 1) * 5)
+      context.stroke()
+    }
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+    texture.repeat.set(finish === 'upholstery' ? 2 : 1.25, finish === 'upholstery' ? 2 : 1.25)
+    const material = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, map: texture, bumpMap: texture,
+      bumpScale: finish === 'marble' ? 0.012 : 0.035,
+      roughness: finish === 'marble' ? 0.18 : finish === 'upholstery' ? 0.88 : 0.56,
+      clearcoat: finish === 'marble' ? 0.65 : finish === 'walnut' ? 0.2 : 0,
+      clearcoatRoughness: 0.22, envMapIntensity: 0.7,
+    })
+    matCache.set(key, material)
+    disposables.push(texture, material)
+    return material
+  }
+
   // One shared radial sprite for every halo in the room.
   const haloTex = (() => {
     const canvas = document.createElement('canvas')
@@ -187,6 +224,7 @@ export function createRoomKit(
     setLabels: fabrication.setLabels,
     model: (id, size) => models.model(id, size),
     mat,
+    furniture,
     box: (w, h, d, material) => new THREE.Mesh(geo(`b${w}|${h}|${d}`, () => new THREE.BoxGeometry(w, h, d)), material),
     rbox: (w, h, d, r, material) => new THREE.Mesh(geo(`r${w}|${h}|${d}|${r}`, () => new RoundedBoxGeometry(w, h, d, rich ? 3 : 1, r)), material),
     cyl: (rTop, rBot, h, material, seg = 18, open = false) =>
@@ -339,7 +377,55 @@ const LEVEL_DISPLAY_ITEMS: RoomItemSpec[] = [
       return group
     },
   })),
+  ...[11, 22, ...Array.from({ length: 21 }, (_, index) => index + 30)].map((level, index): RoomItemSpec => ({
+    id: level < 30 ? `level_furniture_${String(level).padStart(2, '0')}` : `prestige_level_furniture_${level}`,
+    category: (['seating', 'desk', 'nature', 'light', 'tech', 'seating'] as RoomItemCategory[])[index % 6],
+    placement: 'floor', radius: 0.62 + (index % 3) * 0.1, height: 0.92 + (index % 4) * 0.19,
+    tint: ['#557a67', '#bd7653', '#4d7492', '#b49a54', '#8d6680'][index % 5],
+    build: (kit, tint) => buildMilestoneFurniture(kit, index, tint),
+  })),
 ]
+
+function buildMilestoneFurniture(kit: RoomKit, variant: number, tint: THREE.Color): THREE.Group {
+  const group = new THREE.Group()
+  const accent = tint.getHex()
+  const wood = kit.furniture('walnut', 0x76513a)
+  const fabric = kit.furniture('upholstery', accent)
+  const marble = kit.furniture('marble', 0xd6d2c5)
+  const rattan = kit.furniture('rattan', 0xbd8e55)
+  const metal = kit.mat('metal', 0x55616a)
+  const type = variant % 6
+  if (type === 0) {
+    group.add(at(kit.rbox(1.05, 0.18, 0.9, 0.08, fabric), 0, 0.5, 0))
+    group.add(at(kit.rbox(0.95, 0.72, 0.16, 0.07, fabric), 0, 0.88, 0.36))
+    for (const x of [-0.4, 0.4]) for (const z of [-0.3, 0.3]) group.add(at(kit.cyl(0.045, 0.045, 0.55, wood), x, 0.275, z))
+  } else if (type === 1) {
+    group.add(at(kit.rbox(1.2, 0.1, 0.66, 0.035, marble), 0, 0.78, 0))
+    for (const x of [-0.48, 0.48]) for (const z of [-0.22, 0.22]) group.add(at(kit.cyl(0.04, 0.055, 0.78, metal), x, 0.39, z))
+    group.add(at(kit.rbox(0.46, 0.1, 0.28, 0.025, wood), 0, 0.18, 0))
+    group.add(at(kit.cyl(0.07, 0.1, 0.28, kit.mat('gloss', accent), 16), 0.25, 0.97, 0))
+  } else if (type === 2) {
+    group.add(at(kit.cyl(0.46, 0.55, 0.42, rattan, 24), 0, 0.21, 0))
+    group.add(flat(at(kit.tor(0.465, 0.03, kit.mat('gloss', accent)), 0, 0.41, 0)))
+    group.add(at(kit.sph(0.34, kit.mat('leaf', [0x5a936a, 0x74a85c, 0x3b805f][variant % 3])), 0, 0.77, 0))
+    group.add(at(kit.sph(0.22, kit.mat('leaf', 0x4c9562)), 0.23, 0.91, 0.06))
+  } else if (type === 3) {
+    group.add(at(kit.cyl(0.38, 0.48, 0.12, marble, 24), 0, 0.06, 0))
+    group.add(at(kit.cyl(0.045, 0.065, 0.86, metal), 0, 0.49, 0))
+    group.add(at(kit.rbox(0.68, 0.3, 0.46, 0.08, fabric), 0, 0.94, 0))
+    group.add(at(kit.halo(0.86, accent, 0.22), 0, 0.94, 0))
+  } else if (type === 4) {
+    group.add(at(kit.rbox(0.92, 0.15, 0.48, 0.035, wood), 0, 0.82, 0))
+    for (const x of [-0.34, 0.34]) group.add(at(kit.rbox(0.1, 0.82, 0.4, 0.03, wood), x, 0.41, 0))
+    group.add(at(kit.rbox(0.58, 0.36, 0.05, 0.02, kit.mat('emissive', accent)), 0, 1.14, 0.08))
+  } else {
+    group.add(at(kit.rbox(1.1, 0.16, 0.48, 0.04, wood), 0, 0.86, 0))
+    group.add(at(kit.rbox(1.1, 0.66, 0.11, 0.04, rattan), 0, 1.16, 0.16))
+    group.add(at(kit.rbox(1.0, 0.08, 0.42, 0.035, fabric), 0, 0.98, -0.02))
+    for (const x of [-0.46, 0.46]) group.add(at(kit.cyl(0.045, 0.06, 0.86, metal), x, 0.43, 0))
+  }
+  return group
+}
 
 /* ── catalog ────────────────────────────────────────────────────────────────
    Every entry answers "what would a kid actually want in their room?" — the

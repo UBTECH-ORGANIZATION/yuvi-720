@@ -82,9 +82,9 @@ class ProgressionRewardTests(unittest.IsolatedAsyncioTestCase):
     async def test_prestige_rewards_are_generated_through_level_fifty(self) -> None:
         level_35 = progression_rewards.reward_for_level(35)
         self.assertEqual(level_35["sparks"], 100)
-        self.assertEqual(level_35["avatar"], ["prestige_level_frame_35"])
-        self.assertEqual(level_35["room"], ["prestige_room_object_35"])
-        self.assertNotIn("room", progression_rewards.reward_for_level(36))
+        self.assertEqual(level_35["room"], ["prestige_level_furniture_35", "prestige_room_object_35"])
+        self.assertEqual(progression_rewards.reward_for_level(36)["room"], ["prestige_level_furniture_36"])
+        self.assertNotIn("avatar", progression_rewards.reward_for_level(35))
 
 
 if __name__ == "__main__":

@@ -148,7 +148,7 @@ export function YuviRobot3D({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.06
+    renderer.toneMappingExposure = 0.9
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.width = '100%'
@@ -162,6 +162,7 @@ export function YuviRobot3D({
     const scene = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.028).texture
+    scene.environmentIntensity = 0.35
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
@@ -171,7 +172,7 @@ export function YuviRobot3D({
 
     // ── Lighting: soft key + cool fill + two coloured rims (violet / cyan) ──
     scene.add(new THREE.HemisphereLight(0xf4f6ff, 0xa192e6, 0.62))
-    const key = new THREE.DirectionalLight(0xffffff, 1.55)
+    const key = new THREE.DirectionalLight(0xffffff, 1.1)
     key.position.set(2.6, 6.4, 5.6)
     scene.add(key)
     const fill = new THREE.DirectionalLight(0xc7d8ff, 0.42)

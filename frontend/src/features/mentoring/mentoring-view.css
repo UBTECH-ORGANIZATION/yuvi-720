@@ -320,6 +320,17 @@
 .mt-composer > .mt-step-body { flex: 1 1 auto; min-block-size: 0; overflow-y: auto; overscroll-behavior: contain; }
 .mt-composer > .mt-composer__actions { flex: none; margin-block-start: var(--sp-4); padding-block-start: var(--sp-4); border-block-start: 1px solid var(--sp-border); }
 
+/* A 720px-high laptop viewport has enough room for the complete guided flow;
+   reclaim space from the composer chrome before falling back to body scrolling. */
+@media (min-width: 600px) and (max-height: 760px) {
+  .mt-modal.mt-composer { padding-block: var(--sp-5); }
+  .mt-composer__intro { gap: 4px; margin-block-start: 0; }
+  .mt-composer__badge { inline-size: 44px; block-size: 44px; border-radius: 13px; }
+  .mt-composer__sub { line-height: 1.35; }
+  .mt-stepper { margin-block: var(--sp-3); }
+  .mt-composer > .mt-composer__actions { margin-block-start: var(--sp-2); padding-block-start: var(--sp-2); }
+}
+
 /* Guided writing: Yuvi help (layer 1) + my draft (layer 2), visually distinct so
    the child sees what Yuvi asks vs. what actually gets saved. */
 .mt-confirm-backdrop { z-index: 55; }
