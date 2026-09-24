@@ -174,6 +174,7 @@ async def _stream_visual_tail(
     on_lesson_screen: bool,
     auto_visual: bool = True,
     debug_trace: list[dict[str, str]] | None = None,
+    learner_text: str | None = None,
 ):
     """SSE tail shared by chat + hint/explanation replies: the optional visual.
 
@@ -231,6 +232,7 @@ async def _stream_visual_tail(
                 exchange_id=exchange_id,
             ),
             force_visual=asked_to_see,
+            learner_text=learner_text,
             text_filter=lambda text: safety.screen_output(text, language).text,
             question_context=question_context,
         )
@@ -1481,6 +1483,9 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
                 exchange_id=exchange_id,
                 endpoint="/api/agent/coach/support",
                 user_message=support_prompt.get(language) or support_prompt["he"],
+                # The button's prompt is OUR wording, not the learner's: no
+                # learner words, so no "they want a picture" cue from it.
+                learner_text="",
                 response_text=response_text,
                 language=language,
                 on_lesson_screen=request.surface.screen == "learning_lesson",

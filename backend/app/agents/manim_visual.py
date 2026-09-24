@@ -1416,8 +1416,16 @@ async def plan_manim_visual(
     force_visual: bool = False,
     subject: Optional[str] = None,
     question_context: Optional[str] = None,
+    learner_text: Optional[str] = None,
 ) -> Optional[dict]:
     """Let the Coach choose the visual tool and return a constrained scene.
+
+    ``learner_text`` is what the LEARNER actually said, when ``user_message``
+    is not it (a support button sends our own hint instruction). The "would a
+    picture help" cue is read from the learner's words only: our hint prompt
+    is full of comparison/step vocabulary, and reading the cue from it bought
+    a second strong-tier call after every declined hint (4.3% of dev AI spend
+    was visual planning).
 
     ``force_visual`` (on-demand "show me a visual" button) tells the planner it
     must produce a scene; ``prefer_animation`` steers video vs. still. The final
@@ -1451,10 +1459,17 @@ async def plan_manim_visual(
         {"role": "system", "content": system_content},
         {"role": "user", "content": f"{question_block}<learner_request>{user_message}</learner_request>\n<coach_reply>{assistant_response}</coach_reply>"},
     ]
-    explicit_request = force_visual or bool(_EXPLICIT_VISUAL_REQUEST[lang].search(user_message))
-    semantic_visual = _visual_benefit_signal(f"{user_message}\n{assistant_response}", lang)
-    attempts = 2 if explicit_request or semantic_visual else 1
-    for attempt in range(attempts):
+    learner_words = user_message if learner_text is None else learner_text
+    explicit_request = force_visual or bool(_EXPLICIT_VISUAL_REQUEST[lang].search(learner_words))
+    semantic_visual = bool(learner_words) and _visual_benefit_signal(
+        f"{learner_words}\n{assistant_response}", lang)
+    # A second attempt only where a picture was ASKED for, or where the first
+    # answer was unusable (unparseable/empty). A considered "no visual here"
+    # is an answer, not a failure — retrying it paid twice for the same no.
+    attempts = 2 if explicit_request else 1
+    for attempt in range(2):
+        if attempt >= attempts:
+            break
         request_messages = messages
         if attempt:
             request_messages = [
@@ -1480,6 +1495,9 @@ async def plan_manim_visual(
             # remain available when APIM/model planning is temporarily down.
             print("⚠️ Manim scene planner was unavailable")
             break
+        if not response:
+            attempts = 2          # nothing came back: worth one more try
+            continue
         if response:
             try:
                 planned = sanitize_scene(json.loads(response), text_filter, subject)
@@ -1494,6 +1512,7 @@ async def plan_manim_visual(
                     return planned
             except (json.JSONDecodeError, TypeError, ValueError):
                 print("⚠️ Manim tool returned an invalid scene")
+                attempts = 2      # malformed, not a decline: one more try
     if explicit_request or semantic_visual:
         return (
             maths.canonical_function_scene(user_message, lang)
