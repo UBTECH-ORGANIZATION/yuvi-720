@@ -592,18 +592,27 @@ ACTIVENESS_MAP_RULE = {
     "he": (
         "learner_map הוא מה שהתלמיד/ה רואה במפת הפעלנות: כל תחום, המילה שמתארת אותו, מה מחזק אותו "
         "ומה כדאי לעשות. כשנשאלת מה תחום אומר, למה הוא נמוך או איך משפרים אותו — ענה/י מהשורה של אותו "
-        "תחום (ומ-weekly_movement אם יש שורה עליו), בלי ציון מספרי ובלי לנחש סיבות."
+        "תחום (ומ-weekly_movement אם יש שורה עליו), בלי ציון מספרי ובלי לנחש סיבות. "
+        "הרמה הנוכחית וכיוון השינוי השבועי הם שני דברים שונים: תחום יכול להתקדם יפה ובכל זאת לרדת השבוע. "
+        "בשאלה על נקודה אדומה או ירידה, פתח/י בכיוון השינוי שסופק; אל תכחיש/י ירידה בגלל תיאור רמה חיובי. "
+        "ענה/י ב-2–3 משפטים: השינוי, הסיבה הנתמכת בראיות וצעד מעשי אחד. אם חסר מידע על השינוי או הסיבה, אמור/י זאת."
     ),
     "ar": (
         "learner_map هو ما يراه الطالب/ة في خريطة الفاعلية: كل مجال، الكلمة التي تصفه، ما يقوّيه وما يُستحسن فعله. "
         "حين تُسأل ماذا يعني مجال، أو لماذا هو منخفض، أو كيف يُحسَّن — أجب/أجيبي من سطر ذلك المجال (ومن weekly_movement "
-        "إن وُجد سطر عنه)، دون درجة رقمية ودون تخمين أسباب."
+        "إن وُجد سطر عنه)، دون درجة رقمية ودون تخمين أسباب. "
+        "المستوى الحالي واتجاه التغيّر الأسبوعي أمران مختلفان: قد يبقى المجال جيدًا رغم انخفاضه هذا الأسبوع. "
+        "عند السؤال عن نقطة حمراء أو انخفاض، ابدأ/ابدئي باتجاه التغيّر المتاح؛ لا تنفِ الانخفاض بسبب وصف إيجابي للمستوى. "
+        "أجب/أجيبي في جملتين أو ثلاث: التغيّر، سببه المدعوم بالأدلة وخطوة عملية واحدة. اذكر/ي صراحةً إن غابت معلومات التغيّر أو سببه."
     ),
     "en": (
         "learner_map is what the learner sees on their activeness map: each domain, the word describing it, "
         "what strengthens it and the one thing to do. When asked what a domain means, why it is low or how to "
         "improve it, answer from that domain's line (and from weekly_movement if it has a row), with no numeric "
-        "score and no guessed causes."
+        "score and no guessed causes. "
+        "Current level and weekly direction are separate: a domain can still be doing well while declining this week. "
+        "For a red-dot or decline question, start with the supplied direction; never deny a decline because the level label is positive. "
+        "Use 2–3 sentences: the change, its evidence-backed reason, and one practical step. Say when the direction or reason is unavailable."
     ),
 }
 

@@ -1488,12 +1488,22 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const hud = mainContent && avatarRoot && /[?&]perf=1(?:&|$)/.test(window.location.search)
       ? avatarRoot.appendChild(Object.assign(document.createElement('pre'), { className: 'Yuvi-avatar-hud' }))
       : null
+    const hudStage = hud ? avatarRoot?.closest<HTMLElement>('.ys-stage') : null
+    let hudObserver: ResizeObserver | null = null
     if (hud) {
       Object.assign(hud.style, {
         position: 'absolute', insetInlineStart: '8px', insetBlockStart: '8px', zIndex: '20', margin: '0',
         padding: '6px 8px', font: '11px/1.35 ui-monospace, monospace', color: '#dff', background: 'rgba(2,5,24,.72)',
         borderRadius: '6px', pointerEvents: 'none', direction: 'ltr', textAlign: 'left',
       } as Partial<CSSStyleDeclaration>)
+    }
+    if (hud && hudStage) {
+      const positionToolsBelowHud = () => {
+        hudStage.style.setProperty('--ys-perf-tools-top', `${hud.offsetTop + hud.offsetHeight + 8}px`)
+      }
+      hudObserver = new ResizeObserver(positionToolsBelowHud)
+      hudObserver.observe(hud)
+      positionToolsBelowHud()
     }
     const hudFrames: number[] = []
     let hudAt = 0
@@ -2222,6 +2232,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         window.removeEventListener('pointerdown', onAnyInput)
         window.removeEventListener('keydown', onAnyInput)
       }
+      hudObserver?.disconnect()
+      hudStage?.style.removeProperty('--ys-perf-tools-top')
       hud?.remove()
       void audioCtx?.close()
       cancelAnimationFrame(frame)

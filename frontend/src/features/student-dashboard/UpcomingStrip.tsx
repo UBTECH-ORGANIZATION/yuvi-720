@@ -8,6 +8,15 @@ import { activeLessonMinutesRemaining, activeLessonProgressPercent, formatCalend
 
 const ICONS = { task: 'backpack', goal: 'target', meeting: 'teacher', event: 'calendar', lesson: 'book' }
 
+function calendarItemTitle(item: CalendarItem, t: (key: string, params?: Record<string, string | number>) => string) {
+  if (item.kind === 'meeting') {
+    return item.teacher_name
+      ? t('sdash.calendar.meetingWith', { name: item.teacher_name })
+      : t('sdash.calendar.meeting')
+  }
+  return item.title || t('sdash.calendar.untitled')
+}
+
 export function UpcomingStrip({ items }: { items: CalendarItem[] }) {
   const { t, language } = useI18n()
   const reduceMotion = useReducedMotion()
@@ -97,7 +106,7 @@ export function UpcomingStrip({ items }: { items: CalendarItem[] }) {
                     <button type="button" onClick={() => navigate(item.action_route || '/student-dashboard/calendar')}>
                       <span className="sd-upcoming__icon" aria-hidden="true"><Icon name={ICONS[item.kind]} size={18} /></span>
                       <span className="sd-upcoming__copy">
-                        <strong dir="auto">{item.title || t('sdash.calendar.untitled')}</strong>
+                        <strong dir="auto">{calendarItemTitle(item, t)}</strong>
                         <small className="sd-upcoming__when"><Icon name="clock" size={12} />{when}</small>
                       </span>
                       <span className="sd-upcoming__open" aria-hidden="true"><Icon name="chevronLeft" size={15} /></span>

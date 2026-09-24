@@ -16,6 +16,7 @@ interface MySubjectsProps {
 const SUBJECT_ICON: Record<string, string> = {
   math: 'calculator',
   science: 'orbit',
+  other: 'book',
 }
 
 type ObjectiveState = 'mastered' | 'inProgress' | 'notStarted'
@@ -64,6 +65,27 @@ function objectiveState(
   return 'notStarted'
 }
 
+function objectivePriority(objective: ObjectiveView) {
+  const stateRank: Record<ObjectiveState, number> = {
+    mastered: 3,
+    inProgress: 2,
+    notStarted: 1,
+  }
+  return stateRank[objective.state] * 101 + objective.percent
+}
+
+function uniqueObjectives(objectives: ObjectiveView[]) {
+  const byTitle = new Map<string, ObjectiveView>()
+  for (const objective of objectives) {
+    const key = objective.title.trim().replaceAll(/\s+/g, ' ').toLocaleLowerCase()
+    const existing = byTitle.get(key)
+    if (!existing || objectivePriority(objective) > objectivePriority(existing)) {
+      byTitle.set(key, objective)
+    }
+  }
+  return [...byTitle.values()]
+}
+
 /**
  * "My subjects" — where the learner stands, by subject and by the learning
  * objectives inside it.
@@ -95,7 +117,7 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
   const objectives = useMemo<ObjectiveView[]>(() => {
     if (!active) return []
     // A payload cached from before these fields shipped must still render.
-    return (active.curriculum ?? []).map((row) => ({
+    const curriculum = (active.curriculum ?? []).map((row) => ({
       id: row.objectiveId,
       title: row.topic,
       percent: row.percent ?? 0,
@@ -103,6 +125,7 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
       needsReview: row.needsReview ?? false,
       ...unitFacts(units, row.objectiveId),
     }))
+    return uniqueObjectives(curriculum)
   }, [active, units])
 
   return (
@@ -163,14 +186,6 @@ export function MySubjects({ subjects, units, onOpenLearning }: MySubjectsProps)
           ) : (
             <>
               <div className="sd-subjects__objectives-head">
-                <button
-                  type="button"
-                  className="sd-subjects__back"
-                  onClick={() => setSelected(null)}
-                >
-                  <Icon name="chevronLeft" size={16} />
-                  <span>{t('sdash.subjects.back')}</span>
-                </button>
                 <h3 dir="auto">{t('sdash.subjects.objectives', { subject: active.name })}</h3>
               </div>
               {objectives.length === 0 ? (

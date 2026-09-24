@@ -16,6 +16,8 @@ export function StudioLaunchButton() {
   const transition = useStudioTransition()
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const [now, setNow] = useState(Date.now())
+  const [expiring, setExpiring] = useState(false)
+  const [expireError, setExpireError] = useState(false)
 
   // The button sits on every learner page; it only ticks while it has a
   // countdown to show (the studio is closed until `available_at`). The time
@@ -35,6 +37,29 @@ export function StudioLaunchButton() {
   const showingActiveStudioTime = activeStudioSeconds !== null && activeStudioSeconds !== undefined
   const displayedSeconds = showingActiveStudioTime ? activeStudioSeconds : secondsUntilAvailable
   const timeLabel = formatStudioClock(displayedSeconds)
+  const canExpire = showingActiveStudioTime && transition?.studioTime?.debug_can_expire === true
+  const timerLabel = canExpire
+    ? t('YuviStudio.time.devExpire').replace('{time}', timeLabel)
+    : t('YuviStudio.time.remainingValue').replace('{time}', timeLabel)
+
+  const handleClick = async () => {
+    if (!showingActiveStudioTime) {
+      openStudio()
+      return
+    }
+    if (!canExpire || expiring) return
+    setExpiring(true)
+    setExpireError(false)
+    try {
+      await transition.expireStudioTime()
+    } catch {
+      setExpireError(true)
+    } finally {
+      setExpiring(false)
+    }
+  }
+
+  useEffect(() => { setExpireError(false) }, [showingActiveStudioTime])
 
   useEffect(() => {
     if (transition?.studioTime?.allowed === false && secondsUntilAvailable === 0) {
@@ -58,19 +83,20 @@ export function StudioLaunchButton() {
   const warmed = useRef(false)
 
   return (
+    <>
     <button
       ref={buttonRef}
-      className={`studio-launch${transition?.isOpen ? ' is-active' : ''}`}
+      className={`studio-launch${showingActiveStudioTime ? ' is-active' : ''}`}
       type="button"
-      disabled={!showingActiveStudioTime && transition?.studioTime?.allowed === false}
+      disabled={expiring || (showingActiveStudioTime ? !canExpire || activeStudioSeconds <= 0 : transition?.studioTime?.allowed === false)}
       data-tour="learner.studio"
       title={showingActiveStudioTime
-        ? t('YuviStudio.time.remainingValue').replace('{time}', timeLabel)
+        ? timerLabel
         : secondsUntilAvailable ? t('YuviStudio.time.availableIn').replace('{time}', timeLabel) : t('YuviStudio.subtitle')}
       aria-label={showingActiveStudioTime
-        ? t('YuviStudio.time.remainingValue').replace('{time}', timeLabel)
+        ? timerLabel
         : secondsUntilAvailable ? t('YuviStudio.time.availableIn').replace('{time}', timeLabel) : `${t('YuviStudio.title')} — ${t('YuviStudio.launcher')}`}
-      onClick={openStudio}
+      onClick={() => void handleClick()}
       onPointerEnter={warmStudio}
       onFocus={warmStudio}
       onTouchStart={warmStudio}
@@ -78,7 +104,9 @@ export function StudioLaunchButton() {
       <span className="studio-launch__head" aria-hidden="true">
         <YuviHeadIcon />
       </span>
-      <span className="studio-launch__label">{showingActiveStudioTime || secondsUntilAvailable ? timeLabel : t('YuviStudio.title')}</span>
+      <span className="studio-launch__label">{showingActiveStudioTime ? <bdi>{canExpire ? `DEV ${timeLabel}` : timeLabel}</bdi> : t('YuviStudio.title')}</span>
     </button>
+    {expireError && <span role="alert">{t('YuviStudio.time.devExpireFailed')}</span>}
+    </>
   )
 }

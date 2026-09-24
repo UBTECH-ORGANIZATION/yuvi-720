@@ -3,7 +3,7 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStudioDesign } from './useStudioDesign'
 import { navigate } from '../../app/router'
-import { enterStudio, getStudioTime, leaveStudio, type StudioTimeBudget } from '../../services/api'
+import { enterStudio, expireStudioTime, getStudioTime, leaveStudio, type StudioTimeBudget } from '../../services/api'
 import '../../styles/yuvi-avatar-canvas.css'
 
 /* This provider wraps the whole app, but the studio it can open is a Three.js
@@ -24,6 +24,7 @@ interface StudioTransitionValue {
   enterStudio: () => Promise<StudioTimeBudget>
   leaveStudio: () => Promise<StudioTimeBudget | null>
   refreshStudioTime: () => Promise<StudioTimeBudget | null>
+  expireStudioTime: () => Promise<void>
   studioTime: StudioTimeBudget | null
   activeStudioRemainingSeconds: number | null
   setActiveStudioRemainingSeconds: (seconds: number | null) => void
@@ -97,6 +98,12 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
     setStudioTime(next)
     setActiveStudioRemainingSeconds(next.allowed ? next.remaining_seconds : null)
     return next
+  }, [])
+
+  const expireActiveStudioTime = useCallback(async () => {
+    const next = await expireStudioTime()
+    setStudioTime(next)
+    setActiveStudioRemainingSeconds(next.remaining_seconds)
   }, [])
 
   const stopStudioTime = useCallback(async () => {
@@ -256,6 +263,7 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
       enterStudio: startStudioTime,
       leaveStudio: stopStudioTime,
       refreshStudioTime,
+      expireStudioTime: expireActiveStudioTime,
       studioTime,
       activeStudioRemainingSeconds,
       setActiveStudioRemainingSeconds,

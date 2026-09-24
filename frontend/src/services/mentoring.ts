@@ -7,6 +7,13 @@ import type { XpAwardReceipt } from './progression'
 
 export type GoalProgressStage = 'chosen' | 'started' | 'progressed' | 'summarized'
 
+export interface MentoringGoalProgress {
+  kind: string
+  target: number
+  count: number
+  met: boolean
+}
+
 /** One goal agreed in a mentoring conversation, with its own attributes. */
 export interface MentoringGoal {
   id?: string
@@ -22,6 +29,10 @@ export interface MentoringGoal {
   reward_value?: number
   /** Yuvi's one-line reason for that price, shown to the learner. */
   reward_why?: string
+  /** Present only when this goal is measured from platform activity. */
+  progress?: MentoringGoalProgress | null
+  approved_by?: string | null
+  approved_at?: string | null
 }
 
 /** A documented conversation (the object of record) plus the goals set in it. */

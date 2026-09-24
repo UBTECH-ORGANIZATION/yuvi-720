@@ -36,6 +36,17 @@ const studioHelp = read('frontend/src/features/Yuvi-studio/panel/StudioHelp.tsx'
 const css = read('frontend/src/styles/Yuvi-studio.css')
 const he = JSON.parse(read('locales/he.json')) as Record<string, string>
 
+test('performance HUD places room controls below its responsive height only while mounted', () => {
+  assert.match(avatar, /const hudStage = hud \? avatarRoot\?\.closest<HTMLElement>\('\.ys-stage'\) : null/)
+  assert.match(avatar, /if \(hud && hudStage\)/)
+  assert.match(avatar, /hud\.offsetTop \+ hud\.offsetHeight \+ 8/)
+  assert.match(avatar, /new ResizeObserver\(positionToolsBelowHud\)/)
+  assert.match(avatar, /hudObserver\?\.disconnect\(\)/)
+  assert.match(avatar, /hudStage\?\.style\.removeProperty\('--ys-perf-tools-top'\)/)
+  assert.match(css, /inset-block-start: var\(--ys-perf-tools-top, 16px\)/)
+  assert.match(css, /\.ys-stage \.Yuvi-avatar-hud \{[^}]*max-inline-size: calc\(100% - 16px\);[^}]*white-space: pre-wrap; overflow-wrap: anywhere;/)
+})
+
 test('only the studio takes the browser gestures away', () => {
   // The same component draws the floating companion inside scrollable pages.
   // A blanket `touch-action: none` would trap the page under a small robot.
@@ -159,7 +170,7 @@ test('a first visit gets a five-step welcome that teaches catalog furniture plac
   assert.match(studio, /tutorialArmed\.current = false[\s\S]{0,260}\[user\?\.user_id\]/)
   assert.match(studio, /if \(!roomState\.room\.introDone\) \{ setIntroScene\(0\); return \}/)
   assert.doesNotMatch(studio, /setTutorial\(/)
-  assert.match(studio, /lockRoam=\{\(!visitorRoom && mode !== 'roam'\) \|\| gamingRoomTitleGuiding \|\| gamingRoomTitlePrompt \|\| introScene !== null \|\| travelPhase !== 'idle'\}/)
+  assert.match(studio, /lockRoam=\{timeExpired \|\| \(!visitorRoom && mode !== 'roam'\) \|\| gamingRoomTitleGuiding \|\| gamingRoomTitlePrompt \|\| introScene !== null \|\| travelPhase !== 'idle'\}/)
   assert.match(studio, /<StudioWelcome/)
   assert.match(studio, /await roomState\.completeIntro\(\)/)
   assert.match(studio, /const \[introAvatarChanged, setIntroAvatarChanged\] = useState\(false\)/)
@@ -209,6 +220,8 @@ test('placing a station shows a hologram of it as well as its valid placement ri
   assert.match(labRoom, /const ghostWireOkMat = track\(new THREE\.MeshBasicMaterial\(\{\s*\n?\s*color: CYAN, wireframe: true/)
   assert.match(labRoom, /station === 'avatar'[\s\S]{0,180}platform\.clone\(true\)/)
   assert.match(labRoom, /station === 'room' \? makeHologram\(bench\.clone\(true\)\)/)
+  assert.match(labRoom, /station === 'explore' && explore \? makeHologram\(withoutLights\(explore\.clone\(true\)\)\)/)
+  assert.match(labRoom, /station === 'mission' && mission \? makeHologram\(withoutLights\(mission\.clone\(true\)\)\)/)
   // Validity recolours the WHOLE hologram, not only the ring.
   assert.match(labRoom, /ghostRing\.material = valid \? ghostRingOkMat : ghostRingBadMat/)
   assert.match(labRoom, /for \(const mesh of ghostSolids\) mesh\.material = mat/)

@@ -106,7 +106,6 @@
    objectives sit at the inline-end, subjects at the inline-start. */
 .sd-subject-row__go { flex: 0 0 auto; color: var(--sp-ink-400); }
 [dir="ltr"] .sd-subject-row__go { transform: scaleX(-1); }
-[dir="rtl"] .sd-subjects__back .sp-icon { transform: scaleX(-1); }
 
 /* ── Objectives column ──────────────────────────────────────────────────── */
 .sd-subjects__objectives-head {
@@ -123,22 +122,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sd-subjects__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex: 0 0 auto;
-  padding: 5px 11px 5px 8px;
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: transparent;
-  color: var(--sp-primary-700);
-  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
-  cursor: pointer;
-}
-.sd-subjects__back:hover { border-color: rgba(111, 91, 255, .34); }
-.sd-subjects__back:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
-
 .sd-subjects__prompt {
   display: grid;
   place-content: center;
@@ -249,4 +232,3 @@
 [data-theme='dark'] .sd-subject-row__chip.is-advanced { background: rgba(34, 181, 115, .2); color: #7fe3b4; }
 [data-theme='dark'] .sd-subject-row__chip.is-starting { background: rgba(214, 216, 245, .1); color: rgba(214, 216, 245, .7); }
 [data-theme='dark'] .sd-objective__bar { background: rgba(214, 216, 245, .12); }
-[data-theme='dark'] .sd-subjects__back { border-color: rgba(159, 122, 254, .3); color: #d8d1ff; }

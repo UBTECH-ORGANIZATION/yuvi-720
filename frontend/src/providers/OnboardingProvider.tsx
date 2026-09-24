@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { useRoute } from '../app/router'
 import { getLearnerState } from '../services/api'
 import { useAuth } from './AuthProvider'
@@ -26,6 +27,9 @@ interface OnboardingContextValue {
      burning that on a dropped request would cost a child their first run. */
   verified: boolean
   refresh: () => void
+  /* The server just confirmed completion: open the gate now, without waiting
+     for the next state read, or it bounces the learner back to /results. */
+  markDone: () => void
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null)
@@ -42,6 +46,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [reloadKey, setReloadKey] = useState(0)
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), [])
+  const markDone = useCallback(() => {
+    // Sync: navigate()'s popstate update is discrete and would otherwise render first.
+    flushSync(() => {
+      setStage('done')
+      setVerified(true)
+    })
+  }, [])
 
   // Re-check on every navigation until onboarding is finished, so completing a
   // step immediately unlocks the next one. Once 'done' this stops firing, so a
@@ -79,7 +90,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [learnerId, reloadKey, key])
 
   return (
-    <OnboardingContext.Provider value={{ stage, verified, refresh }}>{children}</OnboardingContext.Provider>
+    <OnboardingContext.Provider value={{ stage, verified, refresh, markDone }}>{children}</OnboardingContext.Provider>
   )
 }
 

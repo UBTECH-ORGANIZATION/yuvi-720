@@ -15,7 +15,7 @@ import { useI18n } from '../i18n/I18nProvider'
 import { useNotifications } from '../providers/NotificationsProvider'
 import { useOptionalTeacherRoster } from '../providers/TeacherRosterProvider'
 import { listNotifications, type AppNotification } from '../services/notifications'
-import { Icon } from './primitives'
+import { Hint, Icon } from './primitives'
 import './notification-bell.css'
 import { formatDay } from '../i18n/dates'
 
@@ -91,19 +91,24 @@ export function NotificationBell() {
 
   return (
     <div className="notif" ref={panelRef}>
-      <button
-        type="button"
-        className="notif__bell"
-        aria-expanded={open}
-        aria-label={t('notif.title')}
-        onClick={() => setOpen((value) => !value)}
-        data-tour="notifications.bell"
+      <Hint
+        className="notif__hint"
+        text={t('notif.unreadCount', { count: unread })}
       >
-        <Icon name="bell" size={18} />
-        {unread > 0 ? (
-          <span className="notif__badge" aria-hidden="true">{unread > 9 ? '9+' : unread}</span>
-        ) : null}
-      </button>
+        <button
+          type="button"
+          className="notif__bell"
+          aria-expanded={open}
+          aria-label={t('notif.title')}
+          onClick={() => setOpen((value) => !value)}
+          data-tour="notifications.bell"
+        >
+          <Icon name="bell" size={18} />
+          {unread > 0 ? (
+            <span className="notif__badge" aria-hidden="true">{unread > 9 ? '9+' : unread}</span>
+          ) : null}
+        </button>
+      </Hint>
 
       {open ? (
         <div className="notif__panel" role="dialog" aria-label={t('notif.title')}>

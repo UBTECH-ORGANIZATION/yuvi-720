@@ -215,18 +215,8 @@ async def _build_dashboard(safe_id: str, lang: str) -> dict:
         except Exception as exc:
             print(f"⚠️ dashboard onboarding seed failed: {exc}")
     events = await get_learner_events(safe_id)
-    # Dynamic activeness: the questionnaire base nudged by recent activity.
-    from app.brain.activeness import EVIDENCE_SPAN_DAYS, effective_activeness
-    from app.agents.tutor_decision import recent_tutor_decisions
-    decisions = await recent_tutor_decisions(
-        safe_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
-    )
-    # Its own fetch, spanning both comparison windows. The shared one above is
-    # capped by row count, which for an active learner stops short of last week.
-    activeness_events = await get_learner_events(
-        safe_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
-    )
-    effective = effective_activeness(brain, activeness_events, decisions)
+    from app.brain.activeness import load_effective_activeness
+    effective = await load_effective_activeness(safe_id, brain)
     # Park the strongest driver per domain on the brain. The companion is a
     # different request with no access to this computation, and without it a kid
     # asking "why did this go down?" gets plausible guesses instead of their week.

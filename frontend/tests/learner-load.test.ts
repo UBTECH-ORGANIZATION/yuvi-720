@@ -19,6 +19,8 @@ const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.m
 const companion = read('../src/providers/CompanionProvider.tsx')
 const lesson = read('../src/features/learning-lesson/LessonPage.tsx')
 const appBar = read('../src/components/LearnerAppBar.tsx')
+const bell = read('../src/components/NotificationBell.tsx')
+const teacherBarCss = read('../src/components/teacher-app-bar.css')
 
 describe('the coach panel survives navigation', () => {
   it('does not reload its history because the route changed', () => {
@@ -51,5 +53,22 @@ describe('the learner app bar remembers its counts across a remount', () => {
     assert.match(appBar, /useState\(\(\) => fresh\('tasks', onTasks\) \?\? 0\)/)
     assert.match(appBar, /if \(fresh\('unread', onChat\) === null\) read\(\)/)
     assert.match(appBar, /if \(fresh\('tasks', onTasks\) === null\) read\(\)/)
+  })
+
+  it('explains task and notification badges on hover and keyboard focus', () => {
+    assert.match(appBar, /<Hint[\s\S]{0,180}sdash\.nav\.openTasks/)
+    assert.match(bell, /<Hint[\s\S]{0,180}notif\.unreadCount/)
+  })
+
+  it('moves teacher scope controls onto their own compact row', () => {
+    assert.match(read('../src/components/AppBar.tsx'), /className="app-bar-leading">\{leading\}/)
+    assert.match(teacherBarCss, /\.app-bar\.is-compact \.app-bar-leading[\s\S]{0,180}grid-row: 2/)
+    assert.match(teacherBarCss, /\.app-bar\.is-compact \.tch-scope[\s\S]{0,180}inline-size: 100%/)
+  })
+
+  it('bounds loaded teacher search controls and overlays in the compact header', () => {
+    assert.match(teacherBarCss, /\.app-bar\.is-compact \.tch-search__btn \{[^}]*max-inline-size: 36px/)
+    assert.match(teacherBarCss, /\.app-bar\.is-compact \.tch-search__btn > span \{\s*display: none/)
+    assert.match(teacherBarCss, /\.app-bar\.is-compact \.notif__panel \{[^}]*inset-block-start: calc\(100% \+ 8px\);[^}]*inset-inline: 16px/)
   })
 })

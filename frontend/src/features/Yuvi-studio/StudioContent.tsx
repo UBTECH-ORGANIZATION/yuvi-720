@@ -195,8 +195,8 @@ export function StudioContent({
   }, [])
 
   useEffect(() => {
-    if (remainingSeconds === 0 && studioTime?.allowed) setTimeExpired(true)
-  }, [remainingSeconds, studioTime?.allowed])
+    if (studioTime && remainingSeconds === 0) setTimeExpired(true)
+  }, [remainingSeconds, studioTime])
 
   const clock = formatStudioClock(remainingSeconds)
 
@@ -1006,7 +1006,7 @@ export function StudioContent({
                   setGamingRoomTitlePrompt(true)
                 })
               } : undefined}
-              lockRoam={(!visitorRoom && mode !== 'roam') || gamingRoomTitleGuiding || gamingRoomTitlePrompt || introScene !== null || travelPhase !== 'idle'}
+              lockRoam={timeExpired || (!visitorRoom && mode !== 'roam') || gamingRoomTitleGuiding || gamingRoomTitlePrompt || introScene !== null || travelPhase !== 'idle'}
               label={t('YuviStudio.avatarAlt')}
             />
           )}

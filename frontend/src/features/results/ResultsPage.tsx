@@ -5,6 +5,7 @@ import { Toast } from '../../components/Toast'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPatch, apiPost, getLearnerState } from '../../services/api'
 import { useBrain } from '../../providers/BrainProvider'
+import { useOnboarding } from '../../providers/OnboardingProvider'
 import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
 import { ProfileGlyph } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
@@ -22,6 +23,8 @@ type ResultsProgress = {
 }
 
 const pendingSummaries = new Map<string, Promise<ProfileSummary>>()
+// Unfinished journeys from an older summary version are regenerated, not resumed.
+const SUMMARY_VERSION = 2
 
 function FeedbackFace({ verdict }: { verdict: ProfileFeedbackVerdict }) {
   const mouth =
@@ -84,6 +87,7 @@ function restoredJourneyIndex(progress: ResultsProgress | null, summary: Profile
 export function ResultsPage() {
   const { language, t } = useI18n()
   const { learnerId } = useBrain()
+  const { markDone } = useOnboarding()
   const [status, setStatus] = useState<Status>('loading')
   const [summary, setSummary] = useState<ProfileSummary | null>(null)
   const [studentName, setStudentName] = useState(t('results.learnerFallback'))
@@ -116,10 +120,13 @@ export function ResultsPage() {
         }
         setStudentName(mapping.student_name || t('results.learnerFallback'))
         const savedProgress = savedResultsProgress(state.profile_summary_progress)
-        if (savedProgress?.language === language) {
-          const restoredIndex = restoredJourneyIndex(savedProgress, savedProgress.summary)
-          summaryRef.current = savedProgress.summary
-          setSummary(savedProgress.summary)
+        const resumable = savedProgress && (savedProgress.completed || savedProgress.summary.version === SUMMARY_VERSION)
+          ? savedProgress
+          : null
+        if (resumable?.language === language) {
+          const restoredIndex = restoredJourneyIndex(resumable, resumable.summary)
+          summaryRef.current = resumable.summary
+          setSummary(resumable.summary)
           setJourneyIndex(restoredIndex)
           setStatus('ready')
           return
@@ -127,7 +134,7 @@ export function ResultsPage() {
         setStatus('analyzing')
         const nextSummary = await requestProfileSummary(learnerId ?? '', language)
         if (cancelled) return
-        const restoredIndex = restoredJourneyIndex(savedProgress, nextSummary)
+        const restoredIndex = restoredJourneyIndex(resumable, nextSummary)
         summaryRef.current = nextSummary
         setSummary(nextSummary)
         setJourneyIndex(restoredIndex)
@@ -307,6 +314,7 @@ export function ResultsPage() {
       }).catch(() => undefined)
     }
     await apiPost('/api/profile-summary/complete', {})
+    markDone()
     navigate('/student-dashboard')
   }
 
@@ -349,7 +357,7 @@ export function ResultsPage() {
                 <>
                   <span className="results-eyebrow"><ProfileGlyph iconKey="spark" />{t('results.hero.eyebrow')}</span>
                   <h1>{t('results.hero.title', { name: studentName })}</h1>
-                  <p className="results-card__lead" dir="auto">{summary?.hero_message}</p>
+                  <p className="results-card__lead" dir="auto">{t('results.hero.verification')}</p>
                 </>
               )}
 

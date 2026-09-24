@@ -79,6 +79,14 @@ async def open_task(launch_id: str, session=Depends(require_learner_session)):
         return _failed(error)
 
 
+@router.post("/{launch_id}/test/start")
+async def start_test(launch_id: str, session=Depends(require_learner_session)):
+    try:
+        return _ok(await attempts.start_test(launch_id, session["sub"]))
+    except AttemptError as error:
+        return _failed(error)
+
+
 @router.post("/{launch_id}/answers")
 async def save_answers(launch_id: str, payload: SaveRequest,
                        session=Depends(require_learner_session)):

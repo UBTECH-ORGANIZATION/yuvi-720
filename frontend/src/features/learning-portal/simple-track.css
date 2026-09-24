@@ -189,6 +189,12 @@
   font-size: var(--sp-fs-sm);
 }
 
+.lt-goal__progress {
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+}
+
 .lt-chip {
   display: inline-flex;
   align-items: center;

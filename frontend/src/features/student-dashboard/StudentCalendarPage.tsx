@@ -18,6 +18,15 @@ function todayInIsrael() {
   }).format(new Date())
 }
 
+function calendarItemTitle(item: CalendarItem, t: (key: string, params?: Record<string, string | number>) => string) {
+  if (item.kind === 'meeting') {
+    return item.teacher_name
+      ? t('sdash.calendar.meetingWith', { name: item.teacher_name })
+      : t('sdash.calendar.meeting')
+  }
+  return item.title || t('sdash.calendar.untitled')
+}
+
 function CalendarEntry({ item }: { item: CalendarItem }) {
   const { t, language } = useI18n()
   const content = (
@@ -27,11 +36,7 @@ function CalendarEntry({ item }: { item: CalendarItem }) {
       </span>
       <span className="student-calendar__itemCopy">
         <small>{t(`sdash.calendar.kind.${item.kind}`)}</small>
-        <strong dir="auto">{
-          item.title || (item.kind === 'meeting'
-            ? t('sdash.calendar.meeting')
-            : t('sdash.calendar.untitled'))
-        }</strong>
+        <strong dir="auto">{calendarItemTitle(item, t)}</strong>
         <span>
           {item.all_day ? t('sdash.calendar.allDay') : formatCalendarTime(item.start_at, language)}
           {item.status !== 'upcoming' && ` · ${t(`sdash.calendar.status.${item.status}`)}`}

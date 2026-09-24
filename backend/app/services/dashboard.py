@@ -18,20 +18,26 @@ from app.services.kata_catalog import (
 )
 from app.services.planner import next_focus, plan_next
 
-# Scope for תשפ"ז — the two Ministry subjects (§8.6).
-DEFAULT_SUBJECTS = ("math", "science")
+# The learner's subject picker also includes the catalogue's additional topics.
+DEFAULT_SUBJECTS = ("math", "science", "other")
 
 SUBJECT_NAMES = {
     "math":    {"he": "מתמטיקה", "en": "Mathematics", "ar": "الرياضيات"},
     "science": {"he": "מדע וטכנולוגיה", "en": "Science & Technology", "ar": "العلوم والتكنولوجيا"},
+    "other": {"he": "נושאים נוספים", "en": "Additional topics", "ar": "مواضيع إضافية"},
     "english": {"he": "אנגלית", "en": "English", "ar": "الإنجليزية"},
 }
-SUBJECT_ICON = {"math": "📐", "science": "🔬"}
+SUBJECT_ICON = {"math": "📐", "science": "🔬", "other": "📚"}
 SUBJECT_GRADIENT = {
     "math": "linear-gradient(135deg, #7c5cff, #9f7afe)",
     "science": "linear-gradient(135deg, #4CC9F0, #4299e1)",
+    "other": "linear-gradient(135deg, #f59e0b, #ea580c)",
 }
-SUBJECT_ICON_BG = {"math": "rgba(124,92,255,0.1)", "science": "rgba(76,201,240,0.12)"}
+SUBJECT_ICON_BG = {
+    "math": "rgba(124,92,255,0.1)",
+    "science": "rgba(76,201,240,0.12)",
+    "other": "rgba(245,158,11,0.12)",
+}
 
 LEVEL_WORDS = {
     "great":    {"he": "בהתקדמות מצוינת", "en": "Progressing excellently", "ar": "تقدّم ممتاز"},
@@ -172,7 +178,7 @@ def _subject_curriculum(
 
 
 def _project_subjects(brain: dict, language: str) -> list[dict[str, Any]]:
-    plan = plan_next(brain)
+    plan = plan_next(brain, subjects=DEFAULT_SUBJECTS)
     out = []
     for subject in DEFAULT_SUBJECTS:
         p = plan.get(subject) or {}

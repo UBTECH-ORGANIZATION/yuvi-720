@@ -259,12 +259,16 @@
 
 .yv-player__limit {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2);
   color: var(--sp-warn-600);
   font-size: var(--sp-fs-sm);
   margin: 0;
 }
+
+.yv-player__clock { display: grid; gap: var(--sp-2); justify-items: start; }
+.yv-player__clockValue { font-variant-numeric: tabular-nums; min-inline-size: 5ch; }
 
 .yv-player__foot {
   display: flex;

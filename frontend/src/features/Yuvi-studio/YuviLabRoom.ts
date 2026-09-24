@@ -2519,12 +2519,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       const station = kind.startsWith('station:') ? (kind.slice(8) as StationId) : null
       const spec = station ? null : roomItemSpec(kind)
       ghostBody = spec ? makeHologram(spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff'))) : null
-      // The walk-in stations are shown at their actual size while being
-      // carried; the globe and the kiosk only show their footprint.
       ghostStation = station === 'avatar'
         ? makeHologram(platform.clone(true))
         : station === 'room' ? makeHologram(bench.clone(true))
-          : station === 'gamelab' ? makeHologram(withoutLights(gamelab.clone(true))) : null
+          : station === 'gamelab' ? makeHologram(withoutLights(gamelab.clone(true)))
+            : station === 'explore' && explore ? makeHologram(withoutLights(explore.clone(true)))
+              : station === 'mission' && mission ? makeHologram(withoutLights(mission.clone(true))) : null
       if (ghostStation) {
         ghostStation.position.set(0, 0, 0)
         ghostStation.rotation.set(0, 0, 0)

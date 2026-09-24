@@ -170,6 +170,7 @@ export interface StudioTimeBudget {
   allowed: boolean
   remaining_seconds: number
   available_at: string
+  debug_can_expire?: boolean
 }
 
 export function getStudioTime() {
@@ -182,6 +183,10 @@ export function enterStudio() {
 
 export function leaveStudio() {
   return apiPost<StudioTimeBudget>('/api/studio-time/leave', {})
+}
+
+export function expireStudioTime() {
+  return apiPost<StudioTimeBudget>('/api/studio-time/debug/expire', {})
 }
 
 export interface CommunityRoom {

@@ -13,6 +13,7 @@ export interface ProfileClaim {
 }
 
 export interface ProfileSummary {
+  version?: number
   hero_message: string
   claims: ProfileClaim[]
 }

@@ -1,9 +1,9 @@
 """Authenticated time-budget endpoints for Yuvi Studio."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.dependencies import require_learner
-from app.services.studio_time import enter_studio, leave_studio, studio_time_status
+from app.services.studio_time import enter_studio, expire_studio_time, leave_studio, studio_time_status
 
 
 router = APIRouter(prefix="/api/studio-time", tags=["studio-time"])
@@ -22,3 +22,13 @@ async def post_studio_enter(learner_id: str = Depends(require_learner)):
 @router.post("/leave")
 async def post_studio_leave(learner_id: str = Depends(require_learner)):
     return await leave_studio(learner_id)
+
+
+@router.post("/debug/expire")
+async def post_studio_expire(learner_id: str = Depends(require_learner)):
+    try:
+        return await expire_studio_time(learner_id)
+    except PermissionError:
+        raise HTTPException(status_code=404, detail="Not found") from None
+    except ValueError:
+        raise HTTPException(status_code=409, detail="No active studio session") from None

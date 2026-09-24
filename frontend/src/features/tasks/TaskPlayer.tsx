@@ -23,6 +23,7 @@ import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { QuestionCard } from './QuestionCard'
 import { SlideDeck, StudyBlock } from './SlideDeck'
+import { TestCountdown } from './TestCountdown'
 import type {
   LearnerQuestion, Slide, SubmitResult, TaskComponent, TaskContent,
 } from '../../services/tasks'
@@ -42,6 +43,8 @@ const ORDER: TaskComponent[] = ['presentation', 'practice', 'test']
 interface Props {
   content: TaskContent
   initialAnswers?: Record<string, unknown>
+  testStartedAt?: string | null
+  onStartTest?: () => Promise<{ test_started_at: string }>
   readOnly?: boolean
   onSave?: (answers: Record<string, unknown>, timeSpent: number) => Promise<unknown> | void
   onSubmit?: (answers: Record<string, unknown>, timeSpent: number) => Promise<SubmitResult | void>
@@ -137,7 +140,7 @@ function questionsIn(content: TaskContent, component: TaskComponent): LearnerQue
 
 export function TaskPlayer({
   content, initialAnswers, readOnly, onSave, onSubmit, result, demo,
-  subject, theme, teacher, slideActions,
+  subject, theme, teacher, slideActions, testStartedAt, onStartTest,
 }: Props) {
   const { t } = useI18n()
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers ?? {})
@@ -398,7 +401,11 @@ export function TaskPlayer({
 
           <div className="yv-player__pacedMain">
             {current === 'test' && content.test?.time_limit_minutes ? (
-              <p className="yv-player__limit">
+              onStartTest ? <TestCountdown
+                minutes={content.test.time_limit_minutes}
+                startedAt={testStartedAt}
+                onStart={onStartTest}
+              /> : <p className="yv-player__limit">
                 <Icon name="clock" size={15} />
                 {t('tasks.test.limit', { n: String(content.test.time_limit_minutes) })}
               </p>

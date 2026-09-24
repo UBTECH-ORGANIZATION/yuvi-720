@@ -6,7 +6,7 @@ import { getMyUnread } from '../services/directMessages'
 import { listMyTasks } from '../services/tasks'
 import { subscribe } from '../services/realtime'
 import { AppBar } from './AppBar'
-import { Icon } from './primitives'
+import { Hint, Icon } from './primitives'
 import { StudioLaunchButton } from './StudioLaunchButton'
 import { WalletChip } from './WalletChip'
 import { NotificationBell } from './NotificationBell'
@@ -134,23 +134,28 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
         <Icon name="book" size={16} />
         <span>{t('sdash.nav.learning')}</span>
       </button>
-      <button
-        className={activeSection === 'tasks' ? 'is-active' : ''}
-        type="button"
-        aria-current={activeSection === 'tasks' ? 'page' : undefined}
-        onClick={() => navigate('/tasks')}
+      <Hint
+        className="learner-app-nav__hint"
+        text={t('sdash.nav.openTasks', { count: String(openTasks) })}
       >
-        <Icon name="backpack" size={16} />
-        <span>{t('sdash.nav.tasks')}</span>
-        {/* Tasks waiting to be done — same contract as the chat badge, so a
-            child knows there is homework without opening the list. */}
-        {openTasks > 0 && (
-          <span className="learner-app-nav__badge"
-                aria-label={t('sdash.nav.openTasks', { count: String(openTasks) })}>
-            {openTasks > 99 ? '99+' : openTasks}
-          </span>
-        )}
-      </button>
+        <button
+          className={activeSection === 'tasks' ? 'is-active' : ''}
+          type="button"
+          aria-current={activeSection === 'tasks' ? 'page' : undefined}
+          onClick={() => navigate('/tasks')}
+        >
+          <Icon name="backpack" size={16} />
+          <span>{t('sdash.nav.tasks')}</span>
+          {/* Tasks waiting to be done — same contract as the chat badge, so a
+              child knows there is homework without opening the list. */}
+          {openTasks > 0 && (
+            <span className="learner-app-nav__badge"
+                  aria-label={t('sdash.nav.openTasks', { count: String(openTasks) })}>
+              {openTasks > 99 ? '99+' : openTasks}
+            </span>
+          )}
+        </button>
+      </Hint>
       <button
         className={activeSection === 'goals' ? 'is-active' : ''}
         type="button"

@@ -10,6 +10,56 @@ from app.brain.context_engine import AGENT_VIEWS, build_coach_bundle
 
 
 class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_map_uses_live_values_and_only_matching_weekly_evidence(self) -> None:
+        scoped_view = {
+            "identity": {"locale": "he"},
+            "profile": {
+                "activeness": {"growth_mindset": 90, "initiative_responsibility": 44},
+                "activeness_drivers": [{"key": "growth_mindset", "tag": "quits_on_fail", "dir": "up"}],
+            },
+            "current_state": {},
+        }
+        effective = {
+            "growth_mindset": {
+                "value": 58, "prior_value": 68, "change_confidence": 1,
+                "drivers": [
+                    {"tag": "quits_on_fail", "dir": "up"},
+                    {"tag": "quits_on_fail", "dir": "down", "facts": {"failed_objs": 2, "failed_objs_prior": 1}},
+                ],
+            },
+            "initiative_responsibility": {"value": 51, "prior_value": 51, "change_confidence": 1, "drivers": []},
+        }
+        with (
+            patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
+            patch("app.brain.activeness.load_effective_activeness", new=AsyncMock(return_value=effective)) as load,
+            patch("app.services.events.get_recent_events", new=AsyncMock(return_value=[])),
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock()),
+        ):
+            bundle = await build_coach_bundle("learner-pseudonym", {"screen": "student_dashboard"})
+
+        load.assert_awaited_once_with("learner-pseudonym", scoped_view)
+        rendered = _render_context(bundle)
+        self.assertIn("תפיסת צמיחה: מתקדם/ת יפה — שינוי בשבוע האחרון: ירידה", rendered)
+        self.assertIn("יוזמה ואחריות: מתקדם/ת יפה — ללא שינוי בשבוע האחרון", rendered)
+        self.assertEqual(len(bundle["weekly_movement"]), 1)
+        self.assertIn("תפיסת צמיחה: ירידה", bundle["weekly_movement"][0])
+        self.assertNotIn("90", rendered)
+        self.assertNotIn("68", rendered)
+        self.assertNotIn("58", rendered)
+
+    async def test_live_map_failure_does_not_reuse_stale_trend(self) -> None:
+        scoped_view = {"profile": {"activeness": {"growth_mindset": 90},
+                                  "activeness_drivers": [{"key": "growth_mindset", "tag": "quits_on_fail", "dir": "up"}]}}
+        with (
+            patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
+            patch("app.brain.activeness.load_effective_activeness", new=AsyncMock(side_effect=RuntimeError("unavailable"))),
+            patch("app.services.events.get_recent_events", new=AsyncMock(return_value=[])),
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock()),
+        ):
+            bundle = await build_coach_bundle("learner-pseudonym", {"screen": "student_dashboard"})
+        self.assertEqual(bundle["activeness_map"], [])
+        self.assertEqual(bundle["weekly_movement"], [])
+
     async def test_bundle_uses_scoped_non_identifying_adaptation_signals(self) -> None:
         scoped_view = {
             "identity": {"locale": "he"},
