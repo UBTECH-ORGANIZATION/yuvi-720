@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type Context, type ReactNode } from 'react'
 import { getLearnerState, updateLearnerState } from '../services/api'
 import heMessages from '../../../locales/he.json'
 import enMessages from '../../../locales/en.json'
@@ -23,7 +23,15 @@ const bundledMessages: Record<Language, Messages> = {
   en: enMessages,
   ar: arMessages
 }
-const I18nContext = createContext<I18nContextValue | null>(null)
+const I18nContext: Context<I18nContextValue | null> = (
+  import.meta.hot?.data.i18nContext as Context<I18nContextValue | null> | undefined
+) ?? createContext<I18nContextValue | null>(null)
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data) => {
+    data.i18nContext = I18nContext
+  })
+}
 
 function timeoutSignal(ms: number) {
   const controller = new AbortController()
