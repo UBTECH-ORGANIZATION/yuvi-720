@@ -238,7 +238,8 @@ async def main_async(args) -> int:
     (out / "index.html").write_text(PAGE.format(
         stamp=stamp, census=html.escape(census_text) or "—", sections="".join(sections)),
         encoding="utf-8")
-    shutil.rmtree(out / "dumps", ignore_errors=True)   # vendor text: not kept
+    if not args.keep_dumps:
+        shutil.rmtree(out / "dumps", ignore_errors=True)   # vendor text: not kept
     print(f"→ {out / 'index.html'} ({len(sections)} screens)")
     return 0
 
@@ -250,6 +251,8 @@ def main() -> int:
     parser.add_argument("--no-vision", action="store_true",
                         help="skip the graphics pass (decorative images stay pointable)")
     parser.add_argument("--max-vision-calls", type=int, default=12)
+    parser.add_argument("--keep-dumps", action="store_true",
+                        help="keep the walker dumps (local debugging only)")
     return asyncio.run(main_async(parser.parse_args()))
 
 

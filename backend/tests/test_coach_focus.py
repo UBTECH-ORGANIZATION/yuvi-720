@@ -239,6 +239,9 @@ class FromTheAuditGallery(_WithCatalog):
     def test_an_uncaptured_stem_points_at_the_captured_prompt_line(self):
         frame, _ = self.resolve(trigger="question_intro")
         self.assertEqual((frame["object_id"], frame["precision"]), ("txt:1", "exact"))
+        self.assertEqual((frame["kind"], frame["label"], frame["region"]), ("stem", "השאלה", "question"))
+        frame, _ = self.resolve(message="לא הבנתי את השאלה", query_intent="learning_help")
+        self.assertEqual(frame["object_id"], "txt:1")
 
     def test_a_fill_in_screen_never_invents_catalog_options(self):
         current = _current(recent_events=[

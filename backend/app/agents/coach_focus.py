@@ -35,7 +35,7 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Optional
 
 #: Which catalog kinds a legacy (v7) region stands for.
@@ -261,7 +261,11 @@ def _stem(objects: list[FocusObject], qid: str) -> Optional[FocusObject]:
     prompt = next((o for o in objects if o.kind == "text" and o.role == "instruction"
                    and o.geometry and o.label != _KIND_LABEL_HE.get("stem")
                    and "כותרת" not in (o.label or "")), None)
-    return prompt or stem
+    if prompt is None:
+        return stem
+    # Standing in for the question, it is called the question — the chip reads
+    # "השאלה", not "ההוראות", and ar/en get their word for "the question".
+    return replace(prompt, kind="stem", label=_KIND_LABEL_HE["stem"])
 
 
 def _teaching(objects: list[FocusObject]) -> Optional[FocusObject]:
@@ -348,7 +352,7 @@ def decide(
                             or _first(objects, ("options",), qid), "typed:my_answer")
         named = _named_kind(message)
         if named:
-            target = _first(objects, (named,), qid)
+            target = _stem(objects, qid) if named == "stem" else _first(objects, (named,), qid)
             if target is None and named == "diagram":
                 target = _first(objects, ("image",), qid)   # a "graph" drawn as a picture
             if target is not None:

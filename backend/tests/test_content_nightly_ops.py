@@ -347,3 +347,19 @@ class TheMigrationIsHonest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GraphicVerdictsCrossScreens(unittest.TestCase):
+    def test_a_picture_described_once_is_known_on_every_screen(self):
+        digest = "sha1:1904c366b9e17545"
+        model = {"c": {"slides": [
+            {"questions": [], "enrichment": {"capture_version": 8, "objects": [],
+             "media": [{"src_digest": digest, "label": "דמות", "decor": True}]}},
+            {"questions": [], "enrichment": {"capture_version": 8, "media": [{"src_digest": digest}],
+             "objects": [{"id": "img:1904c366", "kind": "image", "role": "data",
+                          "label_he": "התמונה"}]}},
+        ]}}
+        pipeline.apply_graphic_labels(model, ["c"])
+        later = model["c"]["slides"][1]["enrichment"]
+        self.assertEqual(later["objects"], [])       # the mascot is not "the picture"
+        self.assertEqual(later["media"], [])

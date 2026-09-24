@@ -802,6 +802,21 @@ def apply_graphic_labels(model: dict[str, dict[str, Any]], browsed: list[str]) -
     picture's vetted label; a picture the model called decoration stops
     being pointable. Labels pass the same checks as every public label."""
     for cid in browsed:
+        # The walker crops a picture once, on the first screen it appears on,
+        # so the vision verdict lands there. The same picture on a later
+        # screen (the lesson mascot on every question) must get it too.
+        verdicts: dict[str, dict[str, Any]] = {}
+        for slide in model.get(cid, {}).get("slides") or []:
+            for m in (slide.get("enrichment") or {}).get("media") or []:
+                if isinstance(m, dict) and m.get("src_digest") and (m.get("label") or m.get("decor")):
+                    verdicts.setdefault(str(m["src_digest"]), m)
+        for slide in model.get(cid, {}).get("slides") or []:
+            for m in (slide.get("enrichment") or {}).get("media") or []:
+                seen = verdicts.get(str(m.get("src_digest") or "")) if isinstance(m, dict) else None
+                if seen and seen is not m:
+                    for key in ("label", "decor", "description"):
+                        if seen.get(key) and not m.get(key):
+                            m[key] = seen[key]
         for slide in model.get(cid, {}).get("slides") or []:
             enrichment = slide.get("enrichment") or {}
             if enrichment.get("capture_version") != 8:
