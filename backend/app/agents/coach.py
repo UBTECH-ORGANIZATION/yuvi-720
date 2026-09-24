@@ -907,6 +907,8 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         # answer to the learner (the hint/explanation rules forbid revealing it).
         f"{scope}_question_correct_answer_DO_NOT_REVEAL: {joined((current.get('question') or {}).get('correct'))}",
         f"{scope}_item_info: {current.get('informationToBot') or '—'}",
+        *([f"{scope}_common_mistakes: {current['common_mistakes']}"]
+          if current.get("common_mistakes") else []),
         # What the slide actually shows (nightly browser pass, fingerprint-
         # gated fresh) — so a free-text "מה רואים על המסך?" is answerable from
         # the screen itself, not just the authored note.
@@ -1339,7 +1341,7 @@ async def run_coach_stream(
     # body IS the answer — same SSE frames, same persistence, zero model calls.
     # Any miss (stale, absent, non-Hebrew, guard-flagged) falls through to the
     # live path below, which is exactly today's behavior.
-    if user_message is None and lang == "he":
+    if user_message is None:
         pregen_kind = (
             trigger if trigger in ("question_intro", "lesson_step_intro",
                                    "lesson_welcome")
@@ -1350,8 +1352,8 @@ async def run_coach_stream(
             _cur.get("component_id")
             or (surface_context or {}).get("component_id") or "")
         entry = None
-        if pregen_kind and pregen_component:
-            from app.services import content_intelligence
+        from app.services import content_intelligence
+        if pregen_kind and pregen_component and lang == "he":
             if pregen_kind == "lesson_welcome":
                 entry = content_intelligence.pregen_text(
                     pregen_kind, pregen_component)
@@ -1378,6 +1380,19 @@ async def run_coach_stream(
                     if _arrival and _arrival != _pointed:
                         entry = content_intelligence.pregen_text(
                             pregen_kind, pregen_component, _item, _arrival)
+        # No committed text (another language, or a screen the nightly has not
+        # reached): the first learner here pays once, everyone after is free.
+        from app.services import shared_texts
+        if entry is None and pregen_kind and pregen_component and shared_texts.enabled():
+            from app.services import kata_catalog
+            _serve_current = dict(_cur)
+            _serve_current.setdefault("component_id", pregen_component)
+            entry = await shared_texts.serve(
+                pregen_kind, lang, _serve_current,
+                lesson_title=kata_catalog.component_title(pregen_component) or "",
+                usage_context=usage_context)
+            if entry is not None:
+                coach_debug_trace.append(debug_trace, f"shared_text:{entry['source']}")
         if entry:
             from app.agents import tutor_decision
             body = safety.screen_output(entry["text"], lang).text.strip()
@@ -1418,8 +1433,9 @@ async def run_coach_stream(
                                     if pointer_requests else None),
                 )
                 coach_debug_trace.append(debug_trace, "persist_conversation_turn")
-                await content_intelligence.record_pregen_hit(
-                    usage_context, pregen_kind, collected)
+                if entry.get("source") != "shared_new":   # that one paid a call
+                    await content_intelligence.record_pregen_hit(
+                        usage_context, pregen_kind, collected)
                 return
             coach_debug_trace.append(debug_trace, "pregen_guard_blocked")
         elif pregen_kind and pregen_component:

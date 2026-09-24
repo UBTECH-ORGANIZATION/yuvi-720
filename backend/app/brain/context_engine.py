@@ -740,6 +740,21 @@ async def build_coach_bundle(
             )
             screen_has_variants = position_assumed or not answered_here
 
+    from app.services import misconceptions
+
+    # Prefer the exact sub-content item the learner is on (Kata keeps per-item
+    # mistake/strategy notes) → sharper hints.
+    item_note = (
+        (provider_component or {}).get("information_by_item", {}).get(item_id)
+        or (provider_component or {}).get("information_to_bot")
+        if provider_component else
+        kata_catalog.information_for_item(component_id, item_id)
+    )
+    common_mistakes = ""
+    if misconceptions.enabled():
+        item_note, common_mistakes = misconceptions.for_bundle(
+            item_note, [{"misconception": e.get("misconception")} for e in recent])
+
     recent_view = [
         {
             "verb": safe_text(e.get("verb"), 60),
@@ -974,17 +989,12 @@ async def build_coach_bundle(
                 "resume_available" if component_id and resume_token else "no_open_task"
             ),
             "pace": safe_text(pace, 30),
-            "informationToBot": safe_text(
-                (
-                    # Prefer the exact sub-content item the learner is on (Kata
-                    # keeps per-item mistake/strategy notes) → sharper hints.
-                    (provider_component or {}).get("information_by_item", {}).get(item_id)
-                    or (provider_component or {}).get("information_to_bot")
-                    if provider_component else
-                    kata_catalog.information_for_item(component_id, item_id)
-                ),
-                900,
-            ),
+            "informationToBot": safe_text(item_note, 900),
+            # The note's "common mistakes" catalog as one line (every mistake by
+            # title, the likely one in full) instead of whatever survived the
+            # 900-character cut — only with COACH_MISCONCEPTION_CATALOG on.
+            **({"common_mistakes": safe_text(common_mistakes, misconceptions.LINE_CAP)}
+               if common_mistakes else {}),
             "question": current_question,
             # WHAT KIND of screen this is. A component is a sequence of פריטים,
             # and only some of them ask something — a video, a reading or a
