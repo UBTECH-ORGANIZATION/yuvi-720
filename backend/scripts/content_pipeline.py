@@ -349,12 +349,16 @@ RETRY_VERDICTS = frozenset({
 })
 
 
-def _run_driver(launch_url: str, dump_path: Path) -> tuple[str, Optional[dict]]:
-    """(verdict, dump) from one browser pass over one lomda."""
+def _run_driver(launch_url: str, dump_path: Path,
+                audit_dir: Optional[Path] = None) -> tuple[str, Optional[dict]]:
+    """(verdict, dump) from one browser pass over one lomda. ``audit_dir``
+    (content_audit.py only, never CI) also saves per-screen screenshots."""
     if not DRIVER.exists():
         return "driver_error", None
     command = ["node", str(DRIVER), "--url", launch_url,
                "--out", str(dump_path), "--max-screens", "40"]
+    if audit_dir is not None:
+        command += ["--audit-dir", str(audit_dir)]
     try:
         completed = subprocess.run(
             command, cwd=REPO_ROOT / "frontend", capture_output=True,
@@ -529,6 +533,7 @@ def _dedupe_visible_text(visible: str, information: str) -> str:
 async def browse_component(
     component_id: str, model: dict[str, Any], dump_dir: Path,
     committed_component: Optional[dict[str, Any]] = None,
+    audit_dir: Optional[Path] = None,
 ) -> dict[str, Any]:
     """Attach enrichment to the model's slides; return the extraction record.
 
@@ -552,7 +557,7 @@ async def browse_component(
     host = re.sub(r"^https?://([^/]+).*$", r"\1", launch_url)
     dump_dir.mkdir(parents=True, exist_ok=True)
     verdict, dump = await asyncio.to_thread(
-        _run_driver, launch_url, dump_dir / f"{component_id}.json")
+        _run_driver, launch_url, dump_dir / f"{component_id}.json", audit_dir)
     if verdict != "ok":
         return {"verdict": verdict, "probed_at": probed_at, "player_host": host,
                 "screens_seen": len((dump or {}).get("screens") or []),

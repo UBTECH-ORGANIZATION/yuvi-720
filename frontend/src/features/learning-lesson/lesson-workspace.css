@@ -203,6 +203,17 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   position: relative;
   background: var(--sp-surface-2);
 }
+/* The canvas holds the iframe and the focus-mark layer together, so a mark's
+   pixels are the iframe's pixels. Normally it IS the wrap; in the tall-frame
+   experiment it takes the screen's natural height and the wrap scrolls. */
+.learning-player-canvas {
+  position: relative;
+  block-size: 100%;
+}
+.learning-player-frame-wrap.is-tall {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .learning-provider-frame {
   display: block;
   inline-size: 100%;

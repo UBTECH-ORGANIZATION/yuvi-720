@@ -370,6 +370,8 @@ def _index_shard(shard: dict[str, Any], records: dict[str, dict[str, Any]]) -> N
             "scope": "component",
             "fingerprint": lomda.get("component_fingerprint"),
             "texts": lomda.get("texts") or {},
+            "player_host": str((lomda.get("extraction") or {}).get("player_host") or ""),
+            "item_ids": [str(s.get("item_id")) for s in lomda.get("slides") or [] if s.get("item_id")],
         }
         for slide in lomda.get("slides") or []:
             iid = str(slide.get("item_id") or "")
@@ -890,6 +892,22 @@ def screen_layout(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
         return None
     layout = raw.get("layout")
     return layout if isinstance(layout, dict) else None
+
+
+def component_layouts(component_id: str) -> dict[str, Any]:
+    """{"player_host", "items": {item_id: {"kind", "natural_h"}}} for the
+    lesson's fresh v8 captures — what the tall-frame experiment sizes its
+    canvas from. Items without a fresh v8 capture are simply absent."""
+    if not enabled():
+        return {"player_host": "", "items": {}}
+    _ensure_loaded()
+    component = _STATE["records"].get(record_key(component_id)) or {}
+    items: dict[str, Any] = {}
+    for item_id in component.get("item_ids") or []:
+        layout = screen_layout(component_id, item_id)
+        if layout and layout.get("kind"):
+            items[item_id] = {"kind": layout["kind"], "natural_h": layout.get("natural_h")}
+    return {"player_host": component.get("player_host") or "", "items": items}
 
 
 def _v8_regions(raw: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:

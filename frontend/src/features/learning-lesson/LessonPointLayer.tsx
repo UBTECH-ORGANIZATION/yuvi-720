@@ -27,12 +27,15 @@ interface LessonPointLayerProps {
   playback: 'frame' | 'tab'
   language: string
   onDismiss: () => void
+  /** Where a drawn mark landed, in layer pixels (the tall frame scrolls it
+   *  into view). */
+  onRect?: (rect: { x: number; y: number; w: number; h: number }) => void
 }
 
 /** Room the badge row needs above a rect before it flips below it. */
 const BADGE_ROW_HEIGHT = 44
 
-export function LessonPointLayer({ pointer, playback, language, onDismiss }: LessonPointLayerProps) {
+export function LessonPointLayer({ pointer, playback, language, onDismiss, onRect }: LessonPointLayerProps) {
   const { t } = useI18n()
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -64,6 +67,12 @@ export function LessonPointLayer({ pointer, playback, language, onDismiss }: Les
       box: `${Math.round(box.w)}x${Math.round(box.h)}`,
     })
   }, [pointer, presentation, box.w, box.h])
+  const rectY = presentation.mode === 'rect' ? presentation.rect.y : null
+  useEffect(() => {
+    if (presentation.mode === 'rect' && onRect) onRect(presentation.rect)
+    // Once per mark and position — not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointer, rectY])
 
   if (presentation.mode === 'none' || (presentation.mode === 'callout' && !label)) {
     return <div ref={layerRef} className="lesson-point-layer" aria-hidden="true" />

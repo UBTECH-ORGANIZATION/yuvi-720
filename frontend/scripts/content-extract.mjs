@@ -788,6 +788,15 @@ const PRIMARY_HEIGHT = 860
 
 for (let index = 0; index < maxScreens; index += 1) {
   const { frame } = await readingFrame()
+  // A gate the walker just filled (a dropdown, a combobox) can leave its list
+  // OPEN: that popup is not the screen, and measuring it recorded transient
+  // "options" over the inputs (09-24 audit, CET PLOT-00001 page 2). Close it.
+  await page.keyboard.press('Escape').catch(() => {})
+  await frame.evaluate(() => {
+    const active = document.activeElement
+    if (active && active !== document.body && typeof active.blur === 'function') active.blur()
+  }).catch(() => {})
+  await page.waitForTimeout(150)
   const captured = await captureScreen(frame).catch(() => null)
   if (!captured) break
   const hash = digest(captured.visible_text)

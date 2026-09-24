@@ -196,9 +196,13 @@ def screen_catalog(current: dict[str, Any]) -> list[FocusObject]:
     captured = _captured_objects(current)
     kinds = {o.kind for o in captured}
     ids = {o.id for o in captured}
+    # A captured answer area (inputs, dropdowns, option rows) IS where the
+    # learner answers: the catalog's answer list must not be re-invented as
+    # "option 1…" on a fill-in screen (seen in the 09-24 audit gallery).
+    has_answer_area = any(o.role == "answer_area" for o in captured)
     return captured + [o for o in _catalog_objects(current)
                        if o.kind not in kinds and o.id not in ids
-                       and not (o.kind == "option" and "options" in kinds)]
+                       and not (o.kind in ("options", "option") and has_answer_area)]
 
 
 # ── the learner's own evidence ───────────────────────────────────────────────
@@ -247,7 +251,17 @@ def _first(objects: list[FocusObject], kinds: tuple[str, ...], qid: str = "") ->
 
 
 def _stem(objects: list[FocusObject], qid: str) -> Optional[FocusObject]:
-    return _first(objects, ("stem",), qid)
+    """The question itself. When the capture could not tell which text block
+    is the question (its stem is catalog-only, no geometry) but the screen's
+    prompt line WAS captured — "כתבו את היחס המצומצם…" came out as
+    instructions in the 09-24 audit — that line is what to point at."""
+    stem = _first(objects, ("stem",), qid)
+    if stem is not None and stem.geometry:
+        return stem
+    prompt = next((o for o in objects if o.kind == "text" and o.role == "instruction"
+                   and o.geometry and o.label != _KIND_LABEL_HE.get("stem")
+                   and "כותרת" not in (o.label or "")), None)
+    return prompt or stem
 
 
 def _teaching(objects: list[FocusObject]) -> Optional[FocusObject]:

@@ -228,6 +228,26 @@ class WithoutAV8Capture(_WithCatalog):
         self.assertEqual((frame["kind"], frame["precision"]), ("stem", "semantic"))
 
 
+class FromTheAuditGallery(_WithCatalog):
+    objects = [
+        {"id": "txt:1", "kind": "text", "role": "instruction", "q": [], "parent": None,
+         "option_index": None, "label": "ההוראות", "geometry": _geo(60, 190, 1150, 30)},
+        {"id": "inp:1", "kind": "input", "role": "answer_area", "q": ["q1"], "parent": None,
+         "option_index": None, "label": "המקום לתשובה 1", "geometry": _geo(880, 240, 70, 36)},
+    ]
+
+    def test_an_uncaptured_stem_points_at_the_captured_prompt_line(self):
+        frame, _ = self.resolve(trigger="question_intro")
+        self.assertEqual((frame["object_id"], frame["precision"]), ("txt:1", "exact"))
+
+    def test_a_fill_in_screen_never_invents_catalog_options(self):
+        current = _current(recent_events=[
+            {"question_id": "q1", "success": False, "response": "ניוטון"}])
+        frame, decision = self.resolve(current, trigger="mistake")
+        self.assertNotIn("option", {o.kind for o in decision.objects})
+        self.assertNotEqual(frame["kind"], "option")
+
+
 class TheModeSwitch(unittest.TestCase):
     def test_pointing_kill_switch_wins(self):
         with mock.patch.dict(os.environ, {"COACH_POINTING_ENABLED": "0",

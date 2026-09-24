@@ -4,6 +4,7 @@
 
 import { apiDelete, apiGet, apiPost } from './api'
 import { subscribe as subscribeStream } from './realtime'
+import type { ScreenFrames } from './tallFrame'
 
 /** Solved label positions, in renderer CANVAS units (x -7.1..7.1, y -4..4).
  *  Produced by the backend's visual_layout solver and shared by every
@@ -518,6 +519,15 @@ export function getCoachSupportState(
   return apiGet<CoachSupportState>(
     `/api/agent/coach/support/state${query ? `?${query}` : ''}`,
     { cache: 'no-store', signal }
+  )
+}
+
+/** Per-screen layouts for the tall-frame experiment (flag + host gated on
+ *  the server). Fetched once per lesson. */
+export function getScreenFrames(componentId: string, signal?: AbortSignal): Promise<ScreenFrames> {
+  return apiGet<ScreenFrames>(
+    `/api/agent/coach/screen-frames?component_id=${encodeURIComponent(componentId)}`,
+    { cache: 'no-store', signal },
   )
 }
 

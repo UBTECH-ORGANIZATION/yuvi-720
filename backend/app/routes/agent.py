@@ -986,6 +986,30 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     )
 
 
+@router.get("/coach/screen-frames")
+async def coach_screen_frames(
+    component_id: str = Query(..., min_length=1, max_length=400),
+    _: str = Depends(require_learner),
+):
+    """The tall-frame experiment's input, fetched once per lesson: per screen,
+    how its layout reacts to the viewport height and its natural content
+    height. ``tall_frame`` is true only with ``LESSON_TALL_FRAME_ENABLED`` on
+    AND the lesson's player host on ``LESSON_TALL_FRAME_HOSTS`` — a host is
+    added only after tall-frame-validate.mjs and a human review pass."""
+    import os
+    from app.services import content_intelligence
+
+    layouts = content_intelligence.component_layouts(component_id)
+    enabled = (os.environ.get("LESSON_TALL_FRAME_ENABLED") or "").strip().lower() in {"1", "on", "true", "yes"}
+    hosts = {h.strip().lower() for h in (os.environ.get("LESSON_TALL_FRAME_HOSTS") or "").split(",") if h.strip()}
+    host = str(layouts.get("player_host") or "").lower()
+    return {
+        "tall_frame": bool(enabled and host and host in hosts),
+        "player_host": host,
+        "items": layouts.get("items") or {},
+    }
+
+
 @router.get("/coach/debug-traces/{exchange_id}")
 async def get_coach_debug_trace(exchange_id: str, _: str = Depends(require_admin)):
     """Read one development-only, content-free Coach execution timeline."""
