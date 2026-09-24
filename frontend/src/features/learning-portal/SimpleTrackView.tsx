@@ -25,6 +25,9 @@ interface TrackUnit {
   lessons: TrackLesson[]
   hasHorizon: boolean
   state: TrackState
+  stepsCompleted: number
+  stepsTotal: number
+  progressPercent: number
 }
 
 interface TrackTopic {
@@ -76,10 +79,15 @@ function buildTrack(units: LearningUnitDTO[]): TrackSummary {
     const title = unit.sub_topic_title || unit.topic_title || unit.sub_topic || unit.title
     const key = unit.sub_topic || title
     const { nodes, hasHorizon } = horizon(unit)
+    const stepsCompleted = unit.steps_completed ?? 0
+    const stepsTotal = unit.steps_total ?? 0
     const entry: TrackUnit = {
       unit,
       hasHorizon,
       state: unitState(unit),
+      stepsCompleted,
+      stepsTotal,
+      progressPercent: stepsTotal > 0 ? Math.round((stepsCompleted / stepsTotal) * 100) : 0,
       lessons: nodes.map((component) => ({
         nodeId: component.path_node_id,
         component,
@@ -139,25 +147,28 @@ export function SimpleTrackView({ subject, units, onOpenLesson }: SimpleTrackVie
   const { t, language } = useI18n()
   const track = useMemo(() => buildTrack(units), [units])
   const [openGoal, setOpenGoal] = useState<string | null>(null)
+  const [openUnitId, setOpenUnitId] = useState<string | null>(null)
 
   useEffect(() => {
     setOpenGoal(null)
+    setOpenUnitId(null)
   }, [subject])
 
   const goal = track.topics.find((topic) => topic.key === openGoal) ?? null
+  const openUnit = goal?.units.find((entry) => entry.unit.id === openUnitId) ?? null
 
-  if (goal) {
+  if (goal && openUnit) {
     return (
       <div className="lt-track" data-track-subject={subject} data-track-goal={goal.key}>
         <header className="lt-head lt-head--goal">
-          <button className="lt-back" type="button" onClick={() => setOpenGoal(null)}>
+          <button className="lt-back" type="button" onClick={() => setOpenUnitId(null)}>
             <Icon name="chevronLeft" size={16} />
-            {t('learning.track.back')}
+            {t('learning.track.backToUnits')}
           </button>
-          <h1 dir="auto">{goal.title}</h1>
+          <h1 dir="auto">{openUnit.unit.title}</h1>
           <p>
-            <span className="lt-chip">{t(`learning.track.topicState.${goal.state}`)}</span>
-            {t('learning.track.topic.lessons', { count: goal.lessonCount })}
+            <span className="lt-chip">{t(`learning.track.topicState.${openUnit.state}`)}</span>
+            {t('learning.track.topic.lessons', { count: openUnit.lessons.length })}
           </p>
         </header>
 
@@ -168,11 +179,10 @@ export function SimpleTrackView({ subject, units, onOpenLesson }: SimpleTrackVie
             the last stop, drawn dashed. Units sit two to a row, each in its
             own cell, with a rule between neighbours. */}
         <div className="lt-units">
-          {goal.units.map((entry) => (
-            <section className="lt-unit" key={entry.unit.id}>
-              {goal.units.length > 1 && <h2 dir="auto">{entry.unit.title}</h2>}
+          <section className="lt-unit">
+            {goal.units.length > 1 && <h2 dir="auto">{goal.title}</h2>}
               <ol className="lt-timeline">
-                {entry.lessons.map((lesson) => {
+                {openUnit.lessons.map((lesson) => {
                   const state = lesson.component.progress_state
                   const locked = state === 'locked'
                   return (
@@ -203,16 +213,74 @@ export function SimpleTrackView({ subject, units, onOpenLesson }: SimpleTrackVie
                     </li>
                   )
                 })}
-                {entry.hasHorizon && (
+                {openUnit.hasHorizon && (
                   <li className="lt-stop lt-stop--horizon">
                     <span className="lt-stop__node" aria-hidden="true"><Icon name="compass" size={14} /></span>
                     <p className="lt-horizon">{t('learning.track.horizon')}</p>
                   </li>
                 )}
               </ol>
-            </section>
-          ))}
+          </section>
         </div>
+      </div>
+    )
+  }
+
+  if (goal) {
+    return (
+      <div className="lt-track" data-track-subject={subject} data-track-goal={goal.key}>
+        <header className="lt-head lt-head--goal">
+          <button className="lt-back" type="button" onClick={() => setOpenGoal(null)}>
+            <Icon name="chevronLeft" size={16} />
+            {t('learning.track.back')}
+          </button>
+          <h1 dir="auto">{goal.title}</h1>
+          <p>
+            <span className="lt-chip">{t(`learning.track.topicState.${goal.state}`)}</span>
+            {t('learning.track.topic.lessons', { count: goal.lessonCount })}
+          </p>
+        </header>
+
+        <section className="lt-goals" aria-labelledby="learning-track-units-title">
+          <div className="lt-goals__head">
+            <h2 id="learning-track-units-title">{t('learning.track.units.title')}</h2>
+            <p>{t('learning.track.units.body')}</p>
+          </div>
+
+          <ul className="lt-goals__grid">
+            {goal.units.map((entry) => (
+              <li key={entry.unit.id}>
+                <button
+                  className={`lt-goal is-${entry.state}`}
+                  type="button"
+                  onClick={() => setOpenUnitId(entry.unit.id)}
+                >
+                  <span className="lt-goal__state" aria-hidden="true">
+                    <Icon name={entry.state === 'completed' ? 'check' : entry.state === 'in_progress' ? 'pulse' : 'target'} size={20} />
+                  </span>
+                  <span className="lt-goal__title" dir="auto">{entry.unit.title}</span>
+                  <span className="lt-goal__meta">
+                    <span className="lt-chip">{t(`learning.track.topicState.${entry.state}`)}</span>
+                    <span>{t('learning.track.topic.lessons', { count: entry.lessons.length })}</span>
+                  </span>
+                  <span className="lt-goal__progress">
+                    {t('learning.track.progress.detail', { completed: entry.stepsCompleted, total: entry.stepsTotal })}
+                  </span>
+                  <span
+                    className="lt-meter"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={entry.progressPercent}
+                    aria-label={t('learning.track.kpi.progress')}
+                  >
+                    <span style={{ '--lt-fill': `${entry.progressPercent}%` } as CSSProperties} />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     )
   }
@@ -276,7 +344,10 @@ export function SimpleTrackView({ subject, units, onOpenLesson }: SimpleTrackVie
               <button
                 className={`lt-goal is-${topic.state}`}
                 type="button"
-                onClick={() => setOpenGoal(topic.key)}
+                onClick={() => {
+                  setOpenGoal(topic.key)
+                  setOpenUnitId(null)
+                }}
               >
                 <span className="lt-goal__state" aria-hidden="true">
                   <Icon name={topic.state === 'completed' ? 'check' : topic.state === 'in_progress' ? 'pulse' : 'target'} size={20} />
