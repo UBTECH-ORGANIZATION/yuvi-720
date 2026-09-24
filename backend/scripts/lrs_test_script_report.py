@@ -340,7 +340,7 @@ def classify(row: dict, ev: Evidence, row_number: int) -> Outcome:
     if tc == "TC-ITM-12":
         return na("לא נתמך: באפליקציה אין דילוג על רכיב (\"אני כבר יודע/ת\"), ולכן האירוע skipped ברמת רכיב אינו נשלח.")
     if tc == "TC-ITM-07":
-        return na("אפיון 1.2 (דוח אינטגרציה 9, 22/09): אין צורך לשלוח הודעת מדיה completed; האירוע אינו נשלח.")
+        return na("לא נשלח — לפי הערת המשרד בדוח אינטגרציה 9 (22/09): אין צורך לשלוח הודעת מדיה completed.")
     if tc in {"TC-ITM-05", "TC-ITM-06", "TC-ITM-07"}:
         wanted = {"TC-ITM-05": "played", "TC-ITM-06": "paused", "TC-ITM-07": "completed"}[tc]
         found = ev.find(actor=content, verb=wanted, where=lambda e: object_type(e) in MEDIA_TYPES or ext_of(e).get("mediaFormat") in MEDIA_TYPES)
@@ -507,6 +507,35 @@ def contract_evidence(ev: Evidence, kind: str, verb: str) -> list[dict]:
     return ev.find(actor=s if kind in {"component", "item", "learning-unit"} else None, activity=kind, verb=verb)
 
 
+def contract_valid(kind: str, verb: str, entry: dict) -> bool:
+    """A contract row cites only a statement that would pass its own test row.
+
+    Integration report 10 (24/09) graded the ids the index named: the newest
+    `questionnaire`/`question` statement on 23/09 was the reflection that the
+    content-IRI rewrite had mislabelled (13:19 UTC, fixed in PR #134), so the
+    index pointed the ministry at the one broken shape in the run."""
+    ctx = (stmt(entry).get("context") or {}).get("contextActivities") or {}
+    type_of = lambda a: short(((a or {}).get("definition") or {}).get("type"))
+    parents = ctx.get("parent") or []
+    if isinstance(parents, dict):
+        parents = [parents]
+    grouping = ctx.get("grouping") or []
+    if kind in {"component / item", "questionnaire", "question", "video / audio / animation (media)"} and not supplier_iri(entry):
+        return False
+    if kind == "questionnaire":
+        return bool(parents) and type_of(parents[0]) == "component"
+    if kind == "question":
+        # The question itself is the deepest grouping entry (report 10, "חסר תיוג של question ב-grouping").
+        if not grouping or grouping[-1].get("id") != object_id(entry) or not has_parent(entry):
+            return False
+        if verb == "answered":
+            return not missing(entry, {"questionId", "questionType", "attemptNumber"})
+        return True
+    if kind == "video / audio / animation (media)":
+        return ext_of(entry).get("mediaFormat") in MEDIA_TYPES
+    return True
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -561,7 +590,8 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=["Object Type", "Verb", "Id", "Note"])
         writer.writeheader()
         for row in template:
-            found = contract_evidence(ev, row["Object Type"], row["Verb"])
+            found = [e for e in contract_evidence(ev, row["Object Type"], row["Verb"])
+                     if contract_valid(row["Object Type"], row["Verb"], e)]
             # The template's Note explains a pair that is not expected to have
             # evidence (not supported, vendor-only); only an unexplained blank
             # is a gap worth listing.
