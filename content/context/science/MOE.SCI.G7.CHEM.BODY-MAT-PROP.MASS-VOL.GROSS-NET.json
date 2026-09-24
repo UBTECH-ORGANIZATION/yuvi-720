@@ -8,7 +8,7 @@
       "component_id": "methodica-science-mass-measure-02-01",
       "title": "בואו נלמד משהו חדש",
       "cognitive_level": "['applying-a-model-or-procedure']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:25:57.288684Z",
       "component_fingerprint": "905980841bc5ec11",
       "extraction": {
@@ -3313,7 +3313,7 @@
       "component_id": "methodica-science-mass-measure-02-02",
       "title": "תרגול #2",
       "cognitive_level": "['applying-a-model-or-procedure']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:26:07.075508Z",
       "component_fingerprint": "d9a795dc01692bd5",
       "extraction": {
@@ -4005,7 +4005,7 @@
       "component_id": "methodica-science-mass-measure-02-03",
       "title": "משימת כיתה",
       "cognitive_level": "['applying-a-model-or-procedure']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:26:12.166035Z",
       "component_fingerprint": "a4517438e538e171",
       "extraction": {
@@ -4076,7 +4076,7 @@
       "component_id": "methodica-science-mass-measure-02-04",
       "title": "בואו נאתגר את עצמנו",
       "cognitive_level": "['analyzing']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:26:13.464618Z",
       "component_fingerprint": "5555b54b0490d68d",
       "extraction": {
@@ -4678,7 +4678,7 @@
       "component_id": "methodica-science-mass-measure-02-05",
       "title": "שאלת שיא",
       "cognitive_level": "['analyzing']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:26:14.724853Z",
       "component_fingerprint": "8364205b827b9809",
       "extraction": {
@@ -4799,7 +4799,7 @@
       "component_id": "methodica-science-mass-measure-02-06",
       "title": "שאלת שיא",
       "cognitive_level": "['evaluating-and-justifying']",
-      "provider": "",
+      "provider": "310",
       "kata_updated_at": "2026-08-16T19:26:15.994335Z",
       "component_fingerprint": "622e19e3b287e1eb",
       "extraction": {
