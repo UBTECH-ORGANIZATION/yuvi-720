@@ -119,7 +119,7 @@ function stateColor(state: LevelState, theme: Theme): THREE.Color {
 
 function rewardGlowColor(item: RewardItem, locked: boolean, theme: Theme): number {
   if (locked) return theme === 'light' ? 0x287191 : 0x77f4ff
-  if (item.kind === 'sparks' || item.kind === 'frame') return theme === 'light' ? 0xb06b00 : 0xf4c95d
+  if (item.kind === 'sparks') return theme === 'light' ? 0xb06b00 : 0xf4c95d
   if (item.kind === 'sound') return theme === 'light' ? 0xa83269 : 0xff8abc
   if (item.kind === 'world') return theme === 'light' ? 0x087f96 : 0x77f4ff
   return theme === 'light' ? 0x5c48ad : 0x9f7afe
@@ -332,11 +332,10 @@ export function createRoadmapScene(container: HTMLElement, options: RoadmapScene
         spin = sprite(sparkTexture, { scale: 1.35 })
         group.add(spin)
         glow = sprite(dotTexture, { scale: 2.6, additive: true, opacity: 0.4, color: COLOR.gold.clone(), depth: false })
-      } else if (item.kind === 'hint' || item.kind === 'frame' || item.kind === 'mood' || item.kind === 'sound') {
-        const level = item.kind === 'frame' ? Number(item.id.match(/(\d+)$/)?.[1]) || undefined : undefined
-        const tile = sprite(glyph(item.kind, level), { scale: 1.3, color: tint })
+      } else if (item.kind === 'hint' || item.kind === 'mood' || item.kind === 'sound') {
+        const tile = sprite(glyph(item.kind), { scale: 1.3, color: tint })
         group.add(tile)
-        glow = sprite(dotTexture, { scale: 2.4, additive: true, opacity: 0.3, color: (item.kind === 'frame' ? COLOR.gold : item.kind === 'sound' ? COLOR.pink : COLOR.purple).clone(), depth: false })
+        glow = sprite(dotTexture, { scale: 2.4, additive: true, opacity: 0.3, color: (item.kind === 'sound' ? COLOR.pink : COLOR.purple).clone(), depth: false })
       } else {
         const url = preRenderedThumb(item.kind === 'avatar' ? 'avatar' : 'room', item.id)
         const picture = url
