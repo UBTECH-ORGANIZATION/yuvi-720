@@ -135,6 +135,18 @@ def _stems(text: str) -> set[str]:
     return {_canon(t) for t in _tokens(text) if _usable(t)}
 
 
+def stems(text: str) -> set[str]:
+    """Public: the comparable stems of ``text`` — the same reduction the guard
+    matches on, so the content pipeline checks what the runtime checks."""
+    return _stems(text)
+
+
+def asserts_an_answer(text: str) -> bool:
+    """Public: does ``text`` say "the answer is …" in any supported language?"""
+    return bool(_ANSWER_ASSERTION.search(text or "")
+                or _ANSWER_ASSERTION.search(normalize(text or "")))
+
+
 class AnswerGuard:
     """Decides whether a produced sentence hands over the current answer."""
 

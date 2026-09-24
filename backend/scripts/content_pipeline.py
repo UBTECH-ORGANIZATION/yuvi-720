@@ -53,6 +53,11 @@ ensure_env_loaded()
 from app.services import content_intelligence as ci  # noqa: E402
 from app.services.ai_usage import UsageContext  # noqa: E402
 
+try:  # imported as `scripts.content_pipeline` (tests) or run as a script
+    from scripts import content_objects as objects_lib  # noqa: E402
+except ImportError:  # pragma: no cover - direct script execution
+    import content_objects as objects_lib  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_DIR = REPO_ROOT / "content" / "context"
 DEFAULT_DUMP_DIR = REPO_ROOT / "backend" / "artifacts" / "content-pipeline"
@@ -439,16 +444,18 @@ async def browse_component(
                 "screens_seen": len((dump or {}).get("screens") or []),
                 "screens_mapped": 0}
 
-    # Ids that are NOT a page's own: the component itself, its catalog items,
-    # its question ids. What remains of a screen's announced object ids is the
-    # player's id for that page — the handle a live learner's navigation
-    # events will carry.
+    # Ids that are NOT a page's own: the component itself and its question
+    # ids. Slide item ids are NOT excluded any more: since 09/2026 a CET item
+    # id IS the player's page id, and excluding it blanked the one signal
+    # that maps a CET screen to its slide exactly.
     not_page_ids = {component_id}
     for slide in model["slides"]:
-        not_page_ids.add(str(slide.get("item_id") or ""))
         for q in slide.get("questions") or []:
             not_page_ids.add(str(q.get("question_id") or ""))
     screens = collapse_stuck_screens(dump["screens"], not_page_ids)
+    if any(screen.get("atoms") is not None for screen in screens):
+        return _enrich_v8(component_id, model, screens, not_page_ids,
+                          committed_component, probed_at, host)
     mapped = map_screens_to_slides(screens, model["slides"])
     # A format-bump recapture replaces the enrichment wholesale, but the
     # vision descriptions in the committed shard are still true for any
@@ -499,7 +506,8 @@ async def browse_component(
             # during the walk) — lets the runtime move the position pointer
             # when a live learner navigates or resumes to it.
             "vendor_page_id": _screen_page_id(screen, not_page_ids),
-            "capture_version": ci.CAPTURE_VERSION,
+            # A walker without the object census yields the v7 format.
+            "capture_version": 7,
             "captured_at": probed_at,
         }
         for m in slide["enrichment"]["media"]:
@@ -516,13 +524,97 @@ async def browse_component(
     }
 
 
+def _strictly_visible_text(screen: dict[str, Any]) -> str:
+    """What the learner can actually read: the census's visible, unoccluded
+    text in reading order. `innerText` also returned flip-card backs and
+    collapsed feedback panels (a leak vector: "לא נכון…")."""
+    atoms = [a for a in screen.get("atoms") or []
+             if a.get("kind") in ("text", "option", "table_row") and a.get("text")]
+    atoms.sort(key=lambda a: a.get("order", 0))
+    seen: list[str] = []
+    for atom in atoms:
+        text = " ".join(str(atom["text"]).split())
+        if any(text in other for other in seen):
+            continue
+        seen = [other for other in seen if other not in text] + [text]
+    return " ".join(seen)[:4000] if seen else " ".join(
+        str(screen.get("visible_text") or "").split())[:4000]
+
+
+def _enrich_v8(
+    component_id: str, model: dict[str, Any], screens: list[dict[str, Any]],
+    not_page_ids: set[str], committed_component: Optional[dict[str, Any]],
+    probed_at: str, host: str,
+) -> dict[str, Any]:
+    """Capture v8: verified screen→slide assignment, then the object catalog."""
+    assigned = objects_lib.assign_screens(
+        screens, model["slides"], lambda screen: _screen_page_id(screen, not_page_ids))
+    decorative = objects_lib.decorative_image_digests(screens)
+    committed_media = {
+        old.get("item_id"): (old.get("enrichment") or {}).get("media") or []
+        for old in (committed_component or {}).get("slides") or []
+    }
+    methods: dict[str, int] = {}
+    for slide in model["slides"]:
+        match = assigned.get(slide["item_id"])
+        if not match:
+            continue
+        screen, method = match["screen"], match["method"]
+        methods[method] = methods.get(method, 0) + 1
+        objects, rejections = objects_lib.build_objects(
+            screen, slide, decorative_digests=decorative)
+        prior_descriptions = {
+            m.get("src_digest"): m.get("description")
+            for m in committed_media.get(slide["item_id"]) or []
+            if isinstance(m, dict) and m.get("src_digest") and m.get("description")
+        }
+        media = [m for m in (screen.get("media") or []) if isinstance(m, dict)
+                 and m.get("src_digest") not in decorative][:12]
+        for entry in media:
+            carried = prior_descriptions.get(entry.get("src_digest"))
+            if carried and not entry.get("description"):
+                entry["description"] = carried
+        slide["enrichment"] = {
+            "visible_text": _dedupe_visible_text(
+                _strictly_visible_text(screen), slide["information_to_bot"]),
+            "media": media,
+            "question_rendering": screen.get("question_rendering"),
+            "mapping": {"method": method, "screen": int(screen.get("index") or 0)},
+            "layout": screen.get("layout") or {"kind": "height_dependent",
+                                               "natural_h": None, "tall": []},
+            "grid": screen.get("grid") or [],
+            "objects": objects,
+            "vendor_page_id": _screen_page_id(screen, not_page_ids),
+            "capture_version": ci.CAPTURE_VERSION,
+            "captured_at": probed_at,
+        }
+        slide["_rejections"] = rejections  # run log only; never written
+    blank_ambiguous_page_ids(model["slides"])
+    mapped = sum(1 for s in model["slides"] if s.get("enrichment"))
+    return {
+        "verdict": "extracted" if mapped == len(model["slides"]) else "partial",
+        "probed_at": probed_at,
+        "player_host": host,
+        "screens_seen": len(screens),
+        "screens_mapped": mapped,
+        "mapping": dict(sorted(methods.items())),
+        "walker_version": 8,
+    }
+
+
 # ── Stage C2: describe the graphics the walk photographed ────────────────────
 
 _VISION_PROMPT = (
-    "אלה צילומים של אלמנטים גרפיים ממסך לימוד בשם \"{title}\". כתוב לכל תמונה "
-    "תיאור קצר בעברית (עד 25 מילים): מה רואים בה בפועל — אנשים, חפצים, "
-    "תרשימים, צירים, נקודות, טקסט מסומן. אל תמציא דבר שלא נראה. החזר JSON "
-    "בלבד: {{\"descriptions\": [\"...\"]}} — תיאור אחד לכל תמונה, באותו סדר."
+    "אלה צילומים של אלמנטים גרפיים ממסך לימוד בשם \"{title}\". לכל תמונה, "
+    "באותו סדר, כתוב בעברית:\n"
+    "- label: שם קצר לדבר עצמו, 2–5 מילים, כמו שמורה היה מצביע עליו "
+    "(\"המאזניים עם שתי התיבות\", \"מערכת הצירים\", \"טבלת המסות\"). בלי "
+    "שיפוט (נכון/שגוי) ובלי לרמוז לתשובה.\n"
+    "- description: תיאור קצר (עד 25 מילים) של מה שרואים בפועל — אנשים, "
+    "חפצים, תרשימים, צירים, נקודות, טקסט מסומן. אל תמציא דבר שלא נראה.\n"
+    "- decor: true רק אם זה קישוט שאינו חלק מהתוכן (דמות מלווה, לוגו, אייקון).\n"
+    "החזר JSON בלבד: {{\"items\": [{{\"label\": \"...\", \"description\": "
+    "\"...\", \"decor\": false}}]}} — פריט אחד לכל תמונה, באותו סדר."
 )
 
 
@@ -564,14 +656,58 @@ async def describe_graphics(
                 max_tokens=500, json_mode=True, model_tier="mini",
             )
             try:
-                rows = json.loads(raw or "{}").get("descriptions") or []
+                payload = json.loads(raw or "{}")
             except (TypeError, ValueError):
-                rows = []
-            for entry, description in zip(entries, rows):
-                text = str(description or "").strip()[:200]
+                payload = {}
+            rows = payload.get("items") or [
+                {"description": d} for d in payload.get("descriptions") or []]
+            # A reply with a different count cannot be paired back by order —
+            # zip would shift every later description onto the wrong picture.
+            if len(rows) != len(entries):
+                continue
+            for entry, row in zip(entries, rows):
+                row = row if isinstance(row, dict) else {"description": row}
+                text = str(row.get("description") or "").strip()[:200]
                 if text and _HEBREW.search(text):
                     entry["description"] = text
+                label = " ".join(str(row.get("label") or "").split())[:40]
+                if label and _HEBREW.search(label):
+                    entry["label"] = label
+                if row.get("decor") is True:
+                    entry["decor"] = True
     return calls
+
+
+def apply_graphic_labels(model: dict[str, dict[str, Any]], browsed: list[str]) -> None:
+    """Carry the vision pass onto the v8 objects: an image object takes its
+    picture's vetted label; a picture the model called decoration stops
+    being pointable. Labels pass the same checks as every public label."""
+    for cid in browsed:
+        for slide in model.get(cid, {}).get("slides") or []:
+            enrichment = slide.get("enrichment") or {}
+            if enrichment.get("capture_version") != 8:
+                continue
+            questions = slide.get("questions") or []
+            guards = [objects_lib.answer_guard.AnswerGuard(
+                q.get("correct") or [], q.get("answers") or []) for q in questions]
+            correct = [str(c) for q in questions for c in q.get("correct") or []]
+            by_digest = {str(m.get("src_digest") or "").replace("sha1:", "")[:8]: m
+                         for m in enrichment.get("media") or []
+                         if isinstance(m, dict) and m.get("src_digest")}
+            kept = []
+            for obj in enrichment.get("objects") or []:
+                if obj.get("kind") == "image":
+                    digest = obj["id"].split(":", 1)[1].split(".", 1)[0]
+                    media = by_digest.get(digest) or {}
+                    if media.get("decor"):
+                        continue
+                    label = str(media.get("label") or "")
+                    if label and objects_lib._label_ok(label, guards, correct):
+                        obj["label_he"] = label
+                kept.append(obj)
+            enrichment["objects"] = kept
+            enrichment["media"] = [m for m in enrichment.get("media") or []
+                                   if not (isinstance(m, dict) and m.get("decor"))]
 
 
 def strip_capture_bytes(model: dict[str, dict[str, Any]]) -> None:
@@ -638,6 +774,19 @@ def _echoes_an_answer(text: str, correct: list[str]) -> bool:
         for answer in correct)
 
 
+#: Sections of a vendor's authored note that describe the ANSWER, not the
+#: content: "סימני שליטה" (what a learner who got it does/answers) and graded
+#: hint ladders. An opener written from them foreshadows the answer.
+_ANSWER_SECTIONS = re.compile(
+    r"(?:סימני\s+שליטה|רמזים\s+מדורגים|התשובה\s+הנכונה)[^\n]*(?:\n(?!\s*\n)[^\n]*)*",
+)
+
+
+def _authored_note(info: str) -> str:
+    """The authored note without its answer-describing sections."""
+    return _ANSWER_SECTIONS.sub(" ", str(info or ""))
+
+
 def collect_generation_targets(
     model: dict[str, dict[str, Any]], committed: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -653,7 +802,10 @@ def collect_generation_targets(
     targets: list[dict[str, Any]] = []
     for cid, comp in model.items():
         old = committed.get(cid) or {}
-        old_slides = {s.get("item_id"): s for s in old.get("slides") or []}
+        # Renamed items keep their texts (fingerprints never included the id):
+        # on 09-24 a Kata rename threw away 444 still-valid question texts.
+        prior = objects_lib.match_prior_slides(comp["slides"], old.get("slides") or [])
+        old_slides = {iid: match[0] for iid, match in prior.items()}
         if _stale((old.get("texts") or {}).get("lesson_welcome"),
                   comp["component_fingerprint"], "lesson_welcome"):
             targets.append({
@@ -673,11 +825,13 @@ def collect_generation_targets(
                 "lesson_title": comp["title"],
                 "screen_title": slide["title"],
                 "screen_role": slide["role"],
-                "authored_note": slide["information_to_bot"][:1200],
+                "authored_note": _authored_note(slide["information_to_bot"])[:1200],
                 "visible_on_screen": str(enrichment.get("visible_text") or "")[:1200],
             }
             wanted_kinds = []
-            if slide["role"] in ("teaching", "mixed"):
+            # Video screens too: the client asks for a step intro on every
+            # non-question screen, so a pure video screen always missed.
+            if slide["role"] in ("teaching", "mixed", "video"):
                 wanted_kinds.append("lesson_step_intro")
             if slide["role"] in ("video", "mixed") and (
                     slide["information_to_bot"] or enrichment.get("visible_text")):
@@ -782,6 +936,7 @@ def build_shards(
     committed: dict[str, dict[str, Any]],
     extractions: dict[str, dict[str, Any]],
     generated: dict[str, dict[str, Any]],
+    decisions: Optional[list[dict[str, Any]]] = None,
 ) -> dict[Path, dict[str, Any]]:
     """Relative shard path → shard document, answers stripped by construction."""
 
@@ -814,14 +969,21 @@ def build_shards(
             "lomdot": [],
         })
         old = committed.get(cid) or {}
-        old_slides = {s.get("item_id"): s for s in old.get("slides") or []}
+        prior = objects_lib.match_prior_slides(comp["slides"], old.get("slides") or [])
         slides_out = []
         for slide in comp["slides"]:
-            old_slide = old_slides.get(slide["item_id"]) or {}
+            old_slide, capture_may_carry = prior.get(slide["item_id"], ({}, False))
             enrichment = slide.get("enrichment")
-            if enrichment is None and old_slide.get("enrichment") \
+            if enrichment is None and capture_may_carry and old_slide.get("enrichment") \
                     and old_slide.get("fingerprint") == slide["fingerprint"]:
-                enrichment = old_slide["enrichment"]  # unchanged slide, keep capture
+                carried = old_slide["enrichment"]
+                ok, reason = objects_lib.reverify_capture(slide, carried)
+                if carried.get("capture_version") in ci.CAPTURE_COMPAT and ok:
+                    enrichment = carried  # unchanged slide (maybe renamed): keep capture
+                elif decisions is not None:
+                    decisions.append({"cid": cid, "iid": slide["item_id"],
+                                      "what": "enrichment", "action": "dropped",
+                                      "reason": reason if not ok else "old capture format"})
             questions_out = []
             old_questions = {q.get("question_id"): q
                             for q in old_slide.get("questions") or []}
@@ -858,6 +1020,13 @@ def build_shards(
             if enrichment:
                 row["enrichment"] = enrichment
             slides_out.append(row)
+        extraction = dict(extractions.get(cid) or old.get("extraction") or {
+            "verdict": "not_attempted", "probed_at": "", "player_host": "",
+            "screens_seen": 0, "screens_mapped": 0,
+        })
+        # Honest record: "extracted 2/2" with zero captures on disk is how a
+        # regression hid for a week. Count what is actually written.
+        extraction["screens_mapped"] = sum(1 for row in slides_out if row.get("enrichment"))
         shard["lomdot"].append({
             "component_id": cid,
             "title": comp["title"],
@@ -865,10 +1034,7 @@ def build_shards(
             "provider": comp["provider"],
             "kata_updated_at": comp["kata_updated_at"],
             "component_fingerprint": comp["component_fingerprint"],
-            "extraction": extractions.get(cid) or old.get("extraction") or {
-                "verdict": "not_attempted", "probed_at": "", "player_host": "",
-                "screens_seen": 0, "screens_mapped": 0,
-            },
+            "extraction": extraction,
             "texts": _texts(f"{cid}||", ci.COMPONENT_TEXT_KINDS,
                             old.get("texts") or {},
                             comp["component_fingerprint"]),
@@ -1051,6 +1217,7 @@ async def run(args: argparse.Namespace) -> int:
             model, to_browse, args.max_vision_calls)
         if vision_calls:
             print(f"→ described graphics in {vision_calls} vision calls")
+        apply_graphic_labels(model, to_browse)
     # A crop that never met the vision model (budget cut, --skip-llm, a
     # rejected row) would otherwise be stamped current and stay blind forever
     # — the bytes are about to be stripped. Re-queue its component: the next

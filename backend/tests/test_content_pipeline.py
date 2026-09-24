@@ -138,8 +138,9 @@ class TheWriteIsIdempotent(unittest.TestCase):
 
     def test_a_real_change_still_lands_with_its_new_stamp(self):
         self._write_with(_model(), self._extraction("2026-09-01T01:00:00Z"), {})
-        changed = self._write_with(
-            _model(), self._extraction("2026-09-08T01:00:00Z", mapped=0), {})
+        rebrowsed = dict(self._extraction("2026-09-08T01:00:00Z"),
+                         verdict="launch_rejected")
+        changed = self._write_with(_model(), rebrowsed, {})
         self.assertTrue(changed)
         shard = json.loads(
             (self.out / "MOE.SCI/MOE.SCI.X.json").read_text(encoding="utf-8"))
