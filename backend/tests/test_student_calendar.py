@@ -115,8 +115,8 @@ class CalendarProjectionTest(unittest.IsolatedAsyncioTestCase):
             student_calendar.mentoring,
             "list_conversations",
             AsyncMock(return_value=[
-                {"id": "m1", "date": "2026-08-16", "meeting_stage": "Start"},
-                {"id": "m2", "date": "2026-08-22", "meeting_stage": "End"},
+                {"id": "m1", "date": "2026-08-16", "meeting_stage": "Start", "teacher_name": "Yuvi"},
+                {"id": "m2", "date": "2026-08-22", "meeting_stage": "End", "teacher_name": "Maya"},
                 {"id": "m3", "date": "2026-08-23", "meeting_stage": "Next"},
             ]),
         ), patch.object(
@@ -135,6 +135,8 @@ class CalendarProjectionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.week_end, date(2026, 8, 22))
         self.assertEqual([item.id for item in result.items], ["meeting:m1", "meeting:m2"])
         self.assertTrue(all(item.status == "completed" for item in result.items))
+        self.assertEqual([item.title for item in result.items], ["", ""])
+        self.assertEqual([item.teacher_name for item in result.items], ["Yuvi", "Maya"])
 
     async def test_week_merges_targeted_events_and_timetable_occurrences(self):
         with patch.object(

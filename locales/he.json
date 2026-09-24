@@ -963,6 +963,7 @@
   "sdash.calendar.eyebrow": "השבוע שלך",
   "sdash.calendar.windowLabel": "חלון היומן",
   "sdash.calendar.meeting": "מפגש ליווי",
+  "sdash.calendar.meetingWith": "מפגש ליווי עם {name}",
   "sdash.calendar.kind.task": "משימה",
   "sdash.calendar.kind.meeting": "מפגש",
   "sdash.calendar.kind.goal": "יעד",

@@ -963,6 +963,7 @@
   "sdash.calendar.eyebrow": "Your week",
   "sdash.calendar.windowLabel": "Calendar window",
   "sdash.calendar.meeting": "Mentoring meeting",
+  "sdash.calendar.meetingWith": "Mentoring meeting with {name}",
   "sdash.calendar.kind.task": "Task",
   "sdash.calendar.kind.meeting": "Meeting",
   "sdash.calendar.kind.goal": "Goal",

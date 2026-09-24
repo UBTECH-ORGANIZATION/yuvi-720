@@ -963,6 +963,7 @@
   "sdash.calendar.eyebrow": "أسبوعك",
   "sdash.calendar.windowLabel": "نافذة التقويم",
   "sdash.calendar.meeting": "لقاء إرشاد",
+  "sdash.calendar.meetingWith": "لقاء إرشاد مع {name}",
   "sdash.calendar.kind.task": "مهمة",
   "sdash.calendar.kind.meeting": "لقاء",
   "sdash.calendar.kind.goal": "هدف",

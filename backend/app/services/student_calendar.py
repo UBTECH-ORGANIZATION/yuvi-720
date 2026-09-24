@@ -167,7 +167,7 @@ def _meeting_item(row: dict) -> CalendarItem | None:
     return CalendarItem(
         id=f"meeting:{meeting_id}",
         kind="meeting",
-        title=str(row.get("meeting_stage") or ""),
+        title="",
         teacher_name=str(row.get("teacher_name")) if row.get("teacher_name") else None,
         start_at=str(row.get("date")),
         all_day=all_day,
