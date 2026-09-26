@@ -18,7 +18,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים עבודה עם נקודות במערכת צירים ועם גיאומטריה של מקבילית.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "f5f743e5e44b1b32",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "ms1f49jb2vjzio407",
@@ -37,7 +45,29 @@
               "question_text": "מקבילית\nנתון כי ABCD היא מקבילית. נתונות הנקודות A(3, 2), B(5, 7) ו־D(11, 2). מצאו את שיעור ה־y של הנקודה C. C(_, )",
               "answers": [],
               "fingerprint": "42689385146aa8d3",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על מקבילית ועל קשרים בין הקודקודים שלה. נסו להיעזר במה שכבר ידוע ולבדוק מה אפשר להסיק ממנו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42689385146aa8d3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להסתכל על הנקודות שנמצאות באותו גובה אופקי ולבדוק אילו שיעורים אפשר להשוות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42689385146aa8d3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזאת משתמשים במבנה של מקבילית ובקשרים בין קודקודים שנמצאים על אותו גובה אופקי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42689385146aa8d3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -58,7 +88,29 @@
               "question_text": "מקבילית\nכעת מצאו את שיעור ה־x של הנקודה C. C(____, 7)",
               "answers": [],
               "fingerprint": "dd69cb8ab6295cf6",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו הזדמנות לתרגל חשיבה על מקבילית ועל קשר בין קודקודים מתאימים. נסו להמשיך מהמידע שכבר מצאתם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dd69cb8ab6295cf6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר לבדוק מהו השינוי האופקי בין שתי נקודות מתאימות, ואז להשוות אותו לצד השני של המקבילית.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dd69cb8ab6295cf6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מחפשים שיעור x בעזרת המבנה של המקבילית והקשר בין העתקות אופקיות של קודקודים מתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dd69cb8ab6295cf6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -79,7 +131,29 @@
               "question_text": "מצאנו את אורך הצלע AD – 8 ס\"מ. כדי לחשב את שטח המקבילית צריך למצוא את אורך הגובה לצלע זו. מה אורך הגובה h? ___ ס\"מ.",
               "answers": [],
               "fingerprint": "6baf8407aece4207",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן משלבים בין גובה של מקבילית לבין חישוב שטח. נסו להשתמש במידע הנתון כדי להתקדם צעד אחד נוסף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6baf8407aece4207",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לזהות מהו **הגובה** המאונך לצלע הנתונה, ורק אחר כך לחשוב על שטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6baf8407aece4207",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים מציאת **גובה** של מקבילית ואז שימוש בנוסחת השטח: צלע כפול הגובה אליה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6baf8407aece4207",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms7gadn014k3ccxhi",
@@ -87,7 +161,15 @@
               "question_text": "מצאו את שטח המקבילית: ___ סמ\"ר",
               "answers": [],
               "fingerprint": "814ccaf0ac188094",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "נסו לזהות איזה נתון צריך להשתמש בו ואיך ממשיכים ממנו לחישוב השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "814ccaf0ac188094",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -107,7 +189,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מגלים איך מיקום במערכת צירים עוזר לתכנן, למדוד ולבדוק מקום ושטח בדרך פשוטה וברורה.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "c2089369760e05d2",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mriro31m3ib50cl4i",
@@ -118,7 +208,15 @@
           "position": 1,
           "fingerprint": "06e3c0328b812296",
           "information_to_bot": "1. מטרת הפריט: להציג את סיפור המסגרת של תכנון יריד במגרש בית הספר באמצעות ריצוף של 1×1 מטר.\n2. רמזים מדורגים: ודאו שהלומד מבין שכל מרצפת מייצגת יחידת אורך/שטח אחת ושבהמשך יידרש למקם דוכנים ולחשב מקום.\n3. טעויות נפוצות: להתייחס לסיפור כשאלה חישובית כבר בשלב זה; להסביר שזהו רק רקע לפעילות.\n4. סימני שליטה: הלומד מבין שהפעילות תעסוק בתכנון מיקומים ובבדיקת מקום לדוכנים.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "נכנסים לסיפור המסגרת של התכנון, ומכינים את הקרקע להמשך הפעילות.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "06e3c0328b812296",
+              "generated_at": "2026-09-26T01:40:17Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -130,7 +228,15 @@
           "position": 2,
           "fingerprint": "cf41feb488abb020",
           "information_to_bot": "1. מטרת הפריט: להציג צורך בחישוב אורך קטע אנכי במערכת צירים ללא מדידה בסרגל.\n2. רמזים מדורגים: שאלו את הלומד אילו שיעורים זהים בשתי הנקודות ואילו משתנים.\n3. טעויות נפוצות: לחשב הפרש בין x ל־y מאותה נקודה במקום להשוות בין שתי נקודות.\n4. סימני שליטה: הלומד מזהה שמדובר בקטע אנכי ושיש להשוות את שיעורי ה־y.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן מתחילים לחשוב על נקודות במערכת צירים ועל הדרך לבדוק מה אפשר ללמוד מהן.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "cf41feb488abb020",
+              "generated_at": "2026-09-26T01:40:17Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -152,7 +258,29 @@
                 "מה השתנה בין שתי הנקודות? שיעור ה־y; מה נשאר קבוע שתי הנקודות? שיעור ה־x; האם השלט אופקי או אנכי? מקביל לציר ה־y"
               ],
               "fingerprint": "dff5e26af7861fe7",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קטע במערכת צירים ועל חשיבה מדויקת בין שתי נקודות. נסו לבדוק מה קבוע ומה משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dff5e26af7861fe7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין שתי הנקודות ולחשוב איזה שיעור נשאר אותו הדבר ואיזה שיעור משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dff5e26af7861fe7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים זיהוי של קטע אנכי וחישוב אורך בעזרת הפרש בין שיעורי נקודות. חשוב להשוות בין הנקודות לפי הצירים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dff5e26af7861fe7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms46wc6z3axfnt5ux",
@@ -164,7 +292,29 @@
                 "7 − 2 = ?"
               ],
               "fingerprint": "9571e59982035088",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה קצרה על בחירת תרגיל מתאים מתוך האפשרויות. נסו להתמקד במה שנדרש כדי לחשב את האורך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9571e59982035088",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להיזכר אילו מספרים מופיעים בשתי הנקודות, ולבדוק איזה חיסור מתאים ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9571e59982035088",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתמקדים בזיהוי מה קבוע ומה משתנה בין שתי נקודות, כדי לבחור את דרך החישוב המתאימה לאורך קטע אנכי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9571e59982035088",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms470i2x2alz2utba",
@@ -172,7 +322,29 @@
               "question_text": "מה אורך השלט הדרוש?",
               "answers": [],
               "fingerprint": "19b0655be0ca6ee8",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "מתרגלים בחירה של דרך חישוב לפי מצב הנתונים. נסו לזהות אילו שיעורים רלוונטיים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "19b0655be0ca6ee8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין שתי הנקודות ולראות איזה שיעור נשאר זהה ואיזה משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "19b0655be0ca6ee8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של קטע אנכי והבנה שהאורך שלו מתקבל מהפרש בין שיעורי ה־y.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "19b0655be0ca6ee8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -185,7 +357,15 @@
           "position": 4,
           "fingerprint": "2a473f68bbdb38d6",
           "information_to_bot": "1. מטרת הפריט: להציג בעיית חישוב אורך שרשרת דגלים בין שני דוכנים.\n2. רמזים מדורגים: בקשו מהלומד לזהות אם הקטע אופקי או אנכי ואילו נקודות/שיעורים רלוונטיים.\n3. טעויות נפוצות: להעריך לפי ציור בלבד בלי להשתמש בהפרשי שיעורים; לערבב בין שיעורי x ו־y.\n4. סימני שליטה: הלומד מבין שהמשך הפעילות יחשב את האורך באמצעות הפרש הקואורדינטות המתאים.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן נכנסים לבעיה שבה צריך לחשוב על האורך שבין שני דוכנים ולקרוא את המצב בצורה מדויקת.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "2a473f68bbdb38d6",
+              "generated_at": "2026-09-26T01:40:17Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -207,7 +387,29 @@
                 "מה השתנה בין שתי הנקודות? שיעור ה־x; מה נשאר קבוע שתי הנקודות? שיעור ה־y; האם השרשרת אופקית או אנכית? מקבילה לציר ה־x"
               ],
               "fingerprint": "3ab6b0e335ae954c",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "מתמקדים בקשר בין מיקום על מערכת צירים לבין חישוב אורך. נסו לזהות את הנתונים החשובים לפני שמחשבים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ab6b0e335ae954c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק איזה שיעור זהה בשתי הנקודות, ואז לחשוב על השיעור שהשתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ab6b0e335ae954c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של קטע אופקי וחישוב האורך שלו לפי הפרש שיעורי ה־x.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ab6b0e335ae954c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms4753pt13bhbq71i",
@@ -219,7 +421,29 @@
                 "9 − 4 = ?"
               ],
               "fingerprint": "5aa5a9486f93cac4",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מחפשים דרך חישוב מתאימה על סמך מה שקבוע ומה שמשתנה. נסו לבדוק את הנתונים לפני הבחירה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5aa5a9486f93cac4",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל בזיהוי השיעור הקבוע ואז לעבור לשיעור שמשתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5aa5a9486f93cac4",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב אורך של קטע אופקי בעזרת השוואה בין שיעורי ה־x.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5aa5a9486f93cac4",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms4753pt25xs419vi",
@@ -227,7 +451,29 @@
               "question_text": "מה אורך השרשרת?",
               "answers": [],
               "fingerprint": "3ea866c477045fae",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "מתרגלים הבנה של מערכת צירים ובחירה של דרך חישוב מתאימה. שווה לבדוק את הקשר בין הנקודות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ea866c477045fae",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב איזה שיעור נשאר זהה בשתי הנקודות, ואז חשבו רק את השינוי בשיעור השני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ea866c477045fae",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך מוצאים אורך של קטע אופקי במערכת צירים. כדאי לבדוק מה נשאר קבוע, ואיזה שיעור משתנה בין שתי הנקודות, ואז לחשב את ההפרש המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3ea866c477045fae",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -250,7 +496,29 @@
                 "(13,5)"
               ],
               "fingerprint": "e53905d8e5e86c1c",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים חשיבה על תנועה במערכת צירים. נסו לזהות מה נשאר קבוע ומה משתנה, ולהשתמש בזה כדי להגיע לתשובה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e53905d8e5e86c1c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו קודם איזה ציר נשאר קבוע, ורק אחר כך חשבו איך משתנה השיעור השני.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e53905d8e5e86c1c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה עוסקת בתנועה אנכית במערכת צירים. צריך לשים לב מה קורה לשיעור הקבוע, ואיך משתמשים בכיוון התנועה כדי למצוא את נקודת הקצה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e53905d8e5e86c1c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -273,7 +541,29 @@
                 "(11,7)"
               ],
               "fingerprint": "639cab0d4c7e9ea0",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על תנועה במערכת צירים ועל שיקול של מיקום. נסו לחשוב מה משתנה בתנועה ומה נשאר קבוע, ואחר כך לבדוק אם זה מתאים לתכנון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "639cab0d4c7e9ea0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל בזיהוי הציר המקביל לתנועה, ולבדוק איזה שיעור לא משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "639cab0d4c7e9ea0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים תנועה אופקית במערכת צירים, וגם האם המיקום שנבחר הגיוני. חשוב לשים לב איזה שיעור נשאר קבוע, ואיך הכיוון משפיע על השינוי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "639cab0d4c7e9ea0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms496je322tp92qrb",
@@ -281,7 +571,29 @@
               "question_text": "האם הגיוני למקם כך דוכן ספרים?",
               "answers": [],
               "fingerprint": "e0aa26bba9ed60a6",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה שמבקשת לחשוב גם על חישוב וגם על היגיון של מיקום. נסו לבדוק את הנתונים ולשקול אם הם מתאימים למפה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e0aa26bba9ed60a6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק קודם מה קורה לשיעור שנשאר קבוע, ואז לחשוב אם התוצאה מתאימה למקום הפנוי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e0aa26bba9ed60a6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה משלבת תנועה אופקית עם בדיקה של היגיון המיקום. אפשר להיעזר בכיוון התנועה ובשאלה אם המקום מתאים לתכנון המגרש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e0aa26bba9ed60a6",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -302,7 +614,15 @@
               "question_text": "איזו צורה יש לאזור הישיבה?",
               "answers": [],
               "fingerprint": "c7586e8457af3b36",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים על זיהוי צורה וחישובים במערכת צירים. נסו להתקדם צעד אחר צעד: קודם הצורה, אחר כך האורכים, ולבסוף השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c7586e8457af3b36",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms4ao2tz215q3n66h",
@@ -310,7 +630,29 @@
               "question_text": "מה אורך הצלע המקבילה לציר ה־x?",
               "answers": [],
               "fingerprint": "043c13b7a1820244",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתמקד בקשר בין מערכת הצירים לבין אורכי הצלעות. נסו לחשב בצורה מסודרת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043c13b7a1820244",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו את ההפרש בין הקואורדינטות המתאימות לצלע הזו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043c13b7a1820244",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך מוצאים אורך של צלע המקבילה לאחד הצירים בעזרת ההפרש בין הקואורדינטות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043c13b7a1820244",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "ms4aop4r2gfq1drwt",
@@ -349,7 +691,22 @@
                 "18 כיסאות; 6 כיסאות להוסיף"
               ],
               "fingerprint": "70134a5d592160cc",
-              "texts": {}
+              "texts": {
+                "hint_l1": {
+                  "he": "חשבו קודם את השטח, ואז בדקו כיצד **שינוי הקודקודים** משנה את רוחב האזור.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "70134a5d592160cc",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לחשוב על הקשר בין **מטר מרובע** לבין כיסאות של 1×1 מטר, ואז לבדוק מה משתנה כשמזיזים את הקודקודים B ו־C.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "70134a5d592160cc",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -381,7 +738,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים איך מזהים מלבן במערכת צירים ואיך מחשבים את השטח שלו לפי שתי צלעות סמוכות.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "ef8852cc41ea98c0",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mptti9na1c802zgwy",
@@ -392,7 +757,15 @@
           "position": 1,
           "fingerprint": "9fc7811b6a20717e",
           "information_to_bot": "1. מטרת הפריט: לסייע ללומד להבין כיצד מזהים מלבן במערכת צירים וכיצד מחשבים את שטח המגרש לפי אורכי שתי צלעות סמוכות.\n2. רמזים מדורגים: תחילה בקשו לזהות אם הצלעות מקבילות לצירים; אחר כך לשאול איזו צורה מתקבלת; לאחר מכן להזכיר ששטח מלבן מחושב כמכפלת שתי צלעות סמוכות; לבסוף לכוון למציאת AB ו-BC ולכפל 25×11.\n3. טעויות נפוצות: בלבול בין שטח להיקף; חיבור ארבע הצלעות במקום כפל שתי צלעות סמוכות; כפל שתי צלעות מקבילות; טעות בזיהוי הצורה כמרובע אחר.\n4. סימני שליטה: הלומד מזהה שהצלעות מקבילות לצירים, קובע שהצורה היא מלבן, יודע להשתמש בנוסחת שטח מלבן, מוצא את אורכי AB ו-BC ומחשב שטח 275.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כאן מתרגלים זיהוי צורה וחישוב שטח מתוך נתונים במערכת צירים.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "9fc7811b6a20717e",
+              "generated_at": "2026-09-26T01:40:17Z",
+              "model": "mini"
+            }
+          },
           "questions": [
             {
               "question_id": "mu0v9l0b1wqd43oz4",
@@ -403,7 +776,29 @@
                 "false"
               ],
               "fingerprint": "162f317127c9f5fe",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה של זיהוי והשוואה, ואחר כך חישוב לפי הנתונים שמופיעים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "162f317127c9f5fe",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה להסתכל על הכיוון של הצלעות ביחס לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "162f317127c9f5fe",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים זיהוי של צורה במערכת צירים והבנה של חישוב שטח מלבן לפי שתי צלעות סמוכות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "162f317127c9f5fe",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrsvilp73ap208hwn",
@@ -416,7 +811,29 @@
                 "טרפז"
               ],
               "fingerprint": "1c6b236f39c112a3",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה של זיהוי צורה מתוך מאפיינים גאומטריים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c6b236f39c112a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק איך הצלעות ממוקמות ביחס לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c6b236f39c112a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לחשוב קודם על **הצורה** שמתקבלת ואיך מזהים אותה לפי הצלעות והצירים, ורק אחר כך לעבור לחישוב השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c6b236f39c112a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mu0vopzh3fh87v8k8",
@@ -428,7 +845,29 @@
                 "שטח של מלבן מחשבים על ידי כפל של שתי צלעות מקבילות."
               ],
               "fingerprint": "619a47fc172c6b92",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על דרך החישוב של שטח. נסו להיזכר בכלל המתאים ולבדוק איזו אפשרות מתארת אותו נכון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "619a47fc172c6b92",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את הכלל שמתאים ל**שטח מלבן** ונסו להתעלם מאפשרויות שנשמעות כמו חישוב של גודל אחר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "619a47fc172c6b92",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם יודעים לקשר בין מלבן לבין הדרך שבה מחשבים את השטח שלו, ולא לבלבל זאת עם חישובים אחרים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "619a47fc172c6b92",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mu0vtb023fzr6nbop",
@@ -438,7 +877,29 @@
                 "אורך הצלע AB הוא 25 מטר. אורך הצלע BC הוא 11 מטר."
               ],
               "fingerprint": "afb4e99519bf6404",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך לשלב קריאה של מערכת צירים עם חישוב. נסו לאסוף את המידע הדרוש לפני שבוחרים איך לחשב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "afb4e99519bf6404",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לנתונים של שתי הצלעות הסמוכות, ונסו לקשר אותם לחישוב השטח של הצורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "afb4e99519bf6404",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לזהות קודם את אורך הצלעות הדרושות מתוך הנתונים, ואז להשתמש בקשר בין הצלעות לבין שטח הצורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "afb4e99519bf6404",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mu0vze5r2hdu6xk6p",
@@ -446,7 +907,29 @@
               "question_text": "מה שטח המגרש?\nשטח המגרש הוא ___",
               "answers": [],
               "fingerprint": "f5167062a73e25be",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על שטח, אבל לפני החישוב עצמו כדאי לאסוף את הנתונים הנכונים. נסו לעבוד מסודר ולבדוק מה כבר ידוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f5167062a73e25be",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "קודם כל מצאו את הנתונים הדרושים לחישוב, ורק אחר כך עברו לשלב הבא.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f5167062a73e25be",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם יודעים למצוא את המידע המתאים מתוך מערכת הצירים ולחשב ממנו את השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f5167062a73e25be",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -466,7 +949,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לעבוד עם מערכת צירים חיובית: לקרוא נקודות, לחשב אורכי קטעים ולמצוא שטחים של מלבנים. זה עוזר להבין איך מידע גאומטרי מתחבר לחישוב מדויק.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "488f394ef58ade2e",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mptti9na1c802zgwy",
@@ -487,7 +978,29 @@
                 "AB = 3 יחידות אורך; AC = 6 יחידות אורך; CD = 5 יחידות אורך"
               ],
               "fingerprint": "21fc92bd764bc764",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה שמחברת בין קריאה במערכת צירים לבין חישוב. נסו לאתר את הנתונים ולבחור את דרך הפעולה המתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21fc92bd764bc764",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק קודם אם כל קטע הוא אופקי או אנכי, ורק אחר כך להסתכל על **שיעורי x או y** המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21fc92bd764bc764",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים קריאת נקודות במערכת צירים וחישוב אורכי קטעים שמקבילים לצירים. חשוב לזהות את כיוון הקטע, להתאים את השיעורים הנכונים ולחשב את ההפרש ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "21fc92bd764bc764",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqhxe0juip38h4lv",
@@ -497,7 +1010,29 @@
                 "FD = 2 יחידות אורך; DE = 4 יחידות אורך; EG = 5 יחידות אורך"
               ],
               "fingerprint": "b04a9be658d67b6c",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קריאת נקודות במערכת צירים וחישוב אורכי קטעים. נסו להתקדם צעד־צעד ולבדוק מה מתאים לכל קטע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b04a9be658d67b6c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל בזיהוי הכיוון של כל קטע, ואז להשוות רק את **שיעורי x או y** המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b04a9be658d67b6c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים לקרוא נקודות במערכת צירים ולחשב אורכי קטעים שמקבילים לצירים. חשוב לשים לב האם הקטע אופקי או אנכי, ואז להשתמש בשיעור המתאים ולחשב הפרש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b04a9be658d67b6c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -520,7 +1055,29 @@
                 "B = (16,3); C = (9,1); D = (5,3); E = (9,9)"
               ],
               "fingerprint": "55c16923649de3a3",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על נקודות במערכת צירים ועל חשיבה צעד־אחר־צעד. נסו לבדוק כל קטע בנפרד ולהתקדם בהדרגה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55c16923649de3a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק בכל קטע איזה שיעור משתנה, ואיזה שיעור נשאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55c16923649de3a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים מציאת שיעורי נקודות לפי נקודת מוצא ומרחקים על קטעים שמקבילים לצירים. חשוב לשים לב לכיוון של כל קטע ולבדוק איזה שיעור משתנה בו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55c16923649de3a3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -541,7 +1098,29 @@
               "question_text": "לפניכם מלבן במערכת צירים. חשבו את שטח המלבן. שטח המלבן: ___ יחידות שטח.",
               "answers": [],
               "fingerprint": "4e1cdc728bf57a54",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על שטח של מלבן במערכת צירים. נסו לחשוב איזה חישוב מתאים אחרי שמוצאים את אורכי הצלעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4e1cdc728bf57a54",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מלמצוא את האורך של כל צלע במלבן, ורק אחר כך לעבור לחישוב השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4e1cdc728bf57a54",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים חישוב שטח של מלבן במערכת צירים. קודם מוצאים את אורכי הצלעות לפי השיעורים, ואז משתמשים בקשר בין אורך, רוחב ושטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4e1cdc728bf57a54",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqxf5evp1fkzgoqwf",
@@ -549,7 +1128,29 @@
               "question_text": "לפניכם מלבן אחר במערכת צירים. חשבו את שטח המלבן. שטח המלבן: ___ יחידות שטח.",
               "answers": [],
               "fingerprint": "5e3d360efac54b0a",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על שטח של מלבן במערכת צירים. נסו לחשוב איזה מידע צריך קודם ואיך משלבים אותו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e3d360efac54b0a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו קודם את אורכי הצלעות לפי ההפרשים במערכת הצירים, ורק אחר כך עברו לחישוב השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e3d360efac54b0a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב שטח של מלבן במערכת צירים. צריך לזהות את אורכי הצלעות לפי ההפרשים בין השיעורים, ואז להשתמש בקשר בין אורך ורוחב כדי למצוא את השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5e3d360efac54b0a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -569,7 +1170,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נלמד לעבוד עם מערכת צירים של מספרים חיוביים: לחשב אורכי דרכים, למצוא שיעורי נקודות ולחשב שטחים של מלבנים. נתרגל איך משתמשים במידע שבשרטוט כדי להגיע לתשובה נכונה.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "d101ff66667e4703",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mptti9na1c802zgwy",
@@ -590,7 +1199,29 @@
                 "AB=3; BC=5; CD=6; DE=3; אורך הדרך בסך הכול=17"
               ],
               "fingerprint": "25f036ae5673ae06",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך לחשב אורך של דרך שמורכבת מכמה קטעים. כדאי לעבור קטע־קטע, ואז לחבר את הכול.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "25f036ae5673ae06",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "עברו על כל קטע בנפרד, ובדקו אם הוא אופקי או אנכי לפני שמחברים את האורכים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "25f036ae5673ae06",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב אורכי קטעים אופקיים ואנכיים במערכת צירים, ואז חיבור שלהם לאורך כולל. חשוב לזהות כל קטע בנפרד ולהשתמש בהפרשי השיעורים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "25f036ae5673ae06",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqhxe0juip38h4lv",
@@ -623,7 +1254,29 @@
                 "B=(9,5); C=(4,1); D=(3,5); E=(4,11)"
               ],
               "fingerprint": "8f622a16863b7dc1",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם תנועה אופקית ואנכית במערכת צירים. צריך להסיק שיעורי נקודות מתוך אורכי הקטעים, צעד אחר צעד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8f622a16863b7dc1",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב איזה שיעור משתנה בכל קטע: בקטע אופקי אחד השיעורים נשאר קבוע, ובקטע אנכי השיעור האחר נשאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8f622a16863b7dc1",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת מציאת שיעורי נקודות לפי קטעים המקבילים לצירי מערכת הצירים. כדי לפתור, מזהים את נקודת הייחוס, בודקים איזה שיעור משתנה בכל קטע, ומעדכנים אותו לפי האורך הנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8f622a16863b7dc1",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -644,7 +1297,29 @@
               "question_text": "לפניכם מלבן במערכת צירים. חשבו את שטח המלבן. שטח המלבן: ___ יחידות שטח.",
               "answers": [],
               "fingerprint": "448c44b9b56a7d25",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "בואו נתרגל חישוב שטח של מלבן במערכת צירים. שימו לב לאורך הצלעות ונסו לחשב באופן מסודר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "448c44b9b56a7d25",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל בזיהוי אורכי שתי הצלעות הסמוכות, ואז להשתמש בחישוב השטח של מלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "448c44b9b56a7d25",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך מוצאים את שטח המלבן מתוך אורכי הצלעות שלו במערכת צירים. חשוב לזהות נכון את הממדים ואז לחשב את השטח ביחידות שטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "448c44b9b56a7d25",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqxf5evp1fkzgoqwf",
@@ -672,7 +1347,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה נלמד לעבוד עם מערכת צירים במספרים חיוביים: לזהות אורכי קטעים, למצוא שיעורי נקודות, לחשב שטחים ולהשלים קודקודים. כל זה עוזר להבין טוב יותר צורות במערכת הצירים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "a5da1854e185fa02",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mqxjses5w1a6mauh",
@@ -693,7 +1376,29 @@
                 "קטע AB — מקביל לציר ה־x; קטע BC — אינו מקביל לצירים; קטע AC — מקביל לציר ה־y; אורך הקטע AB — 7; אורך הקטע AC — 1"
               ],
               "fingerprint": "9d012e412282c83c",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים זיהוי קטעים וחישוב אורכים במערכת צירים. נסו לבדוק כל קטע ולהשוות בין השיעורים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9d012e412282c83c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדי לבדוק אם קטע מקביל לציר, השוו את שיעורי ה־x או את שיעורי ה־y של קצותיו, ואז חשבו את האורך לפי ההפרש המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9d012e412282c83c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך מזהים אם קטע מקביל לציר x או לציר y, ואיך מחשבים את אורכו לפי הפרש השיעורים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9d012e412282c83c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -716,7 +1421,29 @@
                 "B(15, 6); C(12, 12)"
               ],
               "fingerprint": "5c1f76da15774245",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים מציאת שיעורי נקודות לפי אורך קטע וכיוון הקטע ביחס לצירים. נסו להתמקד בשיעור שנשאר קבוע ובשיעור שמשתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5c1f76da15774245",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אם הקטע מקביל לציר ה־x, רק שיעור ה־x משתנה. אם הוא מקביל לציר ה־y, רק שיעור ה־y משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5c1f76da15774245",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים איך שיעור אחד נשאר קבוע כשקטע מקביל לציר, ואיך שיעור אחר משתנה לפי האורך והכיוון. צריך לשים לב גם לאפשרות לנוע לשני הכיוונים ולכתוב את הנקודה בסדר הנכון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5c1f76da15774245",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -742,7 +1469,29 @@
                 "16"
               ],
               "fingerprint": "263b25af97701633",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על חישוב שטח מתוך קודקודים במערכת צירים. נסו לזהות אילו אורכים צריך לבדוק ואיך מחברים ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "263b25af97701633",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהצלעות הסמוכות ולבדוק את ההפרש בין שיעורי x או y המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "263b25af97701633",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך מוצאים שטח של מלבן או משולש מתוך הקודקודים שלו. הרעיון הוא לזהות קודם את אורכי הצלעות או הבסיס והגובה, ואז להשתמש בקשר המתאים לשטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "263b25af97701633",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqxn2xkm39e0w8twe",
@@ -755,7 +1504,29 @@
                 "52"
               ],
               "fingerprint": "5202cd92f3d139e8",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על חישוב שטח מתוך קודקודים במערכת צירים. נסו לזהות אילו אורכים צריך לבדוק ואיך מחברים ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5202cd92f3d139e8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהצלעות הסמוכות ולבדוק את ההפרש בין שיעורי x או y המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5202cd92f3d139e8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך מוצאים שטח של מלבן או משולש מתוך הקודקודים שלו. הרעיון הוא לזהות קודם את אורכי הצלעות או הבסיס והגובה, ואז להשתמש בקשר המתאים לשטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5202cd92f3d139e8",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -778,7 +1549,29 @@
                 "CD = 8; AD = 6; A(2, 1); B(2, 9)"
               ],
               "fingerprint": "43ca3c188d7b239c",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה שמשלבת חישוב אורכים והשלמת קודקודים במערכת צירים. כדאי להתבונן בקשרים בין צלעות מקבילות לצירים ולנסות להסיק מהם את הנקודות החסרות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "43ca3c188d7b239c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהנתון על השטח ועל אחת הצלעות, ולבדוק איך אפשר למצוא בעזרתם צלע נוספת לפני שמשלימים את הקודקודים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "43ca3c188d7b239c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן משלבים בין חישוב אורך צלע לבין השלמת נקודות במערכת צירים. צריך להיעזר בשטח ובקשרים בין צלעות אופקיות ואנכיות כדי להבין אילו שיעורים נשארים קבועים ואילו משתנים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "43ca3c188d7b239c",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqhxe0juip38h4lv",
@@ -788,7 +1581,29 @@
                 "A(3, 7); C(7, 3); E(11, 7)"
               ],
               "fingerprint": "02b1988f174a5338",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה שמשלבת חישוב אורכים והשלמת קודקודים במערכת צירים. כדאי להתבונן בקשרים בין צלעות מקבילות לצירים ולנסות להסיק מהם את הנקודות החסרות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "02b1988f174a5338",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהנתון על השטח ועל אחת הצלעות, ולבדוק איך אפשר למצוא בעזרתם צלע נוספת לפני שמשלימים את הקודקודים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "02b1988f174a5338",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו מתרגלים שילוב בין **חישוב אורכי צלעות**, שטח של מלבן והשלמת קודקודים במערכת צירים. צריך להיעזר בקשר בין שטח ואורך צלעות, ובכך שבצלעות המקבילות לצירים שיעור אחד נשאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "02b1988f174a5338",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -808,7 +1623,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים עבודה עם **מערכת צירים**: אורכי קטעים, נקודות על צירים, שטחי מלבן ומשולש, וקואורדינטות של צורות. זה מחזק את הקשר בין גאומטריה לחישוב במישור.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "8b38b486637ea4d6",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mqxjses5w1a6mauh",
@@ -829,7 +1652,29 @@
                 "קטע AB: מקביל לציר ה־y; קטע BC: מקביל לציר ה־x; קטע AC: אינו מקביל לצירים; אורך AB: 8; אורך BC: 6"
               ],
               "fingerprint": "0098a298a020eccb",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על קטעים במערכת צירים, שדורשת זיהוי והשוואה בין שיעורי הנקודות. כדאי להתבונן בנתונים ולנסות לחשב לפי ההפרשים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0098a298a020eccb",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין שיעורי ה־x ושיעורי ה־y של הקצוות, ואז להשתמש בהפרש המתאים כדי למצוא את האורך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0098a298a020eccb",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בשאלה הזו בודקים איך מזהים אם קטע מקביל לציר מסוים ואיך מחשבים את אורכו מתוך שיעורי הנקודות. הרעיון המרכזי הוא לבדוק אילו שיעורים נשארים קבועים ואיזה הפרש נותן את האורך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0098a298a020eccb",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -857,7 +1702,29 @@
                 "(16,21)"
               ],
               "fingerprint": "d6e4058c135c53ed",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים על נקודות במערכת צירים ועל הקשר בין אורך קטע לבין השיעורים של נקודת הקצה. זו הזדמנות לנסות לחשוב על כל האפשרויות שמתאימות לנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d6e4058c135c53ed",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו איזה שיעור נשאר קבוע בקטע המקביל לציר מסוים, ואיזה שיעור יכול להשתנות לפי האורך הנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d6e4058c135c53ed",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הבנה של קטעים המקבילים לצירים ושל מציאת נקודות אפשריות לפי אורך נתון. חשוב לשים לב ששיעור אחד נשאר קבוע, והאחר משתנה בהתאם לאורך ולכיוון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d6e4058c135c53ed",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqxn2xkm39e0w8twe",
@@ -872,7 +1739,29 @@
                 "(5,9)"
               ],
               "fingerprint": "d273050495ea37df",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על נקודות במערכת צירים ועל התאמה בין אורך קטע לבין שיעורי הנקודה. נסו לבדוק את כל האפשרויות שמתאימות לנתון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d273050495ea37df",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בקטע מקביל לציר ה־x שיעור אחד נשאר קבוע, ובקטע מקביל לציר ה־y שיעור אחר נשאר קבוע. שימו לב גם לשינוי לפי האורך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d273050495ea37df",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך קטע מקביל לציר קובע איזה שיעור נשאר קבוע ואיך אורך הקטע יוצר שתי אפשרויות לנקודה. המטרה היא לזהות את הנקודות שמתאימות לנתונים בלי להתבלבל בין השיעורים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d273050495ea37df",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -898,7 +1787,29 @@
                 "30"
               ],
               "fingerprint": "3e0a2e0384f0766b",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "בשאלה הזו מחשבים שטח של מלבן ומשולש מתוך נקודות במערכת צירים. כדאי להתמקד בחישוב בסיס וגובה ולבחון איך משתמשים בהם נכון.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3e0a2e0384f0766b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו להתחיל מהצלעות שמקבילות לצירים, ולבדוק אילו הפרשי שיעורים נותנים את האורך הדרוש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3e0a2e0384f0766b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב שטח של **מלבן** ושל משולש מתוך קואורדינטות. כדאי לזהות את אורכי הצלעות או הבסיס והגובה לפי הפרשי השיעורים, ולהיזהר מבלבול בין x ל־y או משכחת החלוקה ב־2 במשולש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3e0a2e0384f0766b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqxoflw82zqlllu8s",
@@ -911,7 +1822,29 @@
                 "30"
               ],
               "fingerprint": "41b72897f6f33099",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על שטח במערכת צירים. כדאי לקרוא את הנתונים בעיון ולבחור דרך חישוב מתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41b72897f6f33099",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אילו צלעות של הצורה מקבילות לצירים, ואז השתמשו בהפרשי השיעורים המתאימים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41b72897f6f33099",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים חישוב שטח של **משולש** מתוך קואורדינטות. הרעיון הוא לזהות בסיס וגובה מתאימים לפי הצלע המקבילה לציר, ולחשב לפי בסיס כפול גובה חלקי 2.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41b72897f6f33099",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -934,7 +1867,29 @@
                 "C=(14,5)"
               ],
               "fingerprint": "cc4be14db8df3c2a",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה של מציאת נקודה חסרה במערכת צירים. כדאי לחשוב איזה שיעור נשאר קבוע ואיזה אורך אפשר להסיק מהנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cc4be14db8df3c2a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו להיעזר בשטח הנתון כדי למצוא אורך חסר, ואז מקמו את הנקודה לפי צלע שמקבילה לציר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cc4be14db8df3c2a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת הסקת שיעורי נקודה חסרה לפי צלעות המקבילות לצירים ושטח נתון. צריך לזהות אילו שיעורים נשארים קבועים, להשתמש בנוסחת השטח המתאימה, ואז להשלים את הקואורדינטות לפי הכיוון והמרחק.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cc4be14db8df3c2a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqhxe0juip38h4lv",
@@ -964,7 +1919,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתקדמים במערכת צירים עם מספרים חיוביים. תתרגלו קריאה של נקודות, צלעות ושטחים בצורות שונות, ותראו איך אפשר להסיק מידע גיאומטרי מתוך הסרטוט.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "fc9f75682a17e324",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mqxjses5w1a6mauh",
@@ -985,7 +1948,29 @@
                 "C=(3, 5.5); שטח המשולש ABD=22.5; שטח המשולש ABE=22.5"
               ],
               "fingerprint": "90ccd5e5ab5d286a",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להסתכל על הקשרים בין נקודות על קטע ועל שטחים של משולשים. נסו להשתמש בחשיבה על צירים, בסיס וגובה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "90ccd5e5ab5d286a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב לאיזה שיעור נשאר קבוע בקטע אנכי, ואחר כך חפשו את **הגובה** המתאים לבסיס שנבחר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "90ccd5e5ab5d286a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת מציאה של נקודה על קטע אנכי במערכת צירים, ואז חישוב שטחי משולשים לפי **בסיס** ו**גובה**. צריך להתייחס לאורכי הקטעים ולשמור על הקשר בין הנקודות לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "90ccd5e5ab5d286a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1024,7 +2009,29 @@
                 "(10,31)"
               ],
               "fingerprint": "931a0df07988f977",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על מלבנים במערכת צירים, והיא מבקשת לחשב ולהשלים קודקודים מתוך נתונים על צלע ושטח. נסו לבדוק מה אפשר להסיק מהנתונים ואיך להשלים את הצורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "931a0df07988f977",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל ממה שאורך צלע אחת אומר על המיקום של הקודקוד הבא, ואז להמשיך לקודקודים האחרים לפי מבנה המלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "931a0df07988f977",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה עוסקת בהשלמת קודקודים של מלבן שצלעותיו מקבילות לצירים, וגם בבדיקת אפשרויות לקודקוד נגדי לפי **שטח**. צריך לשלב בין אורך צלע, כיוון הצלעות והקשר בין הקודקודים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "931a0df07988f977",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1047,7 +2054,29 @@
                 "C=(7, 2); C=(7, 12)"
               ],
               "fingerprint": "2a495c0afcfe5d07",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם מלבנים ומקבילית במערכת צירים, וצריך להשתמש בחשיבה על צלעות, שטח וקודקוד חסר. נסו להתקדם צעד־צעד מתוך הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2a495c0afcfe5d07",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו קודם מה אורך הצלע הידועה אומר על המיקום האפשרי של הקודקוד, ואחר כך בדקו איך אותו רעיון עוזר להשלים את שאר המרובעים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2a495c0afcfe5d07",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת השלמת קודקודים במלבן שמקביל לצירים, וגם מציאת קודקוד חסר ושטח של מקבילית. הרעיון המרכזי הוא להשתמש ב**צלעות נגדיות** במלבן ובמקבילית, ובקשר בין בסיס לגובה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2a495c0afcfe5d07",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqyw3wt03ct457j0n",
@@ -1057,7 +2086,29 @@
                 "H=(18, 8); שטח המקבילית=12"
               ],
               "fingerprint": "5be4c071dc8fe8ba",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתמקד בקשר בין הקודקודים והצלעות במערכת הצירים. נסו לחשוב איזה נתון עוזר להשלים את הנקודה החסרה ואיך מוצאים את השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5be4c071dc8fe8ba",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב איך הצלעות במרובעים קשורות זו לזו במערכת הצירים. אפשר להיעזר בשוויון בין צלעות נגדיות ובקשר בין נקודות סמוכות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5be4c071dc8fe8ba",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך משתמשים בקשרים בין צלעות במרובעים כדי להשלים קודקוד חסר, ואחר כך איך מחשבים שטח במערכת צירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5be4c071dc8fe8ba",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1078,7 +2129,29 @@
               "question_text": "דגל נפאל\nלפניכם סרטוט של דגל המדינה נפאל על גבי מערכת צירים. EG מקביל לציר ה־x. חשבו את שטח הדגל במערכת הצירים. עגלו לשתי ספרות אחרי הנקודה העשרונית. השטח: ___ יחידות שטח.",
               "answers": [],
               "fingerprint": "dba75d7773c9f560",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם צורה מורכבת במערכת צירים ועם חישוב שטח. נסו לפרק את הבעיה לחלקים ולבדוק איך הנתונים בשרטוט עוזרים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dba75d7773c9f560",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל מלחשוב על פירוק הדגל לצורות פשוטות. אחרי זה בודקים כל חלק בנפרד ומחברים את השטחים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dba75d7773c9f560",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב שטח של צורה מורכבת מתוך מערכת הצירים, בעזרת פירוק לצורות פשוטות וחיבור של השטחים שלהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "dba75d7773c9f560",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1101,7 +2174,29 @@
                 "D=(2, 10.1); E=(8.8, 10.1); G=(8.8, 5.2); A=(2, 1); B=(19, 1)"
               ],
               "fingerprint": "96497aa83601f8e0",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לשים לב לקשרים בין צלעות מקבילות ולשיעורי נקודות. נסו להשתמש בנתונים שבשרטוט כדי להשלים את החסר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "96497aa83601f8e0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב אילו קטעים מקבילים לצירים ואילו שיעורים נשמרים בהם. אפשר להיעזר גם ביחס בין אורכי הקטעים שמופיע בשרטוט.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "96497aa83601f8e0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאת נתונים מסרטוט במערכת צירים, שימוש ביחסי אורכים, והשלמת שיעורי נקודות לפי צלעות מקבילות לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "96497aa83601f8e0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -1142,7 +2237,29 @@
                 "אורך DA: לא גלוי בעדות; אורך AB: לא גלוי בעדות; שטח המלבן: לא גלוי בעדות"
               ],
               "fingerprint": "8e3734da130d16e7",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתבונן בשרטוט ולחשוב אילו שיעורים ואורכים אפשר למצוא ממנו. נסו לפתור בעזרת קריאה מדויקת של הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8e3734da130d16e7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו נקודות שחולקות אותו ערך x או אותו ערך y. כך אפשר לזהות צלעות מקבילות לצירים ולחשב אורכים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8e3734da130d16e7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים איך לקרוא **מלבן** במערכת צירים: מזהים צלעות מקבילות לצירים, מחשבים אורכים לפי הפרשי שיעורים, ואז מוצאים שטח כמכפלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "8e3734da130d16e7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1165,7 +2282,22 @@
                 "אורך DA = 4; אורך AB = 11; B = (13, 3)"
               ],
               "fingerprint": "4b42e35baddb200a",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתחיל מזיהוי הנתונים בשרטוט ובקשר ביניהם. אחר כך אפשר להשתמש בחשיבה מסודרת כדי לקבוע אורכים ושיעורי נקודה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4b42e35baddb200a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך משלבים בין שטח של **מלבן** לבין שיעורי נקודות במערכת צירים, כדי להשלים אורכי צלעות ולמצוא נקודת קצה חסרה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4b42e35baddb200a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1188,7 +2320,22 @@
                 "B = (2, 11); C = (16, 11); E = (8, 5); F = (8, 1); אורך BC = 14; אורך CD = 6; שטח ABCDEF = 108"
               ],
               "fingerprint": "d5b9b3105b14a3e4",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זהו תרגיל על מסלול במערכת צירים, עם כמה שלבים של חישוב והשלמה. נסו לעבוד בצורה מסודרת ולבדוק כל קטע בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d5b9b3105b14a3e4",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים קריאת מסלול במערכת צירים, השלמת שיעורי נקודות, חישוב אורכי קטעים מקבילים לצירים ושטח של צורה מורכבת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d5b9b3105b14a3e4",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -1208,7 +2355,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה מתרגלים עבודה במערכת צירים עם מספרים חיוביים: חישוב אורכי צלעות של מלבנים, מציאת נקודות קצה ושטח של צורות. זה עוזר להבין איך קוראים מידע מתוך שרטוט ומשתמשים בו בחישוב.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "a1b7204abfd0dfe6",
+          "generated_at": "2026-09-26T01:40:17Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mqxjses5w1a6mauh",
@@ -1229,7 +2384,29 @@
                 "אורך DA = 4 יחידות אורך; אורך AB = 15 יחידות אורך; שטח המלבן = 60 יחידות שטח."
               ],
               "fingerprint": "1867485747e4f149",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן נדרשת חשיבה מסודרת על צלעות מקבילות לצירים ועל שטח של מלבן. נסו לזהות את הקשר בין הנתונים ולחשב צעד אחר צעד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1867485747e4f149",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה לבדוק אילו שיעורים משתנים בכל צלע, ואיזה חישוב מתאים לכל כיוון. אחרי זה אפשר לעבור לשטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1867485747e4f149",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך מוצאים אורכי צלעות של **מלבן** במערכת צירים ואיך משתמשים בהם כדי לחשב שטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1867485747e4f149",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1252,7 +2429,29 @@
                 "אורך DA = 8 יחידות אורך; אורך AB = 11 יחידות אורך; שיעורי הנקודה B הם (15, 5)."
               ],
               "fingerprint": "1245894b7e3b05b3",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן משלבים בין שטח, אורכי צלעות ושיעורי נקודה. כדאי להתקדם בסדר מסודר: קודם להבין את הנתון, ואז להסיק ממנו את מה שחסר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1245894b7e3b05b3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהנתון על **השטח** ולבדוק אילו אורכי צלעות אפשר להסיק מהסרטוט.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1245894b7e3b05b3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים איך משתמשים בנתון על שטח מלבן ובקשרים בין הצלעות כדי למצוא אורכים חסרים, ואחר כך להסיק את שיעורי הנקודה החסרה במערכת הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1245894b7e3b05b3",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -1275,7 +2474,29 @@
                 "B=(8,12); C=(8,10); E=(14,4); F=(22,4); אורך BC=2 יחידות אורך; אורך CD=6 יחידות אורך; שטח הצורה ABCDEF=76 יחידות שטח."
               ],
               "fingerprint": "b3ef1145f90af5f7",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על קריאת מסלול במערכת הצירים וחישוב לפי קטעים מקבילים לצירים. אפשר לגשת אליה בשיטתיות ולבדוק כל שלב בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b3ef1145f90af5f7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה לעקוב אחרי החיצים ולשים לב בכל קטע איזה שיעור נשאר קבוע ואיזה משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b3ef1145f90af5f7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן משתמשים בקריאת מסלול במערכת הצירים: משלימים נקודות לפי הקטעים, מחשבים אורכי קטעים לפי הפרשי קואורדינטות, ואז בודקים איך למצוא את השטח של הצורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b3ef1145f90af5f7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }

@@ -12,8 +12,8 @@
       "kata_updated_at": "2026-08-31T06:39:01.132441Z",
       "component_fingerprint": "cb7fb25b556cb510",
       "extraction": {
-        "verdict": "not_attempted",
-        "probed_at": "",
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:14Z",
         "player_host": "",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -202,6 +202,20 @@
                   "source_fingerprint": "55f365e24d525946",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו איזה שיעור נשאר קבוע בקטע, ואיזה משתנה בו. זה יכוון אתכם לשורה או לטור הנכונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55f365e24d525946",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי להסתכל על הקשר בין קטעים המקבילים לצירים לבין שיעורי הנקודות שלהם. בשאלות כאלה צריך לבדוק איזה שיעור נשאר קבוע ואיזה משתנה, ולא להחליף ביניהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "55f365e24d525946",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -352,11 +366,11 @@
       "kata_updated_at": "2026-08-31T09:02:59.317204Z",
       "component_fingerprint": "675056dff8fb78c0",
       "extraction": {
-        "verdict": "extracted",
-        "probed_at": "2026-09-15T01:42:59Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 2,
-        "screens_mapped": 2
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:14Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -464,11 +478,11 @@
       "kata_updated_at": "2026-08-31T09:10:12.460014Z",
       "component_fingerprint": "8f95d391d35b050d",
       "extraction": {
-        "verdict": "extracted",
-        "probed_at": "2026-09-01T11:43:34Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 2,
-        "screens_mapped": 1
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:15Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -533,11 +547,11 @@
       "kata_updated_at": "2026-08-31T09:14:10.664751Z",
       "component_fingerprint": "bd5cc65a940825aa",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-09-01T11:44:07Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 1,
-        "screens_mapped": 1
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:15Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -704,7 +718,29 @@
                 "BA"
               ],
               "fingerprint": "d7b2e3d29cbb5d9a",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מחפשים לזהות קטעים לפי הכיוון שלהם במערכת הצירים. נסו לבדוק את הקשר בין המוטות לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d7b2e3d29cbb5d9a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו את הכיוון של כל מוט ביחס לצירים, ולא את האורך שלו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d7b2e3d29cbb5d9a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של קטעים מקבילים לצירים. כדאי להשוות את הכיוון של כל קטע לציר המתאים, ולא להסתמך על מראה כללי בלבד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "d7b2e3d29cbb5d9a",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -800,6 +836,20 @@
                   "source_fingerprint": "da297d763cbcf775",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו על הצלעות שמוליכות לאותו כיוון, ובדקו אם הן שומרות על אותו יחס לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "da297d763cbcf775",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לזהות את סוג המרובע לפי הצלעות שלו והקשר שלהן לצירים. אפשר להיעזר בזיהוי של צלעות מקבילות כדי להבין את הצורה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "da297d763cbcf775",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -831,6 +881,20 @@
                   "source_fingerprint": "cfc942624fba325e",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו אילו צלעות מקבילות לצירים, ואיזה סוג צורה מתקבל מהשילוב ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cfc942624fba325e",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של צורה לפי הצלעות שלה במערכת הצירים. כדאי לבדוק אילו צלעות מקבילות לציר ה־x ואילו לציר ה־y, ואז להסיק את סוג המרובע או המשולש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cfc942624fba325e",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -848,6 +912,20 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "44cb560c46c9ff17",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו את הכיוון של כל צלע ביחס לצירים, ואז השוו בין הצלעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "44cb560c46c9ff17",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לענות על השאלה צריך לזהות אילו מצלעות המשולש מקבילות לכל אחד מהצירים. אחר כך אפשר להסיק גם מהו סוג המשולש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "44cb560c46c9ff17",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -867,6 +945,20 @@
                   "source_fingerprint": "9cc684ab18d8e836",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו קודם אילו צלעות מקבילות לצירים, ואז חשבו מה זה אומר על הזוויות בין הצלעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9cc684ab18d8e836",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי של סוג משולש לפי צלעות שמקבילות לצירים. כדאי להסתכל על הכיוון של כל צלע ועל הקשר בין הצלעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9cc684ab18d8e836",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -882,11 +974,11 @@
       "kata_updated_at": "2026-08-31T09:21:21.532868Z",
       "component_fingerprint": "5a318c62e6af093c",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-09-01T11:44:34Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 1,
-        "screens_mapped": 1
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:15Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -959,6 +1051,13 @@
                   "source_fingerprint": "be23305cca146ee5",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך להתאים בין שורה לטור ולזהות אילו שיעורים נשארים קבועים בכל אחד מהם, כדי להשלים את נקודות העצים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "be23305cca146ee5",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -981,6 +1080,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "2966406fc90c4137",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים נקודה שנמצאת גם בשורה וגם בטור מסוימים. חשוב לשים לב לשני התנאים יחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2966406fc90c4137",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -1116,6 +1222,13 @@
                   "source_fingerprint": "5aa02781920a6ad0",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק לכל קטע אם לשתי נקודות הקצה יש אותו שיעור x או אותו שיעור y, ולא להסתמך רק על המראה שלו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5aa02781920a6ad0",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -1189,6 +1302,13 @@
                   "source_fingerprint": "431bb797715af3d7",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים אם המרובע מתאים למלבן לפי הקטעים שלו והקשר שלהם לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "431bb797715af3d7",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -1227,6 +1347,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "6c8f485ace9407f3",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק את המרובע לפי הקטעים שמקבילים לצירים ולראות אם כל התנאים מתאימים למלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6c8f485ace9407f3",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -1268,11 +1395,11 @@
       "kata_updated_at": "2026-08-31T09:42:32.532969Z",
       "component_fingerprint": "2cc0f54f3e0f2386",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-09-01T11:45:00Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 2,
-        "screens_mapped": 2
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:15Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -1414,6 +1541,13 @@
                   "source_fingerprint": "4123c038c8d3ba4f",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך להשלים נקודות על כבישים לפי המיקום שלהן במערכת הצירים. שימו לב לשילוב בין כביש, שורה וטור.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4123c038c8d3ba4f",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -1439,6 +1573,20 @@
               ],
               "fingerprint": "b8276d2ada3416fa",
               "texts": {
+                "question_intro": {
+                  "he": "נסו להיעזר בקשרים בין נקודות, צלעות וזוויות, ולבדוק מה אפשר להסיק מהנתונים שעל המסך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b8276d2ada3416fa",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו את הקודקודים ואת הקשר בין השיעורים של הנקודות, ולאחר מכן שאלו מה אפשר להסיק על הזוויות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b8276d2ada3416fa",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
                 "explanation": {
                   "he": "כדאי לבדוק איך מזהים קטעים המקבילים לצירים ואיך קוראים שיעורי נקודות במערכת הצירים. השאלה בוחנת תשומת לב לשיעור שנשאר קבוע ולזיהוי צורה לפי הקודקודים.",
                   "prompt_version": "cp-v2",
@@ -1494,6 +1642,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "924ef2ce3f444149",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק בכל מרובע אילו צלעות מקבילות לצירים, ואילו שיעורי נקודות הקצה נשארים קבועים בכל קטע. כך אפשר לזהות את סוג המרובע לפי הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "924ef2ce3f444149",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -1595,6 +1750,13 @@
                   "source_fingerprint": "2d3cf1e275faf206",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק אילו נקודות יוצרות את צלעות המשולש, ואיך הן מונחות זו ביחס לזו. לפעמים מספיק לזהות את אופי הזוויות כדי להבין את סוג המשולש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2d3cf1e275faf206",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -1617,6 +1779,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "38fb296d3129fa74",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך להסתמך על הנקודות הנתונות של המלבן ולבדוק איזה שיעור צריך להישאר קבוע ואיזה שיעור משתנה. כך משלימים את הנקודה החסרה בהתאם למבנה של המלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "38fb296d3129fa74",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -1749,11 +1918,11 @@
       "kata_updated_at": "2026-08-31T09:58:36.076463Z",
       "component_fingerprint": "0df7eb1efc27f110",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-09-01T11:45:48Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 1,
-        "screens_mapped": 1
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:16Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -1830,6 +1999,13 @@
                   "source_fingerprint": "661bf8099e04e664",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי להתבונן במסלול שבו הנקודה נמצאת ולבדוק אילו נקודות מתאימות לו לפי השיעורים שלהן. חשוב לשים לב להתאמה בין המיקום על המסלול לבין הערכים של הנקודה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "661bf8099e04e664",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -1855,6 +2031,13 @@
                   "source_fingerprint": "4d846883914c06a9",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לבדוק את הקשר בין המסלול לבין השיעורים של הנקודה. אפשר להשוות בין הנתונים שמופיעים בסרטוט ולראות אילו מהם מתאימים למסלול המבוקש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4d846883914c06a9",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -1877,6 +2060,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "cb6c5c8084827933",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי להיעזר בנקודות שכבר מופיעות בסרטוט ולבדוק איזה שיעור צריך להישאר קבוע ואיזה משתנה. כך משלימים את הנתונים החסרים לפי המבנה של המסלול.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "cb6c5c8084827933",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -1914,6 +2104,13 @@
                   "source_fingerprint": "5db45661cd383407",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי להסתכל על שלוש הנקודות הנתונות ולבדוק איזה שיעור חסר כדי להשלים מלבן. לרוב צריך לזהות אילו קווים מקבילים לצירים ואילו שיעורים נשארים זהים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5db45661cd383407",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -1938,6 +2135,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "7bf710d616a93c42",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק את מבנה המלבן שנוצר מהנקודות הנתונות ולזהות איזו צלע משלימה אותו. כך אפשר למצוא את הקודקוד החסר לפי השיעורים שכבר נתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7bf710d616a93c42",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 }
               }
@@ -2109,6 +2313,20 @@
                   "source_fingerprint": "46fb231b162f3523",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לבדוק קודם את סוגי הצלעות במשולש: האם יש ביניהן צלעות מקבילות לצירים או צלעות שנפגשות בזווית מיוחדת?",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "46fb231b162f3523",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לבדוק את היחסים בין הנקודות על גבי הצירים, ולא להסתכל רק על השמות שלהן. כך אפשר להסיק מהו סוג המשולש לפי המבנה שנוצר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "46fb231b162f3523",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             },
@@ -2227,11 +2445,11 @@
       "kata_updated_at": "2026-08-31T10:32:54.037502Z",
       "component_fingerprint": "33842f876a25da6b",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-09-08T01:41:49Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 1,
-        "screens_mapped": 1
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:16Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2339,7 +2557,29 @@
                 "ב.\tהנקודה: (14,5)   סכום שיעוריה: 19"
               ],
               "fingerprint": "7e67f20fa3997b66",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להסתכל על כל הנקודות שבתחום ולחשוב איך משווים ביניהן. זו שאלה של בחירה לפי תנאי, אז חפשו מה משפיע על הערך הכולל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7e67f20fa3997b66",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "נסו לחשוב על הקשר בין המיקום של נקודה בתוך מלבן לבין סכום השיעורים שלה. אפשר לבדוק מה קורה בקצוות של התחום.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7e67f20fa3997b66",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איך לבדוק נקודות בתוך מלבן ולהשוות בין **סכומי שיעורים** של נקודות שונות, לפי המיקום שלהן על ההיקף ובתוך השטח.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7e67f20fa3997b66",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqjgubxy366cbnds3",
@@ -2426,7 +2666,29 @@
                 "K(12.5,7.5)"
               ],
               "fingerprint": "4380fcabcba633f5",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להיעזר בקשר בין נקודות במסלול לבין שיעורי הצירים. נסו לעקוב אחר המסלול צעד אחר צעד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4380fcabcba633f5",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה לבדוק איזה שיעור נשאר קבוע בכל קטע במסלול, ואיך זה עוזר להתקדם מנקודה לנקודה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4380fcabcba633f5",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת מעקב אחרי מסלול על מערכת הצירים, וזיהוי איך משתנים שיעורי הנקודות לאורך הדרך עד שמגיעים לנקודה שעל ציר ה־x.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4380fcabcba633f5",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -2488,11 +2750,11 @@
       "kata_updated_at": "2026-08-31T10:53:33.816350Z",
       "component_fingerprint": "c995f09dfa39c593",
       "extraction": {
-        "verdict": "extracted",
-        "probed_at": "2026-09-01T11:46:16Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 3,
-        "screens_mapped": 3
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:16Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2529,6 +2791,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "7455f3215b17ee01",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להסתכל על מיקום בתי העסק ועל קטע הרחוב שביניהם, ולבדוק איזה שיעור יכול להישאר קבוע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7455f3215b17ee01",
+                  "generated_at": "2026-09-26T01:40:17Z",
                   "model": "mini"
                 },
                 "explanation": {
@@ -2658,7 +2927,29 @@
                 "משולש קהה זווית"
               ],
               "fingerprint": "113ee706f734b71b",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים זיהוי של צורות לפי נתונים גיאומטריים. נסו להיעזר במאפיינים של הזוויות והצלעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "113ee706f734b71b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבחון את הזוויות והצלעות של המשולש לפי הנתונים בשרטוט.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "113ee706f734b71b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת זיהוי סוג של משולש לפי המאפיינים של הצלעות והזוויות בשרטוט.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "113ee706f734b71b",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mqqbwkow2om1obxzk",
@@ -2783,6 +3074,20 @@
               ],
               "fingerprint": "944cd5c513e5d1da",
               "texts": {
+                "question_intro": {
+                  "he": "כאן בודקים התאמה בין נתונים של נקודות על מערכת הצירים לבין סוגי הרובעים. אפשר לנסות להשוות בין הקווים שמתקבלים מכל רובע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "944cd5c513e5d1da",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק אילו שיעורי נקודות יוצרים קווים מקבילים לצירים, ואיך זה קשור לצורת הרובע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "944cd5c513e5d1da",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
                 "explanation": {
                   "he": "כדאי להתבונן בקווים המקבילים לצירים ובשיעורי הקודקודים שלהם. בשאלות כאלה בודקים אם יודעים לזהות איזה שיעור נשאר קבוע ואיזה שיעור משתנה, ואיך משלימים צורה לפי הנקודות הנתונות.",
                   "prompt_version": "cp-v2",
@@ -2804,11 +3109,11 @@
       "kata_updated_at": "2026-08-31T11:01:32.337016Z",
       "component_fingerprint": "97940c53cfcaacda",
       "extraction": {
-        "verdict": "extracted",
-        "probed_at": "2026-09-01T11:46:52Z",
-        "player_host": "learning.cet.ac.il",
-        "screens_seen": 3,
-        "screens_mapped": 3
+        "verdict": "launch_404",
+        "probed_at": "2026-09-26T01:40:17Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -2881,6 +3186,13 @@
                   "source_fingerprint": "f566f4eee610740e",
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת איתור של נקודות על מסלול במערכת הצירים, ובעיקר הבנה של איך שיעורי הנקודות משתנים לאורך קטעים מקבילים לצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "f566f4eee610740e",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
                 }
               }
             }
@@ -2937,6 +3249,13 @@
               ],
               "fingerprint": "89a31a2db595a311",
               "texts": {
+                "question_intro": {
+                  "he": "זהו תרגיל על קטעים המקבילים לצירים ועל קביעת שיעורי נקודה לפי תנאים. נסו לבדוק אילו אפשרויות מתאימות לכל תנאי.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "89a31a2db595a311",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
                 "hint_l1": {
                   "he": "נסו לבדוק איזה שיעור נשאר קבוע כשקטע מקביל לציר מסוים. כך אפשר לצמצם את האפשרויות.",
                   "prompt_version": "cp-v2",
@@ -2963,7 +3282,22 @@
                 "G(7, 0)"
               ],
               "fingerprint": "a6040d1fa348aa14",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "שימו לב לקשר בין קטעים המקבילים לצירים ובין שיעורי הנקודות. נסו לבדוק מה קבוע ומה משתנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a6040d1fa348aa14",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להסתכל על השיעורים של הנקודות ולבדוק איזה מהם נשאר קבוע כשקטע מקביל לציר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a6040d1fa348aa14",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -3053,6 +3387,13 @@
               ],
               "fingerprint": "6644d24f15c455e1",
               "texts": {
+                "question_intro": {
+                  "he": "השאלה עוסקת בקשר בין צורות לשיעורים במערכת הצירים. נסו לזהות את התכונות המתאימות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6644d24f15c455e1",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
                 "hint_l1": {
                   "he": "בדקו אילו צלעות בסרטוט מקבילות לצירים, ואז חשבו איזה מידע על הקודקודים נשאר קבוע.",
                   "prompt_version": "cp-v2",
@@ -3107,7 +3448,22 @@
               "question_text": "השלימו את שיעורי הנקודה L כך שהמרובע BCDL יהיה מלבן.",
               "answers": [],
               "fingerprint": "491357bedb15a755",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "השאלה עוסקת בבנייה של צורה במערכת הצירים. נסו לחשוב על הקשר בין הקודקודים לבין התכונות של המלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "491357bedb15a755",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להיעזר בקודקודים שכבר נתונים ולבדוק איזה שיעורים צריכים להישמר כדי לקבל מלבן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "491357bedb15a755",
+                  "generated_at": "2026-09-26T01:40:17Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
