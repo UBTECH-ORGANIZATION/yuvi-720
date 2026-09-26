@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-24T01:46:20Z",
+  "generated_at": "2026-09-26T01:44:38Z",
   "shards": [
     {
       "subject": "math",
@@ -107,6 +107,12 @@
     },
     {
       "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-VS-WEIGHT",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-VS-WEIGHT.json",
+      "lomdot": 6
+    },
+    {
+      "subject": "science",
       "objective_id": "MOE.SCI.G8.CHEM.ATOM-STRUCT.SUBATOM.E-CLOUD",
       "path": "science/MOE.SCI.G8.CHEM.ATOM-STRUCT.SUBATOM.E-CLOUD.json",
       "lomdot": 10
@@ -120,16 +126,6 @@
   ],
   "backlog": {
     "browse": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00001",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00004",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00005",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00006",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00007",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00008",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00010",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00011",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00002",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00003",
@@ -242,18 +238,21 @@
       "methodica-science-mass-measure-03-02",
       "methodica-science-mass-measure-03-04",
       "methodica-science-mass-measure-03-05",
-      "methodica-science-mass-measure-03-06"
+      "methodica-science-mass-measure-03-06",
+      "methodica-science-mass-weight-01-01",
+      "methodica-science-mass-weight-01-02",
+      "methodica-science-mass-weight-01-03",
+      "methodica-science-mass-weight-01-04",
+      "methodica-science-mass-weight-01-05",
+      "methodica-science-mass-weight-01-06"
     ]
   },
   "stats": {
-    "lomdot": 143,
-    "slides": 559,
-    "questions": 881,
-    "texts_generated": 395,
-    "texts_pending": 2072,
-    "removed": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00010",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00011"
-    ]
+    "lomdot": 149,
+    "slides": 582,
+    "questions": 902,
+    "texts_generated": 419,
+    "texts_pending": 1727,
+    "removed": []
   }
 }
