@@ -1,0 +1,1245 @@
+{
+  "schemaVersion": 1,
+  "id": "YuviLab-en-smartphone-00001",
+  "title": "מה אני עושה כל יום",
+  "titleText": {
+    "he": "מה אני עושה כל יום",
+    "ar": "ماذا أفعل كل يوم"
+  },
+  "subTopic": "PLACEHOLDER:MOE-EN-SUBTOPIC-INDEX",
+  "learningObjective": "PLACEHOLDER:MOE-EN-OBJECTIVE-INDEX",
+  "learningObjectiveText": {
+    "he": "תיאור הרגלים יומיומיים — שלי ושל אחרים — בזמן הווה פשוט, בעזרת צירופי הפעלים של היחידה.",
+    "ar": "وصف العادات اليومية — عاداتي وعادات الآخرين — بصيغة المضارع البسيط، باستخدام تعابير الأفعال في هذه الوحدة."
+  },
+  "targetSector": ["PLACEHOLDER:MOE-SECTOR-INDEX"],
+  "targetAudience": ["PLACEHOLDER:MOE-AUDIENCE-INDEX"],
+  "prerequisiteLearningObjective": [],
+  "manufacture": "Yuvilab",
+  "languages": ["Hebrew", "Arabic", "English"],
+  "inspiration": "Up We Go Student's Book, Section 1 Smartphone Teens, Unit 1 Send a Message! (pp. 10-24). All English text here is original and written for this lomda.",
+  "createdAt": "2026-09-25T00:00:00Z",
+  "updatedAt": "2026-09-25T00:00:00Z",
+
+  "goals": [
+    { "id": "G1", "he": "אני מכיר/ה ואומר/ת 8 צירופים באנגלית על מה שעושים בטלפון", "ar": "أعرف وأقول 8 تعابير بالإنجليزية عمّا نفعله بالهاتف" },
+    { "id": "G2", "he": "אני סורק/ת טקסט קצר ומוצא/ת במהירות מי עושה מה", "ar": "أمسح نصًّا قصيرًا بسرعة وأجد مَن يفعل ماذا" },
+    { "id": "G3", "he": "אני בונה משפט בהווה פשוט על עצמי", "ar": "أبني جملة في المضارع البسيط عن نفسي" },
+    { "id": "G4", "he": "אני מוסיף/ה s- או es- כשמדברים על he / she / it", "ar": "أضيف ‎-s‎ أو ‎-es‎ عند الحديث عن he / she / it" },
+    { "id": "G5", "he": "אני שם/ה מילת זמן במקום הנכון במשפט", "ar": "أضع كلمة الزمن في مكانها الصحيح في الجملة" },
+    { "id": "G6", "he": "אני שואל/ת ועונה על שאלת ‏?… Who", "ar": "أسأل وأجيب عن سؤال ‏?… Who" }
+  ],
+
+  "ui": {
+    "he": {
+      "dir": "rtl",
+      "unitKicker": "אנגלית · חטיבת ביניים",
+      "mapTitle": "מסלול הלמידה",
+      "mapLead": "אפשר להתחיל מאיפה שבא לכם. אין סדר נעול.",
+      "start": "התחלה",
+      "continue": "המשך",
+      "again": "לעבור שוב",
+      "next": "הבא",
+      "back": "הקודם",
+      "check": "בדיקה",
+      "retry": "ננסה שוב",
+      "hint": "רמז",
+      "listen": "האזינו",
+      "stop": "עצירה",
+      "sayIt": "אמרו בקול",
+      "goalsTitle": "בסוף החלק הזה אדע:",
+      "unitGoalsTitle": "בסוף היחידה אדע:",
+      "planQuestion": "איך בא לכם להתחיל?",
+      "orderHint": "לחצו על המילים לפי הסדר. לחיצה נוספת מבטלת.",
+      "matchHint": "לחצו על צירוף באנגלית, ואז על המשמעות שלו.",
+      "typeHint": "הקלידו את התשובה באנגלית.",
+      "yourTurn": "תורכם",
+      "componentDone": "סיימתם את החלק הזה",
+      "backToMap": "חזרה למסלול",
+      "openNext": "לחלק הבא",
+      "reflectSave": "שמירה וסיום",
+      "selfCheckYes": "כן, אני בשליטה",
+      "selfCheckPartly": "עוד קצת תרגול",
+      "selfCheckNo": "עוד לא",
+      "reflectPrompt": "דבר אחד שאנסה בפעם הבאה:",
+      "reflectPlaceholder": "כתבו כאן בעברית או באנגלית",
+      "stretchLabel": "אתגר",
+      "strategyLabel": "אסטרטגיה",
+      "ruleLabel": "הכלל",
+      "tipLabel": "שימו לב",
+      "readItRight": "הגייה נכונה",
+      "miniDict": "מילון קטן",
+      "langSwitch": "العربية",
+      "audioMissing": "השמע יתווסף בקרוב",
+      "whatIsAsked": "מה מבקשים כאן?",
+      "minutes": "דק׳",
+      "doneChip": "הושלם",
+      "supportChip": "מסלול תומך",
+      "assessChip": "להראות מה למדתי",
+      "doneTextOk": "עבודה טובה. אפשר להמשיך, ואפשר לעבור על החלק הזה שוב מתי שתרצו.",
+      "doneTextSupport": "יש דברים שעוד צריכים תרגול. הכנו לכם חלק שהולך צעד-צעד.",
+      "loadError": "התוכן לא נטען. נסו לרענן את העמוד."
+    },
+    "ar": {
+      "dir": "rtl",
+      "unitKicker": "الإنجليزية · المرحلة الإعدادية",
+      "mapTitle": "مسار التعلّم",
+      "mapLead": "ابدأوا من حيث تحبّون. لا يوجد ترتيب مُقفل.",
+      "start": "ابدأ",
+      "continue": "متابعة",
+      "again": "إعادة",
+      "next": "التالي",
+      "back": "السابق",
+      "check": "تحقّق",
+      "retry": "نحاول مرّة أخرى",
+      "hint": "تلميح",
+      "listen": "استمعوا",
+      "stop": "إيقاف",
+      "sayIt": "قولوا بصوت عالٍ",
+      "goalsTitle": "في نهاية هذا الجزء سأعرف:",
+      "unitGoalsTitle": "في نهاية الوحدة سأعرف:",
+      "planQuestion": "كيف تحبّون أن تبدأوا؟",
+      "orderHint": "اضغطوا على الكلمات بالترتيب. ضغطة أخرى تُلغي.",
+      "matchHint": "اضغطوا على تعبير بالإنجليزية ثم على معناه.",
+      "typeHint": "اكتبوا الإجابة بالإنجليزية.",
+      "yourTurn": "دوركم",
+      "componentDone": "أنهيتم هذا الجزء",
+      "backToMap": "العودة إلى المسار",
+      "openNext": "إلى الجزء التالي",
+      "reflectSave": "حفظ وإنهاء",
+      "selfCheckYes": "نعم، أتقنته",
+      "selfCheckPartly": "أحتاج تدريبًا إضافيًا",
+      "selfCheckNo": "ليس بعد",
+      "reflectPrompt": "شيء واحد سأجرّبه في المرّة القادمة:",
+      "reflectPlaceholder": "اكتبوا هنا بالعربية أو بالإنجليزية",
+      "stretchLabel": "تحدٍّ",
+      "strategyLabel": "استراتيجية",
+      "ruleLabel": "القاعدة",
+      "tipLabel": "انتبهوا",
+      "readItRight": "لفظ صحيح",
+      "miniDict": "قاموس صغير",
+      "langSwitch": "עברית",
+      "audioMissing": "سيُضاف الصوت قريبًا",
+      "whatIsAsked": "ماذا يُطلب هنا؟",
+      "minutes": "دقيقة",
+      "doneChip": "اكتمل",
+      "supportChip": "مسار داعم",
+      "assessChip": "لأُظهر ما تعلّمته",
+      "doneTextOk": "عمل جيّد. يمكنكم المتابعة أو إعادة هذا الجزء متى شئتم.",
+      "doneTextSupport": "بعض الأمور ما زالت بحاجة إلى تدريب. أعددنا لكم جزءًا يمشي خطوة بخطوة.",
+      "loadError": "لم يتم تحميل المحتوى. حاولوا تحديث الصفحة."
+    }
+  },
+
+  "components": [
+    {
+      "id": "YuviLab-en-smartphone-00001-C1",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "כוח המילים", "ar": "قوّة الكلمات" },
+      "subtitle": { "he": "8 צירופים שכולם משתמשים בהם", "ar": "8 تعابير يستعملها الجميع" },
+      "componentPurpose": "both",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": [],
+      "isRequired": true,
+      "relativeDifficulty": 1,
+      "masteryLevel": "basic",
+      "order": 1,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 8,
+      "goals": ["G1"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C1-i01",
+          "title": { "he": "לפני שמתחילים", "ar": "قبل أن نبدأ" },
+          "informationToBot": "מטרת הפריט: פיגום מטה-קוגניטיבי של תכנון. מה התלמיד אמור להבין: מהן מטרות היחידה ומה מצפים ממנו בסופה, ושיש לו בחירה אמיתית בדרך. אסטרטגיות חשיבה: לקרוא את המטרות לפני העבודה ולבחור נקודת פתיחה שמתאימה לו. טעויות נפוצות: דילוג על שלב התכנון וצלילה ישר לתרגול. מידע נוסף: הבחירה אינה מוערכת ואין בה נכון/לא נכון — שתי הדרכים מגיעות לאותו מקום. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "plan",
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C1-i01-q1",
+              "questionType": "choice",
+              "assessed": false,
+              "selectedCategory": "learningType",
+              "questionText": { "he": "איך בא לכם להתחיל?", "ar": "كيف تحبّون أن تبدأوا؟" },
+              "answers": [
+                { "id": "words", "he": "מהמילים — קודם אלמד צירופים", "ar": "من الكلمات — أتعلّم التعابير أوّلًا" },
+                { "id": "text", "he": "מהטקסט — קודם אקרא ואגלה בעצמי", "ar": "من النصّ — أقرأ وأكتشف بنفسي" }
+              ],
+              "correctAnswers": [],
+              "feedback": {
+                "any": {
+                  "he": "בחירה טובה. שתי הדרכים מגיעות לאותו מקום — רק בסדר אחר.",
+                  "ar": "اختيار جيّد. الطريقان يصلان إلى الهدف نفسه — بترتيب مختلف فقط."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C1-i02",
+          "title": { "he": "מילון קטן", "ar": "قاموس صغير" },
+          "informationToBot": "מטרת הפריט: הקניית 8 צירופי פועל+מושא הקשורים לשימוש בטלפון. מה התלמיד אמור לתרגל: זיהוי הצירוף באנגלית, המשמעות בעברית/ערבית וההגייה. אסטרטגיות חשיבה: לשים לב שהפועל והמושא נוסעים יחד כיחידה אחת (take a photo ולא do a photo), ולהשמיע לעצמו בקול. טעויות נפוצות: שימוש בפועל הלא נכון לצירוף — do a photo, make a photo; בלבול בין text כשם עצם לבין text כפועל. מידע נוסף: הצירופים חוזרים בכל שאר היחידה. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Audio",
+          "kind": "wordbank",
+          "prompt": {
+            "he": "לחצו על כרטיס כדי לשמוע ולראות את המשמעות. נסו לומר בקול אחרי ההקלטה.",
+            "ar": "اضغطوا على بطاقة لسماع التعبير ورؤية معناه. حاولوا قوله بصوت عالٍ بعد التسجيل."
+          },
+          "body": {
+            "cards": [
+              { "en": "take a photo", "art": "photo", "audio": "audio/en/c1-take-a-photo.mp3", "he": "לצלם תמונה", "ar": "ألتقط صورة" },
+              { "en": "listen to music", "art": "music", "audio": "audio/en/c1-listen-to-music.mp3", "he": "להאזין למוזיקה", "ar": "أستمع إلى الموسيقى" },
+              { "en": "play games", "art": "games", "audio": "audio/en/c1-play-games.mp3", "he": "לשחק משחקים", "ar": "ألعب ألعابًا" },
+              { "en": "watch videos", "art": "video", "audio": "audio/en/c1-watch-videos.mp3", "he": "לצפות בסרטונים", "ar": "أشاهد مقاطع فيديو" },
+              { "en": "text a friend", "art": "text", "audio": "audio/en/c1-text-a-friend.mp3", "he": "לשלוח הודעה לחבר", "ar": "أرسل رسالة إلى صديق" },
+              { "en": "make a call", "art": "call", "audio": "audio/en/c1-make-a-call.mp3", "he": "להתקשר", "ar": "أجري مكالمة" },
+              { "en": "send a voice message", "art": "voice", "audio": "audio/en/c1-send-a-voice-message.mp3", "he": "לשלוח הודעה קולית", "ar": "أرسل رسالة صوتية" },
+              { "en": "use the dictionary", "art": "dictionary", "audio": "audio/en/c1-use-the-dictionary.mp3", "he": "להשתמש במילון", "ar": "أستعمل القاموس" }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C1-i03",
+          "title": { "he": "התאמה", "ar": "مطابقة" },
+          "informationToBot": "מטרת הפריט: בדיקת הבנה ראשונית של 6 מתוך 8 הצירופים, ללא הערכה. מה התלמיד אמור לתרגל: קישור בין הצירוף האנגלי למשמעות. אסטרטגיות חשיבה: להתחיל מהצירופים שבטוחים בהם ולצמצם אפשרויות. טעויות נפוצות: בלבול בין make a call לבין send a voice message, ובין text a friend לבין send a voice message. מידע נוסף: הצלחה כאן אינה תנאי למעבר — זהו חימום. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "התאימו כל צירוף למשמעות שלו.", "ar": "طابقوا كل تعبير مع معناه." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C1-i03-q1",
+              "questionType": "matching",
+              "assessed": true,
+              "questionText": { "he": "התאימו כל צירוף למשמעות שלו.", "ar": "طابقوا كل تعبير مع معناه." },
+              "answers": {
+                "source": ["take a photo", "listen to music", "make a call", "text a friend", "watch videos", "use the dictionary"],
+                "target": [
+                  { "id": "t1", "he": "לצלם תמונה", "ar": "ألتقط صورة" },
+                  { "id": "t2", "he": "להאזין למוזיקה", "ar": "أستمع إلى الموسيقى" },
+                  { "id": "t3", "he": "להתקשר", "ar": "أجري مكالمة" },
+                  { "id": "t4", "he": "לשלוח הודעה לחבר", "ar": "أرسل رسالة إلى صديق" },
+                  { "id": "t5", "he": "לצפות בסרטונים", "ar": "أشاهد مقاطع فيديو" },
+                  { "id": "t6", "he": "להשתמש במילון", "ar": "أستعمل القاموس" }
+                ]
+              },
+              "correctAnswers": ["take a photo|t1", "listen to music|t2", "make a call|t3", "text a friend|t4", "watch videos|t5", "use the dictionary|t6"],
+              "feedback": {
+                "correct": { "he": "כל ההתאמות נכונות. הצירופים האלה יחזרו בכל היחידה.", "ar": "كل المطابقات صحيحة. ستعود هذه التعابير في كل الوحدة." },
+                "incorrect": {
+                  "he": "חלק מההתאמות התחלפו. שימו לב לפועל שפותח את הצירוף: make זה להתקשר, text זה לכתוב הודעה. חזרו למילון הקטן ובדקו את השתיים שאתם פחות בטוחים בהן.",
+                  "ar": "بعض المطابقات تبدّلت. انتبهوا إلى الفعل الذي يبدأ التعبير: make تعني إجراء مكالمة، text تعني كتابة رسالة. عودوا إلى القاموس الصغير وتحقّقوا من الاثنين الأقلّ وضوحًا لديكم."
+                },
+                "hint": { "he": "התחילו מהצירופים שאתם בטוחים בהם. כל התאמה נכונה מצמצמת את האפשרויות.", "ar": "ابدأوا بالتعابير التي تتقنونها. كل مطابقة صحيحة تقلّل الخيارات." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C1-i04",
+          "title": { "he": "הגייה נכונה: all", "ar": "لفظ صحيح: all" },
+          "informationToBot": "מטרת הפריט: הקניית תבנית ההגייה all = /ɔːl/ והרחבתה למשפחת מילים. מה התלמיד אמור להבין: שאותן אותיות מבוטאות אותו דבר בכל המילים במשפחה, ולכן אפשר לנחש הגייה של מילה חדשה. אסטרטגיות חשיבה: להשמיע את המשפחה ברצף ולשמוע את הצליל המשותף. טעויות נפוצות: הגיית call כמו cal, או הגיית a כמו בפט. מידע נוסף: המילה call מופיעה בצירוף make a call שנלמד בפריט הקודם. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Audio",
+          "kind": "pronounce",
+          "prompt": {
+            "he": "לאותיות all יש צליל קבוע. הקשיבו לכל המילים ברצף — תשמעו שהצליל חוזר.",
+            "ar": "للحروف all صوت ثابت. استمعوا إلى الكلمات بالتتابع — ستسمعون الصوت نفسه يتكرّر."
+          },
+          "body": {
+            "pattern": "all",
+            "phoneme": "/ɔːl/",
+            "words": [
+              { "en": "call", "audio": "audio/en/c1-call.mp3" },
+              { "en": "small", "audio": "audio/en/c1-small.mp3" },
+              { "en": "all", "audio": "audio/en/c1-all.mp3" },
+              { "en": "wall", "audio": "audio/en/c1-wall.mp3" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C1-i04-q1",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "איזו מילה נשמעת אחרת מכל השאר?", "ar": "أيّ كلمة تُلفظ بشكل مختلف عن البقيّة؟" },
+              "answers": [
+                { "id": "a1", "en": "ball" },
+                { "id": "a2", "en": "tall" },
+                { "id": "a3", "en": "salad" },
+                { "id": "a4", "en": "wall" }
+              ],
+              "correctAnswers": ["a3"],
+              "feedback": {
+                "correct": { "he": "בדיוק. ב-salad אין רצף all, ולכן הצליל שונה לגמרי.", "ar": "بالضبط. في salad لا يوجد تسلسل all، لذلك الصوت مختلف تمامًا." },
+                "incorrect": {
+                  "he": "שלוש מהמילים מכילות את הרצף all ולכן נשמעות אותו דבר. חפשו את המילה שבה אין את הרצף הזה בכלל.",
+                  "ar": "ثلاث كلمات تحتوي على التسلسل all لذلك تُلفظ بالطريقة نفسها. ابحثوا عن الكلمة التي لا تحتوي عليه إطلاقًا."
+                },
+                "hint": { "he": "סמנו לעצמכם בכל מילה איפה מופיע הרצף a-l-l.", "ar": "حدّدوا في كل كلمة أين يظهر التسلسل a-l-l." }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C2",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "פורום כיתה ח'2", "ar": "منتدى صفّ الثامن 2" },
+      "subtitle": { "he": "קריאה מהירה — למצוא מי עושה מה", "ar": "قراءة سريعة — إيجاد مَن يفعل ماذا" },
+      "componentPurpose": "both",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": ["YuviLab-en-smartphone-00001-C7"],
+      "isRequired": true,
+      "relativeDifficulty": 2,
+      "masteryLevel": "intermediate",
+      "order": 2,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 10,
+      "goals": ["G2", "G6"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C2-i01",
+          "title": { "he": "אסטרטגיה: סריקה", "ar": "استراتيجية: المسح" },
+          "informationToBot": "מטרת הפריט: פיגום מטה-קוגניטיבי של ניטור — הקניית אסטרטגיית הסריקה. מה התלמיד אמור להבין: שלא חייבים לקרוא כל מילה; מחפשים מילת מפתח אחת. אסטרטגיות חשיבה: לזהות קודם את מילת המפתח בשאלה, ואז לרוץ עם העין על הטקסט רק כדי למצוא אותה. טעויות נפוצות: קריאה מילה-מילה של כל הטקסט, שמבזבזת זמן ומאבדת את השאלה. מידע נוסף: האסטרטגיה חוזרת בכל שאלות הסריקה בהמשך הרכיב. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "strategy",
+          "prompt": {
+            "he": "סריקה היא קריאה מהירה עם מטרה אחת: למצוא פרט אחד. לא קוראים כל מילה.",
+            "ar": "المسح قراءة سريعة بهدف واحد: إيجاد تفصيل واحد. لا نقرأ كل كلمة."
+          },
+          "body": {
+            "steps": [
+              { "he": "קראו את השאלה וסמנו לעצמכם את מילת המפתח.", "ar": "اقرأوا السؤال وحدّدوا الكلمة المفتاحية." },
+              { "he": "רוצו עם העין על הטקסט — מחפשים רק את המילה הזאת.", "ar": "مرّروا أعينكم على النصّ — تبحثون عن تلك الكلمة فقط." },
+              { "he": "מצאתם? עכשיו קראו רק את השורה שסביבה.", "ar": "وجدتموها؟ اقرأوا الآن السطر المحيط بها فقط." },
+              { "he": "עצרו ושאלו: זאת באמת התשובה לשאלה שנשאלה?", "ar": "توقّفوا واسألوا: هل هذه فعلًا إجابة السؤال المطروح؟" }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C2-i02",
+          "title": { "he": "הטקסט", "ar": "النصّ" },
+          "informationToBot": "מטרת הפריט: קריאת טקסט אותנטי-למראה ברמה A1 שבו כל התשובות מנוסחות בהווה פשוט בגוף ראשון. מה התלמיד אמור להבין: מה כל דובר עושה הרבה בטלפון, ושכל המשפטים בנויים באותה תבנית I + פועל + מושא. אסטרטגיות חשיבה: לשים לב שהשמות ממוספרים ולכן קל לסרוק לפי מספר, ולשים לב לחזרה על התבנית. טעויות נפוצות: ניסיון לתרגם כל מילה במקום לחפש את מילת המפתח; התבלבלות בין דוברים בעלי תשובות דומות. מידע נוסף: הטקסט מקורי ונכתב עבור הלומדה; הוא אינו מועתק מהספר. הקלטת שמע מלאה זמינה. צילום מסך: לא צורף.",
+          "contentType": "Text Reading",
+          "mediaFormat": "Text",
+          "kind": "reading",
+          "prompt": {
+            "he": "קראו את הפורום. אפשר גם להאזין ולעקוב עם העין.",
+            "ar": "اقرأوا المنتدى. يمكنكم أيضًا الاستماع والمتابعة بأعينكم."
+          },
+          "body": {
+            "audio": "audio/en/c2-forum.mp3",
+            "heading": "THE 8B FORUM",
+            "intro": {
+              "author": "Maya, 13",
+              "lines": [
+                "Hi everyone! I have a school project.",
+                "I ask you ONE question:",
+                "What is the ONE thing you do a lot on your phone?",
+                "Please write your answer below. Thanks a lot!"
+              ]
+            },
+            "replies": [
+              { "n": 1, "name": "Adam", "text": "I take photos of my dog. I take photos every day." },
+              { "n": 2, "name": "Nour", "text": "I listen to music on the bus. I love music!" },
+              { "n": 3, "name": "Tom", "text": "I text my grandma. She texts me back with a lot of hearts." },
+              { "n": 4, "name": "Lina", "text": "I play games with my cousin. We play every evening." },
+              { "n": 5, "name": "Omar", "text": "I watch short videos about football." },
+              { "n": 6, "name": "Shira", "text": "I use the dictionary. I check new English words for school." },
+              { "n": 7, "name": "Daniel", "text": "I make calls to my mum. She always asks: \"Where are you?\"" },
+              { "n": 8, "name": "Rana", "text": "I send voice messages to my best friend. I never write - I talk!" }
+            ],
+            "sayIt": {
+              "en": "I ______ every day.",
+              "he": "אמרו בקול משפט אחד על עצמכם לפי התבנית הזאת.",
+              "ar": "قولوا بصوت عالٍ جملة واحدة عن أنفسكم وفق هذا النموذج."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C2-i03",
+          "title": { "he": "מי עושה מה?", "ar": "مَن يفعل ماذا؟" },
+          "informationToBot": "מטרת הפריט: תרגול סריקה ממוקדת בשאלות Who. מה התלמיד אמור לתרגל: איתור מהיר של דובר לפי מילת מפתח, והבנה שהשאלה עצמה בנויה בהווה פשוט עם פועל בגוף שלישי יחיד. אסטרטגיות חשיבה: לזהות את מילת המפתח בשאלה ולחפש רק אותה בטקסט. טעויות נפוצות: בחירת דובר שמופיעה אצלו מילה דומה אך לא אותה פעולה (למשל Omar שצופה בסרטונים על כדורגל מול Nour שמאזינה למוזיקה); בלבול בין text לבין call. מידע נוסף: לכל שאלה יש רמז שמכוון לאיפה לחפש, בלי לחשוף את התשובה. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "סרקו את הפורום ובחרו את השם הנכון. עשו את זה מהר.", "ar": "امسحوا المنتدى واختاروا الاسم الصحيح. افعلوا ذلك بسرعة." },
+          "showReference": "YuviLab-en-smartphone-00001-C2-i02",
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i03-q1",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "מי מאזין/ה למוזיקה באוטובוס?", "ar": "مَن يستمع إلى الموسيقى في الحافلة؟" },
+              "questionTextEn": "Who listens to music on the bus?",
+              "answers": [{ "id": "a1", "en": "Adam" }, { "id": "a2", "en": "Nour" }, { "id": "a3", "en": "Omar" }, { "id": "a4", "en": "Rana" }],
+              "correctAnswers": ["a2"],
+              "feedback": {
+                "correct": { "he": "מצאתם מהר. מילת המפתח הייתה music, והיא מופיעה רק בתשובה 2.", "ar": "وجدتم بسرعة. الكلمة المفتاحية كانت music وهي تظهر في الإجابة 2 فقط." },
+                "incorrect": { "he": "מילת המפתח בשאלה היא music. חפשו אותה בטקסט — היא מופיעה רק במקום אחד. שימו לב: videos זה לא music.", "ar": "الكلمة المفتاحية في السؤال هي music. ابحثوا عنها في النصّ — تظهر في مكان واحد فقط. انتبهوا: videos ليست music." },
+                "hint": { "he": "חפשו את המילה music בלבד. אל תקראו את כל הטקסט.", "ar": "ابحثوا عن كلمة music فقط. لا تقرأوا النصّ كلّه." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i03-q2",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "מי משחק/ת כל ערב?", "ar": "مَن يلعب كل مساء؟" },
+              "questionTextEn": "Who plays games every evening?",
+              "answers": [{ "id": "a1", "en": "Lina" }, { "id": "a2", "en": "Tom" }, { "id": "a3", "en": "Shira" }, { "id": "a4", "en": "Daniel" }],
+              "correctAnswers": ["a1"],
+              "feedback": {
+                "correct": { "he": "נכון. שתי מילות מפתח עזרו כאן: games וגם every evening.", "ar": "صحيح. ساعدتكم هنا كلمتان مفتاحيتان: games و every evening." },
+                "incorrect": { "he": "בשאלה הזאת יש שתי מילות מפתח: games ו-every evening. חפשו את שתיהן באותה שורה — רק אצל דובר אחד הן מופיעות יחד.", "ar": "في هذا السؤال كلمتان مفتاحيتان: games و every evening. ابحثوا عنهما في السطر نفسه — تظهران معًا عند متحدّث واحد فقط." },
+                "hint": { "he": "מילת הזמן every evening מצמצמת את החיפוש לשורה אחת.", "ar": "كلمة الزمن every evening تحصر البحث في سطر واحد." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i03-q3",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "מי כותב/ת הודעות לבן משפחה?", "ar": "مَن يكتب رسائل لأحد أفراد العائلة؟" },
+              "questionTextEn": "Who texts a family member?",
+              "answers": [{ "id": "a1", "en": "Rana" }, { "id": "a2", "en": "Tom" }, { "id": "a3", "en": "Nour" }, { "id": "a4", "en": "Adam" }],
+              "correctAnswers": ["a2"],
+              "feedback": {
+                "correct": { "he": "מדויק. grandma היא בת משפחה, והפועל הוא text — כלומר לכתוב הודעה.", "ar": "دقيق. grandma من أفراد العائلة، والفعل هو text أي كتابة رسالة." },
+                "incorrect": { "he": "שימו לב להבדל בין הפעלים: text זה לכתוב הודעה, send a voice message זה להקליט, ו-make a call זה לדבר. חפשו את מי שכותב, ולבן משפחה.", "ar": "انتبهوا للفرق بين الأفعال: text تعني كتابة رسالة، و send a voice message تعني التسجيل، و make a call تعني التحدّث. ابحثوا عمّن يكتب، ولأحد أفراد العائلة." },
+                "hint": { "he": "שתי מילות מפתח: הפועל text, ואדם שהוא משפחה (grandma, mum, cousin).", "ar": "كلمتان مفتاحيتان: الفعل text، وشخص من العائلة (grandma, mum, cousin)." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i03-q4",
+              "questionType": "choice",
+              "assessed": true,
+              "stretch": true,
+              "questionText": { "he": "מי משתמש/ת בטלפון בשביל בית הספר?", "ar": "مَن يستعمل الهاتف من أجل المدرسة؟" },
+              "questionTextEn": "Who uses the phone for school?",
+              "answers": [{ "id": "a1", "en": "Omar" }, { "id": "a2", "en": "Daniel" }, { "id": "a3", "en": "Shira" }, { "id": "a4", "en": "Lina" }],
+              "correctAnswers": ["a3"],
+              "feedback": {
+                "correct": { "he": "יפה. כאן המילה school לא הופיעה בשאלה במקרה — היא מופיעה בטקסט רק פעם אחת, בשורה של Shira.", "ar": "أحسنتم. كلمة school لم ترد صدفة — تظهر في النصّ مرّة واحدة فقط، في سطر Shira." },
+                "incorrect": { "he": "גם Maya מזכירה school, אבל היא זאת ששואלת ולא עונה. חפשו את המילה school בתוך אחת התשובות הממוספרות.", "ar": "Maya أيضًا تذكر school، لكنها هي مَن تسأل ولا تجيب. ابحثوا عن كلمة school داخل إحدى الإجابات المرقّمة." },
+                "hint": { "he": "מילת המפתח היא school. שימו לב שהיא מופיעה גם בשאלה של מאיה — אבל היא לא אחת התשובות.", "ar": "الكلمة المفتاحية هي school. انتبهوا إلى أنها تظهر أيضًا في سؤال مايا — لكنها ليست من الإجابات." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C2-i04",
+          "title": { "he": "נכון או לא נכון", "ar": "صحيح أم غير صحيح" },
+          "informationToBot": "מטרת הפריט: בדיקת הבנה מדויקת ולא רק איתור מילים. מה התלמיד אמור לתרגל: השוואה בין הנאמר במשפט לבין מה שכתוב בטקסט, כולל פרטים מטעים. אסטרטגיות חשיבה: למצוא את השורה הרלוונטית ולהשוות מילה במילה. טעויות נפוצות: אישור משפט רק מפני שהשם שבו מופיע בטקסט, בלי לבדוק את הפרט עצמו. מידע נוסף: המשפט הראשון מחליף כדורגל במוזיקה — מלכודת מכוונת. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "קראו כל משפט והחליטו אם הוא מתאים לטקסט.", "ar": "اقرأوا كل جملة وقرّروا إن كانت تطابق النصّ." },
+          "showReference": "YuviLab-en-smartphone-00001-C2-i02",
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i04-q1",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "האם המשפט נכון לפי הטקסט?", "ar": "هل الجملة صحيحة وفق النصّ؟" },
+              "questionTextEn": "Omar watches videos about music.",
+              "answers": [{ "id": "true", "en": "True" }, { "id": "false", "en": "False" }],
+              "correctAnswers": ["false"],
+              "feedback": {
+                "correct": { "he": "בדיוק. Omar צופה בסרטונים על football, לא על music.", "ar": "بالضبط. Omar يشاهد مقاطع عن football لا عن music." },
+                "incorrect": { "he": "השם Omar אכן מופיע בטקסט, ולכן קל להתבלבל. אבל הפרט עצמו שונה: הוא צופה בסרטונים על football. בדקו תמיד גם את הפרט, לא רק את השם.", "ar": "اسم Omar يظهر فعلًا في النصّ لذلك من السهل الالتباس. لكن التفصيل مختلف: هو يشاهد مقاطع عن football. تحقّقوا دائمًا من التفصيل لا من الاسم فقط." },
+                "hint": { "he": "מצאו את השורה של Omar וקראו רק אותה.", "ar": "جدوا سطر Omar واقرأوه وحده." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C2-i04-q2",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "האם המשפט נכון לפי הטקסט?", "ar": "هل الجملة صحيحة وفق النصّ؟" },
+              "questionTextEn": "Rana never writes messages. She talks.",
+              "answers": [{ "id": "true", "en": "True" }, { "id": "false", "en": "False" }],
+              "correctAnswers": ["true"],
+              "feedback": {
+                "correct": { "he": "נכון, והמילה שהוכיחה את זה היא never. מילות זמן כאלה נלמדות בהמשך היחידה.", "ar": "صحيح، والكلمة التي أثبتت ذلك هي never. كلمات الزمن هذه ستُدرَس لاحقًا في الوحدة." },
+                "incorrect": { "he": "Rana כותבת בעצמה: I never write - I talk. המילה never אומרת אף פעם, ולכן המשפט כן מתאים לטקסט.", "ar": "Rana تكتب بنفسها: I never write - I talk. كلمة never تعني أبدًا، لذلك الجملة تطابق النصّ." },
+                "hint": { "he": "חפשו את המילה never בשורה האחרונה.", "ar": "ابحثوا عن كلمة never في السطر الأخير." }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C3",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "נקודת שפה: הווה פשוט", "ar": "نقطة لغوية: المضارع البسيط" },
+      "subtitle": { "he": "איך בונים משפט על מה שעושים כל יום", "ar": "كيف نبني جملة عمّا نفعله كل يوم" },
+      "componentPurpose": "instruction",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": [],
+      "isRequired": true,
+      "relativeDifficulty": 3,
+      "masteryLevel": "intermediate",
+      "order": 3,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 10,
+      "goals": ["G3", "G4", "G5"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C3-i01",
+          "title": { "he": "הכלל הבסיסי", "ar": "القاعدة الأساسية" },
+          "informationToBot": "מטרת הפריט: הקניית מבנה המשפט הבסיסי בהווה פשוט עם I / You / We / They. מה התלמיד אמור להבין: שהמשפט בנוי מנושא + פועל + השלמה, ושהפועל אינו משתנה עבור הגופים האלה. אסטרטגיות חשיבה: לבנות משפטים בעצמו בעזרת בונה המשפטים ולראות שהפועל נשאר זהה. טעויות נפוצות: הוספת s- גם ל-I או ל-They. מידע נוסף: בונה המשפטים אינטראקטיבי ואינו מוערך. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Interactive content",
+          "kind": "builder",
+          "prompt": {
+            "he": "בחרו נושא, בחרו פעולה — והמשפט נבנה לבד. שימו לב: הפועל לא משתנה.",
+            "ar": "اختاروا فاعلًا، اختاروا فعلًا — وتُبنى الجملة وحدها. انتبهوا: الفعل لا يتغيّر."
+          },
+          "body": {
+            "rule": {
+              "en": "I / You / We / They + verb",
+              "he": "עם הגופים האלה הפועל נשאר בדיוק כמו שהוא.",
+              "ar": "مع هذه الضمائر يبقى الفعل كما هو تمامًا."
+            },
+            "subjects": ["I", "You", "We", "They"],
+            "verbs": ["take photos", "listen to music", "play games", "watch videos"],
+            "tails": ["every day", "in the evening", "on the bus"],
+            "thirdPerson": false
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C3-i02",
+          "title": { "he": "כשמדברים על מישהו אחר", "ar": "عندما نتحدّث عن شخص آخر" },
+          "informationToBot": "מטרת הפריט: הקניית תוספת s- לפועל בגוף שלישי יחיד. מה התלמיד אמור להבין: שעבור He / She / It הפועל מקבל s-, וזה השינוי היחיד במשפט. אסטרטגיות חשיבה: לשאול תמיד קודם מיהו הנושא, ורק אחר כך לכתוב את הפועל. טעויות נפוצות: שכחת ה-s; הוספת s- גם לנושא ברבים כמו my friends. מידע נוסף: בונה המשפטים מדגיש את ה-s בצבע כשהוא נוסף. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Interactive content",
+          "kind": "builder",
+          "prompt": {
+            "he": "עכשיו הנושא הוא מישהו אחד אחר. שימו לב מה קורה לסוף הפועל.",
+            "ar": "الآن الفاعل شخص واحد آخر. انتبهوا لما يحدث لنهاية الفعل."
+          },
+          "body": {
+            "rule": {
+              "en": "He / She / It + verb + s",
+              "he": "עבור אדם אחד אחר — הפועל מקבל s בסוף.",
+              "ar": "لشخص واحد آخر — يأخذ الفعل s في النهاية."
+            },
+            "subjects": ["He", "She", "It", "Adam", "Nour"],
+            "verbs": ["take photos", "listen to music", "play games", "watch videos"],
+            "tails": ["every day", "in the evening", "on the bus"],
+            "thirdPerson": true
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C3-i03",
+          "title": { "he": "מתי es- ולא s-", "ar": "متى ‎-es‎ وليس ‎-s‎" },
+          "informationToBot": "מטרת הפריט: הקניית כללי הכתיב לתוספת es- בפעלים המסתיימים ב-ch, sh, s, x, o. מה התלמיד אמור להבין: שהבחירה בין s- ל-es- תלויה באות האחרונה של הפועל, לא במשמעות. אסטרטגיות חשיבה: להסתכל על האות או שתי האותיות האחרונות של הפועל לפני שמוסיפים. טעויות נפוצות: watchs במקום watches, gos במקום goes. מידע נוסף: התוכן מוצג כטבלה קצרה עם דוגמאות מהיחידה עצמה. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "rule",
+          "prompt": {
+            "he": "לרוב הפעלים מוסיפים s. אבל כשהפועל נגמר בצליל שורק או ב-o, מוסיפים es.",
+            "ar": "لمعظم الأفعال نضيف s. لكن إذا انتهى الفعل بصوت صفيري أو بـ o نضيف es."
+          },
+          "body": {
+            "rows": [
+              { "en": "watch → watches", "note": { "he": "נגמר ב-ch", "ar": "ينتهي بـ ch" } },
+              { "en": "finish → finishes", "note": { "he": "נגמר ב-sh", "ar": "ينتهي بـ sh" } },
+              { "en": "go → goes", "note": { "he": "נגמר ב-o", "ar": "ينتهي بـ o" } },
+              { "en": "take → takes", "note": { "he": "רגיל — רק s", "ar": "عادي — s فقط" } },
+              { "en": "play → plays", "note": { "he": "רגיל — רק s", "ar": "عادي — s فقط" } }
+            ],
+            "tip": {
+              "he": "טריק: נסו לומר watchs בקול. קשה, נכון? בדיוק בגלל זה יש es.",
+              "ar": "حيلة: حاولوا قول watchs بصوت عالٍ. صعب، أليس كذلك؟ لهذا بالضبط نضيف es."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C3-i04",
+          "title": { "he": "מילות זמן", "ar": "كلمات الزمن" },
+          "informationToBot": "מטרת הפריט: הקניית מיקומן של מילות התדירות always / sometimes / never ושל ביטויי זמן כמו every day. מה התלמיד אמור להבין: שמילת תדירות באה לפני הפועל, בעוד ביטוי זמן ארוך בא בסוף המשפט או בתחילתו. אסטרטגיות חשיבה: לבדוק אם מדובר במילה אחת או בצירוף — זה קובע את המיקום. טעויות נפוצות: I take always photos במקום I always take photos. מידע נוסף: הכלל הזה נבדק בתרגול ובהערכה. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "rule",
+          "prompt": {
+            "he": "יש שני סוגים של מילות זמן, ולכל אחד מקום אחר במשפט.",
+            "ar": "هناك نوعان من كلمات الزمن، ولكل نوع مكان مختلف في الجملة."
+          },
+          "body": {
+            "rows": [
+              { "en": "I always take photos.", "note": { "he": "always / sometimes / never — לפני הפועל", "ar": "always / sometimes / never — قبل الفعل" } },
+              { "en": "She never plays games.", "note": { "he": "גם כאן — לפני הפועל", "ar": "هنا أيضًا — قبل الفعل" } },
+              { "en": "I watch videos every day.", "note": { "he": "every day — בסוף המשפט", "ar": "every day — في نهاية الجملة" } },
+              { "en": "In the evening, we play games.", "note": { "he": "אפשר גם בהתחלה, עם פסיק", "ar": "يمكن أيضًا في البداية، مع فاصلة" } }
+            ],
+            "tip": {
+              "he": "המילה הקצרה נכנסת פנימה, הצירוף הארוך נשאר בחוץ.",
+              "ar": "الكلمة القصيرة تدخل إلى الداخل، والتعبير الطويل يبقى في الخارج."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C3-i05",
+          "title": { "he": "פתרון מודרך", "ar": "حلّ موجَّه" },
+          "informationToBot": "מטרת הפריט: הדגמת תהליך הפתרון צעד אחר צעד על משפט אחד. מה התלמיד אמור להבין: את סדר הבדיקה — קודם הנושא, אחר כך צורת הפועל, ולבסוף מיקום מילת הזמן. אסטרטגיות חשיבה: לפרק משימה לשלושה צעדים קבועים ולבצע אותם תמיד באותו סדר. טעויות נפוצות: התחלה מהפועל במקום מהנושא. מידע נוסף: אותם שלושה צעדים מוצעים כעצה בפידבק של תרגילי הרכיב הבא. צילום מסך: לא צורף.",
+          "contentType": "Solved Exercise",
+          "mediaFormat": "Text",
+          "kind": "solved",
+          "prompt": {
+            "he": "המשימה: לחבר משפט מהמילים Nour / watch / videos / never.",
+            "ar": "المهمّة: تكوين جملة من الكلمات Nour / watch / videos / never."
+          },
+          "body": {
+            "steps": [
+              { "he": "מי הנושא? Nour — אדם אחד אחר. כלומר כמו she.", "ar": "مَن الفاعل؟ Nour — شخص واحد آخر. أي مثل she.", "en": "Nour = she" },
+              { "he": "מה קורה לפועל? watch נגמר ב-ch, ולכן watches.", "ar": "ماذا يحدث للفعل؟ watch ينتهي بـ ch، لذلك watches.", "en": "watch → watches" },
+              { "he": "איפה מילת הזמן? never היא מילה קצרה — לפני הפועל.", "ar": "أين كلمة الزمن؟ never كلمة قصيرة — قبل الفعل.", "en": "never + watches" },
+              { "he": "מרכיבים הכול יחד.", "ar": "نركّب كل شيء معًا.", "en": "Nour never watches videos." }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C4",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "תרגול", "ar": "تدريب" },
+      "subtitle": { "he": "עשרה תרגילים — אפשר לנסות כמה פעמים שרוצים", "ar": "عشرة تمارين — يمكن المحاولة كما تشاؤون" },
+      "componentPurpose": "practice",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": ["YuviLab-en-smartphone-00001-C7"],
+      "isRequired": true,
+      "relativeDifficulty": 3,
+      "masteryLevel": "intermediate",
+      "order": 4,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 12,
+      "goals": ["G1", "G3", "G4", "G5"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C4-i01",
+          "title": { "he": "s או לא s", "ar": "s أم بدون s" },
+          "informationToBot": "מטרת הפריט: תרגול ההחלטה בין פועל בסיסי לבין פועל עם s- לפי הנושא. מה התלמיד אמור לתרגל: זיהוי הנושא כשלב ראשון קבוע. אסטרטגיות חשיבה: לכסות את הפועל, לקרוא רק את הנושא ולהחליט, ורק אז לבחור. טעויות נפוצות: התייחסות ל-my friends כאל יחיד; שכחת ה-s אחרי שם פרטי. מידע נוסף: שלושה תרגילים ברצף עם אותו מבנה כדי לבסס אוטומציה. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "בחרו את צורת הפועל שמתאימה לנושא.", "ar": "اختاروا صيغة الفعل المناسبة للفاعل." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i01-q1",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "בחרו את המילה הנכונה.", "ar": "اختاروا الكلمة الصحيحة." },
+              "questionTextEn": "Adam ______ photos of his dog.",
+              "answers": [{ "id": "a1", "en": "take" }, { "id": "a2", "en": "takes" }, { "id": "a3", "en": "taking" }],
+              "correctAnswers": ["a2"],
+              "feedback": {
+                "correct": { "he": "נכון. Adam הוא אדם אחד אחר, ולכן takes.", "ar": "صحيح. Adam شخص واحد آخر، لذلك takes." },
+                "incorrect": { "he": "הנושא הוא Adam — אדם אחד אחר, כמו he. לכן הפועל מקבל s. הצעד הראשון תמיד: מיהו הנושא.", "ar": "الفاعل هو Adam — شخص واحد آخر مثل he. لذلك يأخذ الفعل s. الخطوة الأولى دائمًا: مَن الفاعل." },
+                "hint": { "he": "החליפו את Adam במילה he. מה תכתבו עכשיו?", "ar": "استبدلوا Adam بكلمة he. ماذا ستكتبون الآن؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i01-q2",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "בחרו את המילה הנכונה.", "ar": "اختاروا الكلمة الصحيحة." },
+              "questionTextEn": "My friends ______ games every evening.",
+              "answers": [{ "id": "a1", "en": "play" }, { "id": "a2", "en": "plays" }, { "id": "a3", "en": "playes" }],
+              "correctAnswers": ["a1"],
+              "feedback": {
+                "correct": { "he": "מדויק. my friends זה יותר מאחד — כמו they, בלי s.", "ar": "دقيق. my friends أكثر من واحد — مثل they، بدون s." },
+                "incorrect": { "he": "my friends זה רבים, כמו they. רק אדם אחד אחר מקבל s. שימו לב ל-s של שם העצם — היא לא קשורה לפועל.", "ar": "my friends جمع، مثل they. الشخص الواحد الآخر فقط يأخذ s. انتبهوا إلى s الاسم — لا علاقة لها بالفعل." },
+                "hint": { "he": "כמה חברים? אחד או יותר מאחד?", "ar": "كم صديقًا؟ واحد أم أكثر من واحد؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i01-q3",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "בחרו את המילה הנכונה.", "ar": "اختاروا الكلمة الصحيحة." },
+              "questionTextEn": "Omar ______ short videos about football.",
+              "answers": [{ "id": "a1", "en": "watchs" }, { "id": "a2", "en": "watches" }, { "id": "a3", "en": "watch" }],
+              "correctAnswers": ["a2"],
+              "feedback": {
+                "correct": { "he": "יפה מאוד. Omar הוא אדם אחד, ו-watch נגמר ב-ch ולכן es.", "ar": "ممتاز. Omar شخص واحد، و watch ينتهي بـ ch لذلك es." },
+                "incorrect": { "he": "שני שלבים כאן: קודם Omar הוא אדם אחד אחר, ולכן צריך תוספת. אחר כך — watch נגמר ב-ch, ולכן התוספת היא es ולא s.", "ar": "خطوتان هنا: أوّلًا Omar شخص واحد آخر لذلك نحتاج إضافة. ثانيًا — watch ينتهي بـ ch، لذلك الإضافة es وليست s." },
+                "hint": { "he": "מה האות האחרונה של הפועל?", "ar": "ما الحرف الأخير في الفعل؟" }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C4-i02",
+          "title": { "he": "השלמת משפטים", "ar": "إكمال جمل" },
+          "informationToBot": "מטרת הפריט: הפקה פעילה של צורת הפועל בכתיבה חופשית קצרה. מה התלמיד אמור לתרגל: לכתוב את הפועל בצורה הנכונה בלי מבחר תשובות. אסטרטגיות חשיבה: לבדוק נושא, ואז לבדוק אות אחרונה של הפועל. טעויות נפוצות: goes נכתב gos; שכחת s אחרי She. מידע נוסף: הבדיקה מתעלמת מאותיות גדולות/קטנות ומרווחים מיותרים. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "הקלידו את הפועל בצורה הנכונה.", "ar": "اكتبوا الفعل بالصيغة الصحيحة." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i02-q1",
+              "questionType": "fill-in",
+              "assessed": true,
+              "questionText": { "he": "הפועל בסוגריים הוא listen.", "ar": "الفعل بين القوسين هو listen." },
+              "questionTextEn": "Nour ______ to music on the bus.",
+              "answers": [],
+              "correctAnswers": ["listens"],
+              "feedback": {
+                "correct": { "he": "מצוין. Nour היא אדם אחד אחר, ולכן listens.", "ar": "ممتاز. Nour شخصة واحدة أخرى، لذلك listens." },
+                "incorrect": { "he": "הנושא Nour הוא אדם אחד אחר, כמו she. הפועל listen נגמר ב-n רגיל, ולכן פשוט מוסיפים s: listens.", "ar": "الفاعل Nour شخصة واحدة أخرى مثل she. الفعل listen ينتهي بـ n عادي، لذلك نضيف s ببساطة: listens." },
+                "hint": { "he": "Nour = she. מה עושים לפועל?", "ar": "Nour = she. ماذا نفعل بالفعل؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i02-q2",
+              "questionType": "fill-in",
+              "assessed": true,
+              "questionText": { "he": "הפועל בסוגריים הוא go.", "ar": "الفعل بين القوسين هو go." },
+              "questionTextEn": "She ______ to school at eight.",
+              "answers": [],
+              "correctAnswers": ["goes"],
+              "feedback": {
+                "correct": { "he": "בול. go נגמר ב-o, ולכן goes.", "ar": "بالضبط. go ينتهي بـ o، لذلك goes." },
+                "incorrect": { "he": "הפועל go נגמר באות o, וזה אחד המקרים שבהם מוסיפים es ולא s. לכן goes. שווה לזכור את go ביחד עם watch.", "ar": "الفعل go ينتهي بحرف o، وهذه إحدى الحالات التي نضيف فيها es لا s. لذلك goes. يستحق أن تحفظوا go مع watch." },
+                "hint": { "he": "חזרו לטבלת es. איזו מילה שם נגמרת ב-o?", "ar": "عودوا إلى جدول es. أيّ كلمة هناك تنتهي بـ o؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i02-q3",
+              "questionType": "fill-in",
+              "assessed": true,
+              "stretch": true,
+              "questionText": { "he": "הפועל בסוגריים הוא use.", "ar": "الفعل بين القوسين هو use." },
+              "questionTextEn": "Shira ______ the dictionary for school.",
+              "answers": [],
+              "correctAnswers": ["uses"],
+              "feedback": {
+                "correct": { "he": "נכון. use נגמר ב-e שקטה, ופשוט מוסיפים s.", "ar": "صحيح. use ينتهي بـ e صامتة، ونضيف s ببساطة." },
+                "incorrect": { "he": "use נגמר באות e, וזה לא אחד המקרים של es. פשוט מוסיפים s: uses. שימו לב שזה נשמע כמו זי-ז, אבל נכתב עם s אחת.", "ar": "use ينتهي بحرف e، وهذه ليست من حالات es. نضيف s ببساطة: uses. انتبهوا أن اللفظ يشبه الزاي لكن الكتابة بـ s واحدة." },
+                "hint": { "he": "e שקטה בסוף לא משנה את הכלל.", "ar": "الـ e الصامتة في النهاية لا تغيّر القاعدة." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C4-i03",
+          "title": { "he": "סדר המילים", "ar": "ترتيب الكلمات" },
+          "informationToBot": "מטרת הפריט: תרגול מיקום מילת התדירות במשפט. מה התלמיד אמור לתרגל: הרכבת משפט תקין כשמילת הזמן צריכה להיכנס לפני הפועל. אסטרטגיות חשיבה: לבנות קודם נושא+פועל, ואז לשאול איפה נכנסת מילת הזמן. טעויות נפוצות: הצבת always אחרי הפועל או בסוף המשפט. מידע נוסף: הבנייה נעשית בלחיצה ולא בגרירה, כדי לעבוד גם במגע ובמקלדת. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "לחצו על המילים לפי הסדר הנכון.", "ar": "اضغطوا على الكلمات بالترتيب الصحيح." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i03-q1",
+              "questionType": "sequencing",
+              "assessed": true,
+              "questionText": { "he": "הרכיבו משפט תקין.", "ar": "كوّنوا جملة صحيحة." },
+              "answers": ["photos", "always", "I", "take"],
+              "correctAnswers": ["I", "always", "take", "photos"],
+              "feedback": {
+                "correct": { "he": "נכון. מילה קצרה כמו always נכנסת בין הנושא לפועל.", "ar": "صحيح. كلمة قصيرة مثل always تدخل بين الفاعل والفعل." },
+                "incorrect": { "he": "הסדר באנגלית הוא נושא, מילת תדירות, פועל, השלמה. always לא יכולה לבוא אחרי take. בנו קודם I take, ואז דחפו את always לאמצע.", "ar": "الترتيب بالإنجليزية: فاعل، كلمة تكرار، فعل، تكملة. always لا تأتي بعد take. كوّنوا أوّلًا I take ثم أدخلوا always في الوسط." },
+                "hint": { "he": "התחילו מ-I. מה בא מיד אחרי הנושא?", "ar": "ابدأوا بـ I. ماذا يأتي مباشرة بعد الفاعل؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i03-q2",
+              "questionType": "sequencing",
+              "assessed": true,
+              "questionText": { "he": "הרכיבו משפט תקין.", "ar": "كوّنوا جملة صحيحة." },
+              "answers": ["games", "never", "plays", "Tom"],
+              "correctAnswers": ["Tom", "never", "plays", "games"],
+              "feedback": {
+                "correct": { "he": "מצוין. גם כשהנושא הוא שם פרטי, מילת התדירות נכנסת לפני הפועל.", "ar": "ممتاز. حتى عندما يكون الفاعل اسمًا، تدخل كلمة التكرار قبل الفعل." },
+                "incorrect": { "he": "שימו לב לשני דברים: הפועל כאן הוא plays כי Tom הוא אדם אחד, ו-never נכנסת לפניו ולא אחריו.", "ar": "انتبهوا لأمرين: الفعل هنا plays لأنّ Tom شخص واحد، و never تدخل قبله لا بعده." },
+                "hint": { "he": "איזו מילה כאן היא הנושא? התחילו ממנה.", "ar": "أيّ كلمة هنا هي الفاعل؟ ابدأوا بها." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C4-i04",
+          "title": { "he": "מי עושה מה — התאמה", "ar": "مَن يفعل ماذا — مطابقة" },
+          "informationToBot": "מטרת הפריט: שילוב בין אוצר המילים לבין צורת הפועל בגוף שלישי. מה התלמיד אמור לתרגל: קישור בין דמות מהטקסט לבין משפט נכון עליה. אסטרטגיות חשיבה: לחזור לטקסט אם לא זוכרים, ולבדוק שהפועל במשפט מקבל s. טעויות נפוצות: בחירת המשפט הנכון מבחינת תוכן אך שגוי מבחינת צורת הפועל. מידע נוסף: כל ארבעת המשפטים כתובים נכון דקדוקית — ההבדל הוא בתוכן. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "התאימו כל דמות מהפורום למשפט שמתאים לה.", "ar": "طابقوا كل شخصية من المنتدى مع الجملة المناسبة لها." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i04-q1",
+              "questionType": "matching",
+              "assessed": true,
+              "questionText": { "he": "התאימו כל דמות למשפט הנכון.", "ar": "طابقوا كل شخصية مع الجملة الصحيحة." },
+              "answers": {
+                "source": ["Adam", "Rana", "Shira", "Daniel"],
+                "target": [
+                  { "id": "t1", "en": "He takes photos of his dog." },
+                  { "id": "t2", "en": "She sends voice messages." },
+                  { "id": "t3", "en": "She uses the dictionary." },
+                  { "id": "t4", "en": "He makes calls to his mum." }
+                ]
+              },
+              "correctAnswers": ["Adam|t1", "Rana|t2", "Shira|t3", "Daniel|t4"],
+              "feedback": {
+                "correct": { "he": "כל ההתאמות נכונות, ושימו לב — בכל ארבעת המשפטים לפועל יש s.", "ar": "كل المطابقات صحيحة، وانتبهوا — في الجمل الأربع كلّها يأخذ الفعل s." },
+                "incorrect": { "he": "חלק מההתאמות התחלפו. חזרו לפורום וחפשו את הפועל שמופיע בכל משפט: takes, sends, uses, makes. הפועל הוא הרמז הכי מהיר.", "ar": "بعض المطابقات تبدّلت. عودوا إلى المنتدى وابحثوا عن الفعل في كل جملة: takes, sends, uses, makes. الفعل هو أسرع دليل." },
+                "hint": { "he": "הפועל במשפט הוא אותו פועל שהדמות כתבה על עצמה — רק עם s.", "ar": "الفعل في الجملة هو الفعل نفسه الذي كتبته الشخصية عن نفسها — مع s فقط." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C4-i05",
+          "title": { "he": "בדיקה אחרונה", "ar": "فحص أخير" },
+          "informationToBot": "מטרת הפריט: בדיקת תשומת לב לפרטים דקדוקיים בתוך משפט שנראה תקין. מה התלמיד אמור לתרגל: זיהוי טעות דקדוקית והסבר שלה. אסטרטגיות חשיבה: לקרוא את המשפט בקול ולשאול אם הנושא והפועל מסתדרים. טעויות נפוצות: אישור משפט שגוי מפני שהוא נשמע מוכר. מידע נוסף: זהו הפריט האחרון ברכיב לפני סיכום. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "האם המשפט כתוב נכון?", "ar": "هل الجملة مكتوبة بشكل صحيح؟" },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C4-i05-q1",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "האם המשפט כתוב נכון מבחינה דקדוקית?", "ar": "هل الجملة صحيحة نحويًّا؟" },
+              "questionTextEn": "Lina play games with her cousin.",
+              "answers": [{ "id": "true", "en": "Correct" }, { "id": "false", "en": "Not correct" }],
+              "correctAnswers": ["false"],
+              "feedback": {
+                "correct": { "he": "צודקים. חסרה s: הצורה הנכונה היא Lina plays games.", "ar": "أصبتم. تنقص s: الصيغة الصحيحة Lina plays games." },
+                "incorrect": { "he": "המשפט נשמע מוכר, אבל Lina היא אדם אחד אחר, ולכן הפועל צריך להיות plays. זה בדיוק סוג הטעות שכדאי לחפש: נושא יחיד עם פועל בלי s.", "ar": "الجملة تبدو مألوفة، لكن Lina شخصة واحدة أخرى، لذلك يجب أن يكون الفعل plays. هذا بالضبط نوع الخطأ الذي يجدر البحث عنه: فاعل مفرد مع فعل بلا s." },
+                "hint": { "he": "כסו את סוף המשפט וקראו רק Lina play. נשמע נכון?", "ar": "غطّوا نهاية الجملة واقرأوا Lina play فقط. هل يبدو صحيحًا؟" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C7",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "צעד אחר צעד", "ar": "خطوة بخطوة" },
+      "subtitle": { "he": "אותו חומר — הפעם עם שמע ורעיון אחד בכל מסך", "ar": "المادّة نفسها — هذه المرّة بالصوت وفكرة واحدة في كل شاشة" },
+      "componentPurpose": "practice",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": [],
+      "isRequired": false,
+      "relativeDifficulty": 1,
+      "masteryLevel": "basic",
+      "order": 4,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 8,
+      "goals": ["G3", "G4"],
+      "supportLane": true,
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C7-i01",
+          "title": { "he": "הכלל תמיד לידכם", "ar": "القاعدة دائمًا بجانبكم" },
+          "informationToBot": "מטרת הפריט: הצגת הכלל בגרסה מצומצמת שנשארת גלויה לאורך כל הרכיב התומך. מה התלמיד אמור להבין: שתי שורות בלבד — מתי אין תוספת ומתי יש. אסטרטגיות חשיבה: להסתכל בכלל בכל פעם שמתלבטים, זה מותר ורצוי. טעויות נפוצות: ניסיון לזכור בעל פה במקום להיעזר. מידע נוסף: הרכיב הזה מיועד ללומדים שהתקשו בתרגול הרגיל, ולכן הפיגום גבוה. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "rule",
+          "prompt": { "he": "הכלל הזה יישאר על המסך בכל התרגילים כאן. מותר להסתכל.", "ar": "ستبقى هذه القاعدة على الشاشة في كل التمارين هنا. يُسمح بالنظر إليها." },
+          "body": {
+            "rows": [
+              { "en": "I / You / We / They + play", "note": { "he": "בלי תוספת", "ar": "بدون إضافة" } },
+              { "en": "He / She / It + plays", "note": { "he": "עם s", "ar": "مع s" } }
+            ],
+            "sticky": true
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C7-i02",
+          "title": { "he": "שומעים ובוחרים", "ar": "نسمع ونختار" },
+          "informationToBot": "מטרת הפריט: תרגול בערוץ שמיעתי לפני הערוץ הכתוב. מה התלמיד אמור לתרגל: זיהוי אם נשמעה s בסוף הפועל. אסטרטגיות חשיבה: להאזין פעמיים לפני שבוחרים, ולשים לב רק לסוף המילה. טעויות נפוצות: בחירה לפי ניחוש חזותי בלי להאזין. מידע נוסף: כל שאלה כאן מכילה רעיון אחד בלבד ושתי אפשרויות. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Audio",
+          "kind": "question",
+          "prompt": { "he": "לחצו על הרמקול, הקשיבו, ואז בחרו.", "ar": "اضغطوا على مكبّر الصوت، استمعوا، ثم اختاروا." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i02-q1",
+              "questionType": "choice",
+              "assessed": true,
+              "audio": "audio/en/c7-he-plays-games.mp3",
+              "questionText": { "he": "מה שמעתם?", "ar": "ماذا سمعتم؟" },
+              "answers": [{ "id": "a1", "en": "He play games." }, { "id": "a2", "en": "He plays games." }],
+              "correctAnswers": ["a2"],
+              "feedback": {
+                "correct": { "he": "בדיוק. שמעתם את ה-s בסוף. He תמיד מביא s.", "ar": "بالضبط. سمعتم الـ s في النهاية. He يجلب s دائمًا." },
+                "incorrect": { "he": "הקשיבו שוב ושימו לב רק לסוף המילה play. אחרי He תמיד תשמעו s.", "ar": "استمعوا مرّة أخرى وانتبهوا لنهاية كلمة play فقط. بعد He ستسمعون s دائمًا." },
+                "hint": { "he": "הסתכלו בכלל שלמעלה: מה כתוב בשורה של He?", "ar": "انظروا إلى القاعدة في الأعلى: ماذا كُتب في سطر He؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i02-q2",
+              "questionType": "choice",
+              "assessed": true,
+              "audio": "audio/en/c7-they-listen.mp3",
+              "questionText": { "he": "מה שמעתם?", "ar": "ماذا سمعتم؟" },
+              "answers": [{ "id": "a1", "en": "They listen to music." }, { "id": "a2", "en": "They listens to music." }],
+              "correctAnswers": ["a1"],
+              "feedback": {
+                "correct": { "he": "נכון. אחרי They אין s.", "ar": "صحيح. بعد They لا توجد s." },
+                "incorrect": { "he": "They זה יותר מאחד, ולכן הפועל נשאר כמו שהוא — listen. הקשיבו שוב, לא תשמעו s.", "ar": "They أكثر من واحد، لذلك يبقى الفعل كما هو — listen. استمعوا مرّة أخرى، لن تسمعوا s." },
+                "hint": { "he": "They נמצא בשורה העליונה של הכלל.", "ar": "They موجودة في السطر العلوي من القاعدة." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C7-i03",
+          "title": { "he": "נושא אחד בכל פעם", "ar": "فاعل واحد في كل مرّة" },
+          "informationToBot": "מטרת הפריט: תרגול מבודד של זיהוי הנושא בלבד, בלי הסחות. מה התלמיד אמור לתרגל: החלטה בינארית — האם הנושא הוא אדם אחד אחר. אסטרטגיות חשיבה: להחליף את הנושא ב-he/she/they ולראות מה מתאים. טעויות נפוצות: התייחסות לשם עצם ברבים כאל יחיד. מידע נוסף: שלוש שאלות קצרות עם משוב מיידי אחרי כל אחת. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "האם הנושא הוא אדם אחד אחר (he/she/it)?", "ar": "هل الفاعل شخص واحد آخر (he/she/it)؟" },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i03-q1",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "הנושא הוא אדם אחד אחר?", "ar": "هل الفاعل شخص واحد آخر؟" },
+              "questionTextEn": "My sister",
+              "answers": [{ "id": "true", "he": "כן — צריך s", "ar": "نعم — نحتاج s" }, { "id": "false", "he": "לא — בלי s", "ar": "لا — بدون s" }],
+              "correctAnswers": ["true"],
+              "feedback": {
+                "correct": { "he": "נכון. my sister היא אדם אחד, כמו she.", "ar": "صحيح. my sister شخصة واحدة، مثل she." },
+                "incorrect": { "he": "my sister זו אחות אחת — אדם אחד אחר, כמו she. לכן הפועל יקבל s.", "ar": "my sister أخت واحدة — شخصة واحدة أخرى مثل she. لذلك سيأخذ الفعل s." },
+                "hint": { "he": "כמה אחיות? אחת.", "ar": "كم أختًا؟ واحدة." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i03-q2",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "הנושא הוא אדם אחד אחר?", "ar": "هل الفاعل شخص واحد آخر؟" },
+              "questionTextEn": "My parents",
+              "answers": [{ "id": "true", "he": "כן — צריך s", "ar": "نعم — نحتاج s" }, { "id": "false", "he": "לא — בלי s", "ar": "لا — بدون s" }],
+              "correctAnswers": ["false"],
+              "feedback": {
+                "correct": { "he": "בדיוק. parents זה שניים, כמו they.", "ar": "بالضبط. parents اثنان، مثل they." },
+                "incorrect": { "he": "parents זה הורים — יותר מאחד, כמו they. לכן הפועל נשאר בלי s. ה-s בסוף parents שייכת לשם העצם, לא לפועל.", "ar": "parents تعني الوالدين — أكثر من واحد، مثل they. لذلك يبقى الفعل بلا s. الـ s في نهاية parents تخصّ الاسم لا الفعل." },
+                "hint": { "he": "אל תתנו ל-s של parents לבלבל אתכם.", "ar": "لا تدعوا s في parents تربككم." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i03-q3",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "הנושא הוא אדם אחד אחר?", "ar": "هل الفاعل شخص واحد آخر؟" },
+              "questionTextEn": "I",
+              "answers": [{ "id": "true", "he": "כן — צריך s", "ar": "نعم — نحتاج s" }, { "id": "false", "he": "לא — בלי s", "ar": "لا — بدون s" }],
+              "correctAnswers": ["false"],
+              "feedback": {
+                "correct": { "he": "נכון. I זה אני — אף פעם לא מקבל s.", "ar": "صحيح. I تعني أنا — لا تأخذ s أبدًا." },
+                "incorrect": { "he": "I זה אני, ולא אדם אחר. הפועל תמיד נשאר כמו שהוא: I play, I watch, I go.", "ar": "I تعني أنا، لا شخصًا آخر. يبقى الفعل كما هو دائمًا: I play, I watch, I go." },
+                "hint": { "he": "מצאו את I בשורה העליונה של הכלל.", "ar": "جدوا I في السطر العلوي من القاعدة." }
+              }
+            }
+          ]
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C7-i04",
+          "title": { "he": "מרכיבים יחד", "ar": "نركّب معًا" },
+          "informationToBot": "מטרת הפריט: איחוד שני השלבים שנלמדו בנפרד — זיהוי נושא והוספת הסיומת. מה התלמיד אמור לתרגל: כתיבת הפועל המלא. אסטרטגיות חשיבה: שני צעדים קבועים — קודם הנושא, אחר כך הסיומת. טעויות נפוצות: השמטת ה-s למרות שזוהה נכון שהנושא יחיד. מידע נוסף: זהו הפריט המסכם של הרכיב התומך; אחריו מומלץ לחזור לתרגול הרגיל. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "הקלידו את הפועל. הכלל נמצא למעלה.", "ar": "اكتبوا الفعل. القاعدة في الأعلى." },
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i04-q1",
+              "questionType": "fill-in",
+              "assessed": true,
+              "questionText": { "he": "הפועל הוא play.", "ar": "الفعل هو play." },
+              "questionTextEn": "My sister ______ games.",
+              "answers": [],
+              "correctAnswers": ["plays"],
+              "feedback": {
+                "correct": { "he": "יפה. זיהיתם נושא יחיד והוספתם s.", "ar": "أحسنتم. تعرّفتم على فاعل مفرد وأضفتم s." },
+                "incorrect": { "he": "my sister היא אדם אחד אחר, ולכן הפועל מקבל s: plays. זה בדיוק מה שתרגלתם בשאלה הקודמת.", "ar": "my sister شخصة واحدة أخرى، لذلك يأخذ الفعل s: plays. هذا بالضبط ما تدرّبتم عليه في السؤال السابق." },
+                "hint": { "he": "my sister = she. הסתכלו בכלל.", "ar": "my sister = she. انظروا إلى القاعدة." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C7-i04-q2",
+              "questionType": "fill-in",
+              "assessed": true,
+              "questionText": { "he": "הפועל הוא watch.", "ar": "الفعل هو watch." },
+              "questionTextEn": "We ______ videos.",
+              "answers": [],
+              "correctAnswers": ["watch"],
+              "feedback": {
+                "correct": { "he": "מצוין. We זה יותר מאחד, ולכן הפועל נשאר watch.", "ar": "ممتاز. We أكثر من واحد، لذلك يبقى الفعل watch." },
+                "incorrect": { "he": "We זה אנחנו — יותר מאחד. לכן לא מוסיפים כלום, והפועל נשאר watch. שימו לב שלא כל פועל צריך שינוי.", "ar": "We تعني نحن — أكثر من واحد. لذلك لا نضيف شيئًا، ويبقى الفعل watch. انتبهوا أنّ ليس كل فعل يحتاج تغييرًا." },
+                "hint": { "he": "We נמצא בשורה העליונה של הכלל.", "ar": "We موجودة في السطر العلوي من القاعدة." }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C5",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "רגע האמת", "ar": "لحظة الحقيقة" },
+      "subtitle": { "he": "להראות מה למדתם", "ar": "أن تُظهروا ما تعلّمتموه" },
+      "componentPurpose": "practice",
+      "isAssessment": true,
+      "passScoreInternal": 0.7,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": ["YuviLab-en-smartphone-00001-C7", "YuviLab-en-smartphone-00001-C3"],
+      "isRequired": true,
+      "relativeDifficulty": 4,
+      "masteryLevel": "advanced",
+      "order": 5,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 10,
+      "goals": ["G1", "G3", "G4", "G5", "G6"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C5-i01",
+          "title": { "he": "הכתבה", "ar": "التقرير" },
+          "informationToBot": "מטרת הפריט: הצגת טקסט קצר חדש שעליו תיבדק ההבנה, כדי לוודא שהיכולת עברה ולא נשארה בטקסט המוכר. מה התלמיד אמור להבין: מי אומר מה ובאיזו תדירות. אסטרטגיות חשיבה: להשתמש באותה אסטרטגיית סריקה שנלמדה, ולשים לב במיוחד למילות התדירות. טעויות נפוצות: התעלמות ממילות התדירות שמבדילות בין הדוברים. מידע נוסף: טקסט מקורי שנכתב עבור הלומדה. הוא נטול פרטים מזהים אמיתיים. צילום מסך: לא צורף.",
+          "contentType": "Text Reading",
+          "mediaFormat": "Text",
+          "kind": "reading",
+          "prompt": { "he": "קראו את הכתבה. שימו לב במיוחד למילות התדירות.", "ar": "اقرأوا التقرير. انتبهوا خاصّة إلى كلمات التكرار." },
+          "body": {
+            "audio": "audio/en/c5-moment-of-truth.mp3",
+            "heading": "THE MOMENT OF TRUTH",
+            "intro": {
+              "author": "School reporter",
+              "lines": ["One question. Five students. One honest answer each."]
+            },
+            "replies": [
+              { "n": 1, "name": "Karen", "text": "I always send voice messages. I never write." },
+              { "n": 2, "name": "Sandy", "text": "My brother plays games all day. I only watch videos." },
+              { "n": 3, "name": "Jenny", "text": "I text my friends every evening. We talk about school." },
+              { "n": 4, "name": "Sara", "text": "I sometimes use the dictionary. My English teacher is happy." },
+              { "n": 5, "name": "Linda", "text": "I take photos. My phone has 4,000 photos!" }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C5-i02",
+          "title": { "he": "שאלות", "ar": "أسئلة" },
+          "informationToBot": "מטרת הפריט: הערכה מסכמת של יעדי היחידה. מה התלמיד אמור להוכיח: הבנת הנקרא בסריקה, צורת הפועל בגוף שלישי, מיקום מילת תדירות ושאלת Who. אסטרטגיות חשיבה: לעבור על השאלות לפי הסדר ולחזור לטקסט בכל שאלה. טעויות נפוצות: ענייה מהזיכרון בלי לחזור לטקסט; שכחת s. מידע נוסף: הציון נאסף לצורכי ניתוב בלבד ואינו מוצג ללומד. במקרה של אי-הצלחה מוצע רכיב תומך. צילום מסך: לא צורף.",
+          "contentType": "Practice",
+          "mediaFormat": "Interactive content",
+          "kind": "question",
+          "prompt": { "he": "ענו על השאלות. אפשר לחזור לכתבה בכל רגע.", "ar": "أجيبوا عن الأسئلة. يمكنكم العودة إلى التقرير في أيّ لحظة." },
+          "showReference": "YuviLab-en-smartphone-00001-C5-i01",
+          "questions": [
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q1",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "בחרו את השם הנכון.", "ar": "اختاروا الاسم الصحيح." },
+              "questionTextEn": "Who never writes messages?",
+              "answers": [{ "id": "a1", "en": "Karen" }, { "id": "a2", "en": "Jenny" }, { "id": "a3", "en": "Sara" }, { "id": "a4", "en": "Linda" }],
+              "correctAnswers": ["a1"],
+              "feedback": {
+                "correct": { "he": "נכון. Karen כותבת במפורש I never write.", "ar": "صحيح. Karen تكتب صراحةً I never write." },
+                "incorrect": { "he": "מילת המפתח היא never. חפשו אותה בטקסט — היא מופיעה רק פעם אחת. שימו לב ש-Jenny דווקא כן כותבת הודעות.", "ar": "الكلمة المفتاحية هي never. ابحثوا عنها في النصّ — تظهر مرّة واحدة فقط. انتبهوا أنّ Jenny تكتب الرسائل فعلًا." },
+                "hint": { "he": "חפשו את המילה never.", "ar": "ابحثوا عن كلمة never." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q2",
+              "questionType": "choice",
+              "assessed": true,
+              "questionText": { "he": "בחרו את השם הנכון.", "ar": "اختاروا الاسم الصحيح." },
+              "questionTextEn": "Who uses the phone for English?",
+              "answers": [{ "id": "a1", "en": "Karen" }, { "id": "a2", "en": "Sandy" }, { "id": "a3", "en": "Sara" }, { "id": "a4", "en": "Linda" }],
+              "correctAnswers": ["a3"],
+              "feedback": {
+                "correct": { "he": "מדויק. Sara מזכירה dictionary ו-English teacher.", "ar": "دقيق. Sara تذكر dictionary و English teacher." },
+                "incorrect": { "he": "חפשו מילה שקשורה ללימוד אנגלית: dictionary או teacher. רק דובר אחד מזכיר אותן.", "ar": "ابحثوا عن كلمة مرتبطة بتعلّم الإنجليزية: dictionary أو teacher. متحدّث واحد فقط يذكرهما." },
+                "hint": { "he": "איזו מילה בטקסט קשורה לאנגלית?", "ar": "أيّ كلمة في النصّ مرتبطة بالإنجليزية؟" }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q3",
+              "questionType": "fill-in",
+              "assessed": true,
+              "questionText": { "he": "הפועל הוא play. הנושא הוא Sandy's brother.", "ar": "الفعل هو play. الفاعل هو Sandy's brother." },
+              "questionTextEn": "Sandy's brother ______ games all day.",
+              "answers": [],
+              "correctAnswers": ["plays"],
+              "feedback": {
+                "correct": { "he": "נכון. brother הוא אדם אחד אחר.", "ar": "صحيح. brother شخص واحد آخر." },
+                "incorrect": { "he": "הנושא הוא brother — אדם אחד אחר, כמו he. לכן plays. אל תתנו למילה Sandy's לבלבל: הנושא הוא האח, לא Sandy.", "ar": "الفاعل هو brother — شخص واحد آخر مثل he. لذلك plays. لا تدعوا كلمة Sandy's تربككم: الفاعل هو الأخ لا Sandy." },
+                "hint": { "he": "מי משחק? האח.", "ar": "مَن يلعب؟ الأخ." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q4",
+              "questionType": "sequencing",
+              "assessed": true,
+              "questionText": { "he": "הרכיבו משפט תקין על Sara.", "ar": "كوّنوا جملة صحيحة عن Sara." },
+              "answers": ["the dictionary", "uses", "Sara", "sometimes"],
+              "correctAnswers": ["Sara", "sometimes", "uses", "the dictionary"],
+              "feedback": {
+                "correct": { "he": "מצוין. גם s בפועל וגם מילת התדירות במקום.", "ar": "ممتاز. الـ s في الفعل وكلمة التكرار في مكانها." },
+                "incorrect": { "he": "שני דברים לבדוק: הנושא Sara הוא יחיד ולכן uses, ומילת התדירות sometimes נכנסת בין הנושא לפועל.", "ar": "أمران للتحقّق: الفاعل Sara مفرد لذلك uses، وكلمة التكرار sometimes تدخل بين الفاعل والفعل." },
+                "hint": { "he": "נושא, מילת תדירות, פועל, השלמה.", "ar": "فاعل، كلمة تكرار، فعل، تكملة." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q5",
+              "questionType": "true-false",
+              "assessed": true,
+              "questionText": { "he": "האם המשפט נכון לפי הכתבה?", "ar": "هل الجملة صحيحة وفق التقرير؟" },
+              "questionTextEn": "Jenny texts her friends every morning.",
+              "answers": [{ "id": "true", "en": "True" }, { "id": "false", "en": "False" }],
+              "correctAnswers": ["false"],
+              "feedback": {
+                "correct": { "he": "נכון. בטקסט כתוב every evening ולא every morning.", "ar": "صحيح. في النصّ كُتب every evening لا every morning." },
+                "incorrect": { "he": "רוב המשפט מתאים, אבל ביטוי הזמן התחלף: Jenny כותבת every evening. תמיד שווה לבדוק גם את מילת הזמן, לא רק את הפועל.", "ar": "معظم الجملة مطابقة، لكن تعبير الزمن تبدّل: Jenny تكتب every evening. يجدر دائمًا التحقّق من كلمة الزمن أيضًا لا من الفعل فقط." },
+                "hint": { "he": "מצאו את השורה של Jenny ובדקו את מילת הזמן.", "ar": "جدوا سطر Jenny وتحقّقوا من كلمة الزمن." }
+              }
+            },
+            {
+              "questionId": "YuviLab-en-smartphone-00001-C5-i02-q6",
+              "questionType": "fill-in",
+              "assessed": true,
+              "stretch": true,
+              "questionText": { "he": "כתבו משפט אחד אמיתי על עצמכם, בהווה פשוט, עם מילת זמן.", "ar": "اكتبوا جملة واحدة حقيقية عن أنفسكم، بالمضارع البسيط، مع كلمة زمن." },
+              "questionTextEn": "I ______",
+              "openEnded": true,
+              "answers": [],
+              "correctAnswers": [],
+              "feedback": {
+                "any": {
+                  "he": "כתבתם משפט משלכם — זה בדיוק מה שהיחידה הזאת מלמדת. בדקו לבד: יש נושא? יש פועל? יש מילת זמן?",
+                  "ar": "كتبتم جملة خاصّة بكم — هذا بالضبط ما تعلّمه هذه الوحدة. تحقّقوا بأنفسكم: هل يوجد فاعل؟ فعل؟ كلمة زمن؟"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "YuviLab-en-smartphone-00001-C6",
+      "learningUnitId": "YuviLab-en-smartphone-00001",
+      "title": { "he": "מבט לאחור", "ar": "نظرة إلى الوراء" },
+      "subtitle": { "he": "סיכום קצר ורגע של חשיבה", "ar": "تلخيص قصير ولحظة تفكير" },
+      "componentPurpose": "instruction",
+      "isAssessment": false,
+      "manufacture": "Yuvilab",
+      "recommendedAfterFail": [],
+      "isRequired": true,
+      "relativeDifficulty": 1,
+      "masteryLevel": "basic",
+      "order": 6,
+      "depthLevel": "PLACEHOLDER:MOE-DEPTH-INDEX",
+      "cognitiveLevel": ["PLACEHOLDER:MOE-EN-COGNITIVE-INDEX"],
+      "languages": ["Hebrew", "Arabic", "English"],
+      "skills": ["PLACEHOLDER:MOE-SKILL-INDEX"],
+      "estimatedTimeInMinutes": 5,
+      "goals": ["G1", "G2", "G3", "G4", "G5", "G6"],
+      "subContent": [
+        {
+          "id": "YuviLab-en-smartphone-00001-C6-i01",
+          "title": { "he": "הכול במסך אחד", "ar": "كل شيء في شاشة واحدة" },
+          "informationToBot": "מטרת הפריט: סיכום חזותי של הכלל ושל אוצר המילים, בלי תרגול חדש. מה התלמיד אמור לקבל: תמונה אחת שאפשר לחזור אליה לפני מבחן. אסטרטגיות חשיבה: לקרוא את הסיכום ולנסות לשחזר משפט אחד לכל שורה. טעויות נפוצות: אין הערכה בפריט. מידע נוסף: לפי תקן 720 רכיב סיכום אינו כולל תרגול או הערכה. צילום מסך: לא צורף.",
+          "contentType": "Summary",
+          "mediaFormat": "Text",
+          "kind": "summary",
+          "prompt": { "he": "זה כל מה שלמדנו ביחידה הזאת.", "ar": "هذا كل ما تعلّمناه في هذه الوحدة." },
+          "body": {
+            "blocks": [
+              {
+                "titleHe": "המבנה",
+                "titleAr": "البنية",
+                "lines": ["I / You / We / They + play", "He / She / It + plays", "watch → watches · go → goes"]
+              },
+              {
+                "titleHe": "מילות זמן",
+                "titleAr": "كلمات الزمن",
+                "lines": ["I always take photos.", "She never plays games.", "We watch videos every day."]
+              },
+              {
+                "titleHe": "שמונה צירופים",
+                "titleAr": "ثمانية تعابير",
+                "lines": ["take a photo · listen to music · play games · watch videos", "text a friend · make a call · send a voice message · use the dictionary"]
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C6-i02",
+          "title": { "he": "בדיקה עצמית", "ar": "فحص ذاتي" },
+          "informationToBot": "מטרת הפריט: פיגום מטה-קוגניטיבי של הערכה עצמית מול יעדי הלמידה. מה התלמיד אמור לעשות: לסמן לעצמו מול כל יעד עד כמה הוא מרגיש בשליטה. אסטרטגיות חשיבה: להיות כן עם עצמו — הסימון אינו ציון ואינו נראה לאף אחד כהישג. טעויות נפוצות: סימון אוטומטי של הכול כמושג. מידע נוסף: התשובות נשלחות כאירועי Selected ומשמשות את המלווה האישי להמלצה הבאה, לא להערכה. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Interactive content",
+          "kind": "selfcheck",
+          "prompt": { "he": "סמנו לעצמכם. אין כאן נכון ולא נכון.", "ar": "حدّدوا لأنفسكم. لا يوجد هنا صحيح وخاطئ." },
+          "questions": []
+        },
+        {
+          "id": "YuviLab-en-smartphone-00001-C6-i03",
+          "title": { "he": "מחשבה אחרונה", "ar": "فكرة أخيرة" },
+          "informationToBot": "מטרת הפריט: רפלקציה כתובה קצרה עם העברה קדימה. מה התלמיד אמור לעשות: לנסח דבר אחד שינסה בפעם הבאה. אסטרטגיות חשיבה: לחשוב על רגע אחד שבו התקשה, ומה היה עוזר. טעויות נפוצות: כתיבת משפט כללי כמו ללמוד יותר, במקום פעולה ספציפית. מידע נוסף: הטקסט חופשי בעברית, ערבית או אנגלית, ואינו מוערך. צילום מסך: לא צורף.",
+          "contentType": "Instruction",
+          "mediaFormat": "Text",
+          "kind": "reflect",
+          "prompt": { "he": "דבר אחד שאנסה בפעם הבאה:", "ar": "شيء واحد سأجرّبه في المرّة القادمة:" },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

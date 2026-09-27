@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>What I Do Every Day</title>
+  <meta name="description" content="לומדה באנגלית לחטיבת הביניים — הווה פשוט וצירופי פעלים על שימוש בטלפון.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app" id="app" dir="rtl">
+    <header class="topbar">
+      <span class="topbar__mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"></path>
+          <path d="M4 19a2 2 0 0 0 2 2h14"></path>
+          <path d="M8 7h8M8 11h6"></path>
+        </svg>
+      </span>
+      <div class="topbar__titles">
+        <div class="topbar__kicker" id="topKicker"></div>
+        <div class="topbar__title" id="topTitle"></div>
+      </div>
+      <div class="topbar__actions">
+        <button type="button" class="ghostbtn" id="langBtn"></button>
+      </div>
+    </header>
+
+    <main class="stage" id="stage" tabindex="-1">
+      <div class="wrap" id="wrap"></div>
+    </main>
+
+    <footer class="actionbar" id="actionbar" hidden>
+      <div class="actionbar__inner" id="actionbarInner"></div>
+    </footer>
+  </div>
+
+  <script src="player.js"></script>
+</body>
+</html>
