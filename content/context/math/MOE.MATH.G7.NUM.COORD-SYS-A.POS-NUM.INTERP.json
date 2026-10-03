@@ -169,7 +169,29 @@
               "question_text": "מה מספר המשפחות שיש בהן 4 ילדים? ___ משפחות. איזו נקודה מתארת קשר זה?",
               "answers": [],
               "fingerprint": "e8baed75674bfe57",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "נסו לקרוא את הגרף צעד אחר צעד ולהתאים בין הערכים. אפשר להתחיל מהציר האופקי ואז לבדוק איזו נקודה מתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e8baed75674bfe57",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו על הציר האופקי את הערך הנתון, ואז עלו עד לנקודה המתאימה בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e8baed75674bfe57",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לאתר את הערך הנתון על הציר האופקי, לקרוא את הערך המתאים על הציר האנכי, ואז לזהות את הנקודה שמייצגת את הקשר הזה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e8baed75674bfe57",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -190,7 +212,29 @@
               "question_text": "כמה ילדים בסך הכול יש בכל המשפחות שבהן מספר הילדים הגדול ביותר? ___ ילדים.",
               "answers": [],
               "fingerprint": "42796c5cd8823942",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לבדוק את הקשר שבין הערך הגדול ביותר לבין מספר המשפחות המתאים לו. אפשר לחשב זאת מהגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42796c5cd8823942",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "מצאו את הערך הגדול ביותר על הציר, בדקו כמה משפחות מתאימות לו, ואז חברו בין הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42796c5cd8823942",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לזהות מהו הערך הגדול ביותר בגרף, לבדוק כמה משפחות יש עם הערך הזה, ואז לחשב את הסכום הכולל בעזרת כפל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "42796c5cd8823942",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -238,7 +282,29 @@
                 "false"
               ],
               "fingerprint": "243a518a0e108f56",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לקרוא את הנקודות בגרף, להשוות בין הערכים, ולבדוק כל טענה בזהירות לפני שמחליטים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "243a518a0e108f56",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו בגרף את הערכים הרלוונטיים לשני המצבים והשוו ביניהם לפני שמסמנים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "243a518a0e108f56",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת אם אפשר להסיק טענה על סמך השוואה בין ערכים בגרף, ולא רק לפי תחושה. חשוב לבדוק את הנתונים הרלוונטיים לפני שמחליטים אם הטענה נכונה או לא.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "243a518a0e108f56",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -613,7 +679,29 @@
               "question_text": "כמה כיתות ז–יב היו בעיר חיפה בשנת תשפ\"ד?",
               "answers": [],
               "fingerprint": "b081532447d85209",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה של קריאת נתונים מהגרף והשוואה בין טווחי גילים. נסו לאתר את הערכים, להשוות ביניהם, ואז להסיק מסקנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b081532447d85209",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "קראו את מספר הכיתות בכל קבוצת גיל, ואז השוו את הערכים לפי מה שנדרש בשאלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b081532447d85209",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך לקרוא מהגרף את מספר הכיתות בכל קבוצת גיל, ואז להשוות למספר הקבוצות בגני הילדים. המיקוד הוא בקריאת הנתונים ובהשוואה בין קבוצות שונות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "b081532447d85209",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhetla810adpr12i",
@@ -843,6 +931,13 @@
               ],
               "fingerprint": "e1074443dc19f271",
               "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קריאת נתונים מגרף וזיהוי מגמה. כדאי להתבונן בערכים לאורך האימונים ולבדוק איך הם משתנים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "e1074443dc19f271",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
                 "hint_l1": {
                   "he": "בדקו כל אימון בנפרד, והשוו בין הזמנים בעזרת אותה יחידת מידה.",
                   "prompt_version": "cp-v2",
@@ -1027,6 +1122,20 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "696a7f6e6aee8b09",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "קראו את ערכי הטמפרטורה המינימלית והמקסימלית בכל חודש, ואז השוו בין שתי הסדרות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "696a7f6e6aee8b09",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה של טמפרטורות מינימליות ומקסימליות מגרף, והשוואה ביניהן לפי חודשים. צריך לשים לב גם להפרש בין שני הערכים באותו חודש.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "696a7f6e6aee8b09",
+                  "generated_at": "2026-10-03T01:45:06Z",
                   "model": "mini"
                 }
               }
@@ -1237,7 +1346,29 @@
               "question_text": "התאימו עבור כל משפט את השם המתאים.",
               "answers": [],
               "fingerprint": "6a5d0fc1ffd3d09d",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי לקרוא קודם את שני המשתנים שבגרף, ואז להתאים כל משפט לנתון המתאים לו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6a5d0fc1ffd3d09d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שווה להתחיל בזיהוי **שם הילד** על הגרף, ואז לקרוא את שני הערכים שמופיעים ליד הנקודה שלו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6a5d0fc1ffd3d09d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה של נקודות בגרף והשוואה בין תלמידים. חשוב לקרוא נכון את שני הצירים ולבדוק את הערכים של כל ילד לפני שמסיקים מסקנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6a5d0fc1ffd3d09d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhiun0637wpdehb8",
@@ -1800,7 +1931,29 @@
               "question_text": "סמנו את האפשרות הנכונה עבור שבוע כלשהו במסעדה ולא עבור הגרפים המצורפים כדוגמה: באיזה גרף מבין הגרפים יכולות להיות שתי נקודות שונות עם אותו ערך x ועם ערכי y שונים? (כלומר זו מתחת לזו) באיזה גרף מבין הגרפים יכולות להיות שתי נקודות שונות עם אותו ערך y ועם ערכי x שונים? (כלומר זו לצד זו, באותו הגובה) באיזה גרף מבין הגרפים יכולות להיות שתי נקודות שונות ששיעוריהן זהים? (כלומר שתי נקודות באותו המיקום, זו על זו) באיזה גרף מבין הגרפים יכולה להופיע הנקודה (6.5, 7.5)? באיזה גרף מבין הגרפים יכולה להופיע הנקודה (6, 7.5)?",
               "answers": [],
               "fingerprint": "4daf21071675cd78",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להתבונן בגרפים בזהירות ולבחון איזה מידע כל אחד מהם מציג. לאחר מכן אפשר להשוות בין הערכים ולבדוק מה אפשרי בכל גרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4daf21071675cd78",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חשבו קודם מה מייצג כל ציר בכל גרף, ואז בדקו אילו זוגות של ערכים יכולים להופיע יחד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4daf21071675cd78",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה עוסקת בקריאה והשוואה של שני גרפים, ובבדיקה אילו נקודות יכולות להופיע בהם לפי משמעות הצירים. צריך להבחין בין נתונים זהים, נתונים שונים, וערכים שיכולים או לא יכולים לחזור על עצמם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4daf21071675cd78",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -2148,6 +2301,13 @@
                   "generated_at": "2026-09-24T01:42:34Z",
                   "model": "mini"
                 },
+                "hint_l1": {
+                  "he": "כדאי לאתר בגרף קודם את הנקודה של כל שחקן, ואז לבדוק איזה ערך צריך לקרוא מכל ציר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "2c0910246d5337a2",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
                 "explanation": {
                   "he": "השאלה בודקת קריאה מדויקת של הגרף וחיבור הנתונים של שני שחקנים. חשוב לזהות את שתי הנקודות הרלוונטיות לפני שמחשבים.",
                   "prompt_version": "cp-v2",
@@ -2176,6 +2336,13 @@
                   "prompt_version": "cp-v2",
                   "source_fingerprint": "9f427fca70b87b0c",
                   "generated_at": "2026-09-24T01:42:34Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאת גרף דו-משתני, חיבור ערכים והשוואה בין שחקנים. חשוב לזהות נכון את הנקודות בגרף ולקרוא מה מייצג כל ציר לפני שמבצעים חישוב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "9f427fca70b87b0c",
+                  "generated_at": "2026-10-03T01:45:06Z",
                   "model": "mini"
                 }
               }
@@ -2500,7 +2667,29 @@
                 "בגילי 65 ומעלה"
               ],
               "fingerprint": "3db013681193754f",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להשוות בין קבוצות הגיל ולבדוק את הערכים המופיעים בגרף. כך אפשר לזהות את הדפוס המתאים ולבחור בצורה מדויקת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3db013681193754f",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את קבוצת הגיל שמתאימה לערך הגבוה ביותר בגרף, ואז השוו בינה לבין הקבוצות האחרות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3db013681193754f",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים קריאת נתונים מגרף והשוואה ביניהם. כדאי לשים לב לקבוצות הגיל, לערכים שמופיעים בגרף ולשאלה אם הערכים עולים או יורדים כשמתקדמים בגיל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3db013681193754f",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhiy6h61hfl34uer",
@@ -2512,7 +2701,29 @@
                 "אין מגמה ברורה במספר שעות השינה המומלץ ככל שהגיל עולה."
               ],
               "fingerprint": "0383902345fc0877",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קריאת גרף והשוואת נתונים. נסו לבדוק את הערכים שמופיעים לכל קבוצת גיל ולהפעיל חשיבה על סדר ומגמה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0383902345fc0877",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לעבור קבוצת גיל אחר קבוצת גיל ולבדוק איך הערך משתנה בכל אחת מהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0383902345fc0877",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן צריך להסתכל על הגרף ולזהות איך הערכים משתנים בין קבוצות הגיל. השאלה בודקת גם הבנה של מגמה כללית בנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "0383902345fc0877",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -2533,7 +2744,29 @@
               "question_text": "כמה שנים עובד ג עובד בחברה? שנים.",
               "answers": [],
               "fingerprint": "749ed53dedd9c25d",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על גרף נקודות ועל קשר בין שני משתנים. נסו לקרוא את הנתונים בזהירות ולהשוות בין הנקודות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "749ed53dedd9c25d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לאתר קודם את הנקודה של העובד המסומן, ואז לקרוא ממנה את שני הערכים לפי הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "749ed53dedd9c25d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים קריאת נקודות בגרף והשוואה בין ותק לשביעות רצון. צריך לשים לב איזה ערך שייך לכל ציר ולבדוק נתונים של עובדים שונים לפני שמסיקים מסקנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "749ed53dedd9c25d",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhjusbjvw8l6qqo",
@@ -2541,7 +2774,29 @@
               "question_text": "מה שביעות הרצון של עובד א? מתוך 10.",
               "answers": [],
               "fingerprint": "4679fea1900d23e3",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על גרף נקודות והשוואת נתונים. קראו את הצירים והתקדמו בזהירות בין העובדים השונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4679fea1900d23e3",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מהעובד המסומן, ואז לבדוק את הנתון המבוקש לפי ציר הוותק או שביעות הרצון המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4679fea1900d23e3",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן מתרגלים קריאת גרף פיזור והשוואה בין ותק לשביעות רצון. השאלה בודקת הבנה של שני המשתנים יחד ושל קריאת נתון מדויק מתוך הגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4679fea1900d23e3",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhjusbjy3xojddh",
@@ -2549,7 +2804,15 @@
               "question_text": "מה ההפרש בין הוותק של עובד ד לבין הוותק של עובד ג? שנים.",
               "answers": [],
               "fingerprint": "c2899774077ffffa",
-              "texts": {}
+              "texts": {
+                "explanation": {
+                  "he": "כאן מתרגלים קריאת גרף והשוואה בין נתונים. חשוב לשים לב לצירים, להשוות בין העובדים, ולבדוק טענות לפי המידע שבגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c2899774077ffffa",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mrhjusbj2pv70mo7r",
@@ -2565,7 +2828,29 @@
                 "עובד ג ותיק יותר מעובד ב ומרוצה יותר ממנו."
               ],
               "fingerprint": "169f881abf1b6542",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך להפעיל קריאה מדויקת של גרף והשוואה בין נתונים. נסו לבדוק כל טענה מול המידע שבגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "169f881abf1b6542",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לעבור על כל העובדים ולבדוק כל טענה מול הגרף לפני שבוחרים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "169f881abf1b6542",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה מדויקת של גרף והשוואה בין ותק לשביעות רצון. צריך לבדוק כל טענה מול הנתונים של כל העובדים, ולשים לב שלא מתבלבלים בין הצירים או בין עובדים שונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "169f881abf1b6542",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }

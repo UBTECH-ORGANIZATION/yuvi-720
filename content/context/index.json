@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-09-24T01:46:20Z",
+  "generated_at": "2026-10-03T01:48:27Z",
   "shards": [
     {
       "subject": "math",
@@ -59,6 +59,18 @@
     },
     {
       "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.PCT.PERCENT.ABS-CHG",
+      "path": "math/MOE.MATH.G8.NUM.PCT.PERCENT.ABS-CHG.json",
+      "lomdot": 4
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.PCT.PERCENT.REPR",
+      "path": "math/MOE.MATH.G8.NUM.PCT.PERCENT.REPR.json",
+      "lomdot": 6
+    },
+    {
+      "subject": "math",
       "objective_id": "MOE.MATH.G8.NUM.PCT.PERCENT.VALUE",
       "path": "math/MOE.MATH.G8.NUM.PCT.PERCENT.VALUE.json",
       "lomdot": 7
@@ -67,13 +79,31 @@
       "subject": "math",
       "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR",
       "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.ALG-EXPR.json",
-      "lomdot": 5
+      "lomdot": 10
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.QTY-TYPE",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.QTY-TYPE.json",
+      "lomdot": 7
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.REAS",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.REAS.json",
+      "lomdot": 6
     },
     {
       "subject": "math",
       "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG",
       "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.RECOG.json",
-      "lomdot": 6
+      "lomdot": 12
+    },
+    {
+      "subject": "math",
+      "objective_id": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.SOLVE-MISSING",
+      "path": "math/MOE.MATH.G8.NUM.RATIO-PROP-SCL.RATIO.SOLVE-MISSING.json",
+      "lomdot": 2
     },
     {
       "subject": "math",
@@ -91,19 +121,31 @@
       "subject": "science",
       "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET",
       "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.GROSS-NET.json",
-      "lomdot": 6
+      "lomdot": 12
     },
     {
       "subject": "science",
       "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.HOME-INDUSTRY",
       "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.HOME-INDUSTRY.json",
-      "lomdot": 5
+      "lomdot": 10
     },
     {
       "subject": "science",
       "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE",
       "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE.json",
-      "lomdot": 4
+      "lomdot": 8
+    },
+    {
+      "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-VS-WEIGHT",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-VS-WEIGHT.json",
+      "lomdot": 6
+    },
+    {
+      "subject": "science",
+      "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.VOLUME.INSTRUMENTS",
+      "path": "science/MOE.SCI.G7.CHEM.BODY-MAT-PROP.VOLUME.INSTRUMENTS.json",
+      "lomdot": 7
     },
     {
       "subject": "science",
@@ -120,16 +162,6 @@
   ],
   "backlog": {
     "browse": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00001",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00004",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00005",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00006",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00007",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00008",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00010",
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00011",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00002",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.INTERP-00003",
@@ -221,6 +253,32 @@
       "cet.math.g7.num.coord-sys-a.pos-num.repr-00006",
       "cet.math.g7.num.coord-sys-a.pos-num.repr-00007",
       "cet.math.g7.num.coord-sys-a.pos-num.repr-00008",
+      "methodica-ar-math-ratio-01-01",
+      "methodica-ar-math-ratio-01-02",
+      "methodica-ar-math-ratio-01-03",
+      "methodica-ar-math-ratio-01-04",
+      "methodica-ar-math-ratio-01-05",
+      "methodica-ar-math-ratio-01-06",
+      "methodica-ar-math-ratio-02-01",
+      "methodica-ar-math-ratio-02-02",
+      "methodica-ar-math-ratio-02-03",
+      "methodica-ar-math-ratio-02-04",
+      "methodica-ar-math-ratio-02-05",
+      "methodica-ar-science-mass-measure-01-01",
+      "methodica-ar-science-mass-measure-01-02",
+      "methodica-ar-science-mass-measure-01-04",
+      "methodica-ar-science-mass-measure-01-05",
+      "methodica-ar-science-mass-measure-02-01",
+      "methodica-ar-science-mass-measure-02-02",
+      "methodica-ar-science-mass-measure-02-03",
+      "methodica-ar-science-mass-measure-02-04",
+      "methodica-ar-science-mass-measure-02-05",
+      "methodica-ar-science-mass-measure-02-06",
+      "methodica-ar-science-mass-measure-03-01",
+      "methodica-ar-science-mass-measure-03-02",
+      "methodica-ar-science-mass-measure-03-04",
+      "methodica-ar-science-mass-measure-03-05",
+      "methodica-ar-science-mass-measure-03-06",
       "methodica-math-percent-02-01",
       "methodica-math-percent-02-02",
       "methodica-math-percent-02-03",
@@ -228,7 +286,32 @@
       "methodica-math-percent-02-05",
       "methodica-math-percent-02-06",
       "methodica-math-percent-02-07",
+      "methodica-math-percent-06-01",
+      "methodica-math-percent-06-02",
+      "methodica-math-percent-06-03",
+      "methodica-math-percent-06-04",
+      "methodica-math-percent-06-05",
+      "methodica-math-percent-06-06",
+      "methodica-math-percent-08-01",
+      "methodica-math-percent-08-02",
+      "methodica-math-percent-08-03",
+      "methodica-math-percent-08-04",
       "methodica-math-ratio-02-05",
+      "methodica-math-ratio-04-01",
+      "methodica-math-ratio-04-02",
+      "methodica-math-ratio-04-03",
+      "methodica-math-ratio-04-04",
+      "methodica-math-ratio-04-05",
+      "methodica-math-ratio-04-06",
+      "methodica-math-ratio-04-07",
+      "methodica-math-ratio-05-01",
+      "methodica-math-ratio-05-02",
+      "methodica-math-ratio-05-03",
+      "methodica-math-ratio-05-04",
+      "methodica-math-ratio-05-05",
+      "methodica-math-ratio-05-06",
+      "methodica-math-ratio-06-01",
+      "methodica-math-ratio-06-02",
       "methodica-math-scale-01-01",
       "methodica-math-scale-01-02",
       "methodica-math-scale-01-03",
@@ -242,18 +325,28 @@
       "methodica-science-mass-measure-03-02",
       "methodica-science-mass-measure-03-04",
       "methodica-science-mass-measure-03-05",
-      "methodica-science-mass-measure-03-06"
+      "methodica-science-mass-measure-03-06",
+      "methodica-science-mass-weight-01-01",
+      "methodica-science-mass-weight-01-02",
+      "methodica-science-mass-weight-01-03",
+      "methodica-science-mass-weight-01-04",
+      "methodica-science-mass-weight-01-05",
+      "methodica-science-mass-weight-01-06",
+      "methodica-science-volume-liquid-01-01",
+      "methodica-science-volume-liquid-01-02",
+      "methodica-science-volume-liquid-01-03",
+      "methodica-science-volume-liquid-01-04",
+      "methodica-science-volume-liquid-01-05",
+      "methodica-science-volume-liquid-01-06",
+      "methodica-science-volume-liquid-01-07"
     ]
   },
   "stats": {
-    "lomdot": 143,
-    "slides": 559,
-    "questions": 881,
-    "texts_generated": 395,
-    "texts_pending": 2072,
-    "removed": [
-      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00010",
-      "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00011"
-    ]
+    "lomdot": 207,
+    "slides": 785,
+    "questions": 1245,
+    "texts_generated": 426,
+    "texts_pending": 2841,
+    "removed": []
   }
 }
