@@ -18,7 +18,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "ביחידה הזו לומדים להשתמש בנתוני מזג אוויר כדי לבנות גרף, לקרוא טבלה ולהיעזר במידע כדי לקבל החלטות מתאימות.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "e17e75375e192add",
+          "generated_at": "2026-10-03T01:45:06Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mriro31m3ib50cl4i",
@@ -29,7 +37,15 @@
           "position": 1,
           "fingerprint": "362e40cf03e5b12f",
           "information_to_bot": "1. מטרת הפריט: להציג את סיפור המסגרת של תכנון טיול בצפון ואת הצורך להשתמש בנתוני מזג אוויר.\n2. רמזים מדורגים: שאלו מה הילדים רוצים לברר ולמה מידע על מזג האוויר יכול לעזור בתכנון.\n3. טעויות נפוצות: אם הלומד מחפש חישוב או תשובה מספרית, הבהירו שזה עמוד פתיחה שמכין להמשך.\n4. סימני שליטה: הלומד מבין שהפעילות תעסוק בשימוש בנתוני מזג אוויר לצורך קבלת החלטות.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כדאי להיכנס לסיפור של התכנון ולחשוב אילו נתונים יעזרו לקבל החלטה טובה.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "362e40cf03e5b12f",
+              "generated_at": "2026-10-03T01:45:06Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -51,7 +67,29 @@
                 "א–26, ב–30, ג–28, ד–25, ה–23, ו–21"
               ],
               "fingerprint": "7a7106dd24122b27",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על מעבר מטבלה לגרף, והיא מבקשת דיוק והשוואה בין הנתונים. נסו לבדוק כל זוג נתונים בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7a7106dd24122b27",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל משורה אחת בטבלה, למצוא את הערך שלה, ורק אחר כך למקם את הנקודה המתאימה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7a7106dd24122b27",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדי לבנות גרף מטבלה, קוראים בכל שורה זוג נתונים וממקמים אותו במקום המתאים בגרף. חשוב להתאים נכון בין כל ערך בטבלה לבין המיקום שלו בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "7a7106dd24122b27",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -64,7 +102,15 @@
           "position": 3,
           "fingerprint": "290f4f041d406ead",
           "information_to_bot": "1. מטרת הפריט: להסביר כיצד עוברים מטבלה לגרף.\n2. רמזים מדורגים: עודדו את הלומד לזהות בכל שורה בטבלה זוג נתונים ולחשוב כיצד זוג כזה הופך לנקודה בגרף.\n3. טעויות נפוצות: בלבול בין הציר האופקי לציר האנכי או ניסיון לחבר נקודות לפני בדיקת הערכים. הפנו חזרה למשמעות כל ציר.\n4. סימני שליטה: הלומד יכול לתאר שטבלה מספקת זוגות נתונים, וכל זוג מסומן במקום מתאים בגרף.",
-          "texts": {},
+          "texts": {
+            "video_summary": {
+              "he": "הסרטון מסביר איך עוברים מטבלה לגרף: מזהים בכל שורה זוג נתונים, מבינים כיצד הוא מייצג נקודה, וממקמים את הנקודה במקום המתאים בגרף.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "290f4f041d406ead",
+              "generated_at": "2026-10-03T01:45:06Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -76,7 +122,15 @@
           "position": 4,
           "fingerprint": "0171659233b621a2",
           "information_to_bot": "1. מטרת הפריט: לתרגל שימוש בנתוני טמפרטורה כדי לבחור פעילות מתאימה לכל יום.\n2. רמזים מדורגים: בקשו לזהות את היום החם ביותר והקר ביותר; שאלו אילו פעילויות מתאימות לחום גבוה או למזג אוויר קריר יותר; עודדו לנמק לפי הטמפרטורה.\n3. טעויות נפוצות: בחירה שאינה מתחשבת בטמפרטורה או התעלמות מהצורך להשתמש בכל פעילות פעם אחת. בקשו להשוות בין הימים לפני שיבוץ סופי.\n4. סימני שליטה: הלומד משבץ פעילויות באופן עקבי עם מזג האוויר ומסביר את שיקוליו.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "כדאי להיכנס למסך ולחשוב איך נתוני הטמפרטורה יכולים להשפיע על בחירה.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "0171659233b621a2",
+              "generated_at": "2026-10-03T01:45:06Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -88,7 +142,15 @@
           "position": 5,
           "fingerprint": "4bf80fef2ea06d10",
           "information_to_bot": "1. מטרת הפריט: לתרגל מעבר מגרף לטבלה על ידי קריאת מספר היחידות והמחיר ליחידה לכל מוצר.\n2. רמזים מדורגים: בחרו מוצר אחד; בקשו למצוא בגרף את מספר היחידות ואת המחיר; מלאו את שני הערכים בשורה המתאימה; חזרו על הפעולה לכל מוצר.\n3. טעויות נפוצות: החלפה בין מספר היחידות למחיר ליחידה, קריאה לא מדויקת של ערך מהגרף, או דילוג על מוצר. עודדו בדיקה שיטתית שורה-שורה.\n4. סימני שליטה: הלומד משלים נכון את הטבלה: מים 6 ו-3; פיתות 10 ו-2; חומוס 4 ו-5; חבילת קרקרים 1 ו-6; חבילת עוגיות 2 ו-9.",
-          "texts": {},
+          "texts": {
+            "lesson_step_intro": {
+              "he": "נכנסים למסך שבו מתרגלים מעבר מגרף לטבלה, צעד אחר צעד.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "4bf80fef2ea06d10",
+              "generated_at": "2026-10-03T01:45:06Z",
+              "model": "mini"
+            }
+          },
           "questions": [
             {
               "question_id": "msn0k9023guxbfifb",
@@ -98,7 +160,29 @@
                 "מים — מספר היחידות 6, המחיר ליחידה 3; פיתות — מספר היחידות 10, המחיר ליחידה 2; חומוס — מספר היחידות 4, המחיר ליחידה 5; חבילת קרקרים — מספר היחידות 1, המחיר ליחידה 6; חבילת עוגיות — מספר היחידות 2, המח"
               ],
               "fingerprint": "c50d6a06970190d4",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים קריאה מדויקת מהגרף והשלמה של טבלה. נסו לגשת לכל מוצר בנפרד ולבדוק את הנתונים בזהירות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c50d6a06970190d4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק כל שורה בנפרד ולוודא שמשייכים נכון בין הערך בגרף לבין המקום המתאים בטבלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c50d6a06970190d4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המטרה כאן היא לתרגל מעבר מגרף לטבלה: קוראים את הנתונים מהגרף, ומשלימים אותם בתאים המתאימים בטבלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "c50d6a06970190d4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -111,7 +195,15 @@
           "position": 6,
           "fingerprint": "68c865ba1da8a9cf",
           "information_to_bot": "1. מטרת הפריט: להסביר כיצד קוראים נתונים מגרף ומארגנים אותם בטבלה.\n2. רמזים מדורגים: כוונו את הלומד לבחור נקודה או עמודה בגרף, לקרוא את הערכים שלה, ואז להציבם בשורה ובעמודה המתאימות בטבלה.\n3. טעויות נפוצות: שיוך ערך לשורה לא נכונה או החלפת קטגוריה וערך מספרי. בקשו לבדוק את הכותרות לפני מילוי.\n4. סימני שליטה: הלומד מסביר כיצד כל נתון בגרף הופך לערך בתא מתאים בטבלה.",
-          "texts": {},
+          "texts": {
+            "video_summary": {
+              "he": "הסרטון מסביר איך קוראים נתונים מגרף ומארגנים אותם בטבלה, תוך בדיקה של הכותרות והצבה במקום הנכון.",
+              "prompt_version": "cp-v2",
+              "source_fingerprint": "68c865ba1da8a9cf",
+              "generated_at": "2026-10-03T01:45:06Z",
+              "model": "mini"
+            }
+          },
           "questions": []
         },
         {
@@ -131,7 +223,29 @@
               "question_text": "השלימו את העמודה \"כמה נשלם?\".​",
               "answers": [],
               "fingerprint": "3fd65fcd2f44e0ab",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים חשיבה כמותית וחישוב לפי נתונים. אפשר להתחיל ממוצר אחד ולהתקדם בשיטתיות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3fd65fcd2f44e0ab",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לעבוד שורה־שורה: לחשב לכל מוצר בנפרד, ואז לעבור לסכום הכולל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3fd65fcd2f44e0ab",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת חישוב עלות לכל מוצר לפי מספר יחידות ומחיר ליחידה, ואחר כך חיבור של כל התוצאות לסכום כולל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "3fd65fcd2f44e0ab",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msn3llgt1ywwwrxkp",
@@ -139,7 +253,29 @@
               "question_text": "יצא בסך הכול ___ ש\"ח.",
               "answers": [],
               "fingerprint": "65494edfc73b8dd4",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן ממשיכים מחישוב חלקי אל מחשבה על הסכום הכולל. נסו לעקוב אחרי כל התוצאות שנצברו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "65494edfc73b8dd4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר לעבור שוב על כל הסכומים שחושבו לפני שמסכמים את הכול.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "65494edfc73b8dd4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים את היכולת לאסוף את כל הסכומים שחושבו ולהגיע לתוצאה כוללת אחת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "65494edfc73b8dd4",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -159,7 +295,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לעבוד עם מערכת צירים, להבין נקודות בגרף ולבדוק קשרים בין ערכים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "e98d352d86059b3a",
+          "generated_at": "2026-10-03T01:45:06Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "msh2aa44224jsgwnj",
@@ -178,7 +322,29 @@
               "question_text": "השלימו את הטבלה לפי הנתונים שבגרף.",
               "answers": [],
               "fingerprint": "ddaf34b9ea23bdd2",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כדאי להסתכל על הצירים ועל הקשר בין השעה למרחק. נסו לעבוד לפי הנתונים שמופיעים בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ddaf34b9ea23bdd2",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו בגרף את הציר של השעה ואת הציר של המרחק, ואז קראו את הערכים המתאימים לכל שעה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ddaf34b9ea23bdd2",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "במשימה הזו קוראים ערכים מגרף נקודות ומשלימים טבלה. חשוב להבחין בין השעה לבין המרחק, ולשים לב ליחידות המידה ולכותרות הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ddaf34b9ea23bdd2",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msh2ayuk2d5mr8daa",
@@ -189,7 +355,29 @@
                 "בשעה 9:00 יואב היה במרחק 1.5 ק\"מ מהבית."
               ],
               "fingerprint": "60465efb53101dd5",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם גרף ונקודה בודדת, ומתרגלים חשיבה על הקשר בין שני שיעורים. נסו לפרש את המידע לפי הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "60465efb53101dd5",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "שימו לב מה מייצג כל שיעור בנקודה, וקראו את כותרות הצירים לפני שבוחרים תשובה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "60465efb53101dd5",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת פירוש של נקודה בגרף לפי השעה והמרחק. כדאי להיעזר בכותרות הצירים ובסדר השיעורים כדי להבין מה הנקודה מתארת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "60465efb53101dd5",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -210,7 +398,29 @@
               "question_text": "כתבו את שיעורי הנקודה המתאימה למיקום הזה.​",
               "answers": [],
               "fingerprint": "fa75bd9f3ee41dae",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על קישור בין טבלה לבין מערכת צירים. נסו לזהות איך קוראים את הנתון ולמקם אותו לפי הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fa75bd9f3ee41dae",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "קראו את הנתון בטבלה לפי הסדר, ואז חפשו בגרף את המקום שמתאים לו בין הסימונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fa75bd9f3ee41dae",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "במשימה הזו ממירים נתון מטבלה לשיעורי נקודה וממקמים אותה בגרף. חשוב לשמור על הסדר הנכון בין השעה למרחק ולהיעזר בסימוני הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "fa75bd9f3ee41dae",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mt6yn6cn20jre4b72",
@@ -220,7 +430,29 @@
                 "A במיקום (9:30, 2.5) על הגרף"
               ],
               "fingerprint": "043b6c0624639e5e",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן צריך לקשר בין מיקום בגרף לבין שיעורי נקודה. נסו להיעזר בצירים ובסימונים כדי למצוא את הנתון המתאים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043b6c0624639e5e",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "בדקו איזה ערך שייך לשעה ואיזה ערך שייך למרחק, ואז התאימו את הנקודה למקום הנכון על הגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043b6c0624639e5e",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת הצבה של נקודה במערכת צירים לפי נתונים נתונים מראש. כדאי לשים לב לשני השיעורים ולמקום שלהם על הגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "043b6c0624639e5e",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -246,7 +478,29 @@
                 "D"
               ],
               "fingerprint": "70801273aaf8c47b",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קריאת נקודה בגרף, עם שני נתונים יחד. נסו לבדוק איך משלבים בין הערכים על שני הצירים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "70801273aaf8c47b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לאתר כל נתון על הצירים ואז לבדוק היכן הם נפגשים בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "70801273aaf8c47b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בתרגיל הזה צריך להתאים בין שעה למרחק בעזרת גרף. חשוב לקרוא את שני הנתונים יחד ולחפש את הנקודה שמתאימה למפגש שלהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "70801273aaf8c47b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -270,7 +524,29 @@
                 "לא ייתכן"
               ],
               "fingerprint": "deb2f0fc8c6abe6b",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על הסקת מסקנה מהגרף ובדיקת היתכנות. נסו לחשוב על הקשר בין הערכים שמופיעים בשתי השעות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "deb2f0fc8c6abe6b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להשוות בין הערכים של שתי השעות ולחשוב מה אפשר להסיק מהם.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "deb2f0fc8c6abe6b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בתרגיל הזה בודקים אם אפשר להסיק מהגרף שהמיקום נשאר זהה בין שתי שעות. צריך להסתמך על הנתונים שמופיעים בגרף ולנמק את המסקנה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "deb2f0fc8c6abe6b",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -290,7 +566,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה עובדים עם **מערכת צירים** חיובית וקוראים ממנה מידע. תתרגלו לזהות נקודות, להשוות בין ערכים ולגלות איך גרף מספר סיפור שלם.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "e2b2c49017549b8f",
+          "generated_at": "2026-10-03T01:45:06Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "mswy22vs27rnbof9l",
@@ -309,7 +593,29 @@
               "question_text": "השלימו את טבלת הערכים שלפניכם בעזרת הגרף הנתון.",
               "answers": [],
               "fingerprint": "a89f5197a9300b53",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על קריאת גרף והשלמת טבלה. נסו לעבוד בצורה מסודרת ולבדוק כל נקודה בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a89f5197a9300b53",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי להתחיל מקריאת כל נקודה בגרף לפי הצירים, ואז להשוות בין הערכים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a89f5197a9300b53",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "בתרגיל הזה קוראים גרף נקודות, משלימים טבלה ומסיקים מסקנות מהערכים שמתקבלים. חשוב להיעזר בצירים ולבדוק כל נקודה לפי המקום שלה בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "a89f5197a9300b53",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mswy2x2m1iotes7c0",
@@ -323,7 +629,29 @@
                 "קופים"
               ],
               "fingerprint": "bd81b3117ae94d02",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על זיהוי סוג מתוך גרף. נסו להתמקד בהשוואה בין הערכים ולבדוק מה מראה כל נקודה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bd81b3117ae94d02",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק את הערכים על הציר המתאים ולחפש את הערך הנמוך ביותר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bd81b3117ae94d02",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לקרוא את ערכי ה־y של כל הנקודות, ואז לחבר את כל מספרי החיות שמופיעים בטבלה כדי למצוא את הסכום הכולל.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "bd81b3117ae94d02",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "mswy2x2n1e1wgqvoh",
@@ -356,7 +684,29 @@
                 "גרף ג"
               ],
               "fingerprint": "1c689a4ae22314a9",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו משימה על מעבר בין **טבלה** לייצוג גרפי ועל השוואת ערכים. נסו להתבונן במידע ולבדוק אותו שלב אחר שלב.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c689a4ae22314a9",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לבדוק אילו משתנים מופיעים בטבלה ואיך הם מתאימים לצירים, ואז להשוות בין הערכים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c689a4ae22314a9",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כאן בודקים התאמה בין נתונים בטבלה לבין גרף, וגם מחפשים את הערך הגבוה ביותר מתוך הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "1c689a4ae22314a9",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msr9zamb2e8tv5934",
@@ -370,7 +720,22 @@
                 "12:00"
               ],
               "fingerprint": "6de63b0d058564f7",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זו שאלה על **השוואת ערכים** מתוך נתונים בגרף. כדאי לבדוק את המידע בזהירות ולבחור לפי הנתון הגדול ביותר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6de63b0d058564f7",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "חפשו את השורה שבה מופיע הערך הגבוה ביותר, ובדקו לאיזו שעה הוא שייך.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "6de63b0d058564f7",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         },
@@ -391,7 +756,29 @@
               "question_text": "השלימו מספרים במקומות החסרים במשפטים האלה בעזרת הנתונים שבגרף.",
               "answers": [],
               "fingerprint": "5b7a4195d2055d98",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן עובדים עם **גרף מחירים** ועם השוואה בין דרכי קנייה. נסו לקרוא את הנתונים בצורה מסודרת ולבדוק כל אפשרות.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5b7a4195d2055d98",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "הסתכלו על שיעורי הנקודות בגרף כדי להשלים את המשפטים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5b7a4195d2055d98",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "כדאי לקרוא את הנתונים מהגרף לפי מספר הבקבוקים, ואז להשוות בין ההצעות לפי **העלות הכוללת** ולא לפי מספר האריזות. אחרי שמזהים את הערכים שמתאימים לכל מספר בקבוקים, אפשר להשלים את הטבלה ולבדוק כל קנייה בנפרד.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "5b7a4195d2055d98",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msrbuzm714mccs4o2",
@@ -399,7 +786,29 @@
               "question_text": "השלימו את טבלת הערכים. מספר בקבוקים באריזה: 1, 2, 3, 4. מחיר בש\"ח: ____ לכל מספר בקבוקים.",
               "answers": [],
               "fingerprint": "61659775b36621f0",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "עובדים כאן עם קריאת גרף והשלמת טבלה. כדאי להתקדם צעד־צעד ולבדוק בכל פעם את הערך המתאים לנתון שמופיע.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61659775b36621f0",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "הסתכלו על שיעורי הנקודות בגרף, והשתמשו בהם כדי להשלים את מה שחסר בטבלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61659775b36621f0",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "המשימה בודקת קריאה של מידע מגרף והעברה שלו לטבלה. צריך להתאים בין מספר הבקבוקים לבין המחיר, ולשים לב לערכים שמופיעים עבור כל נקודה בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "61659775b36621f0",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msrbuzm712rpw8uwi",
@@ -411,7 +820,29 @@
                 "שתי ההצעות משתלמות באותה המידה."
               ],
               "fingerprint": "41c69d1bd61a3560",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן משווים בין שתי דרכי קנייה בעזרת חישוב. כדאי לחשוב על כל הצעה בנפרד ולבדוק את הסכום הכולל שלה.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41c69d1bd61a3560",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "כדאי לחשב את המחיר הכולל של כל הצעה, ואז להשוות ביניהן.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41c69d1bd61a3560",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת השוואה בין שתי הצעות קנייה לפי **המחיר הכולל**. כדי לענות, מחשבים כל הצעה בנפרד ואז בודקים איזו מהן משתלמת יותר.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "41c69d1bd61a3560",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             }
           ]
         }
@@ -431,7 +862,15 @@
         "screens_seen": 0,
         "screens_mapped": 0
       },
-      "texts": {},
+      "texts": {
+        "lesson_welcome": {
+          "he": "בשיעור הזה לומדים לקרוא מידע מתוך גרפים וטבלאות של מספרים חיוביים, ולהשתמש בו כדי להשוות, להשלים ולמצוא ערכים מתאימים.",
+          "prompt_version": "cp-v2",
+          "source_fingerprint": "756994f183171ab3",
+          "generated_at": "2026-10-03T01:45:06Z",
+          "model": "mini"
+        }
+      },
       "slides": [
         {
           "item_id": "msx2khpj1bv5f7d6s",
@@ -450,7 +889,29 @@
               "question_text": "השלימו את הטבלה לפי הגרף. שם העיר: קריית שמונה, ירושלים, צפת, תל אביב. טמפרטורה במעלות צלזיוס (C°).",
               "answers": [],
               "fingerprint": "ae566bf1f8772ee7",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "כאן מתרגלים קריאת גרף והעברת מידע לטבלה. כדאי להתבונן בנתונים, להשוות ביניהם ולבדוק מה כל נקודה מייצגת.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ae566bf1f8772ee7",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "hint_l1": {
+                  "he": "אפשר להתחיל בזיהוי מה מייצג כל ציר, ואז לקרוא את הערכים מהנקודות בגרף.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ae566bf1f8772ee7",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                },
+                "explanation": {
+                  "he": "השאלה בודקת קריאה של גרף נקודות והבנה של הקשר בין **הצירים** לבין הערכים שמופיעים בטבלה. בנוסף צריך לזהות ערכים גבוהים ונמוכים מתוך הנתונים.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "ae566bf1f8772ee7",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msx31th3lpdwggfm",
@@ -458,7 +919,15 @@
               "question_text": "מה הטמפרטורה הגבוהה ביותר שנמדדה לפי הטבלה? (C°).",
               "answers": [],
               "fingerprint": "4230f03ea9d9c654",
-              "texts": {}
+              "texts": {
+                "question_intro": {
+                  "he": "זהו תרגיל של קריאת נתונים והשוואה. כדאי לעבור על המידע שמופיע ולבדוק מה אפשר להסיק ממנו.",
+                  "prompt_version": "cp-v2",
+                  "source_fingerprint": "4230f03ea9d9c654",
+                  "generated_at": "2026-10-03T01:45:06Z",
+                  "model": "mini"
+                }
+              }
             },
             {
               "question_id": "msx31th32rkpf1sud",
